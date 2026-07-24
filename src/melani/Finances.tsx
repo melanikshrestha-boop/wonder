@@ -2626,7 +2626,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                           <thead>
                             <tr>
                               <th>Date</th>
-                              <th>Payee / full description</th>
+                              <th>Payee</th>
                               <th>Category</th>
                               <th className="num">Amount</th>
                               <th className="num">Balance</th>

@@ -1983,7 +1983,7 @@
 /* Full month detail — NEVER truncate; no frame around the table */
 .wd-table.wd-ledger-full {
   table-layout: fixed;
-  min-width: 0;
+  min-width: 34rem; /* narrower than this, the wrap scrolls instead of colliding */
   width: 100%;
   max-width: 780px;
   border: 0;
@@ -2004,9 +2004,10 @@
 .wd-table.wd-ledger-full td:nth-child(6) { width: 2rem; }
 .wd-table.wd-ledger-full th,
 .wd-table.wd-ledger-full td {
-  overflow: visible;
-  white-space: normal;
-  vertical-align: top;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: middle;
   border: 0;
   border-bottom: 0;
   background: transparent;
