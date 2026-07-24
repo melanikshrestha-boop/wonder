@@ -15,8 +15,8 @@ import { careConciergeApi } from "./scripts/care-concierge-api.mjs";
 import { plaidFinanceApi } from "./scripts/plaid-finance-api.mjs";
 import { marketQuoteApi } from "./scripts/market-quote-api.mjs";
 
-// Workspace runs on its own. Gym is native React (no Melani iframe / no PIN).
-// Optional: proxy only /melani/* if you open live Melani in a new tab later.
+// Wonder is one app on :5173. Gym/Fitness/etc. are native React (no iframe / no PIN).
+// Optional legacy proxy if an old health backend is still running locally.
 const MELANI_TARGET = "http://127.0.0.1:8781";
 
 export default defineConfig(({ mode }) => {

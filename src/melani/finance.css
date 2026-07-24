@@ -6,8 +6,9 @@
 .wd {
   --wd-bg: #000000;
   --wd-elevated: transparent;
-  --wd-hairline: rgba(255, 255, 255, 0.08);
-  --wd-hairline-strong: rgba(255, 255, 255, 0.12);
+  /* No dividing lines — hairlines fully transparent */
+  --wd-hairline: transparent;
+  --wd-hairline-strong: transparent;
   --wd-text: rgba(255, 255, 255, 0.92);
   --wd-secondary: rgba(255, 255, 255, 0.48);
   --wd-tertiary: rgba(255, 255, 255, 0.32);
@@ -2139,5 +2140,205 @@
 .wd-month-tops,
 .wd-ellipsis-btn,
 .wd-ellipsis-row {
+  display: none !important;
+}
+
+/* Do TODAY — same-day checklist, no boxes */
+.wd-today {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.wd-today-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.25rem;
+}
+.wd-today-head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+}
+.wd-today-order {
+  margin: 0 0 0.65rem;
+  font-size: 13px;
+  color: var(--wd-secondary);
+}
+.wd-today-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.wd-today-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.wd-today-list li.is-done .wd-today-body strong {
+  color: var(--wd-tertiary);
+  text-decoration: line-through;
+}
+.wd-today-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.wd-today-row input[type="checkbox"] {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+.wd-today-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.wd-today-body strong {
+  font-weight: 600;
+  color: var(--wd-text);
+}
+.wd-today-body em {
+  font-style: normal;
+  font-weight: 400;
+}
+
+/* ── User: no dividing lines · everything 1.5 spaced ── */
+.wd {
+  line-height: 1.5 !important;
+}
+.wd * {
+  line-height: 1.5;
+}
+.wd-subnav,
+.wd-subnav-plain {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+.wd-subnav-link {
+  line-height: 1.5 !important;
+}
+.wd-top,
+.wd-discipline,
+.wd-panel,
+.wd-panel-head,
+.wd-ledger-close,
+.wd-month-book,
+.wd-month-book-head,
+.wd-month-totals,
+.wd-month-full,
+.wd-table-wrap,
+.wd-acct-table-wrap,
+.wd-filters,
+.wd-filters-ledger,
+.wd-form,
+.wd-brain,
+.wd-reinvest-strip {
+  border: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+.wd-filters input,
+.wd-filters select,
+.wd-page .wd-filters input,
+.wd-page .wd-filters select,
+.wd-filters-ledger input,
+.wd-filters-ledger select {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  line-height: 1.5 !important;
+  min-height: auto;
+  padding: 0.25rem 0.5rem 0.25rem 0;
+}
+.wd-table,
+.wd-table th,
+.wd-table td,
+.wd-table.wd-ledger-full th,
+.wd-table.wd-ledger-full td,
+.wd-acct-table,
+.wd-acct-table th,
+.wd-acct-table td {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  line-height: 1.5 !important;
+}
+.wd-table th {
+  padding-top: 0.35rem;
+  padding-bottom: 0.5rem;
+}
+.wd-table td {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+.wd-month-nav,
+.wd-year-nav,
+.wd-month-nav-link,
+.wd-year-nav-link {
+  border: 0 !important;
+  line-height: 1.5 !important;
+}
+.wd-month-nav-inline {
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.75rem !important;
+}
+.wd-form input,
+.wd-form select,
+.wd-table.wd-edit input,
+.wd-table.wd-edit select {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  line-height: 1.5 !important;
+}
+.wd-btn,
+.wd-chip,
+.wd-chip-btn,
+.wd-select {
+  border: 0 !important;
+  box-shadow: none !important;
+  line-height: 1.5 !important;
+}
+.wd-muted,
+.wd-ledger-sub,
+p,
+li,
+span,
+label,
+strong {
+  line-height: 1.5;
+}
+.wd-discipline {
+  border: 0 !important;
+  padding-top: 0;
+  margin-bottom: 1.25rem;
+}
+.wd-top {
+  border: 0 !important;
+  margin-bottom: 1rem;
+}
+/* kill any remaining hairline rules on finance desk */
+.wd hr {
   display: none !important;
 }

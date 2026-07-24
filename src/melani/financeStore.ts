@@ -23,6 +23,20 @@ export type FinanceAccount = {
    * the #1 lever people can move fast for credit health.
    */
   creditLimit?: number | null;
+  /**
+   * Day of month payment is due (1–31). Cards only.
+   * Not the same as statement closing day.
+   */
+  dueDay?: number | null;
+  /**
+   * Day of month the statement closes / often reports (1–31).
+   * Pay before this if you want a lower reported balance.
+   */
+  statementCloseDay?: number | null;
+  /** True if autopay is on for at least the minimum */
+  autopayMin?: boolean | null;
+  /** APR as percent e.g. 24.99 — optional */
+  apr?: number | null;
   /** Institution label e.g. Chase */
   institution?: string;
   /** Plaid account id when linked */
@@ -95,6 +109,14 @@ export type FinanceState = {
     recentLates: number;
     collections: number;
     knownScore?: number | null;
+    /** Where 677 came from e.g. Credit Karma, Chase, Experian */
+    scoreProvider?: string | null;
+    /** Model e.g. VantageScore 3.0, FICO 8 — not interchangeable */
+    scoreModel?: string | null;
+    /** Bureau if known: Equifax / Experian / TransUnion */
+    scoreBureau?: string | null;
+    /** Minimum checking cash you refuse to go below */
+    cashFloor?: number | null;
   } | null;
 };
 
@@ -150,6 +172,11 @@ function defaultState(): FinanceState {
       collections: 0,
       /** Real bureau score — Melani: 677 */
       knownScore: 677,
+      scoreProvider: null,
+      scoreModel: null,
+      scoreBureau: null,
+      /** Default floor — stop ending at $0.03 */
+      cashFloor: 300,
     },
   };
 }

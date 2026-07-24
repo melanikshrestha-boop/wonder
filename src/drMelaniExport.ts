@@ -1,7 +1,7 @@
 /**
- * Full Dr. Melani → Notion workspace export.
+ * Full Wonder workspace export.
  * Structure mirrors the live app (Fitness / Work / Hygiene / My Data)
- * plus health analytics and real lab numbers from Melani’s chart.
+ * plus health analytics and lab numbers from Melani’s chart.
  */
 import type { Block, Page, Workspace } from "./types";
 
@@ -39,8 +39,8 @@ function page(
   };
 }
 
-/** Entire Dr. Melani system as Notion pages */
-export function buildDrMelaniWorkspace(): Workspace {
+/** Entire Wonder system as Notion pages */
+export function buildWonderWorkspace(): Workspace {
   const FITNESS = "pg-fitness";
   const SLEEP = "pg-sleep";
   const MEALS = "pg-meals";
@@ -74,7 +74,7 @@ export function buildDrMelaniWorkspace(): Workspace {
     page(SLEEP, "Sleep", "😴", FITNESS, [
       b("heading1", "Sleep"),
       b("heading2", "Today"),
-      b("paragraph", "Day: (log in Dr. Melani app — Fitness → Sleep)"),
+      b("paragraph", "Day: (log in Wonder — Fitness → Sleep)"),
       b("paragraph", "Bedtime: —"),
       b("paragraph", "Wake: —"),
       b("divider"),
@@ -91,7 +91,7 @@ export function buildDrMelaniWorkspace(): Workspace {
       b("bullet", "Wed —"),
       b("bullet", "Thu —"),
       b("bullet", "Fri —"),
-      b("callout", "Source of truth: Dr. Melani → Fitness → Sleep (port 8781)."),
+      b("callout", "Source of truth: Wonder → Fitness → Sleep."),
     ]),
 
     page(MEALS, "Meals", "🍽️", FITNESS, [
@@ -134,7 +134,7 @@ export function buildDrMelaniWorkspace(): Workspace {
 
     page(GYM, "Gym", "🏋️", FITNESS, [
       b("heading1", "Gym"),
-      b("heading2", "Week structure (from Dr. Melani plans)"),
+      b("heading2", "Week structure (from Wonder gym plans)"),
       b("bullet", "Monday — Glutes + Abs"),
       b("bullet", "Tuesday — Lower / upper plan day"),
       b("bullet", "Wednesday — plan day"),
@@ -229,7 +229,7 @@ export function buildDrMelaniWorkspace(): Workspace {
 
     page(PM_SKIN, "PM skincare", "🌙", HYGIENE, [
       b("heading1", "PM skincare"),
-      b("paragraph", "Four night types — see calendar in Dr. Melani."),
+      b("paragraph", "Four night types — see calendar in Wonder Hygiene."),
       b("bullet", "Gentle / recovery night"),
       b("bullet", "Active night"),
       b("bullet", "Retinol night"),
@@ -299,4 +299,8 @@ export function buildDrMelaniWorkspace(): Workspace {
   } as Workspace & { exportVersion?: number };
 }
 
-export const DR_MELANI_EXPORT_VERSION = 16;
+export const WONDER_EXPORT_VERSION = 17;
+/** @deprecated Use WONDER_EXPORT_VERSION */
+export const DR_MELANI_EXPORT_VERSION = WONDER_EXPORT_VERSION;
+/** @deprecated Use buildWonderWorkspace */
+export const buildDrMelaniWorkspace = buildWonderWorkspace;

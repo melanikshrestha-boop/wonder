@@ -1,5 +1,5 @@
 /**
- * Minimal line icons — same style as Dr. Melani gym SVGs
+ * Minimal line icons — same style as Wonder gym SVGs
  * (stroke 1.6, round caps, no emoji).
  */
 import type { Page } from "../types";

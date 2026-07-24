@@ -228,7 +228,7 @@ export function GmailConnector({ onGo }: Props) {
           </li>
           <li>Turn on 2-Step Verification if Google asks</li>
           <li>
-            Create app password → name it <em>Dr Melani</em>
+            Create app password → name it <em>Wonder</em>
           </li>
           <li>Copy the 16-character password and paste below</li>
         </ol>

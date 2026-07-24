@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Workspace } from "./types";
-import { forceImportDrMelani, loadWorkspace, saveWorkspace } from "./storage";
+import { forceImportWonder, loadWorkspace, saveWorkspace } from "./storage";
 import {
   activePages,
   addAgentPage,
@@ -40,7 +40,7 @@ import "./notion.css";
  */
 export default function App() {
   const [ws, setWs] = useState<Workspace>(() => {
-    if (typeof window === "undefined") return forceImportDrMelani();
+    if (typeof window === "undefined") return forceImportWonder();
     // Allow deep-link: ?page=pg-meals (opens that page on load)
     const base = loadWorkspace();
     try {
@@ -310,7 +310,7 @@ export default function App() {
               "Re-import full Wonder export? Local edits to the tree may be replaced."
             )
           ) {
-            commitWorkspace(() => forceImportDrMelani());
+            commitWorkspace(() => forceImportWonder());
           }
         }}
       />

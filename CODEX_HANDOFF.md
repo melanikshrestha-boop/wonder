@@ -1,18 +1,30 @@
-# Codex handoff — Dr. Melani / Wonder
+# Codex handoff — Wonder
 
-**Repo:** https://github.com/melanikshrestha-boop/dr.melani  
+**Product name:** Wonder (formerly Dr. Melani)  
+**Repo:** https://github.com/melanikshrestha-boop/wonder (private; may still resolve from old `dr.melani` URL after rename)  
 **Branch:** `grok/latest-dr-melani-july-21-2026`  
 **Stack:** Vite + React + TypeScript (not Next.js)  
 **Local URL:** http://127.0.0.1:5173/  
-**Date stamp:** 2026-07-21  
+**Visibility:** private  
+**Date stamp:** 2026-07-23  
 
 This file is the single source of truth for agents (Codex / GPT / Claude) cloning the app without chat context.
+
+### Naming (do not confuse)
+
+| Say this | Not this |
+|----------|----------|
+| **Wonder** — the product / workspace | Dr. Melani, notion-like |
+| **Mel** — the coach / AI bubble | The whole app is not “Melani” |
+| One app on **:5173** | Separate health app on :8781 |
+
+Internal paths/keys may still contain `melani` so localStorage and imports keep working.
 
 ---
 
 ## App summary
 
-Wonder is a **Notion-style personal OS** with deep **Dr. Melani health surfaces** baked in:
+Wonder is a **Notion-style personal OS** with health surfaces baked in (one app):
 
 - Pages, blocks, slash commands, databases, sidebar
 - Fitness: Sleep · Meals · Gym
@@ -30,14 +42,16 @@ Data lives in the **browser** (`localStorage`). No backend DB required for core 
 ## Exact startup commands
 
 ```bash
-git clone https://github.com/melanikshrestha-boop/dr.melani.git
-cd dr.melani
+git clone https://github.com/melanikshrestha-boop/wonder.git
+# if rename not finished yet:
+# git clone https://github.com/melanikshrestha-boop/dr.melani.git
+cd wonder   # or cd dr.melani
 git checkout grok/latest-dr-melani-july-21-2026
 npm install
 npm run dev
 ```
 
-Open: **http://127.0.0.1:5173/**
+Open: **http://127.0.0.1:5173/** — that is Wonder (merged personal OS). Do not send users to a second app on :8781.
 
 Optional bridges (not required for the UI):
 

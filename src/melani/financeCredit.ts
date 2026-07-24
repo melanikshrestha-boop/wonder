@@ -28,6 +28,10 @@ export type CreditProfile = {
    * When set, the desk displays THIS as the score — not a blended guess.
    */
   knownScore?: number | null;
+  scoreProvider?: string | null;
+  scoreModel?: string | null;
+  scoreBureau?: string | null;
+  cashFloor?: number | null;
 };
 
 export type CreditFactor = {
@@ -71,6 +75,10 @@ export const DEFAULT_CREDIT_PROFILE: CreditProfile = {
   recentLates: 0,
   collections: 0,
   knownScore: REAL_CREDIT_SCORE,
+  scoreProvider: null,
+  scoreModel: null,
+  scoreBureau: null,
+  cashFloor: 300,
 };
 
 const DISCLAIMER_OFFICIAL =

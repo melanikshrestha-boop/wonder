@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Real personal Gmail bridge for the Dr. Melani workspace.
+Real personal Gmail bridge for the Wonder workspace.
 Uses Gmail IMAP + optional SMTP with an App Password (Google Account security).
 Stores credentials encrypted under ~/.melani_assistant/gmail/
 """

@@ -1,5 +1,5 @@
 /**
- * Fitness page — pixel-faithful to Dr. Melani Fitness (Sleep · Meals · Gym · Body).
+ * Fitness page — Wonder Fitness (Sleep · Meals · Gym · Body).
  * Quote + subnav + sleep/brain fog/weekly chart exactly like the app screenshot.
  */
 import { useEffect, useMemo, useRef, useState } from "react";

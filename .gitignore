@@ -4,3 +4,7 @@ dist
 *.local
 .env
 data/
+
+# Raw bank statement dumps (keep out of git; use TS imports)
+src/melani/*.xlsx
+*.xlsx

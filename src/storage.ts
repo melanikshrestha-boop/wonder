@@ -1,5 +1,8 @@
 import type { Block, Database, Page, Workspace } from "./types";
-import { buildDrMelaniWorkspace, DR_MELANI_EXPORT_VERSION } from "./drMelaniExport";
+import {
+  buildWonderWorkspace,
+  WONDER_EXPORT_VERSION,
+} from "./drMelaniExport";
 
 const KEY = "notion-like-workspace-v4-full";
 const VERSION_KEY = "notion-like-export-version";
@@ -30,7 +33,7 @@ export function newBlock(type: Block["type"] = "paragraph", text = ""): Block {
 }
 
 export function defaultWorkspace(): Workspace {
-  const ws = buildDrMelaniWorkspace() as Workspace;
+  const ws = buildWonderWorkspace() as Workspace;
   return migrateWorkspace(ws);
 }
 
@@ -365,11 +368,12 @@ function ensureLifePages(ws: Workspace): Workspace {
 }
 
 function migrateWorkspace(ws: Workspace): Workspace {
-  // Workspace display name (sidebar top) — Wonder, not Dr. Melani
+  // Workspace display name (sidebar top) — always Wonder for this app
   const name =
     !ws.name ||
     /^dr\.?\s*melani$/i.test(ws.name.trim()) ||
-    ws.name.trim() === "Dr Melani"
+    ws.name.trim() === "Dr Melani" ||
+    /^notion-?like$/i.test(ws.name.trim())
       ? "Wonder"
       : ws.name;
 
@@ -400,35 +404,38 @@ function migrateWorkspace(ws: Workspace): Workspace {
   return purgeRemovedPages(ensureSidebarPages(ensureLifePages(base)));
 }
 
-export function forceImportDrMelani(): Workspace {
-  const ws = migrateWorkspace(buildDrMelaniWorkspace() as Workspace);
+export function forceImportWonder(): Workspace {
+  const ws = migrateWorkspace(buildWonderWorkspace() as Workspace);
   saveWorkspace(ws);
   try {
-    localStorage.setItem(VERSION_KEY, String(DR_MELANI_EXPORT_VERSION));
+    localStorage.setItem(VERSION_KEY, String(WONDER_EXPORT_VERSION));
   } catch {
     /* ignore */
   }
   return ws;
 }
 
+/** @deprecated Use forceImportWonder */
+export const forceImportDrMelani = forceImportWonder;
+
 export function loadWorkspace(): Workspace {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) {
-      // Prefer v2 if user already imported Dr. Melani
+      // Prefer v2 if user already imported an older Wonder / Dr. Melani tree
       const v2 = localStorage.getItem("notion-like-workspace-v2-dr-melani");
       if (v2) {
         const data = migrateWorkspace(JSON.parse(v2) as Workspace);
         saveWorkspace(data);
         return data;
       }
-      return forceImportDrMelani();
+      return forceImportWonder();
     }
     const data = migrateWorkspace(JSON.parse(raw) as Workspace);
-    if (!data.pages?.length) return forceImportDrMelani();
+    if (!data.pages?.length) return forceImportWonder();
     return data;
   } catch {
-    return forceImportDrMelani();
+    return forceImportWonder();
   }
 }
 

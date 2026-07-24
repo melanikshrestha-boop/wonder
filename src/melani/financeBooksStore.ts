@@ -52,6 +52,13 @@ export type BooksExtraState = {
   closedMonths: string[];
   /** Optional: user overrides for planned monthly income */
   plannedIncomeByMonth?: Record<string, number>;
+  /**
+   * "Do today" checklist — forensic actions that take minutes, not a week.
+   * Keys are action ids; true = done today / still done.
+   */
+  todayDone?: Record<string, boolean>;
+  /** ISO date the checklist was last reset (new day = fresh urgents) */
+  todayDoneOn?: string | null;
 };
 
 const KEY = "wonder-finance-books-v1";
@@ -68,7 +75,13 @@ function empty(): BooksExtraState {
     receipts: [],
     closedMonths: [],
     plannedIncomeByMonth: {},
+    todayDone: {},
+    todayDoneOn: null,
   };
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export function loadBooksExtra(): BooksExtraState {
@@ -76,6 +89,8 @@ export function loadBooksExtra(): BooksExtraState {
     const raw = localStorage.getItem(KEY);
     if (!raw) return empty();
     const p = JSON.parse(raw) as Partial<BooksExtraState>;
+    const doneOn = p.todayDoneOn || null;
+    // Keep checklist across the day; do not wipe mid-session
     return {
       version: 1,
       payables: Array.isArray(p.payables) ? p.payables : [],
@@ -83,10 +98,28 @@ export function loadBooksExtra(): BooksExtraState {
       receipts: Array.isArray(p.receipts) ? p.receipts : [],
       closedMonths: Array.isArray(p.closedMonths) ? p.closedMonths : [],
       plannedIncomeByMonth: p.plannedIncomeByMonth || {},
+      todayDone: p.todayDone && typeof p.todayDone === "object" ? p.todayDone : {},
+      todayDoneOn: doneOn || todayIso(),
     };
   } catch {
     return empty();
   }
+}
+
+export function toggleTodayDone(
+  id: string,
+  books = loadBooksExtra()
+): BooksExtraState {
+  const next = {
+    ...books,
+    todayDoneOn: todayIso(),
+    todayDone: {
+      ...(books.todayDone || {}),
+      [id]: !books.todayDone?.[id],
+    },
+  };
+  saveBooksExtra(next);
+  return next;
 }
 
 export function saveBooksExtra(state: BooksExtraState) {

@@ -74,6 +74,12 @@ import {
   markChaseImportDone,
 } from "./chaseStatementImport";
 import {
+  applyBofaStatements,
+  bofaImportNeeded,
+  bofaStatementSummary,
+  markBofaImportDone,
+} from "./bofaStatementImport";
+import {
   closeMonth,
   loadBooksExtra,
   newPayable,
@@ -81,8 +87,10 @@ import {
   newReceivable,
   reopenMonth,
   saveBooksExtra,
+  toggleTodayDone,
   type BooksExtraState,
 } from "./financeBooksStore";
+import { buildTodayPlan } from "./financeTodayPlan";
 
 export const FINANCES_PAGE_ID = "pg-finance";
 
@@ -283,20 +291,32 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
     [creditProfile, state]
   );
 
-  // Import real Chase statements once (or when import version bumps)
+  // Import Chase + Bank of America once (or when import version bumps)
   useEffect(() => {
     if (vaultGate !== "ready" || !state) return;
-    if (!chaseImportNeeded()) return;
-    const result = applyChaseStatements(state);
-    setState(result.state);
-    markChaseImportDone();
-    setFilterMonth("all"); // show full Dec 2025 → Jun 2026 history
-    setImportNote(
-      `Chase books loaded · ${chaseStatementSummary()}` +
-        (result.keptManual
-          ? ` · kept ${result.keptManual} other import lines`
-          : "")
-    );
+    const needChase = chaseImportNeeded();
+    const needBofa = bofaImportNeeded();
+    if (!needChase && !needBofa) return;
+
+    let next = state;
+    const notes: string[] = [];
+
+    if (needChase) {
+      const result = applyChaseStatements(next);
+      next = result.state;
+      markChaseImportDone();
+      notes.push(`Chase · ${chaseStatementSummary()}`);
+    }
+    if (needBofa) {
+      const result = applyBofaStatements(next);
+      next = result.state;
+      markBofaImportDone();
+      notes.push(`BofA · ${bofaStatementSummary()}`);
+    }
+
+    setState(next);
+    setFilterMonth("all");
+    setImportNote(`Books loaded · ${notes.join(" · ")}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when vault/session is ready
   }, [vaultGate]);
 
@@ -547,10 +567,34 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   const runwayMonths = brief.runwayMonths;
   const accounting = brief.accounting;
 
+  /** Do TODAY — minutes, not a fake 7-day project */
+  const todayPlan = useMemo(
+    () =>
+      state
+        ? buildTodayPlan(state, booksExtra)
+        : buildTodayPlan(
+            {
+              version: 2,
+              accounts: [],
+              txs: [],
+              budget: [],
+              watchlist: [],
+              goals: [],
+              creditProfile: null,
+            },
+            booksExtra
+          ),
+    [state, booksExtra]
+  );
+
   // Keep books extras on disk whenever they change
   useEffect(() => {
     saveBooksExtra(booksExtra);
   }, [booksExtra]);
+
+  const flipToday = (id: string) => {
+    setBooksExtra((b) => toggleTodayDone(id, b));
+  };
 
   const addPayable = () => {
     const amount = Number(apAmt);
@@ -2970,6 +3014,54 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
                   />
                 </label>
                 <label>
+                  Score provider
+                  <input
+                    placeholder="Credit Karma / Chase / Experian"
+                    value={creditProfile.scoreProvider ?? ""}
+                    onChange={(e) =>
+                      patchCreditProfile({
+                        scoreProvider: e.target.value || null,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Score model
+                  <input
+                    placeholder="VantageScore 3.0 / FICO 8"
+                    value={creditProfile.scoreModel ?? ""}
+                    onChange={(e) =>
+                      patchCreditProfile({
+                        scoreModel: e.target.value || null,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Bureau
+                  <input
+                    placeholder="Equifax / Experian / TransUnion"
+                    value={creditProfile.scoreBureau ?? ""}
+                    onChange={(e) =>
+                      patchCreditProfile({
+                        scoreBureau: e.target.value || null,
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Cash floor $
+                  <input
+                    type="number"
+                    value={creditProfile.cashFloor ?? 300}
+                    onChange={(e) =>
+                      patchCreditProfile({
+                        cashFloor: Math.max(0, Number(e.target.value) || 0),
+                      })
+                    }
+                  />
+                </label>
+                <label>
                   On-time %
                   <input
                     type="number"
@@ -3162,6 +3254,55 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
                 </div>
               </section>
             </div>
+
+            {/* Do today — lives under Review, not on top of Ledger */}
+            <section className="wd-today" aria-label="Do today">
+              <div className="wd-today-head">
+                <h2>Do today</h2>
+                <p className="wd-muted">
+                  {todayPlan.doneCount}/{todayPlan.total} done · ~
+                  {todayPlan.minutesLeft} min left
+                </p>
+              </div>
+              <p className="wd-today-order">{todayPlan.order}</p>
+              <ul className="wd-today-list">
+                {todayPlan.actions.map((a) => (
+                  <li key={a.id} className={a.done ? "is-done" : "is-open"}>
+                    <label className="wd-today-row">
+                      <input
+                        type="checkbox"
+                        checked={a.done}
+                        disabled={a.autoFromBooks}
+                        onChange={() => flipToday(a.id)}
+                        title={
+                          a.autoFromBooks
+                            ? "Completed from your books"
+                            : "Mark done"
+                        }
+                      />
+                      <span className="wd-today-body">
+                        <strong>
+                          {a.title}
+                          {a.minutes > 0 ? (
+                            <em className="wd-muted"> · {a.minutes} min</em>
+                          ) : null}
+                        </strong>
+                        <span className="wd-muted">{a.doExactly}</span>
+                      </span>
+                    </label>
+                    {a.tab ? (
+                      <button
+                        type="button"
+                        className="wd-link"
+                        onClick={() => setTab(a.tab!)}
+                      >
+                        Go
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
           </div>
         ) : null}
 
@@ -3175,6 +3316,10 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
                   + Account
                 </button>
               </div>
+              <p className="wd-muted" style={{ marginBottom: 8 }}>
+                Cards: fill Limit, Due day, Close day, Autopay — that is today&apos;s
+                work (minutes).
+              </p>
               <div className="wd-table-wrap">
                 <table className="wd-table wd-edit">
                   <thead>
@@ -3184,6 +3329,9 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
                       <th>Bank</th>
                       <th className="num">Balance</th>
                       <th className="num">Limit</th>
+                      <th className="num">Due day</th>
+                      <th className="num">Close day</th>
+                      <th>Autopay</th>
                       <th />
                     </tr>
                   </thead>
@@ -3246,6 +3394,70 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
                                   creditLimit: e.target.value
                                     ? Number(e.target.value)
                                     : null,
+                                })
+                              }
+                            />
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="num">
+                          {a.kind === "credit" ? (
+                            <input
+                              type="number"
+                              min={1}
+                              max={31}
+                              value={a.dueDay ?? ""}
+                              placeholder="1–31"
+                              title="Payment due day of month"
+                              onChange={(e) =>
+                                patchAccount(a.id, {
+                                  dueDay: e.target.value
+                                    ? Math.min(
+                                        31,
+                                        Math.max(1, Number(e.target.value) || 1)
+                                      )
+                                    : null,
+                                })
+                              }
+                            />
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="num">
+                          {a.kind === "credit" ? (
+                            <input
+                              type="number"
+                              min={1}
+                              max={31}
+                              value={a.statementCloseDay ?? ""}
+                              placeholder="1–31"
+                              title="Statement closing day"
+                              onChange={(e) =>
+                                patchAccount(a.id, {
+                                  statementCloseDay: e.target.value
+                                    ? Math.min(
+                                        31,
+                                        Math.max(1, Number(e.target.value) || 1)
+                                      )
+                                    : null,
+                                })
+                              }
+                            />
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td>
+                          {a.kind === "credit" ? (
+                            <input
+                              type="checkbox"
+                              checked={!!a.autopayMin}
+                              title="Autopay at least minimum is on"
+                              onChange={(e) =>
+                                patchAccount(a.id, {
+                                  autopayMin: e.target.checked,
                                 })
                               }
                             />

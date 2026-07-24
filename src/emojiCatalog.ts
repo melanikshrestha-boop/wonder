@@ -10,8 +10,8 @@ export type EmojiGroup = {
 
 export const EMOJI_GROUPS: EmojiGroup[] = [
   {
-    id: "dr-melani",
-    label: "Dr. Melani",
+    id: "wonder",
+    label: "Wonder",
     emojis: [
       "🏠", "💪", "😴", "🍽️", "🏋️", "📏", "💼", "✨", "🚿", "🛁", "💇",
       "☀️", "🌙", "📊", "👤", "🩸", "🧪", "📅", "⌚", "📈", "🔥", "💊",

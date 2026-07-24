@@ -1,6 +1,6 @@
 /**
- * Snapshot of Dr. Melani app data — used so exported pages look like the real app.
- * Live numbers can still be logged on port 8781; this is the visual export.
+ * Snapshot of Wonder health profile data — used so exported pages look like the live app.
+ * Source of truth is Wonder itself (Fitness, Labs, Hygiene, Mel).
  */
 
 export const PROFILE = {
@@ -287,4 +287,5 @@ export const CIRC = {
   fiber: 2 * Math.PI * 44,
 };
 
-export const LIVE_APP = "http://127.0.0.1:8781";
+/** Wonder app origin (single app — no separate Dr. Melani tab). */
+export const LIVE_APP = "http://127.0.0.1:5173";

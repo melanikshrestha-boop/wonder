@@ -9,7 +9,7 @@ type Props = {
 
 export function EmojiPicker({ current, onPick, onClose }: Props) {
   const [query, setQuery] = useState("");
-  const [activeGroup, setActiveGroup] = useState(EMOJI_GROUPS[0]?.id || "dr-melani");
+  const [activeGroup, setActiveGroup] = useState(EMOJI_GROUPS[0]?.id || "wonder");
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
