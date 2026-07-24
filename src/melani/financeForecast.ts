@@ -9,7 +9,6 @@ import {
   monthKey,
   money,
   monthlySeries,
-  spentByCategory,
   type FinanceState,
   type FinanceTx,
 } from "./financeStore";
@@ -102,7 +101,6 @@ export function buildForecastBrief(
     };
   });
 
-  const spentMap = spentByCategory(txs, ym);
   const variance = planRows
     .filter((r) => r.planned > 0 || r.spent > 0)
     .map((r) => ({

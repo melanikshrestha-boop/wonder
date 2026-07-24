@@ -9,8 +9,6 @@
 import {
   cashOnHand,
   creditOwed,
-  monthExpense,
-  monthIncome,
   monthKey,
   moneyCents,
   spentByCategory,
@@ -227,8 +225,6 @@ export function buildAdeptBrief(
   const statements = buildStatements(state, ym);
   const planTotal = state.budget.reduce((s, b) => s + (b.planned || 0), 0);
   const hasPlan = planTotal > 0;
-  const income = monthIncome(state.txs, ym);
-  const expense = monthExpense(state.txs, ym);
   const merchants = topMerchants(state.txs, ym, 5);
   const spent = spentByCategory(state.txs, ym);
 

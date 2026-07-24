@@ -566,8 +566,7 @@ function PriceLineChart({
 
   // 5 horizontal gridlines + Y ticks (min, 25%, 50%, 75%, max)
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => {
-    const price = min + span * (1 - t); // t=0 at top = max
-    // Actually: t=0 → max price at top; t=1 → min at bottom
+    // t=0 → max price at top; t=1 → min at bottom
     const priceVal = max - span * t;
     return { t, price: priceVal, y: padT + t * plotH };
   });

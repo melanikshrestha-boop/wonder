@@ -40,14 +40,14 @@ function b64encode(buf: ArrayBuffer | Uint8Array): string {
   return btoa(s);
 }
 
-function b64decode(b64: string): Uint8Array {
+function b64decode(b64: string): Uint8Array<ArrayBuffer> {
   const s = atob(b64);
   const out = new Uint8Array(s.length);
   for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
   return out;
 }
 
-function randomBytes(n: number): Uint8Array {
+function randomBytes(n: number): Uint8Array<ArrayBuffer> {
   const buf = new Uint8Array(n);
   crypto.getRandomValues(buf);
   return buf;
@@ -55,7 +55,7 @@ function randomBytes(n: number): Uint8Array {
 
 async function deriveKey(
   passphrase: string,
-  salt: Uint8Array,
+  salt: Uint8Array<ArrayBuffer>,
   iterations: number
 ): Promise<CryptoKey> {
   const enc = new TextEncoder();

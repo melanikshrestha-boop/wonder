@@ -232,7 +232,6 @@ export function buildSmartBrief(
   const cashFlow = income - expense;
   const projection = projectMonth(txs, ym);
   const planPlanned = planRows.reduce((s, r) => s + r.planned, 0);
-  const planSpent = planRows.reduce((s, r) => s + r.spent, 0);
   const reinvest = buildReinvestPlan(
     income,
     expense,
@@ -563,7 +562,7 @@ export function buildSmartBrief(
       id: f.id,
       priority:
         f.severity === "critical" ? 91 : f.severity === "high" ? 82 : 55,
-      severity: f.severity === "info" ? "low" : f.severity,
+      severity: f.severity,
       title: `Tax · ${f.title}`,
       detail: f.detail,
       amount: f.amount,
@@ -577,7 +576,7 @@ export function buildSmartBrief(
       id: f.id,
       priority:
         f.severity === "critical" ? 94 : f.severity === "high" ? 83 : 58,
-      severity: f.severity === "info" ? "low" : f.severity,
+      severity: f.severity,
       title: `Audit · ${f.title}`,
       detail: f.detail,
       amount: f.amount,
@@ -591,7 +590,7 @@ export function buildSmartBrief(
       id: f.id,
       priority:
         f.severity === "critical" ? 89 : f.severity === "high" ? 78 : 52,
-      severity: f.severity === "info" ? "low" : f.severity,
+      severity: f.severity,
       title: `Forecast · ${f.title}`,
       detail: f.detail,
       amount: f.amount,

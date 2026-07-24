@@ -43,14 +43,12 @@ import {
   newAccount,
   newGoal,
   newTx,
-  recentMonthKeys,
   runningBalanceMap,
   bookkeeperGaps,
   saveFinance,
   savingsRate,
   scaleBudget,
   spentByCategory,
-  topMerchants,
   autoBudgetFromHistory,
   budgetFromLastMonth,
   type AccountKind,
@@ -223,7 +221,7 @@ function dailyBars(txs: FinanceTx[], ym: string) {
   return out;
 }
 
-export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
+export function Finances(_props: { onGo?: (pageId: string) => void }) {
   /**
    * Encryption is optional (off by default).
    * Only if a vault was already set up: show unlock. Otherwise open ledger plain.
@@ -238,6 +236,13 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
 
   const [state, setState] = useState<FinanceState | null>(() =>
     probeVault().mode === "encrypted" ? null : loadFinance()
+  );
+  /** Apply an update only when books are loaded (vault unlocked). */
+  const patchState = useCallback(
+    (fn: (s: FinanceState) => FinanceState) => {
+      patchState((s) => (s ? fn(s) : s));
+    },
+    []
   );
   // Ledger first — a meticulous bookkeeper opens the daybook, not a dashboard
   const [tab, setTab] = useState<TabId>("transactions");
@@ -258,8 +263,8 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   const [goalDraft, setGoalDraft] = useState(() =>
     newGoal({ name: "Emergency fund", target: 5000 })
   );
-  const [sortKey, setSortKey] = useState<SortKey>("date");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [sortKey] = useState<SortKey>("date");
+  const [sortDir] = useState<"asc" | "desc">("desc");
   const [askQ, setAskQ] = useState("");
   const [askA, setAskA] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -331,7 +336,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
       return;
     }
     if (known == null || known === 0) {
-      setState((s) => {
+      patchState((s) => {
         if (!s) return s;
         return {
           ...s,
@@ -510,7 +515,6 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
 
   const series = useMemo(() => monthlySeries(txs, 6), [txs]);
   const bars = useMemo(() => dailyBars(txs, ym), [txs, ym]);
-  const merchants = useMemo(() => topMerchants(txs, ym, 8), [txs, ym]);
 
   const budget = state?.budget || [];
   const categories = useMemo(() => {
@@ -828,16 +832,8 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
     return m;
   }, [bars]);
 
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir(key === "date" || key === "amount" ? "desc" : "asc");
-    }
-  }
-
   function patchCreditProfile(patch: Partial<CreditProfile>) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       creditProfile: {
         ...DEFAULT_CREDIT_PROFILE,
@@ -890,7 +886,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
       setImportNote("Paste failed — use Date · Merchant · Amount · Category");
       return;
     }
-    setState((s) => {
+    patchState((s) => {
       const merged = mergeTxs(s.txs, added);
       return { ...s, txs: merged.txs };
     });
@@ -906,13 +902,14 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
       merchant: "",
       source: "manual",
     });
-    setState((s) => ({ ...s, txs: [tx, ...s.txs] }));
+    patchState((s) => ({ ...s, txs: [tx, ...s.txs] }));
   }
 
+  const watchlist = state?.watchlist;
   const loadQuotes = useCallback(async () => {
-    if (!state.watchlist.length) return;
+    if (!watchlist || !watchlist.length) return;
     try {
-      const q = state.watchlist.map((s) => encodeURIComponent(s)).join(",");
+      const q = watchlist.map((s) => encodeURIComponent(s)).join(",");
       const res = await fetch(`/api/market/quote?symbols=${q}`);
       if (!res.ok) return;
       const data = (await res.json()) as { quotes?: Record<string, unknown>[] };
@@ -920,50 +917,36 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
     } catch {
       /* optional */
     }
-  }, [state.watchlist]);
+  }, [watchlist]);
 
   useEffect(() => {
     void loadQuotes();
   }, [loadQuotes]);
 
   function patchAccount(id: string, patch: Partial<FinanceAccount>) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       accounts: s.accounts.map((a) => (a.id === id ? { ...a, ...patch } : a)),
     }));
   }
 
   function removeAccount(id: string) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       accounts: s.accounts.filter((a) => a.id !== id),
     }));
   }
 
   function addAccount() {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       accounts: [...s.accounts, newAccount({ name: "New account" })],
     }));
   }
 
-  function patchBudget(category: string, planned: number) {
-    setState((s) => {
-      const exists = s.budget.some((b) => b.category === category);
-      return {
-        ...s,
-        budget: exists
-          ? s.budget.map((b) =>
-              b.category === category ? { ...b, planned } : b
-            )
-          : [...s.budget, { category, planned }],
-      };
-    });
-  }
-
   /** Zero typing — plan built from your real spend history */
   function autoBuildPlan() {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       budget: autoBudgetFromHistory(s.txs, s.budget, 3),
     }));
@@ -974,7 +957,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function planMatchLastMonth() {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       budget: budgetFromLastMonth(s.txs, s.budget),
     }));
@@ -983,7 +966,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function planTighten() {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       budget: scaleBudget(s.budget, 0.9),
     }));
@@ -991,7 +974,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function planLoosen() {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       budget: scaleBudget(s.budget, 1.1),
     }));
@@ -999,7 +982,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function nudgeBudget(category: string, delta: number) {
-    setState((s) => {
+    patchState((s) => {
       const cur = s.budget.find((b) => b.category === category)?.planned || 0;
       const next = Math.max(0, Math.ceil((cur + delta) / 5) * 5);
       const exists = s.budget.some((b) => b.category === category);
@@ -1024,14 +1007,14 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
       merchant: txDraft.merchant || txDraft.note.trim() || "Manual",
       source: "manual",
     };
-    setState((s) => ({ ...s, txs: [tx, ...s.txs] }));
+    patchState((s) => ({ ...s, txs: [tx, ...s.txs] }));
     setTxDraft(newTx({ kind: txDraft.kind, category: txDraft.category }));
     setShowTxForm(false);
   }
 
   function loadDemo() {
     const seed = demoSeedTxs();
-    setState((s) => {
+    patchState((s) => {
       const merged = mergeTxs(s.txs, seed);
       const accounts = s.accounts.map((a) => {
         if (a.kind === "checking")
@@ -1072,7 +1055,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
 
   function addGoal() {
     if (!goalDraft.name.trim() || goalDraft.target <= 0) return;
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       goals: [...(s.goals || []), { ...goalDraft, id: newGoal().id }],
     }));
@@ -1083,45 +1066,45 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
     id: string,
     patch: Partial<{ name: string; target: number; saved: number }>
   ) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       goals: (s.goals || []).map((g) => (g.id === id ? { ...g, ...patch } : g)),
     }));
   }
 
   function removeGoal(id: string) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       goals: (s.goals || []).filter((g) => g.id !== id),
     }));
   }
 
   function removeTx(id: string) {
-    setState((s) => ({ ...s, txs: s.txs.filter((t) => t.id !== id) }));
+    patchState((s) => ({ ...s, txs: s.txs.filter((t) => t.id !== id) }));
   }
 
   function patchTx(id: string, patch: Partial<FinanceTx>) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       txs: s.txs.map((t) => (t.id === id ? { ...t, ...patch } : t)),
     }));
   }
 
   function onCsvFile(file: File | null) {
-    if (!file) return;
+    if (!file || !state) return;
     const reader = new FileReader();
     reader.onload = () => {
       const text = String(reader.result || "");
       const existing = fingerprintsFromTxs(state.txs);
       const result = parseBankCsv(text, {
         existingFingerprints: existing,
-        accountId: state.accounts[0]?.id || null,
+        accountId: state.accounts[0]?.id || undefined,
       });
       if (result.errors.length && !result.added.length) {
         setImportNote(result.errors.join(" · "));
         return;
       }
-      setState((s) => {
+      patchState((s) => {
         const merged = mergeTxs(s.txs, result.added);
         return { ...s, txs: merged.txs };
       });
@@ -1134,6 +1117,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function downloadCsv() {
+    if (!state) return;
     const csv = exportLedgerCsv(state.txs);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -1145,7 +1129,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function answerMoney(q: string) {
-    if (!q.trim()) return;
+    if (!q.trim() || !state) return;
     setAskA(
       answerFromBrief(q, brief, {
         worth,
@@ -1202,6 +1186,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   async function plaidSync(itemId?: string, institutionName?: string) {
+    if (!state) return;
     setPlaidBusy(true);
     setPlaidNote("Syncing…");
     try {
@@ -1239,7 +1224,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
         item_id?: string;
       };
       if (!res.ok) throw new Error(data.error || "Sync failed");
-      setState((s) => {
+      patchState((s) => {
         let accounts = [...s.accounts];
         for (const pa of data.accounts || []) {
           const idx = accounts.findIndex(
