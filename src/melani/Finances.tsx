@@ -20,6 +20,25 @@ import {
 } from "./financeCredit";
 import { FINANCE_CATEGORIES } from "./financeCategorize";
 import { exportLedgerCsv, parseBankCsv } from "./financeCsv";
+import { importOfx, looksLikeOfx } from "./financeOfx";
+import {
+  applyTransferPair,
+  detectTransferPairs,
+  monthTrueIncome,
+  monthTrueSpend,
+  type TransferPair,
+} from "./financeTransfers";
+import {
+  buildWorthSeries,
+  explainWorthChange,
+  loadWorth,
+  newValuationItem,
+  saveWorth,
+  valuationAt,
+  worthComposition,
+  type ValuationItem,
+  type WorthState,
+} from "./financeNetWorth";
 import {
   answerFromBrief,
   buildSmartBrief,
@@ -43,7 +62,6 @@ import {
   newAccount,
   newGoal,
   newTx,
-  recentMonthKeys,
   runningBalanceMap,
   bookkeeperGaps,
   saveFinance,
@@ -52,7 +70,6 @@ import {
   savingsRate,
   scaleBudget,
   spentByCategory,
-  topMerchants,
   autoBudgetFromHistory,
   budgetFromLastMonth,
   type AccountKind,
@@ -116,6 +133,7 @@ type PlaidStatus = {
 
 type TabId =
   | "overview"
+  | "worth"
   | "transactions"
   | "plan"
   | "goals"
@@ -128,6 +146,7 @@ type SortKey = "date" | "merchant" | "category" | "amount" | "kind";
 const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "transactions", label: "Ledger", icon: "☰" },
   { id: "overview", label: "Books", icon: "◉" },
+  { id: "worth", label: "Worth", icon: "◆" },
   { id: "plan", label: "Plan", icon: "▦" },
   { id: "goals", label: "Goals", icon: "◎" },
   { id: "insights", label: "Review", icon: "◈" },
@@ -225,7 +244,7 @@ function dailyBars(txs: FinanceTx[], ym: string) {
   return out;
 }
 
-export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
+export function Finances(_props: { onGo?: (pageId: string) => void }) {
   /**
    * Encryption is optional (off by default).
    * Only if a vault was already set up: show unlock. Otherwise open ledger plain.
@@ -258,6 +277,14 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
     return () =>
       window.removeEventListener(FINANCE_EXTERNAL_RESTORE_EVENT, onRestore);
   }, []);
+
+  /** Apply an update only when books are loaded (vault unlocked). */
+  const patchState = useCallback(
+    (fn: (s: FinanceState) => FinanceState) => {
+      setState((s) => (s ? fn(s) : s));
+    },
+    []
+  );
   // Ledger first — a meticulous bookkeeper opens the daybook, not a dashboard
   const [tab, setTab] = useState<TabId>("transactions");
   const [showTxForm, setShowTxForm] = useState(false);
@@ -277,8 +304,27 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   const [goalDraft, setGoalDraft] = useState(() =>
     newGoal({ name: "Emergency fund", target: 5000 })
   );
-  const [sortKey, setSortKey] = useState<SortKey>("date");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [worthStore, setWorthStore] = useState<WorthState>(() => loadWorth());
+  const [valDraft, setValDraft] = useState<{
+    name: string;
+    side: "asset" | "liability";
+    assetClass: ValuationItem["assetClass"];
+    value: string;
+    source: string;
+    confidence: "low" | "medium" | "high";
+  }>({
+    name: "",
+    side: "asset",
+    assetClass: "other",
+    value: "",
+    source: "",
+    confidence: "medium",
+  });
+  const [pointDrafts, setPointDrafts] = useState<
+    Record<string, { value: string; source: string }>
+  >({});
+  const [sortKey] = useState<SortKey>("date");
+  const [sortDir] = useState<"asc" | "desc">("desc");
   const [askQ, setAskQ] = useState("");
   const [askA, setAskA] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -350,7 +396,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
       return;
     }
     if (known == null || known === 0) {
-      setState((s) => {
+      patchState((s) => {
         if (!s) return s;
         return {
           ...s,
@@ -530,7 +576,6 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
 
   const series = useMemo(() => monthlySeries(txs, 6), [txs]);
   const bars = useMemo(() => dailyBars(txs, ym), [txs, ym]);
-  const merchants = useMemo(() => topMerchants(txs, ym, 8), [txs, ym]);
 
   const budget = state?.budget || [];
   const categories = useMemo(() => {
@@ -848,16 +893,137 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
     return m;
   }, [bars]);
 
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir(key === "date" || key === "amount" ? "desc" : "asc");
+  useEffect(() => {
+    saveWorth(worthStore);
+  }, [worthStore]);
+
+  /** Likely transfer pairs — proposals only, applied on click */
+  const transferPairs = useMemo(
+    () => (state ? detectTransferPairs(state.txs) : []),
+    [state]
+  );
+
+  function applyPair(pair: TransferPair) {
+    patchState((s) => ({ ...s, txs: applyTransferPair(s.txs, pair) }));
+    setImportNote(
+      `Marked ${pair.outTx.merchant || pair.outTx.note || "pair"} as a transfer — excluded from income & spending.`
+    );
+  }
+
+  /** Net-worth timeline (12 month-ends; past bank balances reconstructed) */
+  const worthSeries = useMemo(
+    () =>
+      state ? buildWorthSeries(state.accounts, state.txs, worthStore, 12) : [],
+    [state, worthStore]
+  );
+  const worthExplain = useMemo(
+    () => explainWorthChange(worthSeries, state?.txs || []),
+    [worthSeries, state]
+  );
+  const composition = useMemo(
+    () => (state ? worthComposition(state.accounts, worthStore) : null),
+    [state, worthStore]
+  );
+  const trueIncome = useMemo(
+    () => (state ? monthTrueIncome(state.txs, ym) : 0),
+    [state, ym]
+  );
+  const trueSpend = useMemo(
+    () => (state ? monthTrueSpend(state.txs, ym) : 0),
+    [state, ym]
+  );
+  const worthChart = useMemo(() => {
+    if (worthSeries.length < 2) return null;
+    const w = 640;
+    const h = 190;
+    const padL = 8;
+    const padR = 8;
+    const padT = 14;
+    const padB = 26;
+    const vals = worthSeries.map((sn) => sn.total);
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const span = Math.max(1, max - min);
+    const xAt = (i: number) =>
+      padL + (i / Math.max(1, worthSeries.length - 1)) * (w - padL - padR);
+    const yAt = (v: number) => padT + (1 - (v - min) / span) * (h - padT - padB);
+    const pts = worthSeries
+      .map((sn, i) => `${xAt(i).toFixed(1)},${yAt(sn.total).toFixed(1)}`)
+      .join(" ");
+    const area = `${pts} ${xAt(worthSeries.length - 1).toFixed(1)},${(h - padB).toFixed(1)} ${padL.toFixed(1)},${(h - padB).toFixed(1)}`;
+    return { w, h, pts, area, min, max };
+  }, [worthSeries]);
+
+  function addValuationItem() {
+    const value = Number(valDraft.value);
+    if (!valDraft.name.trim() || !Number.isFinite(value) || value <= 0) {
+      setImportNote("A valuation needs a name and a positive value.");
+      return;
     }
+    const today = new Date().toISOString().slice(0, 10);
+    const item = newValuationItem({
+      name: valDraft.name.trim(),
+      side: valDraft.side,
+      assetClass: valDraft.assetClass,
+      points: [
+        {
+          date: today,
+          value: Math.round(value * 100) / 100,
+          source: valDraft.source.trim() || "manual entry",
+          confidence: valDraft.confidence,
+        },
+      ],
+    });
+    setWorthStore((s) => ({ ...s, items: [...s.items, item] }));
+    setValDraft({
+      name: "",
+      side: "asset",
+      assetClass: "other",
+      value: "",
+      source: "",
+      confidence: "medium",
+    });
+  }
+
+  function addValuationPoint(itemId: string) {
+    const draft = pointDrafts[itemId];
+    const value = Number(draft?.value);
+    if (!draft || !Number.isFinite(value) || value <= 0) {
+      setImportNote("Enter a positive value to record a new valuation point.");
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    setWorthStore((s) => ({
+      ...s,
+      items: s.items.map((it) =>
+        it.id === itemId
+          ? {
+              ...it,
+              points: [
+                ...it.points.filter((pt) => pt.date !== today),
+                {
+                  date: today,
+                  value: Math.round(value * 100) / 100,
+                  source: draft.source.trim() || "manual entry",
+                  confidence: "medium" as const,
+                },
+              ].sort((a, b) => a.date.localeCompare(b.date)),
+            }
+          : it
+      ),
+    }));
+    setPointDrafts((d) => ({ ...d, [itemId]: { value: "", source: "" } }));
+  }
+
+  function removeValuationItem(itemId: string) {
+    setWorthStore((s) => ({
+      ...s,
+      items: s.items.filter((i) => i.id !== itemId),
+    }));
   }
 
   function patchCreditProfile(patch: Partial<CreditProfile>) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       creditProfile: {
         ...DEFAULT_CREDIT_PROFILE,
@@ -910,7 +1076,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
       setImportNote("Paste failed — use Date · Merchant · Amount · Category");
       return;
     }
-    setState((s) => {
+    patchState((s) => {
       const merged = mergeTxs(s.txs, added);
       return { ...s, txs: merged.txs };
     });
@@ -926,13 +1092,14 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
       merchant: "",
       source: "manual",
     });
-    setState((s) => ({ ...s, txs: [tx, ...s.txs] }));
+    patchState((s) => ({ ...s, txs: [tx, ...s.txs] }));
   }
 
+  const watchlist = state?.watchlist;
   const loadQuotes = useCallback(async () => {
-    if (!state.watchlist.length) return;
+    if (!watchlist || !watchlist.length) return;
     try {
-      const q = state.watchlist.map((s) => encodeURIComponent(s)).join(",");
+      const q = watchlist.map((s) => encodeURIComponent(s)).join(",");
       const res = await fetch(`/api/market/quote?symbols=${q}`);
       if (!res.ok) return;
       const data = (await res.json()) as { quotes?: Record<string, unknown>[] };
@@ -940,50 +1107,36 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
     } catch {
       /* optional */
     }
-  }, [state.watchlist]);
+  }, [watchlist]);
 
   useEffect(() => {
     void loadQuotes();
   }, [loadQuotes]);
 
   function patchAccount(id: string, patch: Partial<FinanceAccount>) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       accounts: s.accounts.map((a) => (a.id === id ? { ...a, ...patch } : a)),
     }));
   }
 
   function removeAccount(id: string) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       accounts: s.accounts.filter((a) => a.id !== id),
     }));
   }
 
   function addAccount() {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       accounts: [...s.accounts, newAccount({ name: "New account" })],
     }));
   }
 
-  function patchBudget(category: string, planned: number) {
-    setState((s) => {
-      const exists = s.budget.some((b) => b.category === category);
-      return {
-        ...s,
-        budget: exists
-          ? s.budget.map((b) =>
-              b.category === category ? { ...b, planned } : b
-            )
-          : [...s.budget, { category, planned }],
-      };
-    });
-  }
-
   /** Zero typing — plan built from your real spend history */
   function autoBuildPlan() {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       budget: autoBudgetFromHistory(s.txs, s.budget, 3),
     }));
@@ -994,7 +1147,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function planMatchLastMonth() {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       budget: budgetFromLastMonth(s.txs, s.budget),
     }));
@@ -1003,7 +1156,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function planTighten() {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       budget: scaleBudget(s.budget, 0.9),
     }));
@@ -1011,7 +1164,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function planLoosen() {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       budget: scaleBudget(s.budget, 1.1),
     }));
@@ -1019,7 +1172,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function nudgeBudget(category: string, delta: number) {
-    setState((s) => {
+    patchState((s) => {
       const cur = s.budget.find((b) => b.category === category)?.planned || 0;
       const next = Math.max(0, Math.ceil((cur + delta) / 5) * 5);
       const exists = s.budget.some((b) => b.category === category);
@@ -1044,14 +1197,14 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
       merchant: txDraft.merchant || txDraft.note.trim() || "Manual",
       source: "manual",
     };
-    setState((s) => ({ ...s, txs: [tx, ...s.txs] }));
+    patchState((s) => ({ ...s, txs: [tx, ...s.txs] }));
     setTxDraft(newTx({ kind: txDraft.kind, category: txDraft.category }));
     setShowTxForm(false);
   }
 
   function loadDemo() {
     const seed = demoSeedTxs();
-    setState((s) => {
+    patchState((s) => {
       const merged = mergeTxs(s.txs, seed);
       const accounts = s.accounts.map((a) => {
         if (a.kind === "checking")
@@ -1092,7 +1245,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
 
   function addGoal() {
     if (!goalDraft.name.trim() || goalDraft.target <= 0) return;
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       goals: [...(s.goals || []), { ...goalDraft, id: newGoal().id }],
     }));
@@ -1103,45 +1256,52 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
     id: string,
     patch: Partial<{ name: string; target: number; saved: number }>
   ) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       goals: (s.goals || []).map((g) => (g.id === id ? { ...g, ...patch } : g)),
     }));
   }
 
   function removeGoal(id: string) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       goals: (s.goals || []).filter((g) => g.id !== id),
     }));
   }
 
   function removeTx(id: string) {
-    setState((s) => ({ ...s, txs: s.txs.filter((t) => t.id !== id) }));
+    patchState((s) => ({ ...s, txs: s.txs.filter((t) => t.id !== id) }));
   }
 
   function patchTx(id: string, patch: Partial<FinanceTx>) {
-    setState((s) => ({
+    patchState((s) => ({
       ...s,
       txs: s.txs.map((t) => (t.id === id ? { ...t, ...patch } : t)),
     }));
   }
 
   function onCsvFile(file: File | null) {
-    if (!file) return;
+    if (!file || !state) return;
     const reader = new FileReader();
     reader.onload = () => {
       const text = String(reader.result || "");
       const existing = fingerprintsFromTxs(state.txs);
-      const result = parseBankCsv(text, {
-        existingFingerprints: existing,
-        accountId: state.accounts[0]?.id || null,
-      });
+      const isOfx =
+        /\.(ofx|qfx)$/i.test(file.name || "") || looksLikeOfx(text);
+      const result = isOfx
+        ? importOfx(text, {
+            existingFingerprints: existing,
+            accountId: state.accounts[0]?.id || undefined,
+          })
+        : parseBankCsv(text, {
+            existingFingerprints: existing,
+            accountId: state.accounts[0]?.id || undefined,
+          });
       if (result.errors.length && !result.added.length) {
         setImportNote(result.errors.join(" · "));
         return;
       }
-      setState((s) => {
+      patchState((s) => {
         const merged = mergeTxs(s.txs, result.added);
         return { ...s, txs: merged.txs };
       });
@@ -1154,6 +1314,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function downloadCsv() {
+    if (!state) return;
     const csv = exportLedgerCsv(state.txs);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -1165,7 +1326,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   function answerMoney(q: string) {
-    if (!q.trim()) return;
+    if (!q.trim() || !state) return;
     setAskA(
       answerFromBrief(q, brief, {
         worth,
@@ -1222,6 +1383,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   }
 
   async function plaidSync(itemId?: string, institutionName?: string) {
+    if (!state) return;
     setPlaidBusy(true);
     setPlaidNote("Syncing…");
     try {
@@ -1259,7 +1421,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
         item_id?: string;
       };
       if (!res.ok) throw new Error(data.error || "Sync failed");
-      setState((s) => {
+      patchState((s) => {
         let accounts = [...s.accounts];
         for (const pa of data.accounts || []) {
           const idx = accounts.findIndex(
@@ -1519,7 +1681,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
         <input
           ref={fileRef}
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,.ofx,.qfx,text/csv"
           hidden
           onChange={(e) => onCsvFile(e.target.files?.[0] || null)}
         />
@@ -2338,6 +2500,38 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
         {/* ════════ LEDGER — full lists always, months next to filters ════════ */}
         {tab === "transactions" ? (
           <div className="wd-page">
+            {transferPairs.length ? (
+              <section className="wd-panel" aria-label="Likely transfers">
+                <div className="wd-panel-head">
+                  <h2>Likely transfers · {transferPairs.length}</h2>
+                </div>
+                <p className="wd-muted">
+                  Matched money-out and money-in rows. Marking a pair as
+                  Transfers keeps income and spending honest. Nothing changes
+                  without your approval.
+                </p>
+                <ul className="wd-acct-list">
+                  {transferPairs.slice(0, 6).map((pr) => (
+                    <li key={`${pr.outTx.id}-${pr.inTx.id}`}>
+                      {pr.outTx.date} · {pr.outTx.merchant || pr.outTx.note}{" "}
+                      → {pr.inTx.merchant || pr.inTx.note} ·{" "}
+                      <strong>{moneyCents(pr.outTx.amount)}</strong>
+                      <span className="wd-muted">
+                        {" "}· {pr.reason} · confidence{" "}
+                        {Math.round(pr.confidence * 100)}%
+                      </span>{" "}
+                      <button
+                        type="button"
+                        className="wd-btn"
+                        onClick={() => applyPair(pr)}
+                      >
+                        Mark as transfer
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
             <section className="wd-panel">
               <div className="wd-panel-head">
                 <div>
@@ -3325,6 +3519,339 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
                     ) : null}
                   </li>
                 ))}
+              </ul>
+            </section>
+          </div>
+        ) : null}
+
+        {/* ════════ WORTH (net-worth timeline) ════════ */}
+        {tab === "worth" ? (
+          <div className="wd-page">
+            <section className="wd-panel" aria-label="Net worth timeline">
+              <div className="wd-panel-head">
+                <div>
+                  <h2>Net worth over time</h2>
+                  <p className="wd-muted">
+                    Assets minus liabilities at each month-end. Past bank
+                    balances are reconstructed from the ledger (labeled
+                    estimated); manual valuations carry forward from their last
+                    recorded date — nothing is invented between points.
+                  </p>
+                </div>
+              </div>
+              {worthChart ? (
+                <svg
+                  viewBox={`0 0 ${worthChart.w} ${worthChart.h}`}
+                  className="wd-chart"
+                  role="img"
+                  aria-label="Net worth by month, details in the table below"
+                  style={{ width: "100%", height: "auto" }}
+                >
+                  <polygon
+                    points={worthChart.area}
+                    fill="currentColor"
+                    opacity="0.08"
+                  />
+                  <polyline
+                    points={worthChart.pts}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <text x="8" y="11" fontSize="10" opacity="0.7">
+                    {money(worthChart.max)}
+                  </text>
+                  <text
+                    x="8"
+                    y={worthChart.h - 8}
+                    fontSize="10"
+                    opacity="0.7"
+                  >
+                    {money(worthChart.min)}
+                  </text>
+                </svg>
+              ) : (
+                <p className="wd-muted">
+                  Add transactions or valuations to build the timeline.
+                </p>
+              )}
+              {worthExplain ? (
+                <div className="wd-alerts">
+                  <p>
+                    <strong>Why it changed:</strong> {worthExplain.text}
+                  </p>
+                  {worthExplain.topDrivers.length ? (
+                    <ul className="wd-acct-list">
+                      {worthExplain.topDrivers.map((d) => (
+                        <li key={d.label}>
+                          {d.label}:{" "}
+                          <strong>
+                            {d.amount >= 0 ? "+" : "−"}
+                            {moneyCents(Math.abs(d.amount))}
+                          </strong>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="wd-acct-table-wrap">
+                <table className="wd-acct-table">
+                  <caption className="wd-muted">
+                    Month-end snapshots (current month = today)
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Date</th>
+                      <th scope="col">Bank net</th>
+                      <th scope="col">Valuations</th>
+                      <th scope="col">Total</th>
+                      <th scope="col">Basis</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {worthSeries.map((sn) => (
+                      <tr key={sn.date}>
+                        <td>{sn.date}</td>
+                        <td>{moneyCents(sn.bankNet)}</td>
+                        <td>{moneyCents(sn.valuationNet)}</td>
+                        <td>
+                          <strong>{moneyCents(sn.total)}</strong>
+                        </td>
+                        <td className="wd-muted">
+                          {sn.status}
+                          {sn.carriedForward.length
+                            ? ` · carried forward: ${sn.carriedForward.join(", ")}`
+                            : ""}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="wd-panel" aria-label="Net worth composition">
+              <div className="wd-panel-head">
+                <h2>Composition today</h2>
+              </div>
+              {composition ? (
+                <ul className="wd-acct-list">
+                  <li>
+                    Liquid cash (cash + checking + savings):{" "}
+                    <strong>{moneyCents(composition.liquid)}</strong>
+                  </li>
+                  <li>
+                    Invested accounts:{" "}
+                    <strong>{moneyCents(composition.invested)}</strong>
+                  </li>
+                  {composition.otherBankAssets ? (
+                    <li>
+                      Other accounts:{" "}
+                      <strong>{moneyCents(composition.otherBankAssets)}</strong>
+                    </li>
+                  ) : null}
+                  <li>
+                    Manual asset valuations:{" "}
+                    <strong>{moneyCents(composition.valuationAssets)}</strong>
+                  </li>
+                  <li>
+                    Credit owed:{" "}
+                    <strong>−{moneyCents(composition.debt)}</strong>
+                  </li>
+                  {composition.valuationLiabilities ? (
+                    <li>
+                      Manual liabilities:{" "}
+                      <strong>
+                        −{moneyCents(composition.valuationLiabilities)}
+                      </strong>
+                    </li>
+                  ) : null}
+                  <li>
+                    Total net worth:{" "}
+                    <strong>{moneyCents(composition.total)}</strong>
+                  </li>
+                </ul>
+              ) : null}
+              <p className="wd-muted">
+                This month with transfers &amp; card payments excluded: income{" "}
+                {moneyCents(trueIncome)} · spending {moneyCents(trueSpend)}.
+              </p>
+            </section>
+
+            <section className="wd-panel" aria-label="Manual valuations">
+              <div className="wd-panel-head">
+                <h2>Manual valuations</h2>
+              </div>
+              <p className="wd-muted">
+                Property, vehicles, business, collectibles — recorded by you
+                with a date and source. Never auto-updated.
+              </p>
+              <div className="wd-form">
+                <label>
+                  Name
+                  <input
+                    value={valDraft.name}
+                    onChange={(e) =>
+                      setValDraft((d) => ({ ...d, name: e.target.value }))
+                    }
+                    placeholder="e.g. Honda Civic"
+                  />
+                </label>
+                <label>
+                  Type
+                  <select
+                    value={valDraft.side}
+                    onChange={(e) =>
+                      setValDraft((d) => ({
+                        ...d,
+                        side: e.target.value as "asset" | "liability",
+                      }))
+                    }
+                  >
+                    <option value="asset">Asset</option>
+                    <option value="liability">Liability</option>
+                  </select>
+                </label>
+                <label>
+                  Class
+                  <select
+                    value={valDraft.assetClass}
+                    onChange={(e) =>
+                      setValDraft((d) => ({
+                        ...d,
+                        assetClass: e.target
+                          .value as ValuationItem["assetClass"],
+                      }))
+                    }
+                  >
+                    <option value="real-estate">Real estate</option>
+                    <option value="vehicle">Vehicle</option>
+                    <option value="business">Business</option>
+                    <option value="collectible">Collectible</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+                <label>
+                  Value
+                  <input
+                    inputMode="decimal"
+                    value={valDraft.value}
+                    onChange={(e) =>
+                      setValDraft((d) => ({ ...d, value: e.target.value }))
+                    }
+                    placeholder="0.00"
+                  />
+                </label>
+                <label>
+                  Source
+                  <input
+                    value={valDraft.source}
+                    onChange={(e) =>
+                      setValDraft((d) => ({ ...d, source: e.target.value }))
+                    }
+                    placeholder="e.g. KBB, my estimate"
+                  />
+                </label>
+                <label>
+                  Confidence
+                  <select
+                    value={valDraft.confidence}
+                    onChange={(e) =>
+                      setValDraft((d) => ({
+                        ...d,
+                        confidence: e.target.value as
+                          | "low"
+                          | "medium"
+                          | "high",
+                      }))
+                    }
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="wd-btn wd-btn-primary"
+                  onClick={addValuationItem}
+                >
+                  Add valuation
+                </button>
+              </div>
+              <ul className="wd-acct-list">
+                {worthStore.items.map((item) => {
+                  const latest = valuationAt(
+                    item,
+                    new Date().toISOString().slice(0, 10)
+                  );
+                  const draft = pointDrafts[item.id] || {
+                    value: "",
+                    source: "",
+                  };
+                  return (
+                    <li key={item.id}>
+                      <strong>{item.name}</strong> · {item.side} ·{" "}
+                      {item.assetClass}
+                      {latest ? (
+                        <>
+                          {" "}· {moneyCents(latest.value)}{" "}
+                          <span className="wd-muted">
+                            as of {latest.point.date} (
+                            {latest.point.source || "no source"},{" "}
+                            {latest.point.confidence} confidence
+                            {latest.carriedForward ? ", carried forward" : ""})
+                          </span>
+                        </>
+                      ) : (
+                        " · no valuation yet"
+                      )}{" "}
+                      <input
+                        aria-label={`New value for ${item.name}`}
+                        inputMode="decimal"
+                        placeholder="New value"
+                        value={draft.value}
+                        onChange={(e) =>
+                          setPointDrafts((d) => ({
+                            ...d,
+                            [item.id]: { ...draft, value: e.target.value },
+                          }))
+                        }
+                        style={{ width: 90 }}
+                      />{" "}
+                      <input
+                        aria-label={`Source for ${item.name}`}
+                        placeholder="Source"
+                        value={draft.source}
+                        onChange={(e) =>
+                          setPointDrafts((d) => ({
+                            ...d,
+                            [item.id]: { ...draft, source: e.target.value },
+                          }))
+                        }
+                        style={{ width: 110 }}
+                      />{" "}
+                      <button
+                        type="button"
+                        className="wd-btn"
+                        onClick={() => addValuationPoint(item.id)}
+                      >
+                        Record
+                      </button>{" "}
+                      <button
+                        type="button"
+                        className="wd-btn"
+                        onClick={() => removeValuationItem(item.id)}
+                      >
+                        Delete
+                      </button>
+                    </li>
+                  );
+                })}
+                {worthStore.items.length === 0 ? (
+                  <li className="wd-muted">No manual valuations yet.</li>
+                ) : null}
               </ul>
             </section>
           </div>

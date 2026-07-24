@@ -5,9 +5,6 @@
  */
 
 import {
-  monthExpense,
-  monthIncome,
-  monthKey,
   money,
   type FinanceState,
   type FinanceTx,

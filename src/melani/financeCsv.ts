@@ -108,7 +108,7 @@ function mapHeaders(headers: string[]): ColMap {
     )
       map.desc = i;
     if (!map.name && /^(name|merchant|payee|vendor)$/.test(n)) map.name = i;
-    if (!map.category && /^(category|type)$/.test(n)) map.category = i;
+    if (!map.category && n === "category") map.category = i;
   });
   return map;
 }
