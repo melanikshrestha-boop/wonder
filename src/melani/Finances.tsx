@@ -61,7 +61,7 @@ import {
   detectSubscriptions,
   CADENCE_LABEL,
 } from "./subscriptions";
-import { MonthBookCharts } from "./FinCharts";
+import { MonthBookCharts, LabeledLineChart } from "./FinCharts";
 import { FinanceCopilot } from "./FinanceCopilot";
 import type { CopilotContext } from "./financeCopilot";
 import {
@@ -89,7 +89,6 @@ import {
   newTx,
   runningBalanceMap,
   txTypeOf,
-  bookkeeperGaps,
   saveFinance,
   seedFinanceUndoBaseline,
   FINANCE_EXTERNAL_RESTORE_EVENT,
@@ -955,26 +954,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   /** Running balance after each tx (full books, not just filter) */
   const balanceById = useMemo(() => runningBalanceMap(txs), [txs]);
 
-  /** Rockefeller discipline score + open gaps */
-  const gaps = useMemo(
-    () =>
-      state
-        ? bookkeeperGaps(state, ym)
-        : bookkeeperGaps(
-            {
-              version: 2,
-              accounts: [],
-              txs: [],
-              budget: [],
-              watchlist: [],
-              goals: [],
-              creditProfile: null,
-            },
-            ym
-          ),
-    [state, ym]
-  );
-
   const maxBar = useMemo(() => {
     const m = Math.max(1, ...bars.map((b) => Math.abs(b.net)));
     return m;
@@ -1019,28 +998,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     () => (state ? monthTrueSpend(state.txs, ym) : 0),
     [state, ym]
   );
-  const worthChart = useMemo(() => {
-    if (worthSeries.length < 2) return null;
-    const w = 640;
-    const h = 190;
-    const padL = 8;
-    const padR = 8;
-    const padT = 14;
-    const padB = 26;
-    const vals = worthSeries.map((sn) => sn.total);
-    const min = Math.min(...vals);
-    const max = Math.max(...vals);
-    const span = Math.max(1, max - min);
-    const xAt = (i: number) =>
-      padL + (i / Math.max(1, worthSeries.length - 1)) * (w - padL - padR);
-    const yAt = (v: number) => padT + (1 - (v - min) / span) * (h - padT - padB);
-    const pts = worthSeries
-      .map((sn, i) => `${xAt(i).toFixed(1)},${yAt(sn.total).toFixed(1)}`)
-      .join(" ");
-    const area = `${pts} ${xAt(worthSeries.length - 1).toFixed(1)},${(h - padB).toFixed(1)} ${padL.toFixed(1)},${(h - padB).toFixed(1)}`;
-    return { w, h, pts, area, min, max };
-  }, [worthSeries]);
-
   function addValuationItem() {
     const value = Number(valDraft.value);
     if (!valDraft.name.trim() || !Number.isFinite(value) || value <= 0) {
@@ -1678,67 +1635,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
           ) : null}
         </header>
 
-        {/* Discipline + reinvest doctrine — always on the desk */}
-        <section className="wd-discipline" aria-label="Ruthless bookkeeper">
-          <div className="wd-discipline-score">
-            <span>Ruthless</span>
-            <strong
-              className={
-                brief.reinvest.ruthlessness >= 80
-                  ? "is-good"
-                  : brief.reinvest.ruthlessness >= 50
-                    ? "is-mid"
-                    : "is-low"
-              }
-            >
-              {brief.reinvest.ruthlessness}
-            </strong>
-          </div>
-          <ul className="wd-discipline-list">
-            <li
-              className={
-                brief.reinvest.deployNow > 0 ? "is-open" : "is-done"
-              }
-            >
-              {brief.reinvest.deployNow > 0
-                ? `Deploy ${moneyCents(brief.reinvest.deployNow)} to Invest (target ${Math.round(brief.reinvest.targetRate * 100)}%)`
-                : `Reinvest target met · keep rate ${
-                    brief.reinvest.actualRate == null
-                      ? "—"
-                      : `${Math.round(brief.reinvest.actualRate * 100)}%`
-                  }`}
-            </li>
-            <li className={gaps.noTxThisMonth ? "is-open" : "is-done"}>
-              {gaps.noTxThisMonth
-                ? "No entries this month — open the ledger"
-                : `${state.txs.filter((t) => t.date.startsWith(ym)).length} entries this period`}
-            </li>
-            <li className={gaps.uncategorized > 0 ? "is-open" : "is-done"}>
-              {gaps.uncategorized > 0
-                ? `${gaps.uncategorized} uncategorized — name every line`
-                : "Every line categorized"}
-            </li>
-            <li className={gaps.blankMerchant > 0 ? "is-open" : "is-done"}>
-              {gaps.blankMerchant > 0
-                ? `${gaps.blankMerchant} blank payees — write who got the money`
-                : "Every payee named"}
-            </li>
-            <li
-              className={
-                !state.accounts.some((a) => a.kind === "invest")
-                  ? "is-open"
-                  : "is-done"
-              }
-            >
-              {state.accounts.some((a) => a.kind === "invest")
-                ? `Invest book ${moneyCents(brief.reinvest.investedBalance)}`
-                : "Add an Invest account — checking is not compounding"}
-            </li>
-          </ul>
-        </section>
-
-        {/* In-page subnav — same pattern as Fitness (Sleep · Meals · Gym) */}
-        {/* Section tabs — plain words, no middle dots (user preference) */}
+        {/* Section tabs */}
         <nav className="wd-subnav wd-subnav-plain" aria-label="Finance sections">
           {NAV.map((n) => (
             <button
@@ -1861,18 +1758,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   {accounting.modules.length} ok · {ym}
                 </span>
               </div>
-              <p className="wd-muted" style={{ marginBottom: 10 }}>
-                Every module below runs on your real ledger. This table is the
-                desk checklist — not decoration.
-              </p>
               <div className="wd-acct-table-wrap">
                 <table className="wd-acct-table">
                   <thead>
                     <tr>
                       <th>Module</th>
-                      <th>What it does</th>
-                      <th>Live status / metric</th>
-                      <th>Accounting concept</th>
+                      <th>Status</th>
+                      <th className="num">Metric</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1884,12 +1776,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                             {m.ok ? "OK" : "FIX"}
                           </span>
                         </td>
-                        <td>{m.whatItDoes}</td>
-                        <td>
-                          <div>{m.status}</div>
-                          <div className="wd-muted">{m.metric}</div>
-                        </td>
-                        <td>{m.concept}</td>
+                        <td>{m.status}</td>
+                        <td className="num">{m.metric}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2374,9 +2262,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   </div>
                   <p className="wd-safe-num">{money(safeToSpend)}</p>
                   <p className="wd-muted">
-                    After essentials, debt floor, and {Math.round(brief.reinvest.targetRate * 100)}%
-                    reinvest. Still to deploy{" "}
-                    {money(brief.reinvest.deployNow)} · cash {money(cash)}
+                    deploy {money(brief.reinvest.deployNow)} · cash {money(cash)}
                   </p>
                 </section>
                 <section className="wd-panel">
@@ -2582,11 +2468,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 <div className="wd-panel-head">
                   <h2>Likely transfers · {transferPairs.length}</h2>
                 </div>
-                <p className="wd-muted">
-                  Matched money-out and money-in rows. Marking a pair as
-                  Transfers keeps income and spending honest. Nothing changes
-                  without your approval.
-                </p>
                 <ul className="wd-acct-list">
                   {transferPairs.slice(0, 6).map((pr) => (
                     <li key={`${pr.outTx.id}-${pr.inTx.id}`}>
@@ -2905,13 +2786,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             {/* Smart budget engine — $500/mo hard limit */}
             <section className="wd-panel" aria-label="Smart budget">
               <div className="wd-panel-head">
-                <div>
-                  <h2>Smart budget · ${MONTHLY_LIMIT}/mo limit</h2>
-                  <p className="wd-muted">
-                    Live pace, forecast, and where to cut — computed from the
-                    ledger, no typing.
-                  </p>
-                </div>
+                <h2>Budget · ${MONTHLY_LIMIT}/mo</h2>
               </div>
 
               {/* Big numbers */}
@@ -3024,13 +2899,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             {/* Annual books grid — Excel-style, auto-built from ledger */}
             <section className="wd-panel" aria-label="Annual books">
               <div className="wd-panel-head">
-                <div>
-                  <h2>Annual books · {annualBook.year}</h2>
-                  <p className="wd-muted">
-                    Income · savings · expenses by month, auto-filled from the
-                    ledger. Totals compute themselves.
-                  </p>
-                </div>
+                <h2>Annual books · {annualBook.year}</h2>
                 <button
                   type="button"
                   className="wd-btn"
@@ -3594,9 +3463,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 </span>
               </div>
               <p className="wd-safe-num">{creditReport.estimate}</p>
-              <p className="wd-muted">
-                {creditReport.band} · {creditReport.disclaimer}
-              </p>
+              <p className="wd-muted">{creditReport.band}</p>
               <p style={{ marginTop: 8 }}>
                 <strong>{brief.adept.levelLabel}</strong>
               </p>
@@ -3781,10 +3648,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 <h2>Become financially adept</h2>
                 <span className="wd-chip">{brief.adept.level}</span>
               </div>
-              <p className="wd-muted">
-                Rules + drills from YOUR books and score {brief.adept.creditScore}.
-                Do the work — the desk only measures.
-              </p>
 
               <h3 style={{ fontSize: 13, marginTop: 12 }}>Leaks (fix these)</h3>
               <ul className="wd-acct-list">
@@ -3879,13 +3742,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                     </li>
                   ))}
                 </ul>
-                {creditReport.scoreSource === "official" ? (
-                  <p className="wd-muted" style={{ marginTop: 8 }}>
-                    Model (levers only) would guess ~
-                    {creditReport.modelEstimate}. We show your real{" "}
-                    {creditReport.estimate} instead.
-                  </p>
-                ) : null}
               </section>
               <section className="wd-panel">
                 <div className="wd-panel-head">
@@ -3979,10 +3835,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               <div className="wd-panel-head">
                 <div>
                   <h2>Credit score tracking</h2>
-                  <p className="wd-muted">
-                    Daily snapshots + payment due reminders. Missed payments
-                    tank your score — stay on schedule.
-                  </p>
                 </div>
               </div>
 
@@ -4163,11 +4015,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 return learned.length > 0 ? (
                   <div style={{ marginTop: 24 }}>
                     <h3>Learned payment pattern</h3>
-                    <p className="wd-muted">
-                      You never told me your due dates, so I learned them from
-                      your own payment history. Pay a day or two before the
-                      expected date to stay safe.
-                    </p>
                     <ul className="wd-acct-list">
                       {learned.map((p) => (
                         <li
@@ -4212,10 +4059,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                         ? ` · overall ${(util.overall * 100).toFixed(0)}%`
                         : ""}
                     </h3>
-                    <p className="wd-muted">
-                      Utilization is ~30% of your score. Under 30% per card is
-                      the fast win; under 10% is excellent.
-                    </p>
                     <ul className="wd-acct-list">
                       {util.lines.map((u) => (
                         <li
@@ -4258,77 +4101,35 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
           <div className="wd-page">
             <section className="wd-panel" aria-label="Net worth timeline">
               <div className="wd-panel-head">
-                <div>
-                  <h2>Net worth over time</h2>
-                  <p className="wd-muted">
-                    Assets minus liabilities at each month-end. Past bank
-                    balances are reconstructed from the ledger (labeled
-                    estimated); manual valuations carry forward from their last
-                    recorded date — nothing is invented between points.
-                  </p>
-                </div>
+                <h2>Net worth</h2>
               </div>
-              {worthChart ? (
-                <svg
-                  viewBox={`0 0 ${worthChart.w} ${worthChart.h}`}
-                  className="wd-chart"
-                  role="img"
-                  aria-label="Net worth by month, details in the table below"
-                  style={{ width: "100%", height: "auto" }}
-                >
-                  <polygon
-                    points={worthChart.area}
-                    fill="currentColor"
-                    opacity="0.08"
-                  />
-                  <polyline
-                    points={worthChart.pts}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
-                  <text x="8" y="11" fontSize="10" opacity="0.7">
-                    {money(worthChart.max)}
-                  </text>
-                  <text
-                    x="8"
-                    y={worthChart.h - 8}
-                    fontSize="10"
-                    opacity="0.7"
-                  >
-                    {money(worthChart.min)}
-                  </text>
-                </svg>
-              ) : (
-                <p className="wd-muted">
-                  Add transactions or valuations to build the timeline.
-                </p>
-              )}
-              {worthExplain ? (
-                <div className="wd-alerts">
-                  <p>
-                    <strong>Why it changed:</strong> {worthExplain.text}
-                  </p>
-                  {worthExplain.topDrivers.length ? (
-                    <ul className="wd-acct-list">
-                      {worthExplain.topDrivers.map((d) => (
-                        <li key={d.label}>
-                          {d.label}:{" "}
-                          <strong>
-                            {d.amount >= 0 ? "+" : "−"}
-                            {moneyCents(Math.abs(d.amount))}
-                          </strong>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
+              {worthSeries.length ? (
+                <LabeledLineChart
+                  title="Net worth by month"
+                  xLabel="Month"
+                  yLabel="Net worth ($)"
+                  points={worthSeries.map((sn) => ({
+                    x: sn.date.slice(0, 7),
+                    y: sn.total,
+                    label: `${sn.date}: ${moneyCents(sn.total)} (bank ${moneyCents(sn.bankNet)}${sn.valuationNet ? ` + assets ${moneyCents(sn.valuationNet)}` : ""})`,
+                  }))}
+                />
+              ) : null}
+              {worthExplain && worthExplain.topDrivers.length ? (
+                <ul className="wd-acct-list">
+                  {worthExplain.topDrivers.map((d) => (
+                    <li key={d.label}>
+                      {d.label}:{" "}
+                      <strong>
+                        {d.amount >= 0 ? "+" : "−"}
+                        {moneyCents(Math.abs(d.amount))}
+                      </strong>
+                    </li>
+                  ))}
+                </ul>
               ) : null}
               <div className="wd-acct-table-wrap">
                 <table className="wd-acct-table">
-                  <caption className="wd-muted">
-                    Month-end snapshots (current month = today)
-                  </caption>
                   <thead>
                     <tr>
                       <th scope="col">Date</th>
