@@ -2020,6 +2020,45 @@
   font-size: 11px !important;
   line-height: 1.2 !important;
 }
+
+/* Payment-type label — colored by method instead of flat gray */
+.wd-txt {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-top: 1px;
+}
+.wd-txt-zelle { color: #ff6fae; }       /* Zelle — pink */
+.wd-txt-p2p { color: #b98cff; }         /* Venmo/PayPal — violet */
+.wd-txt-card { color: #a889ff; }        /* Card payment — purple */
+.wd-txt-transfer { color: #5cc8e8; }    /* Account transfer — cyan */
+.wd-txt-atm { color: #ff9f45; }         /* ATM — orange */
+.wd-txt-deposit { color: #35d07f; }     /* Direct deposit — green */
+.wd-txt-ach { color: #4db8ff; }         /* ACH — blue */
+.wd-txt-bill { color: #f5c451; }        /* Bill payment — amber */
+.wd-txt-check { color: #d6c25a; }       /* Check — yellow */
+.wd-txt-fee { color: #ff5f57; }         /* Fee — red */
+.wd-txt-interest { color: #4fd6a8; }    /* Interest — teal */
+.wd-txt-adjust { color: #9aa3ad; }      /* Adjustment — gray-blue */
+.wd-txt-purchase { color: #8fb0c9; }    /* Purchase — muted blue-gray */
+.wd-txt-default { color: var(--wd-secondary); }
+
+@media (prefers-color-scheme: light) {
+  .wd-txt-zelle { color: #d6197f; }
+  .wd-txt-p2p { color: #7c3aed; }
+  .wd-txt-card { color: #6d3fe0; }
+  .wd-txt-transfer { color: #0e7fa3; }
+  .wd-txt-atm { color: #c76a10; }
+  .wd-txt-deposit { color: #158a4e; }
+  .wd-txt-ach { color: #1667c2; }
+  .wd-txt-bill { color: #b7860b; }
+  .wd-txt-check { color: #9a8410; }
+  .wd-txt-fee { color: #d13b32; }
+  .wd-txt-interest { color: #0f9e78; }
+  .wd-txt-purchase { color: #4d6a80; }
+}
 .wd-table.wd-ledger-full .wd-payee-input,
 .wd-table.wd-ledger-full input,
 .wd-table.wd-ledger-full select {

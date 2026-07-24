@@ -97,6 +97,29 @@ export function txTypeOf(t: FinanceTx): string {
   return inbound ? "Deposit" : "Purchase";
 }
 
+/**
+ * Color tone for a payment type, so the ledger shows "Zelle" in pink,
+ * "Card payment" in purple, etc. instead of flat gray. Returns a suffix
+ * used as a CSS class (wd-txt-<tone>).
+ */
+export function txTypeTone(type: string): string {
+  const t = (type || "").toLowerCase();
+  if (t.includes("zelle")) return "zelle";
+  if (t.includes("p2p") || t.includes("venmo") || t.includes("paypal") || t.includes("cash app")) return "p2p";
+  if (t.includes("card")) return "card";
+  if (t.includes("transfer")) return "transfer";
+  if (t.includes("atm")) return "atm";
+  if (t.includes("direct deposit") || t === "deposit") return "deposit";
+  if (t.includes("ach")) return "ach";
+  if (t.includes("bill")) return "bill";
+  if (t.includes("check")) return "check";
+  if (t.includes("fee")) return "fee";
+  if (t.includes("interest")) return "interest";
+  if (t.includes("adjust") || t.includes("reversal") || t.includes("refund")) return "adjust";
+  if (t.includes("purchase") || t.includes("pos") || t.includes("debit")) return "purchase";
+  return "default";
+}
+
 export type BudgetLine = {
   category: string;
   planned: number;

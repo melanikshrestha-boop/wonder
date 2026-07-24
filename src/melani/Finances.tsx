@@ -90,6 +90,7 @@ import {
   newTx,
   runningBalanceMap,
   txTypeOf,
+  txTypeTone,
   saveFinance,
   seedFinanceUndoBaseline,
   FINANCE_EXTERNAL_RESTORE_EVENT,
@@ -2651,15 +2652,11 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                       })
                                     }
                                   />
-                                  <div
-                                    className="wd-muted"
-                                    style={{
-                                      fontSize: "0.8em",
-                                      marginTop: "2px",
-                                    }}
+                                  <span
+                                    className={`wd-txt wd-txt-${txTypeTone(txTypeOf(t))}`}
                                   >
                                     {txTypeOf(t)}
-                                  </div>
+                                  </span>
                                 </td>
                                 <td>
                                   <select
