@@ -56,10 +56,13 @@ function tabFromPageId(pageId: string): FitnessTab {
 }
 
 import {
+  FOG_EXTERNAL_RESTORE_EVENT,
   loadFogMap,
   loadSleepDay,
   saveFogMap,
   saveSleepDay,
+  seedFogUndoBaseline,
+  SLEEP_EXTERNAL_RESTORE_EVENT,
   sleepHours,
   sleepWeekDays,
   weekSleepHours,
@@ -79,9 +82,11 @@ function SleepPanel() {
     () => loadSleepDay(todayKey()).bedtime
   );
   const [wake, setWake] = useState(() => loadSleepDay(todayKey()).wake);
-  const [fogMap, setFogMap] = useState<Record<string, boolean>>(() =>
-    loadFogMap()
-  );
+  const [fogMap, setFogMap] = useState<Record<string, boolean>>(() => {
+    const map = loadFogMap();
+    seedFogUndoBaseline(map);
+    return map;
+  });
   const [weekHours, setWeekHours] = useState<(number | null)[]>(() => {
     const iso = todayKey();
     const s = loadSleepDay(iso);
@@ -161,6 +166,44 @@ function SleepPanel() {
     window.addEventListener(MEL_DATA_EVENT, refresh);
     return () => window.removeEventListener(MEL_DATA_EVENT, refresh);
   }, [dayIso]);
+
+  // Global key **U** undoes brain-fog / sleep saves — rehydrate UI
+  useEffect(() => {
+    const onFog = (event: Event) => {
+      const detail = (event as CustomEvent<Record<string, boolean>>).detail;
+      if (detail && typeof detail === "object") {
+        seedFogUndoBaseline(detail);
+        setFogMap(detail);
+      } else {
+        const map = loadFogMap();
+        seedFogUndoBaseline(map);
+        setFogMap(map);
+      }
+    };
+    const onSleep = (event: Event) => {
+      const iso =
+        (event as CustomEvent<{ iso?: string }>).detail?.iso || dayIso;
+      const sleep = loadSleepDay(iso);
+      if (iso === dayIso) {
+        setBedtime(sleep.bedtime);
+        setWake(sleep.wake);
+      }
+      setWeekHours(
+        weekSleepHours(
+          week.map((d) => d.iso),
+          dayIso,
+          iso === dayIso ? sleep.bedtime : bedtime,
+          iso === dayIso ? sleep.wake : wake
+        )
+      );
+    };
+    window.addEventListener(FOG_EXTERNAL_RESTORE_EVENT, onFog);
+    window.addEventListener(SLEEP_EXTERNAL_RESTORE_EVENT, onSleep);
+    return () => {
+      window.removeEventListener(FOG_EXTERNAL_RESTORE_EVENT, onFog);
+      window.removeEventListener(SLEEP_EXTERNAL_RESTORE_EVENT, onSleep);
+    };
+  }, [dayIso, week, bedtime, wake]);
 
   // Draw linear weekly sleep chart (hours per day, line + dots)
   useEffect(() => {

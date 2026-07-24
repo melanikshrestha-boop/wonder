@@ -4,9 +4,13 @@
  * Overnight is normal (e.g. 23:00 → 07:00). Graph reads these hours.
  */
 import { todayKey } from "./data";
+import { pushUndo } from "../undoStack";
 
 export const SLEEP_KEY = "dr-melani-sleep-v1";
 export const FOG_KEY = "dr-melani-brainfog-v1";
+/** UI reloads fog map after global **U** undo */
+export const FOG_EXTERNAL_RESTORE_EVENT = "wonder-fog-external-restore";
+export const SLEEP_EXTERNAL_RESTORE_EVENT = "wonder-sleep-external-restore";
 
 export type SleepDay = {
   bedtime: string; // HH:MM (24h from <input type="time">)
@@ -107,11 +111,35 @@ export function loadSleepDay(iso: string): SleepDay {
   return { bedtime: "", wake: "", hours: null };
 }
 
+let sleepUndoQuiet = false;
+
 export function saveSleepDay(iso: string, bedtime: string, wake: string) {
   const hours = sleepHours(bedtime, wake);
   const payload: SleepDay = { bedtime, wake, hours };
+  const key = `${SLEEP_KEY}:${iso}`;
   try {
-    localStorage.setItem(`${SLEEP_KEY}:${iso}`, JSON.stringify(payload));
+    if (!sleepUndoQuiet && typeof window !== "undefined") {
+      const prevRaw = localStorage.getItem(key);
+      const nextRaw = JSON.stringify(payload);
+      if (prevRaw !== nextRaw) {
+        const previous = prevRaw;
+        pushUndo("Sleep", () => {
+          sleepUndoQuiet = true;
+          try {
+            if (previous == null) localStorage.removeItem(key);
+            else localStorage.setItem(key, previous);
+            window.dispatchEvent(
+              new CustomEvent(SLEEP_EXTERNAL_RESTORE_EVENT, {
+                detail: { iso },
+              })
+            );
+          } finally {
+            sleepUndoQuiet = false;
+          }
+        });
+      }
+    }
+    localStorage.setItem(key, JSON.stringify(payload));
   } catch {
     /* ignore */
   }
@@ -180,9 +208,48 @@ export function loadFogMap(): Record<string, boolean> {
   return {};
 }
 
+let fogUndoQuiet = false;
+let fogLastJson: string | null = null;
+
+/** Call once after loading so the first fog edit has a clean undo baseline */
+export function seedFogUndoBaseline(map?: Record<string, boolean>) {
+  try {
+    fogLastJson = JSON.stringify(map ?? loadFogMap());
+  } catch {
+    fogLastJson = "{}";
+  }
+}
+
+/**
+ * Save brain-fog week map. Pushes global **U** undo so toggling T/W days
+ * can be reversed by pressing U (twice undoes last two toggles).
+ */
 export function saveFogMap(map: Record<string, boolean>) {
   try {
-    localStorage.setItem(FOG_KEY, JSON.stringify(map));
+    const json = JSON.stringify(map);
+    if (
+      !fogUndoQuiet &&
+      fogLastJson != null &&
+      fogLastJson !== json &&
+      typeof window !== "undefined"
+    ) {
+      const previousJson = fogLastJson;
+      pushUndo("Brain fog", () => {
+        fogUndoQuiet = true;
+        try {
+          localStorage.setItem(FOG_KEY, previousJson);
+          fogLastJson = previousJson;
+          const restored = JSON.parse(previousJson) as Record<string, boolean>;
+          window.dispatchEvent(
+            new CustomEvent(FOG_EXTERNAL_RESTORE_EVENT, { detail: restored })
+          );
+        } finally {
+          fogUndoQuiet = false;
+        }
+      });
+    }
+    localStorage.setItem(FOG_KEY, json);
+    fogLastJson = json;
   } catch {
     /* ignore */
   }

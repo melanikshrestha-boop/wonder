@@ -30,13 +30,7 @@ import {
   type MelWorkspaceActionRequest,
 } from "./melani/melActions";
 import { applyMelWorkspaceAction } from "./melani/melWorkspace";
-import {
-  canUndo,
-  peekUndoLabel,
-  performUndo,
-  pushUndo,
-  UNDO_STACK_EVENT,
-} from "./undoStack";
+import { canUndo, performUndo, pushUndo } from "./undoStack";
 import "./notion.css";
 
 /**
@@ -70,23 +64,11 @@ export default function App() {
   const [compactSidebarOpen, setCompactSidebarOpen] = useState(false);
   const workspaceRef = useRef(ws);
   const mainScrollRef = useRef<HTMLDivElement>(null);
-  /** Depth + label for the topbar **U** undo button */
-  const [undoUi, setUndoUi] = useState(() => ({
-    can: canUndo(),
-    label: peekUndoLabel(),
-  }));
 
   useEffect(() => {
     workspaceRef.current = ws;
     saveWorkspace(ws);
   }, [ws]);
-
-  useEffect(() => {
-    const sync = () =>
-      setUndoUi({ can: canUndo(), label: peekUndoLabel() });
-    window.addEventListener(UNDO_STACK_EVENT, sync);
-    return () => window.removeEventListener(UNDO_STACK_EVENT, sync);
-  }, []);
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 768px)");
@@ -389,27 +371,6 @@ export default function App() {
           <span className="topbar-meta">{editedLabel}</span>
           <button
             type="button"
-            className={`topbar-btn topbar-undo-btn${undoUi.can ? " is-ready" : ""}`}
-            title={
-              undoUi.can
-                ? `Undo: ${undoUi.label || "last change"} (U)`
-                : "Nothing to undo yet (U)"
-            }
-            aria-label="Undo last change"
-            disabled={!undoUi.can}
-            onClick={() => {
-              if (!undoLastChange()) {
-                window.alert("Nothing to undo yet. Edit something first, then press U.");
-              }
-            }}
-          >
-            <span className="topbar-undo-key" aria-hidden>
-              U
-            </span>
-            <span className="topbar-undo-word">Undo</span>
-          </button>
-          <button
-            type="button"
             className="topbar-btn"
             title="Favorite"
             onClick={() =>
@@ -440,14 +401,13 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    // Same stack as topbar **U** and key U
                     if (!undoLastChange()) {
-                      window.alert("Nothing to undo yet.");
+                      window.alert("Nothing to undo yet. Press U after an edit.");
                     }
                     setMoreOpen(false);
                   }}
                 >
-                  Undo (U)
+                  Undo last change
                 </button>
                 <button
                   type="button"
