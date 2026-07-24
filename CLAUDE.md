@@ -11,13 +11,11 @@ Owner may switch mid-day from Claude Code to Grok (or the reverse). Unpushed wor
 
 ## Deploy Configuration
 
-- Platform: GitHub Pages (private repo; Actions workflow)
-- Production URL: https://melanikshrestha-boop.github.io/wonder/ (if Pages enabled)
-- Deploy workflow: `.github/workflows/deploy.yml` — runs on push to `main`
-- Deploy trigger: automatic on push to `main`
-- Project type: static web app (Vite)
-- Pre-merge: `npm run build`
-- Health check: production URL returns 200
+- Platform: **GitHub (private) is the real handoff “deploy”** — push to `main` every prompt
+- CI: `.github/workflows/deploy.yml` builds on push to `main` and uploads `dist` artifact
+- GitHub Pages: **not available** on free private plan (needs GitHub Pro or public repo)
+- Optional live host: Vercel/Netlify private project after one-time `vercel login` / `netlify login`
+- Project type: static web app (Vite); finance/health data is sensitive — keep host private
 - Local: http://127.0.0.1:5173/ in Safari
 
 ## Naming

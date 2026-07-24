@@ -73,6 +73,9 @@ Internal folders/keys may still say `melani` / `dr-melani` so localStorage keeps
 
 ## Deploy notes
 
-- Frontend is a static Vite SPA; core data is browser `localStorage`
-- Optional bridges (Gmail :8790, Mel AI :8791) are local only unless separately hosted
-- See `## Deploy Configuration` in `CLAUDE.md` / this file when present
+- **“Deploy” for agent switching = push to GitHub `main`.** That is mandatory every prompt.
+- CI builds `dist/` on every push to `main` (see `.github/workflows/deploy.yml`).
+- GitHub Pages does not work for free private repos; do not make the repo public (bank/health data).
+- Optional public/private web host (Vercel/Netlify) needs a one-time CLI login — ask Melani before putting a live URL on the internet.
+- Frontend is a static Vite SPA; core data is browser `localStorage`.
+- Optional bridges (Gmail :8790, Mel AI :8791) are local only unless separately hosted.

@@ -1,19 +1,14 @@
-# Deploy Wonder static UI to GitHub Pages on every push to main.
-name: Deploy Wonder
+# Verify Wonder production build on every push to main.
+# Live hosting: private repo free plan cannot use GitHub Pages.
+# Prefer continuous git push (agent handoff) + optional Vercel (see AGENTS.md).
+name: Build Wonder
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
   build:
@@ -25,20 +20,11 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - name: Build for GitHub Pages
-        env:
-          GITHUB_PAGES: "1"
+      - name: Production build
         run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: wonder-dist
           path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          retention-days: 14
