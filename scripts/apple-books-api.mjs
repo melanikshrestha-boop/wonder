@@ -29,29 +29,6 @@ const DEFAULT_ANNOTATION_DB = path.join(
 );
 const COVER_CACHE = path.join(os.tmpdir(), "wonder-apple-books-covers");
 
-const RECOVERED_BOOKS = {
-  D65F4E7AED6C5354D2E759063B9C76AD: {
-    title: "The Bhagavad Gita",
-    author: "Eknath Easwaran",
-    genre: "Philosophy & Spirituality",
-    format: "cloud",
-    externalUrl: "https://books.apple.com/us/book/the-bhagavad-gita/id457383796",
-  },
-  BB1813CAFDBAE6C5F90B6364EDE3141D: {
-    title: "Jonathan Livingston Seagull",
-    author: "Richard Bach",
-    genre: "Literature & Fiction",
-    format: "archive",
-  },
-  "1185661123": {
-    title: "They Both Die at the End",
-    author: "Adam Silvera",
-    genre: "Young Adult Fiction",
-    format: "cloud",
-    externalUrl: "https://books.apple.com/us/book/they-both-die-at-the-end/id1185661123",
-  },
-};
-
 const MIME = {
   ".css": "text/css; charset=utf-8",
   ".gif": "image/gif",
@@ -244,11 +221,6 @@ export function appleBooksApi(options = {}) {
     for (const id of plistById.keys()) {
       if (!rowsById.has(id)) rowsById.set(id, { id });
     }
-    for (const id of [...cloudById.keys(), ...annotationsById.keys()]) {
-      if (!rowsById.has(id) && RECOVERED_BOOKS[id]) {
-        rowsById.set(id, { id, ...RECOVERED_BOOKS[id] });
-      }
-    }
 
     const nextSources = new Map();
     const nextBooks = [];
@@ -293,7 +265,7 @@ export function appleBooksApi(options = {}) {
         chapterCount: sourceRoot ? await epubChapterCount(sourceRoot) : 0,
         format,
         cloudOnly: !sourceRoot,
-        externalUrl: externalUrl || RECOVERED_BOOKS[id]?.externalUrl || "",
+        externalUrl,
         annotations: annotationsById.get(id) || [],
         coverUrl: `/api/apple-books/${id}/cover`,
         readerUrl: sourceRoot ? `/api/apple-books/${id}/content/` : "",

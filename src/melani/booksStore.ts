@@ -280,29 +280,6 @@ export function categorizeBook(
   return "Unsorted";
 }
 
-function seedBooks(): Book[] {
-  const now = Date.now();
-  return [
-    {
-      id: uid(),
-      title: "The Innovators",
-      author: "Walter Isaacson",
-      status: "reading",
-      category: "Technology & Innovation",
-      source: "wonder-page",
-      wonderPageId: "pg-book-innovators",
-      rating: 0,
-      pageNow: 0,
-      pageTotal: 560,
-      notes: "",
-      quotes: [],
-      color: SPINE_COLORS[3],
-      createdAt: now,
-      updatedAt: now,
-    },
-  ];
-}
-
 function normalizeStoredBook(value: Partial<Book>, index: number): Book {
   const now = Date.now();
   const title = typeof value.title === "string" ? value.title : "Untitled";
@@ -429,29 +406,25 @@ export function loadBooks(): Book[] {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const arr = JSON.parse(raw) as Partial<Book>[];
-      if (Array.isArray(arr)) return arr.map(normalizeStoredBook).filter(keepBook);
+      if (Array.isArray(arr)) {
+        return arr
+          .map(normalizeStoredBook)
+          .filter(keepBook)
+          // Drop the old baked "starter shelf" seed so only your real books show
+          .filter((b) => b.source !== "wonder-page");
+      }
     }
   } catch {
-    /* Use the starter shelf when storage is unavailable or malformed. */
+    /* fall through to an empty shelf */
   }
-  const seed = seedBooks();
-  saveBooks(seed);
-  return seed;
+  // Never seed placeholder books — your shelf is only your synced/imported library
+  return [];
 }
 
-const REMOVED_TITLES = [
-  "bhagavad gita",
-  "automate the boring stuff with python",
-  "five people you meet in heaven",
-  "tuesdays with morrie",
-  "history of photography",
-];
-
 export function keepBook(book: Pick<Book, "title" | "category">): boolean {
-  const title = book.title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  if (REMOVED_TITLES.some((removed) => title.includes(removed))) return false;
-  if (book.category === "Literature & Fiction" && !title.includes("zero to one")) return false;
-  return true;
+  // Keep every real book. No title/category blocklists — nothing from your
+  // library is filtered out. Only drop a genuinely empty entry.
+  return Boolean(book.title && book.title.trim());
 }
 
 export function saveBooks(books: Book[]) {
