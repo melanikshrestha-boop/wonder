@@ -168,6 +168,7 @@ export function ofxRowsToTxs(
       source: "import",
       externalId,
       pending: false,
+      txType: row.type || null,
     });
   }
 

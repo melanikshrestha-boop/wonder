@@ -66,6 +66,8 @@ export type FinanceTx = {
   /** Dedupe key from bank/csv */
   externalId?: string | null;
   pending?: boolean;
+  /** Transaction type from OFX (DEBIT, ACH_CREDIT, POS, ATM, ZELLE, etc.) */
+  txType?: string | null;
 };
 
 export type BudgetLine = {

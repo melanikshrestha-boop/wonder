@@ -40,6 +40,22 @@ import {
   type WorthState,
 } from "./financeNetWorth";
 import {
+  loadCreditTracking,
+  saveCreditTracking,
+  recordCreditScore,
+  latestScore,
+  paymentReminders,
+  scoreTrend,
+  type CreditTrackingState,
+} from "./creditTracking";
+import {
+  analyzeSpending,
+  forecastSpending,
+  generateBudgetAlerts,
+  suggestCuts,
+} from "./smartBudget";
+import { annualBookCsv, buildAnnualBook } from "./annualBooks";
+import {
   answerFromBrief,
   buildSmartBrief,
 } from "./financeIntelligence";
@@ -135,6 +151,7 @@ type TabId =
   | "overview"
   | "worth"
   | "transactions"
+  | "credit"
   | "plan"
   | "goals"
   | "insights"
@@ -147,6 +164,7 @@ const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "transactions", label: "Ledger", icon: "☰" },
   { id: "overview", label: "Books", icon: "◉" },
   { id: "worth", label: "Worth", icon: "◆" },
+  { id: "credit", label: "Credit", icon: "◈" },
   { id: "plan", label: "Plan", icon: "▦" },
   { id: "goals", label: "Goals", icon: "◎" },
   { id: "insights", label: "Review", icon: "◈" },
@@ -296,6 +314,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   /** "all" = whole selected year · or "YYYY-MM" for one month */
   const [filterMonth, setFilterMonth] = useState("all");
   const [filterKind, setFilterKind] = useState<"all" | TxKind>("all");
+  const [filterTxType, setFilterTxType] = useState("all");
   const [importNote, setImportNote] = useState("");
   const [plaid, setPlaid] = useState<PlaidStatus | null>(null);
   const [plaidBusy, setPlaidBusy] = useState(false);
@@ -305,6 +324,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     newGoal({ name: "Emergency fund", target: 5000 })
   );
   const [worthStore, setWorthStore] = useState<WorthState>(() => loadWorth());
+  const [creditStore, setCreditStore] = useState<CreditTrackingState>(() =>
+    loadCreditTracking()
+  );
+  const [scoreInput, setScoreInput] = useState("");
   const [valDraft, setValDraft] = useState<{
     name: string;
     side: "asset" | "liability";
@@ -587,6 +610,45 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     return Array.from(set);
   }, [budget, txs]);
 
+  const txTypes = useMemo(() => {
+    const types = new Set<string>();
+    for (const t of txs) {
+      if (t.txType) types.add(t.txType);
+    }
+    return Array.from(types).sort();
+  }, [txs]);
+
+  /** Owner's hard monthly spending limit */
+  const MONTHLY_LIMIT = 500;
+  const budgetAnalysis = useMemo(
+    () => analyzeSpending(txs, MONTHLY_LIMIT),
+    [txs]
+  );
+  const budgetForecast = useMemo(
+    () => forecastSpending(txs, MONTHLY_LIMIT),
+    [txs]
+  );
+  const budgetAlerts = useMemo(
+    () =>
+      generateBudgetAlerts(
+        txs,
+        MONTHLY_LIMIT,
+        latestScore(creditStore)?.score ?? REAL_CREDIT_SCORE
+      ),
+    [txs, creditStore]
+  );
+  const budgetCuts = useMemo(
+    () =>
+      budgetForecast.overBudget
+        ? suggestCuts(budgetAnalysis.currentMonth, budgetForecast.overBy)
+        : [],
+    [budgetAnalysis, budgetForecast]
+  );
+  const annualBook = useMemo(
+    () => buildAnnualBook(txs, filterYear),
+    [txs, filterYear]
+  );
+
   const planRows = useMemo(() => {
     return PLAN_GROUPS.map((g) => {
       const planned = g.cats.reduce((s, c) => {
@@ -773,6 +835,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       list = list.filter((t) => t.date.startsWith(String(filterYear)));
     }
     if (filterKind !== "all") list = list.filter((t) => t.kind === filterKind);
+    if (filterTxType !== "all") list = list.filter((t) => t.txType === filterTxType);
     if (filterCat !== "all") list = list.filter((t) => t.category === filterCat);
     if (filterQ.trim()) {
       const q = filterQ.trim().toLowerCase();
@@ -802,6 +865,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     filterMonth,
     filterYear,
     filterKind,
+    filterTxType,
     filterCat,
     filterQ,
     sortKey,
@@ -1020,6 +1084,30 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       ...s,
       items: s.items.filter((i) => i.id !== itemId),
     }));
+  }
+
+  function downloadAnnualCsv() {
+    const csv = annualBookCsv(annualBook);
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `wonder-books-${annualBook.year}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function recordCredit() {
+    const score = Number(scoreInput);
+    if (!Number.isFinite(score) || score < 300 || score > 850) {
+      setImportNote("Enter a valid credit score (300–850).");
+      return;
+    }
+    const updated = recordCreditScore(creditStore, score);
+    setCreditStore(updated);
+    setScoreInput("");
+    saveCreditTracking(updated);
+    setImportNote("Credit score recorded.");
   }
 
   function patchCreditProfile(patch: Partial<CreditProfile>) {
@@ -2655,10 +2743,23 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                     setFilterKind(e.target.value as "all" | TxKind)
                   }
                 >
-                  <option value="all">All types</option>
+                  <option value="all">All in/out</option>
                   <option value="expense">Money out</option>
                   <option value="income">Money in</option>
                 </select>
+                {txTypes.length > 0 ? (
+                  <select
+                    value={filterTxType}
+                    onChange={(e) => setFilterTxType(e.target.value)}
+                  >
+                    <option value="all">All tx types</option>
+                    {txTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
                 <select
                   value={filterCat}
                   onChange={(e) => setFilterCat(e.target.value)}
@@ -2823,6 +2924,17 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                       })
                                     }
                                   />
+                                  {t.txType ? (
+                                    <div
+                                      className="wd-muted"
+                                      style={{
+                                        fontSize: "0.8em",
+                                        marginTop: "2px",
+                                      }}
+                                    >
+                                      {t.txType}
+                                    </div>
+                                  ) : null}
                                 </td>
                                 <td>
                                   <select
@@ -2907,6 +3019,320 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         {/* ════════ PLAN ════════ */}
         {tab === "plan" ? (
           <div className="wd-page">
+            {/* Smart budget engine — $500/mo hard limit */}
+            <section className="wd-panel" aria-label="Smart budget">
+              <div className="wd-panel-head">
+                <div>
+                  <h2>Smart budget · ${MONTHLY_LIMIT}/mo limit</h2>
+                  <p className="wd-muted">
+                    Live pace, forecast, and where to cut — computed from the
+                    ledger, no typing.
+                  </p>
+                </div>
+              </div>
+
+              {/* Big numbers */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                  gap: 12,
+                }}
+              >
+                <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
+                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                    Spent this month
+                  </div>
+                  <div
+                    style={{ fontSize: 22, fontWeight: 600 }}
+                    className={
+                      budgetForecast.today > MONTHLY_LIMIT ? "is-neg" : undefined
+                    }
+                  >
+                    {money(budgetForecast.today)}
+                  </div>
+                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                    {budgetAnalysis.percentOfBudget.toFixed(0)}% of limit
+                  </div>
+                </div>
+                <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
+                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                    Daily burn
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 600 }}>
+                    {money(budgetForecast.dailyBurn)}
+                  </div>
+                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                    safe pace {money(MONTHLY_LIMIT / 30)}/day
+                  </div>
+                </div>
+                <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
+                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                    Month-end forecast
+                  </div>
+                  <div
+                    style={{ fontSize: 22, fontWeight: 600 }}
+                    className={budgetForecast.overBudget ? "is-neg" : "is-pos"}
+                  >
+                    {money(budgetForecast.forecastedTotal)}
+                  </div>
+                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                    {budgetForecast.overBudget
+                      ? `over by ${money(budgetForecast.overBy)}`
+                      : "under limit"}
+                  </div>
+                </div>
+                <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
+                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                    Left to spend
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 600 }}>
+                    {money(Math.max(0, MONTHLY_LIMIT - budgetForecast.today))}
+                  </div>
+                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                    {budgetForecast.daysLeftInMonth} days left
+                  </div>
+                </div>
+              </div>
+
+              {/* Pace bar */}
+              <div className="wd-progress" style={{ marginTop: 12 }}>
+                <i
+                  className={
+                    budgetAnalysis.percentOfBudget > 100 ? "is-over" : ""
+                  }
+                  style={{
+                    width: `${Math.min(100, budgetAnalysis.percentOfBudget)}%`,
+                  }}
+                />
+              </div>
+
+              {/* Alerts */}
+              {budgetAlerts.length > 0 ? (
+                <ul className="wd-acct-list" style={{ marginTop: 12 }}>
+                  {budgetAlerts.map((a, i) => (
+                    <li
+                      key={i}
+                      style={{
+                        padding: 10,
+                        borderLeft:
+                          a.type === "critical"
+                            ? "4px solid #d32f2f"
+                            : a.type === "warning"
+                              ? "4px solid #f57c00"
+                              : "4px solid #999",
+                        background:
+                          a.type === "critical"
+                            ? "#ffebee"
+                            : a.type === "warning"
+                              ? "#fff3e0"
+                              : "#f5f5f5",
+                        borderRadius: 4,
+                      }}
+                    >
+                      {a.message}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {/* Suggested cuts when over pace */}
+              {budgetCuts.length > 0 ? (
+                <div style={{ marginTop: 12 }}>
+                  <h3>Where to cut to stay under ${MONTHLY_LIMIT}</h3>
+                  <ul className="wd-acct-list">
+                    {budgetCuts.map((c) => (
+                      <li key={c.category}>
+                        Cut <strong>{money(c.cut)}</strong> from {c.category}
+                        <span className="wd-muted"> · {c.reasoning}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </section>
+
+            {/* Annual books grid — Excel-style, auto-built from ledger */}
+            <section className="wd-panel" aria-label="Annual books">
+              <div className="wd-panel-head">
+                <div>
+                  <h2>Annual books · {annualBook.year}</h2>
+                  <p className="wd-muted">
+                    Income · savings · expenses by month, auto-filled from the
+                    ledger. Totals compute themselves.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="wd-btn"
+                  onClick={downloadAnnualCsv}
+                >
+                  Export CSV
+                </button>
+              </div>
+
+              {/* Income vs Expenses bar + split pie */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 24,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
+                <svg width={220} height={180} viewBox="0 0 220 180">
+                  {(() => {
+                    const inc = annualBook.income.annualTotal;
+                    const exp = annualBook.expenses.annualTotal;
+                    const max = Math.max(inc, exp, 1);
+                    const hInc = (inc / max) * 130;
+                    const hExp = (exp / max) * 130;
+                    return (
+                      <>
+                        <rect x={40} y={150 - hInc} width={60} height={hInc} fill="#1f6f8b" />
+                        <rect x={120} y={150 - hExp} width={60} height={hExp} fill="#e8743b" />
+                        <text x={70} y={145 - hInc} fontSize={11} textAnchor="middle" fill="#333">
+                          {money(inc)}
+                        </text>
+                        <text x={150} y={145 - hExp} fontSize={11} textAnchor="middle" fill="#333">
+                          {money(exp)}
+                        </text>
+                        <text x={70} y={168} fontSize={12} textAnchor="middle" fill="#666">
+                          Income
+                        </text>
+                        <text x={150} y={168} fontSize={12} textAnchor="middle" fill="#666">
+                          Expenses
+                        </text>
+                      </>
+                    );
+                  })()}
+                </svg>
+                <svg width={160} height={160} viewBox="-1.2 -1.2 2.4 2.4">
+                  {(() => {
+                    const parts = [
+                      { v: annualBook.split.income, color: "#1f6f8b" },
+                      { v: annualBook.split.expenses, color: "#e8743b" },
+                      { v: annualBook.split.saved, color: "#2e7d32" },
+                    ].filter((p) => p.v > 0);
+                    const total = parts.reduce((s, p) => s + p.v, 0) || 1;
+                    let angle = -Math.PI / 2;
+                    return parts.map((p, i) => {
+                      const frac = p.v / total;
+                      const a2 = angle + frac * Math.PI * 2;
+                      const large = frac > 0.5 ? 1 : 0;
+                      const x1 = Math.cos(angle);
+                      const y1 = Math.sin(angle);
+                      const x2 = Math.cos(a2);
+                      const y2 = Math.sin(a2);
+                      angle = a2;
+                      if (frac >= 0.999) {
+                        return <circle key={i} r={1} fill={p.color} />;
+                      }
+                      return (
+                        <path
+                          key={i}
+                          d={`M0,0 L${x1},${y1} A1,1 0 ${large} 1 ${x2},${y2} Z`}
+                          fill={p.color}
+                        />
+                      );
+                    });
+                  })()}
+                  <circle r={0.45} fill="#fff" />
+                </svg>
+                <div>
+                  <div>
+                    <span style={{ color: "#1f6f8b" }}>■</span> Income{" "}
+                    {money(annualBook.income.annualTotal)}
+                  </div>
+                  <div>
+                    <span style={{ color: "#e8743b" }}>■</span> Expenses{" "}
+                    {money(annualBook.expenses.annualTotal)}
+                  </div>
+                  <div>
+                    <span style={{ color: "#2e7d32" }}>■</span> Potential to save{" "}
+                    <strong
+                      className={
+                        annualBook.potentialToSave >= 0 ? "is-pos" : "is-neg"
+                      }
+                    >
+                      {money(annualBook.potentialToSave)}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* The grid itself */}
+              {(["income", "savings", "expenses"] as const).map((key) => {
+                const section = annualBook[key];
+                if (!section.rows.length) return null;
+                return (
+                  <div key={key} className="wd-acct-table-wrap" style={{ marginTop: 16 }}>
+                    <table className="wd-acct-table" style={{ fontSize: 12 }}>
+                      <thead>
+                        <tr>
+                          <th style={{ minWidth: 140 }}>{section.title}</th>
+                          {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((m) => (
+                            <th key={m} className="num">{m}</th>
+                          ))}
+                          <th className="num">Annual</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {section.rows.map((row) => (
+                          <tr key={row.label}>
+                            <td title={row.label}>{row.label}</td>
+                            {row.monthly.map((v, m) => (
+                              <td key={m} className="num">
+                                {v ? money(v) : "–"}
+                              </td>
+                            ))}
+                            <td className="num"><strong>{money(row.annual)}</strong></td>
+                          </tr>
+                        ))}
+                        <tr>
+                          <td><strong>{section.title} total</strong></td>
+                          {section.monthlyTotals.map((v, m) => (
+                            <td key={m} className="num">
+                              <strong>{v ? money(v) : "–"}</strong>
+                            </td>
+                          ))}
+                          <td className="num"><strong>{money(section.annualTotal)}</strong></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+
+              {/* Net row */}
+              <div className="wd-acct-table-wrap" style={{ marginTop: 16 }}>
+                <table className="wd-acct-table" style={{ fontSize: 12 }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ minWidth: 140 }}>
+                        <strong>Net (income − expenses)</strong>
+                      </td>
+                      {annualBook.netByMonth.map((v, m) => (
+                        <td
+                          key={m}
+                          className={`num ${v >= 0 ? "is-pos" : "is-neg"}`}
+                        >
+                          {v ? money(v) : "–"}
+                        </td>
+                      ))}
+                      <td
+                        className={`num ${
+                          annualBook.potentialToSave >= 0 ? "is-pos" : "is-neg"
+                        }`}
+                      >
+                        <strong>{money(annualBook.potentialToSave)}</strong>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
             <section className="wd-panel">
               <div className="wd-panel-head">
                 <h2>Monthly plan · {ym}</h2>
@@ -3520,6 +3946,219 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   </li>
                 ))}
               </ul>
+            </section>
+          </div>
+        ) : null}
+
+        {/* ════════ CREDIT — score tracking & payment reminders ════════ */}
+        {tab === "credit" ? (
+          <div className="wd-page">
+            <section className="wd-panel" aria-label="Credit score tracking">
+              <div className="wd-panel-head">
+                <div>
+                  <h2>Credit score tracking</h2>
+                  <p className="wd-muted">
+                    Daily snapshots + payment due reminders. Missed payments
+                    tank your score — stay on schedule.
+                  </p>
+                </div>
+              </div>
+
+              {/* Record new score */}
+              <div className="wd-form" style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="number"
+                  min={300}
+                  max={850}
+                  placeholder="Enter score (300–850)"
+                  value={scoreInput}
+                  onChange={(e) => setScoreInput(e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  className="wd-btn wd-btn-primary"
+                  onClick={recordCredit}
+                >
+                  Record today
+                </button>
+              </div>
+
+              {/* Score chart */}
+              {creditStore.snapshots.length > 0 ? (
+                <div style={{ margin: "20px 0" }}>
+                  <svg
+                    width="100%"
+                    height={200}
+                    viewBox="0 0 600 200"
+                    style={{
+                      border: "1px solid #e0e0e0",
+                      borderRadius: 4,
+                    }}
+                  >
+                    <defs>
+                      <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#4285f4" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#4285f4" stopOpacity={0.05} />
+                      </linearGradient>
+                    </defs>
+                    {/* Grid lines */}
+                    {[300, 450, 600, 750].map((score) => (
+                      <line
+                        key={`grid-${score}`}
+                        x1={0}
+                        y1={170 - ((score - 300) / 550) * 160}
+                        x2={600}
+                        y2={170 - ((score - 300) / 550) * 160}
+                        stroke="#f0f0f0"
+                        strokeWidth={1}
+                      />
+                    ))}
+                    {/* Y-axis labels */}
+                    {[300, 450, 600, 750].map((score) => (
+                      <text
+                        key={`label-${score}`}
+                        x={5}
+                        y={175 - ((score - 300) / 550) * 160}
+                        fontSize={12}
+                        fill="#666"
+                      >
+                        {score}
+                      </text>
+                    ))}
+                    {/* Score line */}
+                    <polyline
+                      points={creditStore.snapshots
+                        .map((s, i) => {
+                          const x = (i / (creditStore.snapshots.length - 1 || 1)) * 560 + 30;
+                          const y = 170 - ((s.score - 300) / 550) * 160;
+                          return `${x},${y}`;
+                        })
+                        .join(" ")}
+                      fill="none"
+                      stroke="#4285f4"
+                      strokeWidth={2}
+                    />
+                    {/* Fill under line */}
+                    <polygon
+                      points={`30,170 ${creditStore.snapshots
+                        .map((s, i) => {
+                          const x = (i / (creditStore.snapshots.length - 1 || 1)) * 560 + 30;
+                          const y = 170 - ((s.score - 300) / 550) * 160;
+                          return `${x},${y}`;
+                        })
+                        .join(" ")} 590,170`}
+                      fill="url(#scoreGrad)"
+                    />
+                    {/* Latest point dot */}
+                    {creditStore.snapshots.length > 0 && (
+                      <circle
+                        cx={590}
+                        cy={170 - ((creditStore.snapshots[creditStore.snapshots.length - 1].score - 300) / 550) * 160}
+                        r={4}
+                        fill="#1a73e8"
+                      />
+                    )}
+                  </svg>
+                </div>
+              ) : null}
+
+              {/* Latest score summary */}
+              {latestScore(creditStore) ? (() => {
+                const latest = latestScore(creditStore)!;
+                const trend = scoreTrend(creditStore, 30);
+                return (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                      gap: 12,
+                      marginTop: 16,
+                    }}
+                  >
+                    <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
+                      <div className="wd-muted" style={{ fontSize: 12 }}>
+                        Latest
+                      </div>
+                      <div style={{ fontSize: 24, fontWeight: 600, color: "#1a73e8" }}>
+                        {latest.score}
+                      </div>
+                      <div className="wd-muted" style={{ fontSize: 12, marginTop: 4 }}>
+                        {latest.date}
+                        {latest.trend === "up" && " ↑"}
+                        {latest.trend === "down" && " ↓"}
+                      </div>
+                    </div>
+                    <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
+                      <div className="wd-muted" style={{ fontSize: 12 }}>
+                        30-day avg
+                      </div>
+                      <div style={{ fontSize: 24, fontWeight: 600 }}>
+                        {trend.average}
+                      </div>
+                      <div
+                        className={trend.change >= 0 ? "is-pos" : "is-neg"}
+                        style={{ fontSize: 12, marginTop: 4 }}
+                      >
+                        {trend.change >= 0 ? "+" : ""}
+                        {trend.change}
+                      </div>
+                    </div>
+                    <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
+                      <div className="wd-muted" style={{ fontSize: 12 }}>
+                        Range
+                      </div>
+                      <div style={{ fontSize: 24, fontWeight: 600 }}>
+                        {trend.lowPoint} – {trend.highPoint}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })() : null}
+
+              {/* Payment reminders */}
+              {(() => {
+                const reminders = paymentReminders(accounts);
+                return reminders.length > 0 ? (
+                  <div style={{ marginTop: 24 }}>
+                    <h3>Payment due reminders</h3>
+                    <ul className="wd-acct-list">
+                      {reminders.map((r) => (
+                        <li
+                          key={r.accountId}
+                          style={{
+                            padding: 12,
+                            background:
+                              r.urgency === "critical"
+                                ? "#ffebee"
+                                : r.urgency === "warning"
+                                  ? "#fff3e0"
+                                  : "#f5f5f5",
+                            borderLeft:
+                              r.urgency === "critical"
+                                ? "4px solid #d32f2f"
+                                : r.urgency === "warning"
+                                  ? "4px solid #f57c00"
+                                  : "4px solid #999",
+                            borderRadius: 4,
+                          }}
+                        >
+                          <div style={{ fontWeight: 600 }}>{r.accountName}</div>
+                          <div className="wd-muted" style={{ fontSize: 12, marginTop: 4 }}>
+                            Due {r.dueDate} ({r.daysUntilDue} day
+                            {r.daysUntilDue === 1 ? "" : "s"})
+                            {r.minimumAmount && ` · min ${moneyCents(r.minimumAmount)}`}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 24 }} className="wd-muted">
+                    No upcoming payment reminders (all cards configured with due dates).
+                  </div>
+                );
+              })()}
             </section>
           </div>
         ) : null}
