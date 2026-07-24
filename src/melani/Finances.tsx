@@ -45,6 +45,8 @@ import {
   recordCreditScore,
   latestScore,
   paymentReminders,
+  inferCardPaydays,
+  creditUtilization,
   scoreTrend,
   type CreditTrackingState,
 } from "./creditTracking";
@@ -3068,6 +3070,15 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                     {budgetForecast.daysLeftInMonth} days left
                   </div>
                 </div>
+                <div className="wd-stat-tile">
+                  <div className="wd-stat-label">Safe to spend today</div>
+                  <div className="wd-stat-value is-pos">
+                    {money(budgetForecast.safeToSpendToday)}
+                  </div>
+                  <div className="wd-stat-sub">
+                    stay under ${MONTHLY_LIMIT} at this rate
+                  </div>
+                </div>
               </div>
 
               {/* Pace bar */}
@@ -4076,7 +4087,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 );
               })() : null}
 
-              {/* Payment reminders */}
+              {/* Payment reminders — configured due days first */}
               {(() => {
                 const reminders = paymentReminders(accounts);
                 return reminders.length > 0 ? (
@@ -4104,9 +4115,98 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                       ))}
                     </ul>
                   </div>
+                ) : null;
+              })()}
+
+              {/* Learned from your ledger — no due date needed */}
+              {(() => {
+                const learned = inferCardPaydays(txs);
+                return learned.length > 0 ? (
+                  <div style={{ marginTop: 24 }}>
+                    <h3>Learned payment pattern</h3>
+                    <p className="wd-muted">
+                      You never told me your due dates, so I learned them from
+                      your own payment history. Pay a day or two before the
+                      expected date to stay safe.
+                    </p>
+                    <ul className="wd-acct-list">
+                      {learned.map((p) => (
+                        <li
+                          key={p.label}
+                          className={`wd-alert ${
+                            p.urgency === "critical"
+                              ? "is-critical"
+                              : p.urgency === "warning"
+                                ? "is-warning"
+                                : ""
+                          }`}
+                        >
+                          <div style={{ fontWeight: 600 }}>{p.label}</div>
+                          <div className="wd-muted" style={{ fontSize: 12, marginTop: 4 }}>
+                            You usually pay around day {p.dayOfMonth} (
+                            {p.occurrences} payments seen) · next expected{" "}
+                            {p.nextExpected} — in {p.daysUntil} day
+                            {p.daysUntil === 1 ? "" : "s"} · last paid{" "}
+                            {p.lastPaymentDate}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ) : (
                   <div style={{ marginTop: 24 }} className="wd-muted">
-                    No upcoming payment reminders (all cards configured with due dates).
+                    No card payment pattern in the ledger yet — after a couple
+                    of card payments I'll learn your dates automatically. Or
+                    set the due day on a card in Accounts for exact reminders.
+                  </div>
+                );
+              })()}
+
+              {/* Utilization — the fastest score lever */}
+              {(() => {
+                const util = creditUtilization(accounts);
+                return util.lines.length > 0 ? (
+                  <div style={{ marginTop: 24 }}>
+                    <h3>
+                      Utilization
+                      {util.overall != null
+                        ? ` · overall ${(util.overall * 100).toFixed(0)}%`
+                        : ""}
+                    </h3>
+                    <p className="wd-muted">
+                      Utilization is ~30% of your score. Under 30% per card is
+                      the fast win; under 10% is excellent.
+                    </p>
+                    <ul className="wd-acct-list">
+                      {util.lines.map((u) => (
+                        <li
+                          key={u.accountName}
+                          className={`wd-alert ${
+                            u.utilization >= 0.5
+                              ? "is-critical"
+                              : u.utilization >= 0.3
+                                ? "is-warning"
+                                : ""
+                          }`}
+                        >
+                          <div style={{ fontWeight: 600 }}>
+                            {u.accountName} · {(u.utilization * 100).toFixed(0)}%
+                          </div>
+                          <div className="wd-muted" style={{ fontSize: 12, marginTop: 4 }}>
+                            {moneyCents(u.balance)} of {moneyCents(u.limit)}{" "}
+                            limit
+                            {u.payToThirty > 0
+                              ? ` — pay ${moneyCents(u.payToThirty)} to get under 30%`
+                              : " — under 30%, good"}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 12 }} className="wd-muted">
+                    Add your card's credit limit in Accounts to unlock
+                    utilization tracking (the fastest score lever).
                   </div>
                 );
               })()}

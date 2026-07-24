@@ -31,6 +31,8 @@ export type BudgetForecast = {
   overBudget: boolean;
   overBy: number;
   daysUntilOverBudget: number; // if continuing current pace
+  /** What you can spend today and still land under the limit */
+  safeToSpendToday: number;
 };
 
 export type SmartBudgetState = {
@@ -78,9 +80,9 @@ export function analyzeSpending(
   percentOfBudget: number;
 } {
   const ym = currentMonth(today);
-  const lastYm = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-    .toISOString()
-    .slice(0, 7);
+  // Local-time month arithmetic (toISOString shifts across UTC midnight)
+  const lm = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const lastYm = `${lm.getFullYear()}-${String(lm.getMonth() + 1).padStart(2, "0")}`;
 
   // Current month by category
   const byCategory = new Map<string, number>();
@@ -157,6 +159,13 @@ export function forecastSpending(
     daysUntilOver = Math.ceil((monthlyLimit - spent) / dailyBurn);
   }
 
+  // Spread what's left evenly across the remaining days (incl. today)
+  const safeToSpendToday =
+    Math.round(
+      (Math.max(0, monthlyLimit - spent) / Math.max(1, daysLeftInMonth + 1)) *
+        100
+    ) / 100;
+
   return {
     today: Math.round(spent * 100) / 100,
     daysLeftInMonth,
@@ -165,6 +174,7 @@ export function forecastSpending(
     overBudget,
     overBy: Math.round(overBy * 100) / 100,
     daysUntilOverBudget: daysUntilOver === Infinity ? daysLeftInMonth : daysUntilOver,
+    safeToSpendToday,
   };
 }
 

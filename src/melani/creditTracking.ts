@@ -4,7 +4,7 @@
  * Prevents missed payments from damaging credit.
  */
 
-import type { FinanceAccount } from "./financeStore";
+import type { FinanceAccount, FinanceTx } from "./financeStore";
 
 export type CreditSnapshot = {
   date: string; // YYYY-MM-DD
@@ -166,6 +166,128 @@ export function paymentReminders(
   }
 
   return reminders.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
+}
+
+const CARD_PAYMENT_RE =
+  /card payment|payment to .{0,20}card|credit crd|autopay|epay|payment thank you/i;
+
+export type InferredPayday = {
+  /** Card name as it appears in payment descriptions */
+  label: string;
+  /** Most common day-of-month you pay this card */
+  dayOfMonth: number;
+  /** How many payments back the pattern */
+  occurrences: number;
+  lastPaymentDate: string;
+  /** Next expected payment date based on the pattern */
+  nextExpected: string;
+  daysUntil: number;
+  urgency: "critical" | "warning" | "info";
+};
+
+/**
+ * The owner doesn't know their card due dates — so learn them from the
+ * ledger. Groups card-payment rows by payee, finds the most common
+ * day-of-month, and projects the next expected payment. Explainable:
+ * "you've paid this card N times, usually around day D."
+ */
+export function inferCardPaydays(
+  txs: FinanceTx[],
+  today = new Date()
+): InferredPayday[] {
+  const byCard = new Map<string, { days: number[]; last: string }>();
+  for (const t of txs) {
+    if (t.kind !== "expense") continue;
+    const text = `${t.merchant || ""} ${t.note || ""}`;
+    if (!CARD_PAYMENT_RE.test(text)) continue;
+    const label = (t.merchant || t.note || "Card").trim();
+    const day = Number(t.date.slice(8, 10));
+    if (!day) continue;
+    const rec = byCard.get(label) || { days: [], last: "" };
+    rec.days.push(day);
+    if (t.date > rec.last) rec.last = t.date;
+    byCard.set(label, rec);
+  }
+
+  const out: InferredPayday[] = [];
+  const todayMs = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  ).getTime();
+  for (const [label, rec] of byCard) {
+    if (rec.days.length < 2) continue; // one payment is not a pattern
+    // Mode of day-of-month (ties → earliest day, safer to remind early)
+    const counts = new Map<number, number>();
+    for (const d of rec.days) counts.set(d, (counts.get(d) || 0) + 1);
+    const dayOfMonth = [...counts.entries()].sort(
+      (a, b) => b[1] - a[1] || a[0] - b[0]
+    )[0][0];
+
+    let next = new Date(today.getFullYear(), today.getMonth(), dayOfMonth);
+    if (next.getTime() < todayMs) {
+      next = new Date(today.getFullYear(), today.getMonth() + 1, dayOfMonth);
+    }
+    const y = next.getFullYear();
+    const m = String(next.getMonth() + 1).padStart(2, "0");
+    const d = String(next.getDate()).padStart(2, "0");
+    const daysUntil = Math.round((next.getTime() - todayMs) / 86400000);
+
+    out.push({
+      label,
+      dayOfMonth,
+      occurrences: rec.days.length,
+      lastPaymentDate: rec.last,
+      nextExpected: `${y}-${m}-${d}`,
+      daysUntil,
+      urgency:
+        daysUntil <= 2 ? "critical" : daysUntil <= 7 ? "warning" : "info",
+    });
+  }
+  return out.sort((a, b) => a.daysUntil - b.daysUntil);
+}
+
+export type UtilizationLine = {
+  accountName: string;
+  balance: number;
+  limit: number;
+  /** 0–1 */
+  utilization: number;
+  /** Dollars to pay to get under 30% (0 if already under) */
+  payToThirty: number;
+};
+
+/**
+ * Credit utilization per card + overall. Utilization is ~30% of the
+ * score — the fastest lever. payToThirty shows the exact paydown.
+ */
+export function creditUtilization(accounts: FinanceAccount[]): {
+  lines: UtilizationLine[];
+  overall: number | null;
+} {
+  const lines: UtilizationLine[] = [];
+  let totalBal = 0;
+  let totalLim = 0;
+  for (const a of accounts) {
+    if (a.kind !== "credit" || !a.creditLimit || a.creditLimit <= 0) continue;
+    const utilization = a.balance / a.creditLimit;
+    totalBal += a.balance;
+    totalLim += a.creditLimit;
+    lines.push({
+      accountName: a.name,
+      balance: a.balance,
+      limit: a.creditLimit,
+      utilization: Math.round(utilization * 1000) / 1000,
+      payToThirty: Math.max(
+        0,
+        Math.round((a.balance - a.creditLimit * 0.3) * 100) / 100
+      ),
+    });
+  }
+  return {
+    lines: lines.sort((a, b) => b.utilization - a.utilization),
+    overall: totalLim > 0 ? Math.round((totalBal / totalLim) * 1000) / 1000 : null,
+  };
 }
 
 /**

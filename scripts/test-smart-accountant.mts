@@ -246,6 +246,116 @@ check("june reconstructed bank net", june.bankNet === 400, june);
 check("june valuation carried + labeled", june.valuationNet === 9000 && june.carriedForward.includes("Car"));
 check("past labeled estimated, today observed", june.status === "estimated" && jul.status === "observed");
 
+// ── Smart budget ($500/mo engine) ──────────────────────────────────
+const { analyzeSpending, forecastSpending, suggestCuts } = await import(
+  "../src/melani/smartBudget.ts"
+);
+{
+  const mid = new Date(2026, 6, 15); // Jul 15, local time
+  const btxs = [
+    newTx({ date: "2026-07-03", kind: "expense", amount: 100, category: "Food / groceries" }),
+    newTx({ date: "2026-07-10", kind: "expense", amount: 200, category: "Shopping" }),
+    newTx({ date: "2026-07-12", kind: "expense", amount: 60, category: "Transfers" }), // excluded
+    newTx({ date: "2026-07-01", kind: "income", amount: 900, category: "Income" }),
+    newTx({ date: "2026-06-20", kind: "expense", amount: 80, category: "Food / groceries" }),
+  ];
+  const an = analyzeSpending(btxs, 500, mid);
+  check("budget: transfers excluded from spend", an.totalSpent === 300, an);
+  check("budget: percent of $500 limit", an.percentOfBudget === 60, an);
+  const fc = forecastSpending(btxs, 500, mid);
+  check("budget: daily burn = 300/15", fc.dailyBurn === 20, fc);
+  check("budget: forecast = burn × 31 days", fc.forecastedTotal === 620 && fc.overBudget, fc);
+  check(
+    "budget: safe-to-spend today = 200/(16+1)",
+    fc.safeToSpendToday === Math.round((200 / 17) * 100) / 100,
+    fc
+  );
+  const cuts = suggestCuts(an.currentMonth, 120);
+  check("budget: cuts avoid essentials first", cuts.length > 0 && cuts[0].category !== "Food / groceries", cuts);
+}
+
+// ── Credit tracking: inferred paydays + utilization ────────────────
+const { inferCardPaydays, creditUtilization, recordCreditScore, latestScore } =
+  await import("../src/melani/creditTracking.ts");
+{
+  const mid = new Date(2026, 6, 15);
+  const ptxs = [
+    newTx({ date: "2026-05-10", kind: "expense", amount: 50, category: "Credit card payment", merchant: "Payment to Chase card 5584" }),
+    newTx({ date: "2026-06-10", kind: "expense", amount: 100, category: "Credit card payment", merchant: "Payment to Chase card 5584" }),
+    newTx({ date: "2026-07-11", kind: "expense", amount: 24, category: "Credit card payment", merchant: "Payment to Chase card 5584" }),
+    // one-off payee never repeats — must NOT create a pattern
+    newTx({ date: "2026-07-02", kind: "expense", amount: 10, category: "Other", merchant: "Random store" }),
+  ];
+  const learned = inferCardPaydays(ptxs, mid);
+  check("payday: one card learned", learned.length === 1, learned);
+  check("payday: mode day = 10", learned[0]?.dayOfMonth === 10, learned);
+  check(
+    "payday: next expected Aug 10 (day 10 passed this month)",
+    learned[0]?.nextExpected === "2026-08-10",
+    learned
+  );
+  const util = creditUtilization([
+    { id: "c1", name: "Chase", kind: "credit", balance: 450, creditLimit: 1000 },
+    { id: "c2", name: "NoLimit", kind: "credit", balance: 100 },
+    { id: "b1", name: "Checking", kind: "checking", balance: 500 },
+  ]);
+  check("utilization: only cards with limits", util.lines.length === 1, util);
+  check("utilization: 45% and pay-to-30 = $150", util.lines[0].utilization === 0.45 && util.lines[0].payToThirty === 150, util);
+  let cstate = { version: 1 as const, snapshots: [] };
+  cstate = recordCreditScore(cstate, 677);
+  check("credit: score recorded + clamped range ok", latestScore(cstate)?.score === 677);
+  const again = recordCreditScore(cstate, 700);
+  check("credit: same-day duplicate ignored", latestScore(again)?.score === 677);
+}
+
+// ── Annual books grid ──────────────────────────────────────────────
+const { buildAnnualBook, annualBookCsv } = await import(
+  "../src/melani/annualBooks.ts"
+);
+{
+  const atxs = [
+    newTx({ date: "2026-01-05", kind: "income", amount: 1000, category: "Income", merchant: "Paycheck" }),
+    newTx({ date: "2026-02-05", kind: "income", amount: 1000, category: "Income", merchant: "Paycheck" }),
+    newTx({ date: "2026-01-10", kind: "expense", amount: 300, category: "Rent / housing" }),
+    newTx({ date: "2026-02-15", kind: "expense", amount: 200, category: "Food / groceries" }),
+    newTx({ date: "2026-01-20", kind: "expense", amount: 150, category: "Transfers", merchant: "To savings" }),
+    newTx({ date: "2025-12-31", kind: "expense", amount: 999, category: "Shopping" }), // wrong year
+  ];
+  const book = buildAnnualBook(atxs, 2026);
+  check("annual: income total", book.income.annualTotal === 2000, book.income);
+  check("annual: expense total excludes transfers + other years", book.expenses.annualTotal === 500, book.expenses);
+  check("annual: transfers counted as savings", book.savings.annualTotal === 150, book.savings);
+  check("annual: potential to save = 2000-500", book.potentialToSave === 1500, book);
+  check("annual: monthly placement (Jan income)", book.income.monthlyTotals[0] === 1000, book.income.monthlyTotals);
+  const csv = annualBookCsv(book);
+  check("annual: CSV has header + net row", csv.includes("Jan") && csv.includes("Net (income − expenses)"));
+}
+
+// ── Bank-style tx types ────────────────────────────────────────────
+const { txTypeOf } = await import("../src/melani/financeStore.ts");
+{
+  check(
+    "txType: Zelle out",
+    txTypeOf(newTx({ kind: "expense", merchant: "Zelle payment to Ziyu Gao" })) === "Zelle debit"
+  );
+  check(
+    "txType: Zelle in",
+    txTypeOf(newTx({ kind: "income", merchant: "Zelle payment from BIMALA" })) === "Zelle credit"
+  );
+  check(
+    "txType: card payment",
+    txTypeOf(newTx({ kind: "expense", merchant: "Payment to Chase card 5584" })) === "Card payment"
+  );
+  check(
+    "txType: stored OFX type wins",
+    txTypeOf({ ...newTx({ kind: "expense", merchant: "Zelle to Mom" }), txType: "POS" }) === "POS"
+  );
+  check(
+    "txType: default purchase",
+    txTypeOf(newTx({ kind: "expense", merchant: "TRADER JOES" })) === "Purchase"
+  );
+}
+
 console.log("");
 console.log(`${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
