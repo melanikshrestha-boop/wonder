@@ -9,7 +9,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ClipboardEvent,
 } from "react";
 import "./finance.css";
 import {
@@ -80,8 +79,6 @@ import {
   newAccount,
   newGoal,
   newTx,
-  runningBalanceMap,
-  txTypeOf,
   bookkeeperGaps,
   saveFinance,
   seedFinanceUndoBaseline,
@@ -129,6 +126,7 @@ import {
   type BooksExtraState,
 } from "./financeBooksStore";
 import { buildTodayPlan } from "./financeTodayPlan";
+import { FinanceSheet } from "./FinanceSheet";
 
 export const FINANCES_PAGE_ID = "pg-finance";
 
@@ -160,7 +158,6 @@ type TabId =
   | "insights"
   | "accounts";
 
-type SortKey = "date" | "merchant" | "category" | "amount" | "kind";
 
 /** Bookkeeper desk — ledger is home, not a marketing dashboard */
 const NAV: { id: TabId; label: string; icon: string }[] = [
@@ -308,16 +305,9 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   );
   // Ledger first — a meticulous bookkeeper opens the daybook, not a dashboard
   const [tab, setTab] = useState<TabId>("transactions");
-  const [showTxForm, setShowTxForm] = useState(false);
-  const [txDraft, setTxDraft] = useState(() => newTx());
-  const [filterQ, setFilterQ] = useState("");
-  const [filterCat, setFilterCat] = useState("all");
-  // Accountant period: year first, then Jan → current month (grows automatically)
-  const [filterYear, setFilterYear] = useState(() => new Date().getFullYear());
-  /** "all" = whole selected year · or "YYYY-MM" for one month */
+  /** "all" = current calendar month context for Books/Plan · sheet shows full books */
   const [filterMonth, setFilterMonth] = useState("all");
-  const [filterKind, setFilterKind] = useState<"all" | TxKind>("all");
-  const [filterTxType, setFilterTxType] = useState("all");
+  const filterYear = new Date().getFullYear();
   const [importNote, setImportNote] = useState("");
   const [plaid, setPlaid] = useState<PlaidStatus | null>(null);
   const [plaidBusy, setPlaidBusy] = useState(false);
@@ -349,8 +339,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const [pointDrafts, setPointDrafts] = useState<
     Record<string, { value: string; source: string }>
   >({});
-  const [sortKey] = useState<SortKey>("date");
-  const [sortDir] = useState<"asc" | "desc">("desc");
   const [askQ, setAskQ] = useState("");
   const [askA, setAskA] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -526,10 +514,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       );
   }, []);
 
-  const today = new Date();
-  const liveYear = today.getFullYear();
-  const liveMonth = today.getMonth() + 1; // 1–12
-
   const ym = filterMonth === "all" ? monthKey() : filterMonth || monthKey();
   const txs = state?.txs || [];
   const accounts = state?.accounts || [];
@@ -544,61 +528,9 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const rate = useMemo(() => savingsRate(txs, ym), [txs, ym]);
   const goals = state?.goals || [];
 
-  /**
-   * Years on the books (+ this calendar year). Newest first.
-   * Year toggle only matters once you have more than one year.
-   */
-  const years = useMemo(() => {
-    const set = new Set<number>([liveYear]);
-    for (const t of txs) {
-      const y = Number((t.date || "").slice(0, 4));
-      if (y >= 2000 && y <= 2100) set.add(y);
-    }
-    return [...set].sort((a, b) => b - a);
-  }, [txs, liveYear]);
 
-  /**
-   * Smart month strip for the selected year:
-   * Jan → current month (this year), or Jan → Dec (past years).
-   * Grows by itself when the calendar rolls (August appears in August).
-   * Also extends if books somehow have a later month in that year.
-   */
-  const months = useMemo(() => {
-    let last = filterYear === liveYear ? liveMonth : 12;
-    if (filterYear > liveYear) last = 1;
-    for (const t of txs) {
-      if (!(t.date || "").startsWith(String(filterYear))) continue;
-      const mo = Number(t.date.slice(5, 7));
-      if (mo > last && mo <= 12) last = mo;
-    }
-    last = Math.max(1, Math.min(12, last));
-    const keys: string[] = [];
-    for (let m = 1; m <= last; m++) {
-      keys.push(`${filterYear}-${String(m).padStart(2, "0")}`);
-    }
-    return keys; // January → current, calendar order
-  }, [filterYear, liveYear, liveMonth, txs]);
 
-  /** Short label: "Jul" keeps the strip small */
-  const monthLabel = (ymKey: string) => {
-    const [y, m] = ymKey.split("-").map(Number);
-    if (!y || !m) return ymKey;
-    try {
-      return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "short" });
-    } catch {
-      return ymKey;
-    }
-  };
 
-  const monthLabelLong = (ymKey: string) => {
-    const [y, m] = ymKey.split("-").map(Number);
-    if (!y || !m) return ymKey;
-    try {
-      return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "long" });
-    } catch {
-      return ymKey;
-    }
-  };
 
   const series = useMemo(() => monthlySeries(txs, 6), [txs]);
   const bars = useMemo(() => dailyBars(txs, ym), [txs, ym]);
@@ -613,11 +545,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     return Array.from(set);
   }, [budget, txs]);
 
-  const txTypes = useMemo(() => {
-    const types = new Set<string>();
-    for (const t of txs) types.add(txTypeOf(t));
-    return Array.from(types).sort();
-  }, [txs]);
 
   /** Owner's hard monthly spending limit */
   const MONTHLY_LIMIT = 500;
@@ -826,113 +753,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     setBooksExtra(reopenMonth(ym, booksExtra));
   };
 
-  const ledger = useMemo(() => {
-    let list = [...txs];
-    if (filterMonth !== "all") {
-      // One month only (e.g. 2026-07)
-      list = list.filter((t) => t.date.startsWith(filterMonth));
-    } else {
-      // "All" inside the selected year — not every year dumped together
-      list = list.filter((t) => t.date.startsWith(String(filterYear)));
-    }
-    if (filterKind !== "all") list = list.filter((t) => t.kind === filterKind);
-    if (filterTxType !== "all")
-      list = list.filter((t) => txTypeOf(t) === filterTxType);
-    if (filterCat !== "all") list = list.filter((t) => t.category === filterCat);
-    if (filterQ.trim()) {
-      const q = filterQ.trim().toLowerCase();
-      list = list.filter(
-        (t) =>
-          (t.merchant || "").toLowerCase().includes(q) ||
-          (t.note || "").toLowerCase().includes(q) ||
-          (t.category || "").toLowerCase().includes(q)
-      );
-    }
-    const dir = sortDir === "asc" ? 1 : -1;
-    list.sort((a, b) => {
-      let cmp = 0;
-      if (sortKey === "date") cmp = a.date.localeCompare(b.date);
-      else if (sortKey === "merchant")
-        cmp = (a.merchant || a.note || "").localeCompare(
-          b.merchant || b.note || ""
-        );
-      else if (sortKey === "category") cmp = a.category.localeCompare(b.category);
-      else if (sortKey === "kind") cmp = a.kind.localeCompare(b.kind);
-      else cmp = a.amount - b.amount;
-      return cmp * dir;
-    });
-    return list;
-  }, [
-    txs,
-    filterMonth,
-    filterYear,
-    filterKind,
-    filterTxType,
-    filterCat,
-    filterQ,
-    sortKey,
-    sortDir,
-  ]);
 
   /**
    * Accountant month books: every line kept, grouped by YYYY-MM.
    * Summary on top; "..." expands to full detail (no cutoffs, no slice).
    */
-  const monthBooks = useMemo(() => {
-    const map = new Map<string, FinanceTx[]>();
-    for (const t of ledger) {
-      const m = (t.date || "").slice(0, 7);
-      if (!m || m.length < 7) continue;
-      if (!map.has(m)) map.set(m, []);
-      map.get(m)!.push(t);
-    }
-    return [...map.entries()]
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .map(([month, rows]) => {
-        const sorted = [...rows].sort((a, b) => {
-          const d = b.date.localeCompare(a.date);
-          if (d !== 0) return d;
-          return (a.merchant || a.note || "").localeCompare(
-            b.merchant || b.note || ""
-          );
-        });
-        let moneyIn = 0;
-        let moneyOut = 0;
-        const recv = new Map<string, number>();
-        const spent = new Map<string, number>();
-        for (const t of sorted) {
-          const name = (t.merchant || t.note || "Unknown").trim() || "Unknown";
-          if (t.kind === "income") {
-            moneyIn += t.amount;
-            recv.set(name, (recv.get(name) || 0) + t.amount);
-          } else {
-            moneyOut += t.amount;
-            spent.set(name, (spent.get(name) || 0) + t.amount);
-          }
-        }
-        const topReceived = [...recv.entries()]
-          .map(([name, total]) => ({ name, total }))
-          .sort((a, b) => b.total - a.total)
-          .slice(0, 8);
-        const topSpent = [...spent.entries()]
-          .map(([name, total]) => ({ name, total }))
-          .sort((a, b) => b.total - a.total)
-          .slice(0, 8);
-        return {
-          month,
-          rows: sorted,
-          moneyIn,
-          moneyOut,
-          net: moneyIn - moneyOut,
-          count: sorted.length,
-          topReceived,
-          topSpent,
-        };
-      });
-  }, [ledger]);
 
   /** Running balance after each tx (full books, not just filter) */
-  const balanceById = useMemo(() => runningBalanceMap(txs), [txs]);
 
   /** Rockefeller discipline score + open gaps */
   const gaps = useMemo(
@@ -1123,55 +950,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     }));
   }
 
-  function onLedgerPaste(e: ClipboardEvent<HTMLDivElement>) {
-    const text = e.clipboardData.getData("text/plain");
-    if (!text || (!text.includes("\t") && !text.includes("\n"))) return;
-    e.preventDefault();
-    const lines = text
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    const added: FinanceTx[] = [];
-    for (const line of lines) {
-      const cols =
-        line.split("\t").length > 1 ? line.split("\t") : line.split(",");
-      const dateRaw = (cols[0] || "").trim();
-      const merchant = (cols[1] || "").trim();
-      const amountRaw = (cols[2] || "").replace(/[$,]/g, "").trim();
-      const amount = Math.abs(Number(amountRaw));
-      if (!amount || Number.isNaN(amount)) continue;
-      let date = dateRaw;
-      if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(dateRaw)) {
-        const [mm, dd, yy] = dateRaw.split("/");
-        const y = yy.length === 2 ? `20${yy}` : yy;
-        date = `${y}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-      }
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        date = new Date().toISOString().slice(0, 10);
-      }
-      const isNeg = amountRaw.trim().startsWith("-") || Number(amountRaw) < 0;
-      added.push(
-        newTx({
-          date,
-          merchant: merchant || "Pasted",
-          note: merchant || "Pasted",
-          amount,
-          category: (cols[3] || "Uncategorized").trim() || "Uncategorized",
-          kind: isNeg ? "expense" : "expense",
-          source: "import",
-        })
-      );
-    }
-    if (!added.length) {
-      setImportNote("Paste failed — use Date · Merchant · Amount · Category");
-      return;
-    }
-    patchState((s) => {
-      const merged = mergeTxs(s.txs, added);
-      return { ...s, txs: merged.txs };
-    });
-    setImportNote(`Pasted ${added.length} rows`);
-  }
 
   function addBlankSheetRow() {
     const tx = newTx({
@@ -1277,20 +1055,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     });
   }
 
-  function addTx() {
-    if (!txDraft.amount || txDraft.amount <= 0) return;
-    const tx: FinanceTx = {
-      ...txDraft,
-      id: newTx().id,
-      amount: Math.abs(txDraft.amount),
-      note: txDraft.note.trim(),
-      merchant: txDraft.merchant || txDraft.note.trim() || "Manual",
-      source: "manual",
-    };
-    patchState((s) => ({ ...s, txs: [tx, ...s.txs] }));
-    setTxDraft(newTx({ kind: txDraft.kind, category: txDraft.category }));
-    setShowTxForm(false);
-  }
 
   function loadDemo() {
     const seed = demoSeedTxs();
@@ -1330,7 +1094,11 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       return { ...s, txs: merged.txs, accounts, goals, budget };
     });
     setImportNote("Demo month loaded.");
-    setTab("overview");
+    setTab("transactions");
+  }
+
+  function replaceTxs(next: FinanceTx[]) {
+    patchState((s) => ({ ...s, txs: next }));
   }
 
   function addGoal() {
@@ -1677,7 +1445,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               type="button"
               className="wd-btn wd-btn-primary"
               onClick={() => {
-                setShowTxForm(true);
+                addBlankSheetRow();
                 setTab("transactions");
               }}
             >
@@ -1691,6 +1459,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         </header>
 
         {/* Discipline + reinvest doctrine — always on the desk */}
+        {/* Discipline strip — Books and other desks; Ledger sheet keeps the desk clear */}
+        {tab !== "transactions" ? (
         <section className="wd-discipline" aria-label="Ruthless bookkeeper">
           <div className="wd-discipline-score">
             <span>Ruthless</span>
@@ -1752,6 +1522,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             {BOOKKEEPER_RULES[new Date().getDate() % BOOKKEEPER_RULES.length]}
           </p>
         </section>
+        ) : null}
 
         {/* In-page subnav — same pattern as Fitness (Sleep · Meals · Gym) */}
         {/* Section tabs — plain words, no middle dots (user preference) */}
@@ -2587,423 +2358,20 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
           </div>
         ) : null}
 
-        {/* ════════ LEDGER — full lists always, months next to filters ════════ */}
+        {/* ════════ LEDGER SHEET — AstraSheet-style books ════════ */}
         {tab === "transactions" ? (
           <div className="wd-page">
-            {transferPairs.length ? (
-              <section className="wd-panel" aria-label="Likely transfers">
-                <div className="wd-panel-head">
-                  <h2>Likely transfers · {transferPairs.length}</h2>
-                </div>
-                <p className="wd-muted">
-                  Matched money-out and money-in rows. Marking a pair as
-                  Transfers keeps income and spending honest. Nothing changes
-                  without your approval.
-                </p>
-                <ul className="wd-acct-list">
-                  {transferPairs.slice(0, 6).map((pr) => (
-                    <li key={`${pr.outTx.id}-${pr.inTx.id}`}>
-                      {pr.outTx.date} · {pr.outTx.merchant || pr.outTx.note}{" "}
-                      → {pr.inTx.merchant || pr.inTx.note} ·{" "}
-                      <strong>{moneyCents(pr.outTx.amount)}</strong>
-                      <span className="wd-muted">
-                        {" "}· {pr.reason} · confidence{" "}
-                        {Math.round(pr.confidence * 100)}%
-                      </span>{" "}
-                      <button
-                        type="button"
-                        className="wd-btn"
-                        onClick={() => applyPair(pr)}
-                      >
-                        Mark as transfer
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-            <section className="wd-panel">
-              <div className="wd-panel-head">
-                <div>
-                  <h2>Ledger</h2>
-                  <p className="wd-muted wd-ledger-sub">
-                    Full list every time. Pick a month next to categories.
-                  </p>
-                </div>
-                <div className="wd-top-actions">
-                  <button
-                    type="button"
-                    className="wd-btn"
-                    onClick={addBlankSheetRow}
-                  >
-                    + Row
-                  </button>
-                  <button
-                    type="button"
-                    className="wd-btn wd-btn-primary"
-                    onClick={() => setShowTxForm((v) => !v)}
-                  >
-                    {showTxForm ? "Close form" : "Add entry"}
-                  </button>
-                </div>
-              </div>
-
-              {showTxForm ? (
-                <div className="wd-form">
-                  <label>
-                    Type
-                    <select
-                      value={txDraft.kind}
-                      onChange={(e) =>
-                        setTxDraft((d) => ({
-                          ...d,
-                          kind: e.target.value as TxKind,
-                        }))
-                      }
-                    >
-                      <option value="expense">Money out</option>
-                      <option value="income">Money in</option>
-                    </select>
-                  </label>
-                  <label>
-                    Amount
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={txDraft.amount || ""}
-                      onChange={(e) =>
-                        setTxDraft((d) => ({
-                          ...d,
-                          amount: Math.max(0, Number(e.target.value) || 0),
-                        }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    Date
-                    <input
-                      type="date"
-                      value={txDraft.date}
-                      onChange={(e) =>
-                        setTxDraft((d) => ({ ...d, date: e.target.value }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    Category
-                    <select
-                      value={txDraft.category}
-                      onChange={(e) =>
-                        setTxDraft((d) => ({
-                          ...d,
-                          category: e.target.value,
-                        }))
-                      }
-                    >
-                      {categories.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="wd-wide">
-                    Payee / description
-                    <input
-                      value={txDraft.note}
-                      onChange={(e) =>
-                        setTxDraft((d) => ({
-                          ...d,
-                          note: e.target.value,
-                          merchant: e.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="wd-btn wd-btn-primary"
-                    onClick={addTx}
-                  >
-                    Save
-                  </button>
-                </div>
-              ) : null}
-
-              {/* Filters stacked: search · type · category · year · months */}
-              <div className="wd-filters wd-filters-ledger">
-                <input
-                  type="search"
-                  placeholder="Search payee, note, category…"
-                  value={filterQ}
-                  onChange={(e) => setFilterQ(e.target.value)}
-                />
-                <select
-                  value={filterKind}
-                  onChange={(e) =>
-                    setFilterKind(e.target.value as "all" | TxKind)
-                  }
-                >
-                  <option value="all">All in/out</option>
-                  <option value="expense">Money out</option>
-                  <option value="income">Money in</option>
-                </select>
-                {txTypes.length > 0 ? (
-                  <select
-                    value={filterTxType}
-                    onChange={(e) => setFilterTxType(e.target.value)}
-                  >
-                    <option value="all">All tx types</option>
-                    {txTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-                <select
-                  value={filterCat}
-                  onChange={(e) => setFilterCat(e.target.value)}
-                >
-                  <option value="all">All categories</option>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                {/* Year right next to categories */}
-                <nav className="wd-year-nav wd-year-nav-inline" aria-label="Year">
-                  {years.map((y) => (
-                    <button
-                      key={y}
-                      type="button"
-                      className={
-                        filterYear === y
-                          ? "wd-year-nav-link is-active"
-                          : "wd-year-nav-link"
-                      }
-                      onClick={() => {
-                        setFilterYear(y);
-                        setFilterMonth("all");
-                      }}
-                    >
-                      {y}
-                    </button>
-                  ))}
-                </nav>
-              </div>
-
-              {/* Months on the same control strip as categories — Jan → current */}
-              <nav className="wd-month-nav wd-month-nav-inline" aria-label="Month">
-                <button
-                  type="button"
-                  className={
-                    filterMonth === "all"
-                      ? "wd-month-nav-link is-active"
-                      : "wd-month-nav-link"
-                  }
-                  onClick={() => setFilterMonth("all")}
-                >
-                  All
-                </button>
-                {months.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    className={
-                      filterMonth === m
-                        ? "wd-month-nav-link is-active"
-                        : "wd-month-nav-link"
-                    }
-                    onClick={() => setFilterMonth(m)}
-                  >
-                    {monthLabel(m)}
-                  </button>
-                ))}
-              </nav>
-
-              <p className="wd-muted" style={{ margin: "0 0 12px", fontSize: 12 }}>
-                {ledger.length} line{ledger.length === 1 ? "" : "s"}
-                {filterMonth === "all"
-                  ? ` · ${filterYear} full year`
-                  : ` · ${monthLabelLong(filterMonth)} ${filterYear}`}
-              </p>
-
-              {monthBooks.length === 0 ? (
-                <p className="wd-muted wd-pad">
-                  Empty books — import Chase CSV or add an entry.
-                </p>
-              ) : null}
-
-              {/* Always full list — no ···, no hide */}
-              <div
-                className="wd-month-books"
-                onPaste={onLedgerPaste}
-                tabIndex={0}
-              >
-                {monthBooks.map((book) => {
-                  const monthOnly = monthLabelLong(book.month);
-                  const yearOnly = book.month.slice(0, 4);
-                  return (
-                    <section key={book.month} className="wd-month-book">
-                      <header className="wd-month-book-head">
-                        <div>
-                          <h3>
-                            {monthOnly}{" "}
-                            <span
-                              className="wd-muted"
-                              style={{ fontWeight: 400 }}
-                            >
-                              {yearOnly}
-                            </span>
-                          </h3>
-                          <p className="wd-muted">
-                            {book.count} line{book.count === 1 ? "" : "s"} · in{" "}
-                            <strong className="is-pos">
-                              {moneyCents(book.moneyIn)}
-                            </strong>{" "}
-                            · out{" "}
-                            <strong className="is-neg">
-                              {moneyCents(book.moneyOut)}
-                            </strong>{" "}
-                            · net{" "}
-                            <strong
-                              className={book.net >= 0 ? "is-pos" : "is-neg"}
-                            >
-                              {moneyCents(book.net)}
-                            </strong>
-                          </p>
-                        </div>
-                      </header>
-
-                      <div className="wd-table-wrap wd-month-full">
-                        <table className="wd-table wd-edit wd-ledger-table wd-ledger-full">
-                          <thead>
-                            <tr>
-                              <th>Date</th>
-                              <th>Payee / full description</th>
-                              <th>Category</th>
-                              <th className="num">Amount</th>
-                              <th className="num">Balance</th>
-                              <th />
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {book.rows.map((t) => (
-                              <tr
-                                key={t.id}
-                                className={
-                                  !t.category ||
-                                  t.category === "Uncategorized" ||
-                                  t.category === "Other" ||
-                                  !(t.merchant || t.note || "").trim()
-                                    ? "is-gap"
-                                    : undefined
-                                }
-                              >
-                                <td>
-                                  <input
-                                    type="date"
-                                    value={t.date}
-                                    onChange={(e) =>
-                                      patchTx(t.id, { date: e.target.value })
-                                    }
-                                  />
-                                </td>
-                                <td className="wd-payee-cell">
-                                  <input
-                                    className="wd-payee-input"
-                                    value={t.merchant || t.note || ""}
-                                    title={t.merchant || t.note || ""}
-                                    placeholder="Full payee name"
-                                    onChange={(e) =>
-                                      patchTx(t.id, {
-                                        merchant: e.target.value,
-                                        note: e.target.value,
-                                      })
-                                    }
-                                  />
-                                  <div
-                                    className="wd-muted"
-                                    style={{
-                                      fontSize: "0.8em",
-                                      marginTop: "2px",
-                                    }}
-                                  >
-                                    {txTypeOf(t)}
-                                  </div>
-                                </td>
-                                <td>
-                                  <select
-                                    value={t.category}
-                                    onChange={(e) =>
-                                      patchTx(t.id, {
-                                        category: e.target.value,
-                                      })
-                                    }
-                                  >
-                                    {categories.map((c) => (
-                                      <option key={c} value={c}>
-                                        {c}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </td>
-                                <td className="num">
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    title={
-                                      t.kind === "income"
-                                        ? "Money in — green"
-                                        : "Money out — red"
-                                    }
-                                    className={
-                                      t.kind === "income" ? "is-pos" : "is-neg"
-                                    }
-                                    value={t.amount || ""}
-                                    onChange={(e) =>
-                                      patchTx(t.id, {
-                                        amount: Math.max(
-                                          0,
-                                          Math.round(
-                                            (Number(e.target.value) || 0) * 100
-                                          ) / 100
-                                        ),
-                                      })
-                                    }
-                                  />
-                                </td>
-                                <td
-                                  className={`num wd-balance ${
-                                    (balanceById.get(t.id) || 0) >= 0
-                                      ? "is-pos"
-                                      : "is-neg"
-                                  }`}
-                                >
-                                  {moneyCents(balanceById.get(t.id) || 0)}
-                                </td>
-                                <td>
-                                  <button
-                                    type="button"
-                                    className="wd-x"
-                                    onClick={() => removeTx(t.id)}
-                                  >
-                                    ×
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  );
-                })}
-              </div>
-            </section>
+            <FinanceSheet
+              txs={state.txs}
+              categories={categories}
+              transferPairs={transferPairs}
+              onApplyTransfer={applyPair}
+              statusNote={importNote || undefined}
+              onPatchTx={patchTx}
+              onAddRow={addBlankSheetRow}
+              onRemoveTx={removeTx}
+              onReplaceTxs={replaceTxs}
+            />
           </div>
         ) : null}
 
