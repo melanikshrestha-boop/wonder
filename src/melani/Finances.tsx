@@ -199,13 +199,7 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   {
     id: "essentials",
     label: "Essentials",
-    cats: [
-      "Rent / housing",
-      "Utilities",
-      "Food / groceries",
-      "Transport",
-      "Health",
-    ],
+    cats: ["Utilities", "Food / groceries", "Transport", "Health"],
   },
   {
     id: "lifestyle",

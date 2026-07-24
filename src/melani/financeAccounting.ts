@@ -62,7 +62,6 @@ export const CHART_OF_ACCOUNTS: CoaAccount[] = [
   { code: "3000", name: "Owner equity / net worth", type: "equity" },
   { code: "4000", name: "Income", type: "income", category: "Income" },
   { code: "4100", name: "Gifts received", type: "income", category: "Income" },
-  { code: "5000", name: "Rent / housing", type: "expense", category: "Rent / housing" },
   { code: "5100", name: "Utilities", type: "expense", category: "Utilities" },
   { code: "5200", name: "Food / groceries", type: "expense", category: "Food / groceries" },
   { code: "5300", name: "Restaurants / coffee", type: "expense", category: "Restaurants / coffee" },

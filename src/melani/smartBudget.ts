@@ -261,7 +261,6 @@ export function suggestCuts(
   categories: CategorySpend[],
   target: number, // how much to cut
   essentials: Set<string> = new Set([
-    "Rent / housing",
     "Utilities",
     "Food / groceries",
     "Transport",

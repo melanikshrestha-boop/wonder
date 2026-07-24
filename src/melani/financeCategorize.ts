@@ -7,7 +7,6 @@
 const RULES: { category: string; match: RegExp }[] = [
   { category: "Income", match: /\b(payroll|direct dep|salary|venmo cashout|zelle from|irs treas|refund|interest paid|goldman sachs|marcus|cash redemption|atm cash deposit)\b/i },
   { category: "Credit card payment", match: /\b(payment to chase card|chase credit card payment|loan_pmt|payment thank you)\b/i },
-  { category: "Rent / housing", match: /\b(rent|landlord|apartment|mortgage|hoa|property mgmt)\b/i },
   { category: "Utilities", match: /\b(con ed|coned|pseg|national grid|water bill|utility|electric|gas bill|internet|verizon|spectrum|optimum|at&t|comcast)\b/i },
   { category: "Education / school", match: /\b(univ of california|university|tuition|usc |usc\/|bookstore|follett|jones & bartlett|american databank|platinum educational|ticket office)\b/i },
   { category: "Food / groceries", match: /\b(whole foods|wholefds|trader joe'?s?|costco|walmart|aldi|kroger|safeway|grocery|instacart|fresh direct|wegmans|h mart|woodside grocery|g mart)\b/i },
@@ -25,7 +24,6 @@ const RULES: { category: string; match: RegExp }[] = [
 
 export const FINANCE_CATEGORIES = [
   "Income",
-  "Rent / housing",
   "Utilities",
   "Food / groceries",
   "Restaurants / coffee",
