@@ -388,6 +388,49 @@ const { detectSubscriptions } = await import("../src/melani/subscriptions.ts");
   check("subs: sorted by monthly cost desc", scan.subs.every((s, i, a) => i === 0 || a[i - 1].monthlyCost >= s.monthlyCost));
 }
 
+// ── Finance copilot (grounded ledger queries) ──────────────────────
+const { answerCopilot } = await import("../src/melani/financeCopilot.ts");
+const { detectSubscriptions: detectSubs2 } = await import("../src/melani/subscriptions.ts");
+{
+  const ctxTxs = [
+    newTx({ date: "2026-06-04", kind: "expense", amount: 60, category: "Food / groceries", merchant: "TRADER JOES" }),
+    newTx({ date: "2026-06-18", kind: "expense", amount: 40, category: "Food / groceries", merchant: "WHOLE FOODS" }),
+    newTx({ date: "2026-06-10", kind: "expense", amount: 120, category: "Shopping", merchant: "AMAZON" }),
+    newTx({ date: "2026-06-01", kind: "income", amount: 3000, category: "Income", merchant: "PAYROLL" }),
+    newTx({ date: "2026-05-15", kind: "expense", amount: 15.49, category: "Entertainment", merchant: "NETFLIX.COM" }),
+    newTx({ date: "2026-06-15", kind: "expense", amount: 15.49, category: "Entertainment", merchant: "NETFLIX.COM" }),
+  ];
+  const stubBrief = { dataQuality: { hasTxs: true } };
+  const stubCredit = { utilization: 0.2, estimate: 700, band: "good", scoreSource: "official", tips: [], };
+  const baseCtx = {
+    state: { version: 2, accounts: [], txs: ctxTxs, budget: [], watchlist: [], goals: [], creditProfile: null },
+    brief: stubBrief,
+    subs: detectSubs2(ctxTxs),
+    worth: 5000, cash: 6000, debt: 1000, income: 3000, expense: 235,
+    cashFlow: 2765, rate: 0.5, credit: stubCredit, ym: "2026-06",
+  };
+
+  const foodA = answerCopilot("how much did I spend on food in June?", baseCtx as any);
+  check("copilot: food total = $100", foodA.text.includes("$100"), foodA.text);
+  check("copilot: cites Food category", foodA.sources.some((s) => /Food/i.test(s)), foodA.sources);
+
+  const incA = answerCopilot("how much did I make in June?", baseCtx as any);
+  check("copilot: income = $3,000", incA.text.includes("$3,000"), incA.text);
+
+  const merA = answerCopilot("what's my biggest merchant?", baseCtx as any);
+  check("copilot: top merchant AMAZON", /amazon/i.test(merA.text), merA.text);
+
+  const subA = answerCopilot("what subscriptions am I paying for?", baseCtx as any);
+  check("copilot: finds Netflix subscription", /netflix/i.test(subA.text) || subA.data?.some((d) => /netflix/i.test(d.label)), subA);
+
+  const nwA = answerCopilot("what's my net worth?", baseCtx as any);
+  check("copilot: net worth = $5,000", nwA.text.includes("$5,000"), nwA.text);
+
+  const emptyCtx = { ...baseCtx, state: { ...baseCtx.state, txs: [] } };
+  const emptyA = answerCopilot("how much did I spend?", emptyCtx as any);
+  check("copilot: empty ledger asks for import", /import/i.test(emptyA.text), emptyA.text);
+}
+
 console.log("");
 console.log(`${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -62,6 +62,8 @@ import {
   CADENCE_LABEL,
 } from "./subscriptions";
 import { MonthBookCharts } from "./FinCharts";
+import { FinanceCopilot } from "./FinanceCopilot";
+import type { CopilotContext } from "./financeCopilot";
 import {
   answerFromBrief,
   buildSmartBrief,
@@ -348,6 +350,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const [sortDir] = useState<"asc" | "desc">("desc");
   const [askQ, setAskQ] = useState("");
   const [askA, setAskA] = useState<string | null>(null);
+  const [copilotOpen, setCopilotOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const idleTimer = useRef<number | null>(null);
   // Filing cabinet next to the ledger (payables, receipts, closed months)
@@ -691,6 +694,27 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const safeToSpend = brief.safeToSpend;
   const runwayMonths = brief.runwayMonths;
   const accounting = brief.accounting;
+
+  const copilotCtx: CopilotContext | null = useMemo(
+    () =>
+      state
+        ? {
+            state,
+            brief,
+            subs: subscriptionScan,
+            worth,
+            cash,
+            debt,
+            income,
+            expense,
+            cashFlow,
+            rate,
+            credit: creditReport,
+            ym,
+          }
+        : null,
+    [state, brief, subscriptionScan, worth, cash, debt, income, expense, cashFlow, rate, creditReport, ym]
+  );
 
   /** Do TODAY — minutes, not a fake 7-day project */
   const todayPlan = useMemo(
@@ -1614,6 +1638,14 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             <h1>{tabTitle}</h1>
           </div>
           <div className="wd-top-actions">
+            <button
+              type="button"
+              className="wd-copilot-btn"
+              onClick={() => setCopilotOpen(true)}
+              title="Ask the AI copilot about your ledger"
+            >
+              <span aria-hidden>✦</span> Copilot
+            </button>
             {hasEncryptedVault() && isVaultUnlocked() ? (
               <button
                 type="button"
@@ -4846,6 +4878,14 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
           </div>
         ) : null}
       </div>
+
+      {copilotCtx ? (
+        <FinanceCopilot
+          open={copilotOpen}
+          onClose={() => setCopilotOpen(false)}
+          ctx={copilotCtx}
+        />
+      ) : null}
     </div>
   );
 }
