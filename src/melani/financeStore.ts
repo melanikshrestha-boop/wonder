@@ -70,6 +70,33 @@ export type FinanceTx = {
   txType?: string | null;
 };
 
+/**
+ * Bank-style transaction type for a row. Uses the stored txType when the
+ * import carried one; otherwise derives it from the description the way
+ * bank sites label their filters (Zelle credit, ACH debit, ATM…).
+ */
+export function txTypeOf(t: FinanceTx): string {
+  if (t.txType && t.txType.trim()) return t.txType.trim();
+  const text = `${t.merchant || ""} ${t.note || ""}`.toLowerCase();
+  const inbound = t.kind === "income";
+  if (/zelle/.test(text)) return inbound ? "Zelle credit" : "Zelle debit";
+  if (/venmo|cash app|cashapp|paypal/.test(text)) return "P2P payment";
+  if (/card payment|payment to chase card|autopay|epay|crd pmt|payment thank you/.test(text))
+    return "Card payment";
+  if (/transfer/.test(text)) return "Account transfer";
+  if (/atm|cash withdrawal/.test(text)) return "ATM";
+  if (/direct dep|payroll|salary/.test(text)) return "Direct deposit";
+  if (/\bach\b|direct debit/.test(text))
+    return inbound ? "ACH credit" : "ACH debit";
+  if (/bill ?pay/.test(text)) return "Bill payment";
+  if (/\bcheck\b|\bchk\b/.test(text)) return "Check";
+  if (/fee|service charge/.test(text)) return "Fee";
+  if (/interest/.test(text)) return "Interest";
+  if (/refund|reversal|adjustment|rebate/.test(text))
+    return "Adjustment or reversal";
+  return inbound ? "Deposit" : "Purchase";
+}
+
 export type BudgetLine = {
   category: string;
   planned: number;

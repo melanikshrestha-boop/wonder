@@ -79,6 +79,7 @@ import {
   newGoal,
   newTx,
   runningBalanceMap,
+  txTypeOf,
   bookkeeperGaps,
   saveFinance,
   seedFinanceUndoBaseline,
@@ -612,9 +613,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
 
   const txTypes = useMemo(() => {
     const types = new Set<string>();
-    for (const t of txs) {
-      if (t.txType) types.add(t.txType);
-    }
+    for (const t of txs) types.add(txTypeOf(t));
     return Array.from(types).sort();
   }, [txs]);
 
@@ -835,7 +834,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       list = list.filter((t) => t.date.startsWith(String(filterYear)));
     }
     if (filterKind !== "all") list = list.filter((t) => t.kind === filterKind);
-    if (filterTxType !== "all") list = list.filter((t) => t.txType === filterTxType);
+    if (filterTxType !== "all")
+      list = list.filter((t) => txTypeOf(t) === filterTxType);
     if (filterCat !== "all") list = list.filter((t) => t.category === filterCat);
     if (filterQ.trim()) {
       const q = filterQ.trim().toLowerCase();
@@ -2883,7 +2883,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                               <th>Date</th>
                               <th>Payee / full description</th>
                               <th>Category</th>
-                              <th>In / Out</th>
                               <th className="num">Amount</th>
                               <th className="num">Balance</th>
                               <th />
@@ -2924,17 +2923,15 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                       })
                                     }
                                   />
-                                  {t.txType ? (
-                                    <div
-                                      className="wd-muted"
-                                      style={{
-                                        fontSize: "0.8em",
-                                        marginTop: "2px",
-                                      }}
-                                    >
-                                      {t.txType}
-                                    </div>
-                                  ) : null}
+                                  <div
+                                    className="wd-muted"
+                                    style={{
+                                      fontSize: "0.8em",
+                                      marginTop: "2px",
+                                    }}
+                                  >
+                                    {txTypeOf(t)}
+                                  </div>
                                 </td>
                                 <td>
                                   <select
@@ -2952,23 +2949,15 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                     ))}
                                   </select>
                                 </td>
-                                <td>
-                                  <select
-                                    value={t.kind}
-                                    onChange={(e) =>
-                                      patchTx(t.id, {
-                                        kind: e.target.value as TxKind,
-                                      })
-                                    }
-                                  >
-                                    <option value="expense">Out</option>
-                                    <option value="income">In</option>
-                                  </select>
-                                </td>
                                 <td className="num">
                                   <input
                                     type="number"
                                     step="0.01"
+                                    title={
+                                      t.kind === "income"
+                                        ? "Money in — green"
+                                        : "Money out — red"
+                                    }
                                     className={
                                       t.kind === "income" ? "is-pos" : "is-neg"
                                     }
@@ -3032,64 +3021,50 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               </div>
 
               {/* Big numbers */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                  gap: 12,
-                }}
-              >
-                <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
-                  <div className="wd-muted" style={{ fontSize: 12 }}>
-                    Spent this month
-                  </div>
+              <div className="wd-stat-grid">
+                <div className="wd-stat-tile">
+                  <div className="wd-stat-label">Spent this month</div>
                   <div
-                    style={{ fontSize: 22, fontWeight: 600 }}
-                    className={
-                      budgetForecast.today > MONTHLY_LIMIT ? "is-neg" : undefined
-                    }
+                    className={`wd-stat-value ${
+                      budgetForecast.today > MONTHLY_LIMIT ? "is-neg" : ""
+                    }`}
                   >
                     {money(budgetForecast.today)}
                   </div>
-                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                  <div className="wd-stat-sub">
                     {budgetAnalysis.percentOfBudget.toFixed(0)}% of limit
                   </div>
                 </div>
-                <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
-                  <div className="wd-muted" style={{ fontSize: 12 }}>
-                    Daily burn
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 600 }}>
+                <div className="wd-stat-tile">
+                  <div className="wd-stat-label">Daily burn</div>
+                  <div className="wd-stat-value">
                     {money(budgetForecast.dailyBurn)}
                   </div>
-                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                  <div className="wd-stat-sub">
                     safe pace {money(MONTHLY_LIMIT / 30)}/day
                   </div>
                 </div>
-                <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
-                  <div className="wd-muted" style={{ fontSize: 12 }}>
-                    Month-end forecast
-                  </div>
+                <div className="wd-stat-tile">
+                  <div className="wd-stat-label">Month-end forecast</div>
                   <div
-                    style={{ fontSize: 22, fontWeight: 600 }}
-                    className={budgetForecast.overBudget ? "is-neg" : "is-pos"}
+                    className={`wd-stat-value ${
+                      budgetForecast.overBudget ? "is-neg" : "is-pos"
+                    }`}
                   >
                     {money(budgetForecast.forecastedTotal)}
                   </div>
-                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                  <div className="wd-stat-sub">
                     {budgetForecast.overBudget
                       ? `over by ${money(budgetForecast.overBy)}`
                       : "under limit"}
                   </div>
                 </div>
-                <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
-                  <div className="wd-muted" style={{ fontSize: 12 }}>
-                    Left to spend
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 600 }}>
+                <div className="wd-stat-tile">
+                  <div className="wd-stat-label">Left to spend</div>
+                  <div className="wd-stat-value">
                     {money(Math.max(0, MONTHLY_LIMIT - budgetForecast.today))}
                   </div>
-                  <div className="wd-muted" style={{ fontSize: 12 }}>
+                  <div className="wd-stat-sub">
                     {budgetForecast.daysLeftInMonth} days left
                   </div>
                 </div>
@@ -3113,22 +3088,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   {budgetAlerts.map((a, i) => (
                     <li
                       key={i}
-                      style={{
-                        padding: 10,
-                        borderLeft:
-                          a.type === "critical"
-                            ? "4px solid #d32f2f"
-                            : a.type === "warning"
-                              ? "4px solid #f57c00"
-                              : "4px solid #999",
-                        background:
-                          a.type === "critical"
-                            ? "#ffebee"
-                            : a.type === "warning"
-                              ? "#fff3e0"
-                              : "#f5f5f5",
-                        borderRadius: 4,
-                      }}
+                      className={`wd-alert ${
+                        a.type === "critical"
+                          ? "is-critical"
+                          : a.type === "warning"
+                            ? "is-warning"
+                            : ""
+                      }`}
                     >
                       {a.message}
                     </li>
@@ -3180,27 +3146,33 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   alignItems: "center",
                 }}
               >
-                <svg width={220} height={180} viewBox="0 0 220 180">
+                <svg
+                  width={220}
+                  height={180}
+                  viewBox="0 0 220 180"
+                  className="wd-chart-frame"
+                  style={{ maxWidth: 220 }}
+                >
                   {(() => {
                     const inc = annualBook.income.annualTotal;
                     const exp = annualBook.expenses.annualTotal;
                     const max = Math.max(inc, exp, 1);
-                    const hInc = (inc / max) * 130;
-                    const hExp = (exp / max) * 130;
+                    const hInc = (inc / max) * 120;
+                    const hExp = (exp / max) * 120;
                     return (
                       <>
                         <rect x={40} y={150 - hInc} width={60} height={hInc} fill="#1f6f8b" />
                         <rect x={120} y={150 - hExp} width={60} height={hExp} fill="#e8743b" />
-                        <text x={70} y={145 - hInc} fontSize={11} textAnchor="middle" fill="#333">
+                        <text x={70} y={142 - hInc} fontSize={11} textAnchor="middle">
                           {money(inc)}
                         </text>
-                        <text x={150} y={145 - hExp} fontSize={11} textAnchor="middle" fill="#333">
+                        <text x={150} y={142 - hExp} fontSize={11} textAnchor="middle">
                           {money(exp)}
                         </text>
-                        <text x={70} y={168} fontSize={12} textAnchor="middle" fill="#666">
+                        <text x={70} y={168} fontSize={12} textAnchor="middle">
                           Income
                         </text>
-                        <text x={150} y={168} fontSize={12} textAnchor="middle" fill="#666">
+                        <text x={150} y={168} fontSize={12} textAnchor="middle">
                           Expenses
                         </text>
                       </>
@@ -3237,9 +3209,9 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                       );
                     });
                   })()}
-                  <circle r={0.45} fill="#fff" />
+                  <circle r={0.45} fill="var(--wd-bg, #000)" />
                 </svg>
-                <div>
+                <div className="wd-annual-legend">
                   <div>
                     <span style={{ color: "#1f6f8b" }}>■</span> Income{" "}
                     {money(annualBook.income.annualTotal)}
@@ -3991,10 +3963,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                     width="100%"
                     height={200}
                     viewBox="0 0 600 200"
-                    style={{
-                      border: "1px solid #e0e0e0",
-                      borderRadius: 4,
-                    }}
+                    className="wd-chart-frame"
                   >
                     <defs>
                       <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -4010,7 +3979,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                         y1={170 - ((score - 300) / 550) * 160}
                         x2={600}
                         y2={170 - ((score - 300) / 550) * 160}
-                        stroke="#f0f0f0"
+                        stroke="rgba(255,255,255,0.08)"
                         strokeWidth={1}
                       />
                     ))}
@@ -4021,39 +3990,45 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                         x={5}
                         y={175 - ((score - 300) / 550) * 160}
                         fontSize={12}
-                        fill="#666"
                       >
                         {score}
                       </text>
                     ))}
-                    {/* Score line */}
-                    <polyline
-                      points={creditStore.snapshots
-                        .map((s, i) => {
-                          const x = (i / (creditStore.snapshots.length - 1 || 1)) * 560 + 30;
-                          const y = 170 - ((s.score - 300) / 550) * 160;
-                          return `${x},${y}`;
-                        })
-                        .join(" ")}
-                      fill="none"
-                      stroke="#4285f4"
-                      strokeWidth={2}
-                    />
-                    {/* Fill under line */}
-                    <polygon
-                      points={`30,170 ${creditStore.snapshots
-                        .map((s, i) => {
-                          const x = (i / (creditStore.snapshots.length - 1 || 1)) * 560 + 30;
-                          const y = 170 - ((s.score - 300) / 550) * 160;
-                          return `${x},${y}`;
-                        })
-                        .join(" ")} 590,170`}
-                      fill="url(#scoreGrad)"
-                    />
+                    {/* Score line + fill (needs 2+ points) */}
+                    {creditStore.snapshots.length > 1 ? (
+                      <>
+                        <polyline
+                          points={creditStore.snapshots
+                            .map((s, i) => {
+                              const x = (i / (creditStore.snapshots.length - 1)) * 560 + 30;
+                              const y = 170 - ((s.score - 300) / 550) * 160;
+                              return `${x},${y}`;
+                            })
+                            .join(" ")}
+                          fill="none"
+                          stroke="#4285f4"
+                          strokeWidth={2}
+                        />
+                        <polygon
+                          points={`30,170 ${creditStore.snapshots
+                            .map((s, i) => {
+                              const x = (i / (creditStore.snapshots.length - 1)) * 560 + 30;
+                              const y = 170 - ((s.score - 300) / 550) * 160;
+                              return `${x},${y}`;
+                            })
+                            .join(" ")} 590,170`}
+                          fill="url(#scoreGrad)"
+                        />
+                      </>
+                    ) : null}
                     {/* Latest point dot */}
                     {creditStore.snapshots.length > 0 && (
                       <circle
-                        cx={590}
+                        cx={
+                          creditStore.snapshots.length > 1
+                            ? 590
+                            : 30
+                        }
                         cy={170 - ((creditStore.snapshots[creditStore.snapshots.length - 1].score - 300) / 550) * 160}
                         r={4}
                         fill="#1a73e8"
@@ -4068,34 +4043,21 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 const latest = latestScore(creditStore)!;
                 const trend = scoreTrend(creditStore, 30);
                 return (
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                      gap: 12,
-                      marginTop: 16,
-                    }}
-                  >
-                    <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
-                      <div className="wd-muted" style={{ fontSize: 12 }}>
-                        Latest
-                      </div>
-                      <div style={{ fontSize: 24, fontWeight: 600, color: "#1a73e8" }}>
+                  <div className="wd-stat-grid" style={{ marginTop: 16 }}>
+                    <div className="wd-stat-tile">
+                      <div className="wd-stat-label">Latest</div>
+                      <div className="wd-stat-value" style={{ color: "#5aa2f7" }}>
                         {latest.score}
                       </div>
-                      <div className="wd-muted" style={{ fontSize: 12, marginTop: 4 }}>
+                      <div className="wd-stat-sub">
                         {latest.date}
                         {latest.trend === "up" && " ↑"}
                         {latest.trend === "down" && " ↓"}
                       </div>
                     </div>
-                    <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
-                      <div className="wd-muted" style={{ fontSize: 12 }}>
-                        30-day avg
-                      </div>
-                      <div style={{ fontSize: 24, fontWeight: 600 }}>
-                        {trend.average}
-                      </div>
+                    <div className="wd-stat-tile">
+                      <div className="wd-stat-label">30-day avg</div>
+                      <div className="wd-stat-value">{trend.average}</div>
                       <div
                         className={trend.change >= 0 ? "is-pos" : "is-neg"}
                         style={{ fontSize: 12, marginTop: 4 }}
@@ -4104,11 +4066,9 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                         {trend.change}
                       </div>
                     </div>
-                    <div style={{ padding: 12, background: "#f9f9f9", borderRadius: 4 }}>
-                      <div className="wd-muted" style={{ fontSize: 12 }}>
-                        Range
-                      </div>
-                      <div style={{ fontSize: 24, fontWeight: 600 }}>
+                    <div className="wd-stat-tile">
+                      <div className="wd-stat-label">Range</div>
+                      <div className="wd-stat-value">
                         {trend.lowPoint} – {trend.highPoint}
                       </div>
                     </div>
@@ -4126,22 +4086,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                       {reminders.map((r) => (
                         <li
                           key={r.accountId}
-                          style={{
-                            padding: 12,
-                            background:
-                              r.urgency === "critical"
-                                ? "#ffebee"
-                                : r.urgency === "warning"
-                                  ? "#fff3e0"
-                                  : "#f5f5f5",
-                            borderLeft:
-                              r.urgency === "critical"
-                                ? "4px solid #d32f2f"
-                                : r.urgency === "warning"
-                                  ? "4px solid #f57c00"
-                                  : "4px solid #999",
-                            borderRadius: 4,
-                          }}
+                          className={`wd-alert ${
+                            r.urgency === "critical"
+                              ? "is-critical"
+                              : r.urgency === "warning"
+                                ? "is-warning"
+                                : ""
+                          }`}
                         >
                           <div style={{ fontWeight: 600 }}>{r.accountName}</div>
                           <div className="wd-muted" style={{ fontSize: 12, marginTop: 4 }}>

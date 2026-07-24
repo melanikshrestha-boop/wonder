@@ -90,6 +90,8 @@ type ColMap = {
   desc?: number;
   name?: number;
   category?: number;
+  /** Bank "Type" column (Zelle credit, ACH debit, DEBIT_CARD…) */
+  txType?: number;
 };
 
 function mapHeaders(headers: string[]): ColMap {
@@ -109,6 +111,8 @@ function mapHeaders(headers: string[]): ColMap {
       map.desc = i;
     if (!map.name && /^(name|merchant|payee|vendor)$/.test(n)) map.name = i;
     if (!map.category && n === "category") map.category = i;
+    if (!map.txType && /^(type|transactiontype|trantype)$/.test(n))
+      map.txType = i;
   });
   return map;
 }
@@ -214,6 +218,7 @@ export function parseBankCsv(
     }
     existing.add(fpKey);
 
+    const typeRaw = col.txType != null ? (cells[col.txType] || "").trim() : "";
     added.push({
       id: uid(),
       date,
@@ -226,6 +231,7 @@ export function parseBankCsv(
       source: "csv",
       externalId: fpKey,
       pending: false,
+      txType: typeRaw || null,
     });
   }
 
