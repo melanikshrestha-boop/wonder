@@ -194,7 +194,6 @@ const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "overview", label: "Books", icon: "◉" },
   { id: "plan", label: "Plan", icon: "▦" },
   { id: "subscriptions", label: "Subscriptions", icon: "↻" },
-  { id: "insights", label: "Review", icon: "◈" },
   { id: "sql", label: "SQL", icon: "⌗" },
 ];
 
@@ -328,8 +327,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const [filterCat, setFilterCat] = useState("all");
   // Accountant period: year first, then Jan → current month (grows automatically)
   const [filterYear, setFilterYear] = useState(() => new Date().getFullYear());
-  /** "all" = whole selected year · or "YYYY-MM" for one month */
-  const [filterMonth, setFilterMonth] = useState("all");
+  /** Month dropdown: live month by default (rolls with the calendar) · "all" = whole year */
+  const [filterMonth, setFilterMonth] = useState<string>(() => monthKey());
   const [filterKind, setFilterKind] = useState<"all" | TxKind>("all");
   const [filterTxType, setFilterTxType] = useState("all");
   const [importNote, setImportNote] = useState("");
@@ -593,17 +592,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     return keys; // January → current, calendar order
   }, [filterYear, liveYear, liveMonth, txs]);
 
-  /** Short label: "Jul" keeps the strip small */
-  const monthLabel = (ymKey: string) => {
-    const [y, m] = ymKey.split("-").map(Number);
-    if (!y || !m) return ymKey;
-    try {
-      return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "short" });
-    } catch {
-      return ymKey;
-    }
-  };
-
   const monthLabelLong = (ymKey: string) => {
     const [y, m] = ymKey.split("-").map(Number);
     if (!y || !m) return ymKey;
@@ -631,6 +619,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     const types = new Set<string>();
     for (const t of txs) types.add(txTypeOf(t));
     return Array.from(types).sort();
+  }, [txs]);
+
+  /** Only categories that actually appear in your books — no unused options */
+  const usedCategories = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of txs) if (t.category) set.add(t.category);
+    return Array.from(set).sort();
   }, [txs]);
 
   /** Owner's hard monthly spending limit */
@@ -865,25 +860,37 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
 
   const ledger = useMemo(() => {
     let list = [...txs];
-    if (filterMonth !== "all") {
-      // One month only (e.g. 2026-07)
-      list = list.filter((t) => t.date.startsWith(filterMonth));
-    } else {
-      // "All" inside the selected year — not every year dumped together
-      list = list.filter((t) => t.date.startsWith(String(filterYear)));
+    const searching = filterQ.trim().length > 0;
+    // A search looks across ALL your books, not just the visible month
+    if (!searching) {
+      if (filterMonth !== "all") {
+        list = list.filter((t) => t.date.startsWith(filterMonth));
+      } else {
+        list = list.filter((t) => t.date.startsWith(String(filterYear)));
+      }
     }
     if (filterKind !== "all") list = list.filter((t) => t.kind === filterKind);
     if (filterTxType !== "all")
       list = list.filter((t) => txTypeOf(t) === filterTxType);
     if (filterCat !== "all") list = list.filter((t) => t.category === filterCat);
-    if (filterQ.trim()) {
-      const q = filterQ.trim().toLowerCase();
-      list = list.filter(
-        (t) =>
-          (t.merchant || "").toLowerCase().includes(q) ||
-          (t.note || "").toLowerCase().includes(q) ||
-          (t.category || "").toLowerCase().includes(q)
-      );
+    if (searching) {
+      // Every word must match somewhere: payee, note, category, type,
+      // date, or amount ("zelle 300", "chase jul", "8.99" all work)
+      const words = filterQ.trim().toLowerCase().split(/\s+/);
+      list = list.filter((t) => {
+        const hay = [
+          t.merchant || "",
+          t.note || "",
+          t.category || "",
+          txTypeOf(t),
+          t.date,
+          String(t.amount),
+          t.amount.toFixed(2),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return words.every((w) => hay.includes(w));
+      });
     }
     const dir = sortDir === "asc" ? 1 : -1;
     list.sort((a, b) => {
@@ -1632,93 +1639,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         {/* ════════ BOOKS (period summary) ════════ */}
         {tab === "overview" ? (
           <div className="wd-overview">
-            {/* Bookkeeper period close — not a vanity dashboard */}
-            <section className="wd-panel wd-brain">
-              <div className="wd-brain-top">
-                <div>
-                  <p className="wd-brain-k">Period · {ym}</p>
-                  <h2 className="wd-brain-h">{brief.headline}</h2>
-                </div>
-                <div
-                  className="wd-brain-q"
-                  title="Ruthless reinvest score this period"
-                >
-                  <span>Ruthless</span>
-                  <strong>{brief.reinvest.ruthlessness}</strong>
-                </div>
-              </div>
-              <div className="wd-reinvest-strip">
-                <span>
-                  Keep target{" "}
-                  <strong>
-                    {Math.round(brief.reinvest.targetRate * 100)}%
-                  </strong>
-                </span>
-                <span>
-                  Actual{" "}
-                  <strong>
-                    {brief.reinvest.actualRate == null
-                      ? "—"
-                      : `${Math.round(brief.reinvest.actualRate * 100)}%`}
-                  </strong>
-                </span>
-                <span>
-                  Deploy now{" "}
-                  <strong className={brief.reinvest.deployNow > 0 ? "is-neg" : "is-pos"}>
-                    {moneyCents(brief.reinvest.deployNow)}
-                  </strong>
-                </span>
-                <span>
-                  Invest book{" "}
-                  <strong>{moneyCents(brief.reinvest.investedBalance)}</strong>
-                </span>
-              </div>
-              {brief.dataQuality.score < 50 ? (
-                <div className="wd-brain-cta">
-                  {state.txs.length > 0 ? (
-                    <button
-                      type="button"
-                      className="wd-btn wd-btn-primary"
-                      onClick={autoBuildPlan}
-                    >
-                      Auto-build plan from spend
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="wd-btn"
-                    onClick={() => fileRef.current?.click()}
-                  >
-                    Import bank CSV
-                  </button>
-                </div>
-              ) : null}
-              {brief.dataQuality.hasTxs ? (
-                <div className="wd-reinvest-strip">
-                  <span>
-                    Burn/day{" "}
-                    <strong>{money(brief.projection.burnPerDay)}</strong>
-                  </span>
-                  <span>
-                    Month-end flow{" "}
-                    <strong
-                      className={
-                        brief.projection.projectedFlow < 0 ? "is-neg" : "is-pos"
-                      }
-                    >
-                      {money(brief.projection.projectedFlow)}
-                    </strong>
-                  </span>
-                  <span>
-                    Day{" "}
-                    <strong>
-                      {brief.projection.dayOfMonth}/{brief.projection.daysInMonth}
-                    </strong>
-                  </span>
-                </div>
-              ) : null}
-            </section>
-
             {/* ═══ 14 accounting modules — work first, no chrome ═══ */}
             <section className="wd-panel wd-acct-modules">
               <div className="wd-panel-head">
@@ -2468,15 +2388,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               </section>
             ) : null}
             <section className="wd-panel">
-              <div className="wd-panel-head">
-                <div>
-                  <h2>Ledger</h2>
-                </div>
-              </div>
-
-              {/* CSV-only books: entries come from monthly imports, never typed */}
-
-              {/* Filters stacked: search · type · category · year · months */}
+              {/* One compact filter row — every control is a dropdown */}
               <div className="wd-filters wd-filters-ledger">
                 <input
                   type="search"
@@ -2499,7 +2411,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                     value={filterTxType}
                     onChange={(e) => setFilterTxType(e.target.value)}
                   >
-                    <option value="all">All tx types</option>
+                    <option value="all">All types</option>
                     {txTypes.map((type) => (
                       <option key={type} value={type}>
                         {type}
@@ -2512,69 +2424,38 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   onChange={(e) => setFilterCat(e.target.value)}
                 >
                   <option value="all">All categories</option>
-                  {categories.map((c) => (
+                  {usedCategories.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>
                   ))}
                 </select>
-                {/* Year right next to categories */}
-                <nav className="wd-year-nav wd-year-nav-inline" aria-label="Year">
-                  {years.map((y) => (
-                    <button
-                      key={y}
-                      type="button"
-                      className={
-                        filterYear === y
-                          ? "wd-year-nav-link is-active"
-                          : "wd-year-nav-link"
-                      }
-                      onClick={() => {
-                        setFilterYear(y);
-                        setFilterMonth("all");
-                      }}
-                    >
-                      {y}
-                    </button>
-                  ))}
-                </nav>
-              </div>
-
-              {/* Months on the same control strip as categories — Jan → current */}
-              <nav className="wd-month-nav wd-month-nav-inline" aria-label="Month">
-                <button
-                  type="button"
-                  className={
-                    filterMonth === "all"
-                      ? "wd-month-nav-link is-active"
-                      : "wd-month-nav-link"
-                  }
-                  onClick={() => setFilterMonth("all")}
+                <select
+                  value={filterYear}
+                  onChange={(e) => {
+                    setFilterYear(Number(e.target.value));
+                    setFilterMonth("all");
+                  }}
                 >
-                  All
-                </button>
-                {months.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    className={
-                      filterMonth === m
-                        ? "wd-month-nav-link is-active"
-                        : "wd-month-nav-link"
-                    }
-                    onClick={() => setFilterMonth(m)}
-                  >
-                    {monthLabel(m)}
-                  </button>
-                ))}
-              </nav>
-
-              <p className="wd-muted" style={{ margin: "0 0 12px", fontSize: 12 }}>
-                {ledger.length} line{ledger.length === 1 ? "" : "s"}
-                {filterMonth === "all"
-                  ? ` · ${filterYear} full year`
-                  : ` · ${monthLabelLong(filterMonth)} ${filterYear}`}
-              </p>
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+                {/* Current month first, walking back to January; All year last */}
+                <select
+                  value={filterMonth}
+                  onChange={(e) => setFilterMonth(e.target.value)}
+                >
+                  {[...months].reverse().map((m) => (
+                    <option key={m} value={m}>
+                      {monthLabelLong(m)}
+                    </option>
+                  ))}
+                  <option value="all">All {filterYear}</option>
+                </select>
+              </div>
 
               {monthBooks.length === 0 ? (
                 <p className="wd-muted wd-pad">Import a bank CSV to start.</p>

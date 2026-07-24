@@ -9,8 +9,11 @@ import {
   answerCopilot,
   copilotSuggestions,
   type CopilotContext,
+  type CopilotChart,
+  type CopilotTurn,
 } from "./financeCopilot";
 import { money } from "./financeStore";
+import { LabeledLineChart, LabeledPieChart } from "./FinCharts";
 import "./finance-copilot.css";
 
 type Msg = {
@@ -19,6 +22,7 @@ type Msg = {
   text: string;
   sources?: string[];
   data?: { label: string; value: string }[];
+  chart?: CopilotChart;
 };
 
 function uid() {
@@ -63,6 +67,8 @@ export function FinanceCopilot({
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
   }, [msgs, thinking]);
 
+  const lastTurn = useRef<CopilotTurn | undefined>(undefined);
+
   function send(text: string) {
     const q = text.trim();
     if (!q || thinking) return;
@@ -72,10 +78,18 @@ export function FinanceCopilot({
     setThinking(true);
     // Small delay so the "reading your ledger" state is visible (feels alive).
     window.setTimeout(() => {
-      const ans = answerCopilot(q, ctx);
+      const ans = answerCopilot(q, ctx, lastTurn.current);
+      lastTurn.current = { question: q, answer: ans };
       setMsgs((m) => [
         ...m,
-        { id: uid(), role: "assistant", text: ans.text, sources: ans.sources, data: ans.data },
+        {
+          id: uid(),
+          role: "assistant",
+          text: ans.text,
+          sources: ans.sources,
+          data: ans.data,
+          chart: ans.chart,
+        },
       ]);
       setThinking(false);
     }, 240);
@@ -123,6 +137,21 @@ export function FinanceCopilot({
             {m.role === "assistant" ? <span className="fc-avatar" aria-hidden>✦</span> : null}
             <div className="fc-bubble">
               <p className="fc-text">{m.text}</p>
+              {m.chart ? (
+                <div className="fc-chart">
+                  {m.chart.kind === "pie" ? (
+                    <LabeledPieChart title={m.chart.title} slices={m.chart.slices} size={190} />
+                  ) : (
+                    <LabeledLineChart
+                      title={m.chart.title}
+                      xLabel={m.chart.xLabel}
+                      yLabel={m.chart.yLabel}
+                      points={m.chart.points}
+                      height={190}
+                    />
+                  )}
+                </div>
+              ) : null}
               {m.data && m.data.length ? (
                 <table className="fc-data">
                   <tbody>

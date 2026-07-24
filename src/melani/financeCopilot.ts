@@ -34,13 +34,28 @@ export type CopilotContext = {
   ym: string;
 };
 
+export type CopilotChart =
+  | { kind: "pie"; title: string; slices: { name: string; value: number }[] }
+  | {
+      kind: "line";
+      title: string;
+      xLabel: string;
+      yLabel: string;
+      points: { x: string; y: number; label: string }[];
+    };
+
 export type CopilotAnswer = {
   text: string;
   /** What data the copilot read to answer — shown like Cursor's context. */
   sources: string[];
   /** Optional small table to render under the answer. */
   data?: { label: string; value: string }[];
+  /** Chart the copilot built from the ledger (Excel-copilot style). */
+  chart?: CopilotChart;
 };
+
+/** Last exchange, so follow-ups like "which one" have something to refer to. */
+export type CopilotTurn = { question: string; answer: CopilotAnswer };
 
 const MONTHS = [
   "january", "february", "march", "april", "may", "june",
@@ -176,7 +191,11 @@ function merchantBreakdown(txs: FinanceTx[], ym?: string): { name: string; value
  * Direct data queries first (spend/income/merchants/subscriptions/counts),
  * then the advisory brain for judgement (afford/credit/runway/reinvest).
  */
-export function answerCopilot(question: string, ctx: CopilotContext): CopilotAnswer {
+export function answerCopilot(
+  question: string,
+  ctx: CopilotContext,
+  prev?: CopilotTurn
+): CopilotAnswer {
   const q = question.toLowerCase().trim();
   const txs = ctx.state.txs;
 
@@ -190,11 +209,105 @@ export function answerCopilot(question: string, ctx: CopilotContext): CopilotAns
     };
   }
 
+  // ── Small talk — answer like a person, never dump a report ───────
+  if (/^(hi|hey|hello|yo|sup|hiya|howdy|good (morning|afternoon|evening))[.!\s]*$/.test(q)) {
+    return {
+      text: "Hey. Ask me anything about your money — totals, a merchant, a month, subscriptions — or ask for a chart.",
+      sources: [],
+    };
+  }
+  if (/^(thanks|thank you|thx|ok|okay|cool|nice|got it|k)[.!\s]*$/.test(q)) {
+    return { text: "Anytime.", sources: [] };
+  }
+
+  // ── Follow-ups ("which one", "the biggest one") use the last answer ──
+  if (/^(which( one)?|who|what one|the (biggest|top|largest)( one)?|biggest one|top one)\??$/.test(q)) {
+    const list = prev?.answer.data;
+    if (list && list.length) {
+      return {
+        text: `${list[0].label} — ${list[0].value}.`,
+        sources: ["previous answer"],
+        data: list.slice(0, 3),
+      };
+    }
+    return {
+      text: "Which one of what? Ask me about a category, merchant, or month first and I'll rank them.",
+      sources: [],
+    };
+  }
+
   const month = resolveMonth(q, txs, ctx.ym);
   const category = resolveCategory(q, txs);
   const scope = month ? month.ym : undefined;
   const scopeLabel = month ? month.label : "all time";
   const merchant = resolveMerchant(q, txs);
+
+  // ── Chart requests — build the chart from the rows (Excel-style) ──
+  const wantsChart = /\b(chart|graph|plot|pie|visuali[sz]e|draw)\b/.test(q);
+  const isAverage = /\b(average|avg|typical)\b/.test(q);
+  const wantsTrend =
+    !isAverage && /\b(over time|by month|trend|progression|each month)\b/.test(q);
+  if (wantsChart || (wantsTrend && /\b(spend|spent|spending|income|flow|net|money)\b/.test(q))) {
+    // Trend line: monthly totals for spend / income / net
+    if (wantsTrend || /\b(line|over time|trend)\b/.test(q)) {
+      const metric = /\bincome|earn|made|deposits?\b/.test(q)
+        ? "income"
+        : /\bnet|flow|cash ?flow\b/.test(q)
+          ? "net"
+          : "spend";
+      const byMonth = new Map<string, { inn: number; out: number }>();
+      for (const t of txs) {
+        if (isTransferLike(t)) continue;
+        const key = t.date.slice(0, 7);
+        const cur = byMonth.get(key) || { inn: 0, out: 0 };
+        if (t.kind === "income") cur.inn += t.amount;
+        else if (t.kind === "expense") cur.out += t.amount;
+        byMonth.set(key, cur);
+      }
+      const keys = [...byMonth.keys()].sort();
+      const points = keys.map((k) => {
+        const v = byMonth.get(k)!;
+        const y =
+          metric === "income" ? v.inn : metric === "net" ? v.inn - v.out : v.out;
+        return {
+          x: k.slice(2),
+          y: Math.round(y * 100) / 100,
+          label: `${monthLabel(k)}: ${moneyCents(y)}`,
+        };
+      });
+      const titles = { spend: "Spending by month", income: "Income by month", net: "Net cash flow by month" };
+      return {
+        text: `Here's your ${titles[metric].toLowerCase()} — built from ${txs.length} rows.`,
+        sources: [`${keys.length} months`, "monthly rollup"],
+        chart: {
+          kind: "line",
+          title: titles[metric],
+          xLabel: "Month",
+          yLabel: metric === "income" ? "Income ($)" : metric === "net" ? "Net ($)" : "Spend ($)",
+          points,
+        },
+      };
+    }
+    // Pie: merchants if asked, otherwise category split
+    if (/\bmerchant|store|payee|vendor\b/.test(q)) {
+      const slices = merchantBreakdown(txs, scope)
+        .slice(0, 8)
+        .map((m) => ({ name: m.name, value: m.value }));
+      return {
+        text: `Top merchants ${month ? `in ${scopeLabel}` : "across your ledger"}, as a pie.`,
+        sources: [month ? scopeLabel : "all transactions", "merchant rollup"],
+        chart: { kind: "pie", title: `Merchants — ${month ? scopeLabel : "all time"}`, slices },
+      };
+    }
+    const slices = categoryBreakdown(txs, scope)
+      .slice(0, 8)
+      .map((c) => ({ name: c.name, value: c.value }));
+    return {
+      text: `Spend by category ${month ? `in ${scopeLabel}` : "across your ledger"}, as a pie.`,
+      sources: [month ? scopeLabel : "all transactions", "category rollup"],
+      chart: { kind: "pie", title: `Spend by category — ${month ? scopeLabel : "all time"}`, slices },
+    };
+  }
 
   // ── A specific merchant ("how much at Amazon / on Uber") ─────────
   if (merchant && /\b(spend|spent|spending|cost|paid|much|at|on)\b/.test(q)) {
@@ -357,21 +470,34 @@ export function answerCopilot(question: string, ctx: CopilotContext): CopilotAns
     return { text: `You owe ${money(ctx.debt)} across credit accounts. Utilization ${ctx.credit.utilization == null ? "unknown (add card limits)" : `${Math.round(ctx.credit.utilization * 100)}%`}.`, sources: ["accounts", "credit"] };
   }
 
-  // ── Judgement questions → advisory brain, with a data source note ─
-  const advisory = answerFromBrief(question, ctx.brief, {
-    worth: ctx.worth,
-    cash: ctx.cash,
-    debt: ctx.debt,
-    income: ctx.income,
-    expense: ctx.expense,
-    cashFlow: ctx.cashFlow,
-    rate: ctx.rate,
-    credit: ctx.credit,
-    txCount: txs.length,
-  });
+  // ── Judgement questions ONLY → advisory brain ────────────────────
+  // (afford / credit / runway / reinvest / cut). Everything else gets a
+  // short, honest nudge instead of a canned wall of advice.
+  const isJudgement =
+    /\b(afford|should i|worth it|can i buy|credit|score|fico|utilization|runway|broke|survive|reinvest|invest|save rate|cut|reduce|leak|budget|forecast|owe|debt)\b/.test(
+      q
+    );
+  if (isJudgement) {
+    const advisory = answerFromBrief(question, ctx.brief, {
+      worth: ctx.worth,
+      cash: ctx.cash,
+      debt: ctx.debt,
+      income: ctx.income,
+      expense: ctx.expense,
+      cashFlow: ctx.cashFlow,
+      rate: ctx.rate,
+      credit: ctx.credit,
+      txCount: txs.length,
+    });
+    return {
+      text: advisory,
+      sources: [`${txs.length} transactions`, "budget + credit + reinvest model"],
+    };
+  }
+
   return {
-    text: advisory,
-    sources: [`${txs.length} transactions`, "budget + credit + reinvest model"],
+    text: "I didn't catch that. Try: \"how much on food in June\", \"top merchants\", \"chart my spending by month\", or \"can I afford $500\".",
+    sources: [],
   };
 }
 
@@ -380,10 +506,10 @@ export function copilotSuggestions(ctx: CopilotContext): string[] {
   const out: string[] = [];
   const cats = categoryBreakdown(ctx.state.txs).slice(0, 1);
   if (cats[0]) out.push(`How much did I spend on ${cats[0].name.split(/[\s/]/)[0]}?`);
+  out.push("Chart my spending by month");
+  out.push("Pie chart of spend by category");
   if (ctx.subs.count) out.push("What subscriptions am I paying for?");
-  out.push("Where did my money go this month?");
   out.push("Can I afford a $1,000 purchase?");
-  out.push("How is my credit?");
   return out.slice(0, 5);
 }
 

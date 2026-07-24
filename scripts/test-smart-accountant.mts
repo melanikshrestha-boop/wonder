@@ -474,6 +474,20 @@ const { detectSubscriptions: detectSubs2 } = await import("../src/melani/subscri
   const avgA = answerCopilot("what's my average monthly spend?", baseCtx as any);
   check("copilot: average monthly spend answered", /average/i.test(avgA.text) && /\$/.test(avgA.text), avgA.text);
 
+  const hiA = answerCopilot("hi", baseCtx as any);
+  check("copilot: greeting is short, not a report", hiA.text.length < 140 && !/deploy|reinvest/i.test(hiA.text), hiA.text);
+
+  const pieA = answerCopilot("pie chart of spend by category", baseCtx as any);
+  check("copilot: builds a pie chart", pieA.chart?.kind === "pie" && (pieA.chart?.slices?.length || 0) > 0, pieA.chart);
+
+  const lineA = answerCopilot("chart my spending by month", baseCtx as any);
+  check("copilot: builds a line chart", lineA.chart?.kind === "line" && (lineA.chart?.points?.length || 0) > 0, lineA.chart);
+
+  const prevA = answerCopilot("where did my money go?", baseCtx as any);
+  const whichA = answerCopilot("which one", baseCtx as any, { question: "where did my money go?", answer: prevA } as any);
+  const topLabel = prevA.data?.[0]?.label || "";
+  check("copilot: follow-up 'which one' uses last answer", !!topLabel && whichA.text.includes(topLabel), { whichA: whichA.text, topLabel });
+
   const emptyCtx = { ...baseCtx, state: { ...baseCtx.state, txs: [] } };
   const emptyA = answerCopilot("how much did I spend?", emptyCtx as any);
   check("copilot: empty ledger asks for import", /import/i.test(emptyA.text), emptyA.text);
