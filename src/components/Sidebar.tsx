@@ -69,8 +69,8 @@ function applySidebarWidth(w: number) {
 
 /** Health section roots */
 const HEALTH_ROOT_IDS = ["pg-fitness", "pg-hygiene", "pg-data"] as const;
-/** Learn section roots — World Monitor + Finances. No Work / Books section. */
-const LEARN_ROOT_IDS = ["pg-world-monitor", "pg-finance"] as const;
+/** Learn section roots — Bookshelf + World Monitor + Finances. No Work section. */
+const LEARN_ROOT_IDS = ["pg-library", "pg-world-monitor", "pg-finance"] as const;
 
 /** true = closed (kids hidden). Opening a parent always forces its kids closed. */
 function markClosed(ids: readonly string[], map: Record<string, boolean>) {
@@ -93,8 +93,7 @@ function closeDescendants(
 const SIDEBAR_HIDDEN_IDS = new Set([
   "pg-life",
   "pg-my-tasks",
-  "pg-books", // Books section removed
-  "pg-library", // Bookshelf removed entirely
+  "pg-books", // Bookshelf is pg-library
   "pg-my-data", // use pg-data
   "pg-agents", // hub is hidden; children show under Agents
   "pg-work", // Work section removed — stocks live on World Monitor under Learn
@@ -113,6 +112,7 @@ function loadCollapsed(): Record<string, boolean> {
     "pg-fitness": true,
     "pg-hygiene": true,
     "pg-data": true,
+    "pg-library": true,
     "pg-world-monitor": true,
     "pg-finance": true,
     // Sections start open so you see the three Health roots (each still closed inside)
@@ -694,7 +694,7 @@ export function Sidebar({
   );
 
   // Preferred drop targets
-  const learnNestId = learnTop[0]?.id;
+  const learnNestId = pageById("pg-library")?.id || learnTop[0]?.id;
   const healthNestId = pageById("pg-fitness")?.id || healthTop[0]?.id;
 
   const sectionHealthClosed = collapsed[SECTION_KEYS.health] === true;
@@ -871,7 +871,7 @@ export function Sidebar({
           ))}
           {learnTop.length === 0 ? (
             <p className="sidebar-empty-hint">
-              World Monitor and Finances will show here after a refresh.
+              Bookshelf and World Monitor will show here after a refresh.
             </p>
           ) : null}
           <button type="button" className="sidebar-new" onClick={onNewPage}>

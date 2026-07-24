@@ -20,6 +20,7 @@ import {
 } from "./labEngine";
 import { FitnessExact, isFitnessPage } from "./FitnessExact";
 import { HygieneExact, isHygienePage } from "./HygieneExact";
+import { BooksLibrary, isBooksPage } from "./BooksLibrary";
 import { isGmailAgentPage } from "./gmailRoute";
 import { CycleTracker } from "./CycleTracker";
 import { ExpandableText } from "./ExpandableText";
@@ -341,6 +342,7 @@ export function isMelaniRichPage(pageId: string): boolean {
     isFitnessPage(pageId) ||
     isHygienePage(pageId) ||
     isGmailAgentPage(pageId) ||
+    isBooksPage(pageId) ||
     isWardrobePage(pageId) ||
     isShoppingAgentPage(pageId) ||
     isCareConciergePage(pageId) ||
@@ -354,6 +356,7 @@ export function isMelaniRichPage(pageId: string): boolean {
 export function MelaniRichPage({
   pageId,
   onGo,
+  pages,
 }: {
   pageId: string;
   onGo: (id: string) => void;
@@ -398,6 +401,11 @@ export function MelaniRichPage({
   // Learn → Finances (accounts, budget, spending, light quotes)
   if (isFinancesPage(pageId)) {
     return <Finances onGo={onGo} />;
+  }
+
+  // Learn → Bookshelf
+  if (isBooksPage(pageId)) {
+    return <BooksLibrary onGo={onGo} workspacePages={pages} />;
   }
 
   if (pageId === "pg-data" || pageId === "pg-my-data") {
