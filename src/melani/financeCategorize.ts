@@ -10,7 +10,7 @@ const RULES: { category: string; match: RegExp }[] = [
   { category: "Rent / housing", match: /\b(rent|landlord|apartment|mortgage|hoa|property mgmt)\b/i },
   { category: "Utilities", match: /\b(con ed|coned|pseg|national grid|water bill|utility|electric|gas bill|internet|verizon|spectrum|optimum|at&t|comcast)\b/i },
   { category: "Education / school", match: /\b(univ of california|university|tuition|usc |usc\/|bookstore|follett|jones & bartlett|american databank|platinum educational|ticket office)\b/i },
-  { category: "Food / groceries", match: /\b(whole foods|wholefds|trader joe|costco|walmart|aldi|kroger|safeway|grocery|instacart|fresh direct|wegmans|h mart|woodside grocery|g mart)\b/i },
+  { category: "Food / groceries", match: /\b(whole foods|wholefds|trader joe'?s?|costco|walmart|aldi|kroger|safeway|grocery|instacart|fresh direct|wegmans|h mart|woodside grocery|g mart)\b/i },
   { category: "Restaurants / coffee", match: /\b(starbucks|dunkin|mcdonald|chipotle|cava|doordash|uber eats|grubhub|seamless|restaurant|cafe|coffee|pizza|sushi|bagel|blue bottle|insomnia|bruxie|kobunga|wingstop|yogurtland|subway|himalayan|dulce)\b/i },
   { category: "Transport", match: /\b(uber|lyft|waymo|mta|metrocard|omny|shell|exxon|chevron|gas station|parking|toll|ezpass|citi bike|arco)\b/i },
   { category: "Health", match: /\b(pharmacy|cvs|walgreens|rite aid|duane reade|doctor|dental|hospital|labcorp|quest diag|health|medical|insurance)\b/i },

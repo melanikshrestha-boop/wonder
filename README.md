@@ -54,6 +54,43 @@ npm run gmail   # Gmail IMAP bridge :8790
 
 These are optional backends. The UI itself is one app on **:5173**.
 
+## Smart Accountant (Finances)
+
+The Finances desk is a local-first bookkeeping OS: ledger, budget plan, goals,
+accounts, double-entry accounting pack (journal, reconciliation, statements,
+monthly close), plus:
+
+- **Worth tab** — net worth as a timeline, not one number. Month-end snapshots
+  reconstruct past bank balances from the ledger (labeled *estimated*); manual
+  valuations (property, vehicle, business, collectibles) carry forward from
+  their last recorded date and are labeled as carried forward — nothing is
+  invented between data points. Every change comes with a "why it changed"
+  breakdown showing the arithmetic.
+- **Imports without APIs** — drag a bank export onto Import: Chase-style CSV,
+  generic CSV (Date + Amount + Description), and **OFX/QFX** (bank & card).
+  OFX `FITID` becomes the transaction's `externalId`, so re-importing the same
+  statement never duplicates rows. No Plaid or bank credentials required.
+- **Transfer intelligence** — deterministic matching of money-out/money-in
+  pairs (same cents, ≤3-day window, different accounts, transfer-y wording).
+  Each proposal shows its evidence and confidence; nothing is applied without
+  your click. Transfers and card payments are excluded from true income and
+  spending so moving money never looks like earning or spending it.
+- **Cents-safe math** — `financeMoney.ts` does ledger arithmetic in integer
+  cents so floating-point dust can never fake a penny.
+- **Optional encryption** — a local passphrase vault (AES-GCM, PBKDF2) can
+  encrypt the finance books at rest. Off by default; no cloud.
+
+Run its test suite:
+
+```bash
+npm run test:finance   # money math, CSV/OFX parsing, dedupe, transfers, net-worth timeline
+```
+
+**Limits:** Wonder is a personal records tool. It is **not** tax, legal,
+investment, or accounting advice. Credit figures are educational estimates,
+not FICO. All data stays in this browser — export CSV backups yourself
+(Ledger → Export CSV); local storage means *you* own backups.
+
 ## Data
 Core data lives in the **browser** (`localStorage`). Some finance imports are shipped as TypeScript snapshots under `src/melani/` for offline books. Raw bank spreadsheets (e.g. `.xlsx` statement dumps) are **not** committed.
 
