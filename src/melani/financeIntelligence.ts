@@ -339,8 +339,8 @@ export function buildSmartBrief(
       severity: "critical",
       title: "Connect money data",
       detail:
-        "Import a Chase/bank CSV or load demo. Without transactions, every number is a guess.",
-      cta: "Import CSV or Load demo",
+        "Import a Chase/bank CSV. Without transactions, every number is a guess.",
+      cta: "Import CSV",
       tab: "accounts",
     });
   } else if (!hasTxs) {
@@ -700,7 +700,7 @@ export function answerFromBrief(
   if (!q) return "Ask a real money question — afford, runway, credit, tax, audit, hire, or what to cut.";
 
   if (!brief.dataQuality.hasTxs) {
-    return "I don't have transactions yet. Import a bank CSV (Accounts) or Load demo — then I can answer with numbers, not vibes.";
+    return "I don't have transactions yet. Import a bank CSV (Accounts) — then I can answer with numbers from your ledger.";
   }
 
   // Adept OS + accountant backends first

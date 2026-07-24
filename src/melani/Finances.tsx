@@ -327,7 +327,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const [plaidNote, setPlaidNote] = useState("");
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [goalDraft, setGoalDraft] = useState(() =>
-    newGoal({ name: "Emergency fund", target: 5000 })
+    newGoal({ name: "", target: 1000, saved: 0 })
   );
   const [worthStore, setWorthStore] = useState<WorthState>(() => loadWorth());
   const [creditStore, setCreditStore] = useState<CreditTrackingState>(() =>
@@ -2371,7 +2371,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                     {state.txs.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="wd-muted">
-                          No transactions — load demo or import CSV.
+                          No transactions — import a bank CSV.
                         </td>
                       </tr>
                     ) : null}

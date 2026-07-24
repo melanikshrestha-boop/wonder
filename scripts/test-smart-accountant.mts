@@ -510,6 +510,37 @@ const { runSql } = await import("../src/melani/financeSql.ts");
   check("sql: select star + limit", r7.rowCount === 2 && r7.columns.includes("merchant"), r7);
 }
 
+// ── Guard: the ledger only ever holds the user's real imported data ─
+// This must stay true for every finance feature added in the future.
+{
+  const store = await import("../src/melani/financeStore.ts");
+  // 1. There is no demo/seed transaction generator anywhere.
+  check("no-fake: demoSeedTxs export is gone", !("demoSeedTxs" in store), Object.keys(store).filter((k) => /demo|seed|sample|mock/i.test(k)));
+
+  // 2. Loading a ledger that somehow contains manual/demo rows drops them —
+  //    only real imports (source import/csv/plaid) survive.
+  values.clear();
+  values.set(
+    "wonder-finance-v2",
+    JSON.stringify({
+      version: 2,
+      accounts: [],
+      budget: [],
+      watchlist: [],
+      goals: [],
+      creditProfile: null,
+      txs: [
+        { id: "fake-1", date: "2026-06-01", kind: "expense", amount: 1850, category: "Rent / housing", note: "Rent", merchant: "Rent", source: "manual" },
+        { id: "import-1", date: "2026-06-02", kind: "expense", amount: 20, category: "Food", note: "TJ", merchant: "TJ", source: "import" },
+      ],
+    })
+  );
+  const loaded = store.loadFinance();
+  check("no-fake: manual/demo rows are purged on load", loaded.txs.length === 1 && loaded.txs[0].source === "import", loaded.txs);
+  check("no-fake: no Rent/housing survives", !loaded.txs.some((t) => t.category === "Rent / housing"), loaded.txs);
+  values.clear();
+}
+
 console.log("");
 console.log(`${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
