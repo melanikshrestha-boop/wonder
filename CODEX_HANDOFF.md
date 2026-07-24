@@ -1,7 +1,7 @@
 # Codex handoff — Wonder
 
 **Product name:** Wonder (formerly Dr. Melani)  
-**Repo:** https://github.com/melanikshrestha-boop/wonder (private; may still resolve from old `dr.melani` URL after rename)  
+**Repo:** https://github.com/melanikshrestha-boop/wonder (private)  
 **Branch:** `grok/latest-dr-melani-july-21-2026`  
 **Stack:** Vite + React + TypeScript (not Next.js)  
 **Local URL:** http://127.0.0.1:5173/  
@@ -43,9 +43,7 @@ Data lives in the **browser** (`localStorage`). No backend DB required for core 
 
 ```bash
 git clone https://github.com/melanikshrestha-boop/wonder.git
-# if rename not finished yet:
-# git clone https://github.com/melanikshrestha-boop/dr.melani.git
-cd wonder   # or cd dr.melani
+cd wonder
 git checkout grok/latest-dr-melani-july-21-2026
 npm install
 npm run dev
