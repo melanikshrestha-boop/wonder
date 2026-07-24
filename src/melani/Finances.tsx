@@ -47,6 +47,8 @@ import {
   runningBalanceMap,
   bookkeeperGaps,
   saveFinance,
+  seedFinanceUndoBaseline,
+  FINANCE_EXTERNAL_RESTORE_EVENT,
   savingsRate,
   scaleBudget,
   spentByCategory,
@@ -236,9 +238,26 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
   const [vaultBusy, setVaultBusy] = useState(false);
   const [saveErr, setSaveErr] = useState("");
 
-  const [state, setState] = useState<FinanceState | null>(() =>
-    probeVault().mode === "encrypted" ? null : loadFinance()
-  );
+  const [state, setState] = useState<FinanceState | null>(() => {
+    if (probeVault().mode === "encrypted") return null;
+    const initial = loadFinance();
+    seedFinanceUndoBaseline(initial);
+    return initial;
+  });
+
+  // Global **U** undo restores ledger from outside (topbar / key U)
+  useEffect(() => {
+    const onRestore = (event: Event) => {
+      const detail = (event as CustomEvent<FinanceState>).detail;
+      if (detail && detail.version === 2) {
+        seedFinanceUndoBaseline(detail);
+        setState(detail);
+      }
+    };
+    window.addEventListener(FINANCE_EXTERNAL_RESTORE_EVENT, onRestore);
+    return () =>
+      window.removeEventListener(FINANCE_EXTERNAL_RESTORE_EVENT, onRestore);
+  }, []);
   // Ledger first — a meticulous bookkeeper opens the daybook, not a dashboard
   const [tab, setTab] = useState<TabId>("transactions");
   const [showTxForm, setShowTxForm] = useState(false);
@@ -403,6 +422,7 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
     setVaultBusy(true);
     try {
       const next = await unlockVault(vaultPass);
+      seedFinanceUndoBaseline(next);
       setState(next);
       setVaultPass("");
       setVaultGate("ready");
@@ -1345,7 +1365,11 @@ export function Finances({ onGo }: { onGo?: (pageId: string) => void }) {
               onClick={() => {
                 // Escape hatch: open plain books if any; vault stays for later
                 lockVault();
-                setState(loadFinance());
+                {
+                  const plain = loadFinance();
+                  seedFinanceUndoBaseline(plain);
+                  setState(plain);
+                }
                 setVaultGate("ready");
                 setVaultErr("");
                 setVaultPass("");

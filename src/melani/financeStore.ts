@@ -4,6 +4,8 @@
  * period closed, local-first. Optional Plaid. Numbers stay on this device.
  */
 
+import { pushUndo } from "../undoStack";
+
 export type AccountKind =
   | "cash"
   | "checking"
@@ -269,11 +271,56 @@ export function loadFinance(): FinanceState {
   }
 }
 
+/** When true, saveFinance does not push undo (used while restoring) */
+let financeUndoQuiet = false;
+let financeLastJson: string | null = null;
+
+export const FINANCE_EXTERNAL_RESTORE_EVENT = "wonder-finance-external-restore";
+
+/**
+ * Save ledger. Automatically records an Undo step (press **U**) so Finances
+ * edits can be reversed like workspace page moves.
+ */
 export function saveFinance(state: FinanceState) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ ...state, version: 2 }));
+    const payload = { ...state, version: 2 as const };
+    const json = JSON.stringify(payload);
+    if (
+      !financeUndoQuiet &&
+      financeLastJson &&
+      financeLastJson !== json &&
+      typeof window !== "undefined"
+    ) {
+      const previousJson = financeLastJson;
+      pushUndo("Finances", () => {
+        financeUndoQuiet = true;
+        try {
+          localStorage.setItem(KEY, previousJson);
+          financeLastJson = previousJson;
+          const restored = JSON.parse(previousJson) as FinanceState;
+          window.dispatchEvent(
+            new CustomEvent(FINANCE_EXTERNAL_RESTORE_EVENT, {
+              detail: restored,
+            })
+          );
+        } finally {
+          financeUndoQuiet = false;
+        }
+      });
+    }
+    localStorage.setItem(KEY, json);
+    financeLastJson = json;
   } catch {
     /* ignore */
+  }
+}
+
+/** Call after loadFinance so the first edit has a baseline without undoing load */
+export function seedFinanceUndoBaseline(state: FinanceState) {
+  try {
+    financeLastJson = JSON.stringify({ ...state, version: 2 as const });
+  } catch {
+    financeLastJson = null;
   }
 }
 

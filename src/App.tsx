@@ -30,6 +30,13 @@ import {
   type MelWorkspaceActionRequest,
 } from "./melani/melActions";
 import { applyMelWorkspaceAction } from "./melani/melWorkspace";
+import {
+  canUndo,
+  peekUndoLabel,
+  performUndo,
+  pushUndo,
+  UNDO_STACK_EVENT,
+} from "./undoStack";
 import "./notion.css";
 
 /**
@@ -63,13 +70,23 @@ export default function App() {
   const [compactSidebarOpen, setCompactSidebarOpen] = useState(false);
   const workspaceRef = useRef(ws);
   const mainScrollRef = useRef<HTMLDivElement>(null);
-  /** Snapshots of the workspace before your last moves / Mel actions (for Undo) */
-  const melUndoRef = useRef<Workspace[]>([]);
+  /** Depth + label for the topbar **U** undo button */
+  const [undoUi, setUndoUi] = useState(() => ({
+    can: canUndo(),
+    label: peekUndoLabel(),
+  }));
 
   useEffect(() => {
     workspaceRef.current = ws;
     saveWorkspace(ws);
   }, [ws]);
+
+  useEffect(() => {
+    const sync = () =>
+      setUndoUi({ can: canUndo(), label: peekUndoLabel() });
+    window.addEventListener(UNDO_STACK_EVENT, sync);
+    return () => window.removeEventListener(UNDO_STACK_EVENT, sync);
+  }, []);
 
   useEffect(() => {
     const query = window.matchMedia("(max-width: 768px)");
@@ -89,21 +106,21 @@ export default function App() {
     setWs((current) => {
       const next = mutator(current);
       if (next === current) return current;
-      // Keep last ~30 steps so Undo can walk back several moves
-      melUndoRef.current = [...melUndoRef.current.slice(-29), current];
+      // Global **U** stack — pages, Mel, Finances share one undo history
+      const snapshot = current;
+      pushUndo("Workspace", () => {
+        workspaceRef.current = snapshot;
+        saveWorkspace(snapshot);
+        setWs(snapshot);
+      });
       workspaceRef.current = next;
       return next;
     });
   }
 
-  /** Undo the last workspace change (sidebar move, Mel move, trash, …) */
-  function undoWorkspaceChange(): boolean {
-    const previous = melUndoRef.current.pop();
-    if (!previous) return false;
-    workspaceRef.current = previous;
-    saveWorkspace(previous);
-    setWs(previous);
-    return true;
+  /** Undo last change. Press **U** or click topbar U. */
+  function undoLastChange(): boolean {
+    return performUndo().ok;
   }
 
   // Global shortcuts — like Notion
@@ -134,12 +151,15 @@ export default function App() {
         e.preventDefault();
         commitWorkspace((prev) => addChildPage(prev, null));
       }
-      // ⌘Z / Ctrl+Z — undo last sidebar / Mel workspace action (not text typing)
-      if (meta && !e.shiftKey && e.key.toLowerCase() === "z") {
-        if (isTypingTarget(e.target)) return; // let the browser undo text in fields
-        if (melUndoRef.current.length === 0) return;
+      // **U** = Undo (your shortcut). Also ⌘Z / Ctrl+Z when not typing.
+      const isU =
+        !meta && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "u";
+      const isCmdZ = meta && !e.shiftKey && e.key.toLowerCase() === "z";
+      if (isU || isCmdZ) {
+        if (isTypingTarget(e.target)) return;
+        if (!canUndo()) return;
         e.preventDefault();
-        undoWorkspaceChange();
+        undoLastChange();
       }
     }
     window.addEventListener("keydown", onKey);
@@ -208,12 +228,15 @@ export default function App() {
       if (!request?.action) return;
 
       if (request.action.kind === "undo-workspace") {
-        const previous = melUndoRef.current[melUndoRef.current.length - 1];
-        if (!previous) {
-          request.result = { ok: false, summary: "Nothing to undo yet. Move a page or ask Mel to change something first." };
+        if (!canUndo()) {
+          request.result = {
+            ok: false,
+            summary:
+              "Nothing to undo yet. Change a page, Finances, or ask Mel first — then press U.",
+          };
           return;
         }
-        const ok = undoWorkspaceChange();
+        const ok = undoLastChange();
         if (!ok) {
           request.result = { ok: false, summary: "Nothing to undo yet." };
           return;
@@ -223,7 +246,8 @@ export default function App() {
         );
         request.result = {
           ok: true,
-          summary: "Undid the last change (page move, nest, trash, or Mel action).",
+          summary:
+            "Undid the last change (press U anytime — pages, Mel, Finances).",
           pageId: restored?.id,
           pageTitle: restored?.title,
         };
@@ -235,8 +259,12 @@ export default function App() {
       request.result = applied.result;
       if (!applied.changed) return;
 
-      // Same undo stack as drag-and-drop so one Undo button reverses Mel OR your hands
-      melUndoRef.current = [...melUndoRef.current.slice(-29), before];
+      // Same global **U** stack as drag-and-drop / topbar button
+      pushUndo("Workspace", () => {
+        workspaceRef.current = before;
+        saveWorkspace(before);
+        setWs(before);
+      });
       workspaceRef.current = applied.workspace;
       saveWorkspace(applied.workspace);
       setWs(applied.workspace);
@@ -361,9 +389,32 @@ export default function App() {
           <span className="topbar-meta">{editedLabel}</span>
           <button
             type="button"
+            className={`topbar-btn topbar-undo-btn${undoUi.can ? " is-ready" : ""}`}
+            title={
+              undoUi.can
+                ? `Undo: ${undoUi.label || "last change"} (U)`
+                : "Nothing to undo yet (U)"
+            }
+            aria-label="Undo last change"
+            disabled={!undoUi.can}
+            onClick={() => {
+              if (!undoLastChange()) {
+                window.alert("Nothing to undo yet. Edit something first, then press U.");
+              }
+            }}
+          >
+            <span className="topbar-undo-key" aria-hidden>
+              U
+            </span>
+            <span className="topbar-undo-word">Undo</span>
+          </button>
+          <button
+            type="button"
             className="topbar-btn"
             title="Favorite"
-            onClick={() => setWs((p) => toggleFavorite(p, activePage.id))}
+            onClick={() =>
+              commitWorkspace((p) => toggleFavorite(p, activePage.id))
+            }
           >
             {activePage.favorite ? "★" : "☆"}
           </button>
@@ -389,14 +440,14 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    // Same undo stack as Mel’s Undo button and ⌘Z
-                    if (!undoWorkspaceChange()) {
+                    // Same stack as topbar **U** and key U
+                    if (!undoLastChange()) {
                       window.alert("Nothing to undo yet.");
                     }
                     setMoreOpen(false);
                   }}
                 >
-                  Undo last change
+                  Undo (U)
                 </button>
                 <button
                   type="button"

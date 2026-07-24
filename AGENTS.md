@@ -42,6 +42,14 @@ If mid-task and interrupted: commit as `WIP: <what>` and push so Claude/Grok can
 
 ---
 
+## Undo — press **U**
+
+- Topbar shows a **U** Undo button (also works when disabled until first edit).
+- Keyboard: press **`U`** when not typing in a field (same role as ⌘C for copy).
+- Also **⌘Z** / **Ctrl+Z** when not in a text field.
+- Global stack: workspace page moves + Mel actions + Finances ledger saves.
+- New features that mutate saved state should call `pushUndo(label, restore)` from `src/undoStack.ts` before applying the change.
+
 ## Run / open
 
 ```bash
