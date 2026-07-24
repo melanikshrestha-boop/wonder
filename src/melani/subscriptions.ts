@@ -61,22 +61,61 @@ const KNOWN: { match: RegExp; name: string }[] = [
   { match: /microsoft|office\s?365|xbox/i, name: "Microsoft" },
   { match: /dropbox/i, name: "Dropbox" },
   { match: /notion/i, name: "Notion" },
-  { match: /openai|chatgpt/i, name: "OpenAI" },
-  { match: /claude|anthropic/i, name: "Anthropic" },
-  { match: /github/i, name: "GitHub" },
+  // AI / dev tools
+  { match: /claude|anthropic/i, name: "Claude" },
+  { match: /cursor/i, name: "Cursor" },
+  { match: /openai|chatgpt/i, name: "ChatGPT" },
+  { match: /perplexity/i, name: "Perplexity" },
+  { match: /midjourney/i, name: "Midjourney" },
+  { match: /github|copilot/i, name: "GitHub" },
+  { match: /vercel/i, name: "Vercel" },
+  { match: /replit/i, name: "Replit" },
   { match: /patreon/i, name: "Patreon" },
   { match: /substack/i, name: "Substack" },
   { match: /nyt|new york times/i, name: "NY Times" },
   { match: /wsj|wall street journal/i, name: "WSJ" },
-  { match: /planet\s?fitness|equinox|blink\s?fitness|la\s?fitness|gym|crossfit|peloton|classpass/i, name: "Gym / Fitness" },
+  { match: /planet\s?fitness|equinox|blink\s?fitness|la\s?fitness|crossfit|peloton|classpass/i, name: "Gym / Fitness" },
   { match: /geico|progressive|state\s?farm|allstate|insurance/i, name: "Insurance" },
   { match: /at&t|verizon|t-?mobile|sprint|comcast|xfinity|spectrum/i, name: "Phone / Internet" },
-  { match: /dashpass|doordash\s?pass|uber\s?one|instacart\+?/i, name: "Delivery pass" },
+  { match: /dashpass|doordash\s?pass|uber\s?one|instacart\+/i, name: "Delivery pass" },
   { match: /linkedin/i, name: "LinkedIn" },
   { match: /canva/i, name: "Canva" },
   { match: /figma/i, name: "Figma" },
   { match: /grammarly/i, name: "Grammarly" },
+  { match: /squarespace/i, name: "Squarespace" },
+  { match: /shopify/i, name: "Shopify" },
+  { match: /wix\.com|\bwix\b/i, name: "Wix" },
+  { match: /1password|lastpass|dashlane/i, name: "Password manager" },
+  { match: /google\s?(one|storage|workspace)/i, name: "Google" },
 ];
+
+/**
+ * Categories that are spending, not subscriptions. A restaurant you visit
+ * every week is not a subscription — only known brands survive here.
+ */
+const NON_SUBSCRIPTION_CATEGORIES = new Set([
+  "food / groceries",
+  "food",
+  "groceries",
+  "dining",
+  "restaurants",
+  "restaurant",
+  "coffee",
+  "transport",
+  "gas",
+  "fuel",
+  "travel",
+  "shopping",
+  "retail",
+  "clothes",
+  "atm",
+  "cash",
+  "transfers",
+  "transfer",
+  "uncategorized",
+  "other",
+  "misc",
+]);
 
 function matchKnown(text: string): string | null {
   for (const k of KNOWN) if (k.match.test(text)) return k.name;
@@ -156,11 +195,30 @@ function amountConsistency(amounts: number[]): number {
   return Math.sqrt(variance) / mean; // lower = steadier
 }
 
+/** Merchant-name words that signal a physical place, not a subscription. */
+const VENUE_WORDS = /\b(village|cafe|caf|coffee|grill|kitchen|restaurant|bar|bistro|deli|market|mart|diner|eatery|pizzeria|taqueria|sushi|bakery|juice|bowls?|tacos?|burger|thai|ramen|store|shop|salon|spa|nails?|barber)\b/i;
+
+/** How tightly the charges land on the same day of the month (0 = identical day). */
+function dayOfMonthSpread(dates: string[]): number {
+  const days = dates.map((d) => Number(d.slice(8, 10)));
+  const min = Math.min(...days);
+  const max = Math.max(...days);
+  // Handle month-end wrap (e.g. billed on the 30th shows as 1st next month)
+  const wrapped = Math.min(max - min, min + 31 - max);
+  return wrapped;
+}
+
 /**
- * Scan the ledger for recurring subscriptions.
- * Groups expenses by merchant, measures the gap between charges, and
- * keeps anything that repeats on a regular cadence (or matches a known brand).
+ * Only a real subscription survives here. The tell that separates a
+ * subscription from "a restaurant I go to a lot" is that a subscription
+ * charges a near-identical amount on a regular cadence. So for anything
+ * that isn't a known brand we require: a non-spending category, a tight
+ * amount (charges within ~8% of each other), a monthly/quarterly/yearly
+ * rhythm, and — for monthly — the same day of the month each time.
  */
+const AMOUNT_CV_MAX = 0.08; // charges must be within ~8% to count
+const DOM_SPREAD_MAX = 4; // monthly charges must land within 4 days
+
 export function detectSubscriptions(txs: FinanceTx[]): SubscriptionScan {
   const groups = new Map<string, FinanceTx[]>();
 
@@ -183,9 +241,7 @@ export function detectSubscriptions(txs: FinanceTx[]): SubscriptionScan {
     const amount = median(amounts);
     const last = list[list.length - 1];
     const isKnown = Boolean(matchKnown((last.merchant || last.note || "").toLowerCase()));
-
-    // Need repetition, OR a known brand seen at least once.
-    if (list.length < 2 && !isKnown) continue;
+    const cat = (last.category || "").toLowerCase().trim();
 
     let cadence: SubCadence = "monthly";
     let perMonth = 1;
@@ -200,16 +256,30 @@ export function detectSubscriptions(txs: FinanceTx[]): SubscriptionScan {
       const c = cadenceFor(gap);
       cadence = c.cadence;
       perMonth = c.perMonth;
+    }
 
-      // Irregular + inconsistent amounts + not a known brand → not a subscription.
-      const cv = amountConsistency(amounts);
-      if (cadence === "irregular" && !isKnown) continue;
-      if (cv > 0.35 && !isKnown && cadence !== "yearly") continue;
+    if (isKnown) {
+      // A recognized brand is a subscription even from a single charge.
+      // A weekly/irregular rhythm on a brand is almost always monthly billing
+      // plus one-off buys (App Store, etc.) — normalize it to monthly.
+      if (list.length < 2 || cadence === "weekly" || cadence === "irregular") {
+        cadence = "monthly";
+        perMonth = 1;
+        gap = 30;
+      }
     } else {
-      // Single known charge — assume monthly.
-      cadence = "monthly";
-      perMonth = 1;
-      gap = 30;
+      // Unknown merchant — must clear every strict gate to count.
+      const raw = (last.merchant || last.note || "");
+      if (list.length < 3) continue; // two similar charges is coincidence, not a plan
+      if (NON_SUBSCRIPTION_CATEGORIES.has(cat)) continue; // restaurants, gas, shopping…
+      if (VENUE_WORDS.test(raw)) continue; // "… Village", "… Cafe" → a place, not a plan
+      if (cadence !== "monthly" && cadence !== "quarterly" && cadence !== "yearly") {
+        continue; // weekly/irregular unknowns are spending, not plans
+      }
+      if (amountConsistency(amounts) > AMOUNT_CV_MAX) continue; // varies → not a plan
+      if (cadence === "monthly" && dayOfMonthSpread(list.map((t) => t.date)) > DOM_SPREAD_MAX) {
+        continue; // real subs bill the same day each month
+      }
     }
 
     const monthlyCost = amount * perMonth;

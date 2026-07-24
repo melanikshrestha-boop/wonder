@@ -386,6 +386,39 @@ const { detectSubscriptions } = await import("../src/melani/subscriptions.ts");
   check("subs: irregular groceries excluded", !groceries, groceries);
   check("subs: monthly total is positive", scan.monthlyTotal > 0, scan.monthlyTotal);
   check("subs: sorted by monthly cost desc", scan.subs.every((s, i, a) => i === 0 || a[i - 1].monthlyCost >= s.monthlyCost));
+
+  // ── False-positive guards: restaurants are NOT subscriptions ──
+  const restaurantTxs = [
+    // Cava — visited monthly-ish, VARYING amounts (real spend, not a plan)
+    newTx({ date: "2026-04-08", kind: "expense", amount: 12.4, merchant: "CAVA USC VILLAGE", category: "Food / groceries" }),
+    newTx({ date: "2026-05-11", kind: "expense", amount: 18.9, merchant: "CAVA USC VILLAGE", category: "Food / groceries" }),
+    newTx({ date: "2026-06-02", kind: "expense", amount: 9.75, merchant: "CAVA USC VILLAGE", category: "Food / groceries" }),
+    newTx({ date: "2026-06-24", kind: "expense", amount: 21.3, merchant: "CAVA USC VILLAGE", category: "Food / groceries" }),
+    // Bruxie — same story
+    newTx({ date: "2026-05-03", kind: "expense", amount: 14, merchant: "BRUXIE", category: "Dining" }),
+    newTx({ date: "2026-06-09", kind: "expense", amount: 27.5, merchant: "BRUXIE", category: "Dining" }),
+  ];
+  const rScan = detectSubscriptions(restaurantTxs);
+  check("subs: Cava restaurant NOT a subscription", !rScan.subs.some((s) => /cava/i.test(s.merchant)), rScan.subs);
+  check("subs: Bruxie restaurant NOT a subscription", !rScan.subs.some((s) => /bruxie/i.test(s.merchant)), rScan.subs);
+  check("subs: no false positives from restaurants", rScan.count === 0, rScan);
+
+  // ── Real ones: Claude/Cursor + a same-day identical unknown charge ──
+  const realTxs = [
+    newTx({ date: "2026-04-17", kind: "expense", amount: 20, merchant: "CLAUDE.AI SUBSCRIPTION", category: "Software" }),
+    newTx({ date: "2026-05-17", kind: "expense", amount: 20, merchant: "CLAUDE.AI SUBSCRIPTION", category: "Software" }),
+    newTx({ date: "2026-06-17", kind: "expense", amount: 20, merchant: "CLAUDE.AI SUBSCRIPTION", category: "Software" }),
+    newTx({ date: "2026-05-20", kind: "expense", amount: 20, merchant: "CURSOR AI POWERED IDE", category: "Software" }),
+    newTx({ date: "2026-06-20", kind: "expense", amount: 20, merchant: "CURSOR AI POWERED IDE", category: "Software" }),
+    // Unknown SaaS billed the same day, identical amount → real subscription
+    newTx({ date: "2026-04-05", kind: "expense", amount: 9.99, merchant: "ACME CLOUD HOSTING", category: "Software" }),
+    newTx({ date: "2026-05-05", kind: "expense", amount: 9.99, merchant: "ACME CLOUD HOSTING", category: "Software" }),
+    newTx({ date: "2026-06-06", kind: "expense", amount: 9.99, merchant: "ACME CLOUD HOSTING", category: "Software" }),
+  ];
+  const realScan = detectSubscriptions(realTxs);
+  check("subs: Claude detected", realScan.subs.some((s) => s.merchant === "Claude"), realScan.subs);
+  check("subs: Cursor detected", realScan.subs.some((s) => s.merchant === "Cursor"), realScan.subs);
+  check("subs: identical same-day unknown detected", realScan.subs.some((s) => /acme/i.test(s.merchant)), realScan.subs);
 }
 
 // ── Finance copilot (grounded ledger queries) ──────────────────────
