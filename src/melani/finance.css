@@ -2396,3 +2396,188 @@ strong {
   color: var(--wd-text);
   line-height: 1.7;
 }
+
+/* ── Subscriptions tab ── */
+.wd-sub-chart {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.wd-donut .wd-donut-big {
+  fill: var(--wd-text);
+  font-size: 20px;
+  font-weight: 700;
+}
+.wd-donut .wd-donut-sub {
+  fill: var(--wd-secondary);
+  font-size: 12px;
+}
+.wd-sub-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wd-sub-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--wd-text);
+}
+.wd-sub-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.wd-sub-legend-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wd-sub-legend-val {
+  font-variant-numeric: tabular-nums;
+  color: var(--wd-secondary);
+}
+.wd-sub-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.wd-sub-table th,
+.wd-sub-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--wd-text);
+}
+.wd-sub-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--wd-secondary);
+  font-weight: 600;
+}
+.wd-sub-table .wd-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.wd-cad {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--wd-secondary);
+}
+.wd-cad-monthly { background: rgba(31, 111, 139, 0.22); color: #7fc7dd; }
+.wd-cad-yearly { background: rgba(181, 101, 29, 0.22); color: #e0a566; }
+.wd-cad-weekly { background: rgba(201, 79, 124, 0.22); color: #e59ab8; }
+.wd-cad-quarterly { background: rgba(125, 91, 166, 0.22); color: #bda6dd; }
+.wd-cad-irregular { background: rgba(255, 255, 255, 0.08); color: var(--wd-secondary); }
+.wd-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--wd-text);
+}
+.wd-empty-icon {
+  font-size: 40px;
+  opacity: 0.5;
+  margin-bottom: 8px;
+}
+
+/* ── Labeled charts (title + axes + hover) ── */
+.wd-month-charts {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin: 14px 0 6px;
+}
+.wd-month-charts-line {
+  flex: 1 1 380px;
+  min-width: 300px;
+}
+.wd-linechart {
+  width: 100%;
+  height: auto;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+.wd-chart-title {
+  fill: var(--wd-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.wd-chart-tick {
+  fill: var(--wd-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.wd-chart-axis-label {
+  fill: var(--wd-secondary);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+.wd-chart-grid {
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 1;
+}
+.wd-chart-axis {
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 1;
+}
+.wd-chart-zero {
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-dasharray: 4 3;
+  stroke-width: 1;
+}
+.wd-chart-cursor {
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+  pointer-events: none;
+}
+.wd-chart-hover {
+  fill: var(--wd-text);
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.wd-pie-wrap {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+}
+.wd-pie-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 180px;
+}
+.wd-pie-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--wd-text);
+  cursor: default;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+.wd-pie-legend li.is-hot {
+  background: rgba(255, 255, 255, 0.07);
+}

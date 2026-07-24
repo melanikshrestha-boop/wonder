@@ -356,6 +356,38 @@ const { txTypeOf } = await import("../src/melani/financeStore.ts");
   );
 }
 
+// ── Subscription detection ─────────────────────────────────────────
+const { detectSubscriptions } = await import("../src/melani/subscriptions.ts");
+{
+  const stxs = [
+    // Netflix: 3 monthly charges → detected, monthly
+    newTx({ date: "2026-04-15", kind: "expense", amount: 15.49, merchant: "NETFLIX.COM", category: "Entertainment" }),
+    newTx({ date: "2026-05-15", kind: "expense", amount: 15.49, merchant: "NETFLIX.COM", category: "Entertainment" }),
+    newTx({ date: "2026-06-15", kind: "expense", amount: 15.49, merchant: "NETFLIX.COM", category: "Entertainment" }),
+    // Spotify: single known charge → detected as monthly
+    newTx({ date: "2026-06-03", kind: "expense", amount: 11.99, merchant: "Spotify USA", category: "Entertainment" }),
+    // Grocery run: two irregular charges, not a brand → NOT a subscription
+    newTx({ date: "2026-06-02", kind: "expense", amount: 54.2, merchant: "TRADER JOES", category: "Food" }),
+    newTx({ date: "2026-06-19", kind: "expense", amount: 88.7, merchant: "TRADER JOES", category: "Food" }),
+    // Yearly Amazon Prime
+    newTx({ date: "2025-06-10", kind: "expense", amount: 139, merchant: "Amazon Prime", category: "Shopping" }),
+    newTx({ date: "2026-06-10", kind: "expense", amount: 139, merchant: "Amazon Prime", category: "Shopping" }),
+  ];
+  const scan = detectSubscriptions(stxs);
+  const netflix = scan.subs.find((s) => s.merchant === "Netflix");
+  const spotify = scan.subs.find((s) => s.merchant === "Spotify");
+  const prime = scan.subs.find((s) => s.merchant === "Amazon Prime");
+  const groceries = scan.subs.find((s) => /trader/i.test(s.merchant));
+  check("subs: netflix detected monthly", !!netflix && netflix.cadence === "monthly", netflix);
+  check("subs: netflix amount = 15.49", !!netflix && netflix.amount === 15.49, netflix);
+  check("subs: spotify single known charge detected", !!spotify, spotify);
+  check("subs: prime detected yearly", !!prime && prime.cadence === "yearly", prime);
+  check("subs: prime monthly cost ≈ 11.58", !!prime && Math.abs(prime.monthlyCost - 139 / 12) < 0.05, prime);
+  check("subs: irregular groceries excluded", !groceries, groceries);
+  check("subs: monthly total is positive", scan.monthlyTotal > 0, scan.monthlyTotal);
+  check("subs: sorted by monthly cost desc", scan.subs.every((s, i, a) => i === 0 || a[i - 1].monthlyCost >= s.monthlyCost));
+}
+
 console.log("");
 console.log(`${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

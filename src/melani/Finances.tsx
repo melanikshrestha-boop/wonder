@@ -58,6 +58,11 @@ import {
 } from "./smartBudget";
 import { annualBookCsv, buildAnnualBook } from "./annualBooks";
 import {
+  detectSubscriptions,
+  CADENCE_LABEL,
+} from "./subscriptions";
+import { MonthBookCharts } from "./FinCharts";
+import {
   answerFromBrief,
   buildSmartBrief,
 } from "./financeIntelligence";
@@ -156,6 +161,7 @@ type TabId =
   | "transactions"
   | "credit"
   | "plan"
+  | "subscriptions"
   | "goals"
   | "insights"
   | "accounts";
@@ -169,19 +175,10 @@ const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "worth", label: "Worth", icon: "◆" },
   { id: "credit", label: "Credit", icon: "◈" },
   { id: "plan", label: "Plan", icon: "▦" },
+  { id: "subscriptions", label: "Subscriptions", icon: "↻" },
   { id: "goals", label: "Goals", icon: "◎" },
   { id: "insights", label: "Review", icon: "◈" },
   { id: "accounts", label: "Accounts", icon: "▭" },
-];
-
-/** Ruthless reinvest bookkeeper — capital first, lifestyle residual */
-const BOOKKEEPER_RULES = [
-  "Record every dollar the day it moves.",
-  "Reinvest first — lifestyle gets the leftover, never the priority.",
-  "Name every line — no blank payees, no vague categories.",
-  "Cut leaks hard. Compounding needs surplus, not stories.",
-  "High-interest debt before toys. Then deploy to Invest.",
-  "If it is not on the ledger, it does not exist.",
 ];
 
 const KINDS: { id: AccountKind; label: string }[] = [
@@ -308,8 +305,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   );
   // Ledger first — a meticulous bookkeeper opens the daybook, not a dashboard
   const [tab, setTab] = useState<TabId>("transactions");
-  const [showTxForm, setShowTxForm] = useState(false);
-  const [txDraft, setTxDraft] = useState(() => newTx());
   const [filterQ, setFilterQ] = useState("");
   const [filterCat, setFilterCat] = useState("all");
   // Accountant period: year first, then Jan → current month (grows automatically)
@@ -649,6 +644,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     () => buildAnnualBook(txs, filterYear),
     [txs, filterYear]
   );
+
+  const subscriptionScan = useMemo(() => detectSubscriptions(txs), [txs]);
 
   const planRows = useMemo(() => {
     return PLAN_GROUPS.map((g) => {
@@ -1173,18 +1170,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     setImportNote(`Pasted ${added.length} rows`);
   }
 
-  function addBlankSheetRow() {
-    const tx = newTx({
-      kind: "expense",
-      amount: 0,
-      category: "Uncategorized",
-      note: "",
-      merchant: "",
-      source: "manual",
-    });
-    patchState((s) => ({ ...s, txs: [tx, ...s.txs] }));
-  }
-
   const watchlist = state?.watchlist;
   const loadQuotes = useCallback(async () => {
     if (!watchlist || !watchlist.length) return;
@@ -1275,21 +1260,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
           : [...s.budget, { category, planned: next }],
       };
     });
-  }
-
-  function addTx() {
-    if (!txDraft.amount || txDraft.amount <= 0) return;
-    const tx: FinanceTx = {
-      ...txDraft,
-      id: newTx().id,
-      amount: Math.abs(txDraft.amount),
-      note: txDraft.note.trim(),
-      merchant: txDraft.merchant || txDraft.note.trim() || "Manual",
-      source: "manual",
-    };
-    patchState((s) => ({ ...s, txs: [tx, ...s.txs] }));
-    setTxDraft(newTx({ kind: txDraft.kind, category: txDraft.category }));
-    setShowTxForm(false);
   }
 
   function loadDemo() {
@@ -1641,11 +1611,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       <div className="wd-main">
         <header className="wd-top">
           <div className="wd-top-titles">
-            <p className="wd-kicker">Personal ledger · Rockefeller desk</p>
             <h1>{tabTitle}</h1>
-            <p className="wd-top-principle">
-              Every dollar named. Every cent recorded. Balance before you spend.
-            </p>
           </div>
           <div className="wd-top-actions">
             {hasEncryptedVault() && isVaultUnlocked() ? (
@@ -1673,16 +1639,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 Demo
               </button>
             ) : null}
-            <button
-              type="button"
-              className="wd-btn wd-btn-primary"
-              onClick={() => {
-                setShowTxForm(true);
-                setTab("transactions");
-              }}
-            >
-              + Entry
-            </button>
           </div>
           {importNote ? <p className="wd-note wd-top-note">{importNote}</p> : null}
           {saveErr ? (
@@ -1747,10 +1703,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 : "Add an Invest account — checking is not compounding"}
             </li>
           </ul>
-          <p className="wd-discipline-rule">{brief.reinvest.order}</p>
-          <p className="wd-discipline-rule is-soft">
-            {BOOKKEEPER_RULES[new Date().getDate() % BOOKKEEPER_RULES.length]}
-          </p>
         </section>
 
         {/* In-page subnav — same pattern as Fitness (Sleep · Meals · Gym) */}
@@ -1785,7 +1737,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 <div>
                   <p className="wd-brain-k">Period · {ym}</p>
                   <h2 className="wd-brain-h">{brief.headline}</h2>
-                  <p className="wd-muted">{brief.sub}</p>
                 </div>
                 <div
                   className="wd-brain-q"
@@ -1821,11 +1772,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   <strong>{moneyCents(brief.reinvest.investedBalance)}</strong>
                 </span>
               </div>
-              <div className="wd-book-rules">
-                {BOOKKEEPER_RULES.map((rule) => (
-                  <p key={rule}>{rule}</p>
-                ))}
-              </div>
               {brief.dataQuality.score < 50 ? (
                 <div className="wd-brain-cta">
                   <button
@@ -1849,19 +1795,28 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 </div>
               ) : null}
               {brief.dataQuality.hasTxs ? (
-                <p className="wd-muted wd-brain-proj">
-                  Pace: {money(brief.projection.burnPerDay)}/day · Projected
-                  month-end flow{" "}
-                  <strong
-                    className={
-                      brief.projection.projectedFlow < 0 ? "is-neg" : "is-pos"
-                    }
-                  >
-                    {money(brief.projection.projectedFlow)}
-                  </strong>{" "}
-                  · day {brief.projection.dayOfMonth}/
-                  {brief.projection.daysInMonth}
-                </p>
+                <div className="wd-reinvest-strip">
+                  <span>
+                    Burn/day{" "}
+                    <strong>{money(brief.projection.burnPerDay)}</strong>
+                  </span>
+                  <span>
+                    Month-end flow{" "}
+                    <strong
+                      className={
+                        brief.projection.projectedFlow < 0 ? "is-neg" : "is-pos"
+                      }
+                    >
+                      {money(brief.projection.projectedFlow)}
+                    </strong>
+                  </span>
+                  <span>
+                    Day{" "}
+                    <strong>
+                      {brief.projection.dayOfMonth}/{brief.projection.daysInMonth}
+                    </strong>
+                  </span>
+                </div>
               ) : null}
             </section>
 
@@ -2626,116 +2581,16 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               <div className="wd-panel-head">
                 <div>
                   <h2>Ledger</h2>
-                  <p className="wd-muted wd-ledger-sub">
-                    Full list every time. Pick a month next to categories.
-                  </p>
-                </div>
-                <div className="wd-top-actions">
-                  <button
-                    type="button"
-                    className="wd-btn"
-                    onClick={addBlankSheetRow}
-                  >
-                    + Row
-                  </button>
-                  <button
-                    type="button"
-                    className="wd-btn wd-btn-primary"
-                    onClick={() => setShowTxForm((v) => !v)}
-                  >
-                    {showTxForm ? "Close form" : "Add entry"}
-                  </button>
                 </div>
               </div>
 
-              {showTxForm ? (
-                <div className="wd-form">
-                  <label>
-                    Type
-                    <select
-                      value={txDraft.kind}
-                      onChange={(e) =>
-                        setTxDraft((d) => ({
-                          ...d,
-                          kind: e.target.value as TxKind,
-                        }))
-                      }
-                    >
-                      <option value="expense">Money out</option>
-                      <option value="income">Money in</option>
-                    </select>
-                  </label>
-                  <label>
-                    Amount
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={txDraft.amount || ""}
-                      onChange={(e) =>
-                        setTxDraft((d) => ({
-                          ...d,
-                          amount: Math.max(0, Number(e.target.value) || 0),
-                        }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    Date
-                    <input
-                      type="date"
-                      value={txDraft.date}
-                      onChange={(e) =>
-                        setTxDraft((d) => ({ ...d, date: e.target.value }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    Category
-                    <select
-                      value={txDraft.category}
-                      onChange={(e) =>
-                        setTxDraft((d) => ({
-                          ...d,
-                          category: e.target.value,
-                        }))
-                      }
-                    >
-                      {categories.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="wd-wide">
-                    Payee / description
-                    <input
-                      value={txDraft.note}
-                      onChange={(e) =>
-                        setTxDraft((d) => ({
-                          ...d,
-                          note: e.target.value,
-                          merchant: e.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="wd-btn wd-btn-primary"
-                    onClick={addTx}
-                  >
-                    Save
-                  </button>
-                </div>
-              ) : null}
+              {/* CSV-only books: entries come from monthly imports, never typed */}
 
               {/* Filters stacked: search · type · category · year · months */}
               <div className="wd-filters wd-filters-ledger">
                 <input
                   type="search"
-                  placeholder="Search payee, note, category…"
+                  placeholder="Search"
                   value={filterQ}
                   onChange={(e) => setFilterQ(e.target.value)}
                 />
@@ -2832,9 +2687,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               </p>
 
               {monthBooks.length === 0 ? (
-                <p className="wd-muted wd-pad">
-                  Empty books — import Chase CSV or add an entry.
-                </p>
+                <p className="wd-muted wd-pad">Import a bank CSV to start.</p>
               ) : null}
 
               {/* Always full list — no ···, no hide */}
@@ -2999,6 +2852,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                           </tbody>
                         </table>
                       </div>
+
+                      {/* Month visuals — graph + pie under the logs */}
+                      <MonthBookCharts
+                        rows={book.rows}
+                        month={book.month}
+                        monthLabel={`${monthOnly} ${yearOnly}`}
+                      />
                     </section>
                   );
                 })}
@@ -3420,6 +3280,153 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 );
               })}
             </section>
+          </div>
+        ) : null}
+
+        {/* ════════ SUBSCRIPTIONS ════════ */}
+        {tab === "subscriptions" ? (
+          <div className="wd-page">
+            {subscriptionScan.count === 0 ? (
+              <section className="wd-panel" aria-label="Subscriptions">
+                <div className="wd-empty">
+                  <div className="wd-empty-icon">↻</div>
+                  <p>No recurring charges detected yet.</p>
+                  <p className="wd-muted">Import or add a few months of transactions.</p>
+                </div>
+              </section>
+            ) : (
+              <>
+                <section className="wd-panel" aria-label="Subscriptions total">
+                  <div className="wd-stat-grid">
+                    <div className="wd-stat-tile">
+                      <div className="wd-stat-label">Per month</div>
+                      <div className="wd-stat-value is-neg">
+                        {money(subscriptionScan.monthlyTotal)}
+                      </div>
+                    </div>
+                    <div className="wd-stat-tile">
+                      <div className="wd-stat-label">Per year</div>
+                      <div className="wd-stat-value is-neg">
+                        {money(subscriptionScan.yearlyTotal)}
+                      </div>
+                    </div>
+                    <div className="wd-stat-tile">
+                      <div className="wd-stat-label">Active</div>
+                      <div className="wd-stat-value">{subscriptionScan.count}</div>
+                    </div>
+                    <div className="wd-stat-tile">
+                      <div className="wd-stat-label">Biggest</div>
+                      <div className="wd-stat-value">
+                        {money(subscriptionScan.subs[0]?.monthlyCost || 0)}
+                      </div>
+                      <div className="wd-stat-sub">
+                        {subscriptionScan.subs[0]?.merchant || "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Donut — share of monthly subscription spend */}
+                  <div className="wd-sub-chart">
+                    {(() => {
+                      const R = 70;
+                      const C = 2 * Math.PI * R;
+                      const total = subscriptionScan.monthlyTotal || 1;
+                      const palette = [
+                        "#1f6f8b", "#e8743b", "#4b8f6b", "#b5651d", "#7d5ba6",
+                        "#c94f7c", "#3a7d99", "#d1a13a", "#5c8d5c", "#a0522d",
+                      ];
+                      let offset = 0;
+                      const segs = subscriptionScan.subs.map((s, i) => {
+                        const frac = s.monthlyCost / total;
+                        const len = frac * C;
+                        const seg = (
+                          <circle
+                            key={s.key}
+                            cx={90}
+                            cy={90}
+                            r={R}
+                            fill="none"
+                            stroke={palette[i % palette.length]}
+                            strokeWidth={26}
+                            strokeDasharray={`${len} ${C - len}`}
+                            strokeDashoffset={-offset}
+                            transform="rotate(-90 90 90)"
+                          />
+                        );
+                        offset += len;
+                        return seg;
+                      });
+                      return (
+                        <svg width={180} height={180} viewBox="0 0 180 180" className="wd-donut">
+                          <circle cx={90} cy={90} r={R} fill="none" stroke="var(--wd-line, #2a2a2a)" strokeWidth={26} opacity={0.25} />
+                          {segs}
+                          <text x={90} y={84} textAnchor="middle" className="wd-donut-big">
+                            {money(subscriptionScan.monthlyTotal)}
+                          </text>
+                          <text x={90} y={104} textAnchor="middle" className="wd-donut-sub">
+                            /mo
+                          </text>
+                        </svg>
+                      );
+                    })()}
+                    <ul className="wd-sub-legend">
+                      {subscriptionScan.subs.slice(0, 8).map((s, i) => {
+                        const palette = [
+                          "#1f6f8b", "#e8743b", "#4b8f6b", "#b5651d", "#7d5ba6",
+                          "#c94f7c", "#3a7d99", "#d1a13a", "#5c8d5c", "#a0522d",
+                        ];
+                        return (
+                          <li key={s.key}>
+                            <span
+                              className="wd-sub-dot"
+                              style={{ background: palette[i % palette.length] }}
+                            />
+                            <span className="wd-sub-legend-name">{s.merchant}</span>
+                            <span className="wd-sub-legend-val">{money(s.monthlyCost)}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </section>
+
+                <section className="wd-panel" aria-label="Subscription list">
+                  <table className="wd-sub-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Cadence</th>
+                        <th className="wd-num">Charge</th>
+                        <th className="wd-num">Monthly</th>
+                        <th className="wd-num">Yearly</th>
+                        <th>Next</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subscriptionScan.subs.map((s) => (
+                        <tr key={s.key}>
+                          <td>
+                            {s.merchant}
+                            {s.count > 1 ? (
+                              <span className="wd-muted"> ·{s.count}×</span>
+                            ) : null}
+                          </td>
+                          <td>
+                            <span className={`wd-cad wd-cad-${s.cadence}`}>
+                              {CADENCE_LABEL[s.cadence]}
+                            </span>
+                          </td>
+                          <td className="wd-num">{money(s.amount)}</td>
+                          <td className="wd-num">{money(s.monthlyCost)}</td>
+                          <td className="wd-num">{money(s.yearlyCost)}</td>
+                          <td className="wd-muted">{s.nextDate}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </section>
+              </>
+            )}
           </div>
         ) : null}
 

@@ -51,12 +51,6 @@ const SIDEBAR_EXTRA_PAGES: {
     parentId: null,
   },
   {
-    id: "pg-library",
-    title: "Bookshelf",
-    icon: "📚",
-    parentId: null, // Learn section
-  },
-  {
     id: "pg-help",
     title: "Help",
     icon: "❓",
@@ -119,9 +113,10 @@ const PURGE_PAGE_IDS = new Set([
   "pg-labs",
   "pg-analytics", // Health Analytics dump page
   "pg-agent-weather", // Weather lives in Mel only (NYC default)
-  "pg-life", // removed — Bookshelf lives under Learn
+  "pg-life",
   "pg-my-tasks", // removed for now
-  "pg-books", // use pg-library Bookshelf
+  "pg-books", // Books section deleted entirely
+  "pg-library", // Bookshelf deleted entirely (owner request)
 ]);
 
 /** Exact titles to kill (user-made dupes under Data, etc.) */
@@ -136,6 +131,7 @@ const PURGE_PAGE_TITLES = new Set([
   "weather",
   "life",
   "my tasks",
+  "bookshelf",
 ]);
 
 function shouldPurgePage(p: {
@@ -200,11 +196,8 @@ function ensureSidebarPages(ws: Workspace): Workspace {
       cover: null,
     });
   }
-  const pages = [...ws.pages, ...extra].map((page) =>
-    page.id === "pg-library" ? { ...page, title: "Bookshelf", icon: "books" } : page
-  );
-  if (!extra.length && pages.every((page, index) => page === ws.pages[index])) return ws;
-  return { ...ws, pages };
+  if (!extra.length) return ws;
+  return { ...ws, pages: [...ws.pages, ...extra] };
 }
 
 function cleanWorkPageBlocks(blocks: Block[]): Block[] {
@@ -274,9 +267,7 @@ function ensureLifePages(ws: Workspace): Workspace {
             title: p.title || title,
             // Force line icons for system pages (emoji “🌍” was showing as empty page)
             icon:
-              id === "pg-world-monitor" ||
-              id === "pg-library" ||
-              id === "pg-finance"
+              id === "pg-world-monitor" || id === "pg-finance"
                 ? icon
                 : p.icon || icon,
             trashedAt: null, // never leave Bookshelf / stocks in trash by accident
@@ -290,11 +281,6 @@ function ensureLifePages(ws: Workspace): Workspace {
   ensurePage("pg-fitness", "Fitness", "fitness", null);
   ensurePage("pg-hygiene", "Hygiene", "hygiene", null);
   ensurePage("pg-data", "My Data", "data", null);
-
-  // Learn — Bookshelf ALWAYS sits here (top-level), never buried under Work
-  ensurePage("pg-library", "Bookshelf", "books", null, [
-    newBlock("paragraph", "Books, notes, and saved references."),
-  ]);
 
   // Learn — World Monitor = stocks / markets / tech (NOT under Work)
   ensurePage(
@@ -360,9 +346,10 @@ function ensureLifePages(ws: Workspace): Workspace {
     return p;
   });
 
-  // If you were sitting on the deleted Work page, open Bookshelf
+  // If you were sitting on a deleted page, open Finances
   let activePageId = ws.activePageId;
-  if (activePageId === "pg-work") activePageId = "pg-library";
+  if (activePageId === "pg-work" || activePageId === "pg-library")
+    activePageId = "pg-finance";
 
   return { ...ws, pages, activePageId };
 }

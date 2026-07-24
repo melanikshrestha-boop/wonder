@@ -71,7 +71,7 @@ const EMPTY_MACROS: MacroBag = {
 };
 
 const PAGE_ALIASES: Array<{ pattern: RegExp; pageId: string; title: string }> = [
-  { pattern: /^(?:my\s+)?(?:bookshelf|library|books?)$/i, pageId: "pg-library", title: "Bookshelf" },
+  // Books section removed — no bookshelf alias
   // Weather is Mel-only (no page) — do not navigate to a Weather page
   { pattern: /^(?:my\s+)?(?:wardrobe|closet|clothes)$/i, pageId: "pg-fashion-os", title: "Wardrobe" },
   { pattern: /^(?:my\s+)?(?:shopping|grocer(?:y|ies)|inventory|restock)$/i, pageId: "pg-agent-shopping", title: "Shopping" },
@@ -94,7 +94,7 @@ const PAGE_ALIASES: Array<{ pattern: RegExp; pageId: string; title: string }> = 
     pageId: "pg-world-monitor",
     title: "World Monitor",
   },
-  { pattern: /^(?:my\s+)?learn$/i, pageId: "pg-library", title: "Bookshelf" },
+  { pattern: /^(?:my\s+)?learn$/i, pageId: "pg-world-monitor", title: "World Monitor" },
   { pattern: /^(?:my\s+)?health$/i, pageId: "pg-fitness", title: "Fitness" },
 ];
 

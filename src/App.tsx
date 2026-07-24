@@ -21,7 +21,6 @@ import { PageEditor } from "./components/PageEditor";
 import { SearchModal } from "./components/SearchModal";
 import { iconForPage, MinimalIcon } from "./components/MinimalIcon";
 import { isMelaniRichPage, MelaniRichPage } from "./melani/MelaniViews";
-import { isWardrobePage } from "./melani/wardrobe/route";
 import { MelaniAI } from "./melani/MelaniAI";
 import { FocusOverlay } from "./melani/FocusOverlay";
 import {
@@ -326,9 +325,7 @@ export default function App() {
       />
 
       {/* Always Notion main: topbar + breadcrumbs + page body */}
-      <main className={`main${melaniMode ? " is-melani" : ""}${
-        isWardrobePage(activePage.id) ? " is-wardrobe" : ""
-      }`}>
+      <main className={`main${melaniMode ? " is-melani" : ""}`}>
         <header className="topbar">
           <button
             type="button"
