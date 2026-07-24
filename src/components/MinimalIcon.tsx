@@ -222,6 +222,18 @@ export function MinimalIcon({ name, size = 16, className = "" }: Props) {
           />
         </svg>
       );
+    case "habits":
+      // checkbox grid — Habit Tracker page
+      return (
+        <svg {...common}>
+          <rect {...stroke} x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+          <rect {...stroke} x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+          <rect {...stroke} x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+          <rect {...stroke} x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+          <path {...stroke} d="m5.2 7 1.4 1.5L9 5.5" />
+          <path {...stroke} d="m15.2 17 1.4 1.5L19 15.5" />
+        </svg>
+      );
     case "journal":
       return (
         <svg {...common}>
@@ -363,6 +375,8 @@ export function iconForPage(page: Pick<Page, "id" | "title" | "kind" | "icon">):
   const t = (page.title || "").toLowerCase();
 
   if (id === "pg-home" || t === "home") return "home";
+  if (id === "pg-habits" || id.includes("habit") || t === "habits" || t.includes("habit tracker"))
+    return "habits";
   if (id.includes("fitness") || t === "fitness") return "fitness";
   if (id.includes("sleep") || t.includes("sleep")) return "sleep";
   if (id.includes("meal") || t.includes("meal")) return "meals";

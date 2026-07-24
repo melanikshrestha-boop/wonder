@@ -324,6 +324,20 @@ function ensureLifePages(ws: Workspace): Workspace {
     ]
   );
 
+  // Health — Habit Tracker (top-level so it's always one click away)
+  ensurePage(
+    "pg-habits",
+    "Habits",
+    "habits",
+    null,
+    [
+      newBlock(
+        "paragraph",
+        "Every habit, every day. Streaks, momentum, and the ruthless truth about what you actually did."
+      ),
+    ]
+  );
+
   // Wardrobe stays under Agents
   ensurePage("pg-fashion-os", "Wardrobe", "fashion", "pg-agents", [
     newBlock("paragraph", "Your clothes, extracted and organized."),

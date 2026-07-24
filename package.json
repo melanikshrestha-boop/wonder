@@ -16,7 +16,8 @@
     "test:weather": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-weather-agent.mts",
     "test:care": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-care-concierge.mts",
     "preview": "vite preview",
-    "test:finance": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-smart-accountant.mts"
+    "test:finance": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-smart-accountant.mts",
+    "test:habits": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-habits.mts"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",

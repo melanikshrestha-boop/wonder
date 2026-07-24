@@ -80,6 +80,7 @@ const PAGE_ALIASES: Array<{ pattern: RegExp; pageId: string; title: string }> = 
   { pattern: /^(?:my\s+)?(?:meals?|food|macros?|nutrition)$/i, pageId: "pg-meals", title: "Meals" },
   { pattern: /^(?:my\s+)?(?:sleep|brain fog)$/i, pageId: "pg-sleep", title: "Sleep" },
   { pattern: /^(?:my\s+)?(?:gym|workout|training|fitness)$/i, pageId: "pg-gym", title: "Gym" },
+  { pattern: /^(?:my\s+)?(?:habits?|habit tracker|streaks?|routines?)$/i, pageId: "pg-habits", title: "Habits" },
   { pattern: /^(?:my\s+)?(?:data|labs?|period|cycle|health data)$/i, pageId: "pg-data", title: "My Data" },
   { pattern: /^(?:my\s+)?daily shower$/i, pageId: "pg-shower-daily", title: "Daily shower" },
   { pattern: /^(?:my\s+)?everything shower$/i, pageId: "pg-shower-everything", title: "Everything shower" },
