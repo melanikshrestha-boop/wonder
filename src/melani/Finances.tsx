@@ -173,6 +173,22 @@ type TabId =
 type SortKey = "date" | "merchant" | "category" | "amount" | "kind";
 
 /** Bookkeeper desk — ledger is home, not a marketing dashboard */
+/**
+ * Is the payment type already obvious from the payee text? If the payee
+ * says "Zelle to Mom" we don't tack on "(Zelle debit)" — only label when
+ * the method isn't already written in the line (e.g. "Zutobi.com" → purchase).
+ */
+function typeInPayee(payee: string, type: string): boolean {
+  const p = payee.toLowerCase();
+  const t = type.toLowerCase();
+  const words = [
+    "zelle", "transfer", "card", "atm", "ach", "check", "deposit",
+    "purchase", "venmo", "paypal", "cash app", "interest", "fee",
+    "refund", "bill", "wire", "payment",
+  ];
+  return words.some((w) => t.includes(w) && p.includes(w));
+}
+
 const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "transactions", label: "Ledger", icon: "☰" },
   { id: "overview", label: "Books", icon: "◉" },
@@ -2640,26 +2656,23 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                   />
                                 </td>
                                 <td className="wd-payee-cell">
-                                  <span className="wd-payee-line">
-                                    <input
-                                      className="wd-payee-input"
-                                      size={Math.max(6, (t.merchant || t.note || "").length)}
-                                      value={t.merchant || t.note || ""}
-                                      title={t.merchant || t.note || ""}
-                                      placeholder="Full payee name"
-                                      onChange={(e) =>
-                                        patchTx(t.id, {
-                                          merchant: e.target.value,
-                                          note: e.target.value,
-                                        })
-                                      }
-                                    />
-                                    <span
-                                      className={`wd-txt wd-txt-${t.kind === "income" ? "in" : "out"}`}
-                                    >
-                                      ({txTypeOf(t)})
-                                    </span>
-                                  </span>
+                                  {(() => {
+                                    const payee = t.merchant || t.note || "";
+                                    const type = txTypeOf(t);
+                                    const show = !typeInPayee(payee, type);
+                                    return (
+                                      <span className="wd-payee-text" title={payee}>
+                                        {payee || "—"}
+                                        {show ? (
+                                          <span
+                                            className={`wd-txt wd-txt-${t.kind === "income" ? "in" : "out"}`}
+                                          >
+                                            {" "}({type})
+                                          </span>
+                                        ) : null}
+                                      </span>
+                                    );
+                                  })()}
                                 </td>
                                 <td>
                                   <select

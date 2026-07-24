@@ -2021,26 +2021,18 @@
   line-height: 1.2 !important;
 }
 
-/* Payee + type on ONE line: "Zutobi.com (purchase)" */
-.wd-table.wd-ledger-full .wd-payee-line {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
+/* Payee as tight text: "Zutobi.com (purchase)" — type sits right after */
+.wd-table.wd-ledger-full .wd-payee-cell {
+  font-size: 13px;
+}
+.wd-payee-text {
+  display: block;
   white-space: nowrap;
   overflow: hidden;
-}
-.wd-table.wd-ledger-full .wd-payee-line .wd-payee-input {
-  width: auto !important;
-  min-width: 0;
-  max-width: 16rem;
-  flex: 0 1 auto;
+  text-overflow: ellipsis;
 }
 /* Type in parens — green if money in, red if money out */
 .wd-txt {
-  flex: 0 0 auto;
-  font-size: 12px;
-  line-height: 1.2;
   font-weight: 600;
 }
 .wd-txt-in { color: var(--wd-green, #30d158); }
