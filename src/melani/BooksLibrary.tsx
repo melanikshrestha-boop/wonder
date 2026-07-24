@@ -213,11 +213,12 @@ export function BooksLibrary({
         state: "done",
         message: `${result.count} from Apple Books`,
       });
-    } catch (error) {
+    } catch {
+      // No backend reachable (e.g. the shared web link, or the local server
+      // isn't running). Apple Books can only be read from your own Mac.
       setSync({
         state: "error",
-        message:
-          error instanceof Error ? error.message : "Apple Books unavailable",
+        message: "Apple Books syncs on your Mac — run Wonder locally to pull your library",
       });
     }
   }, []);
