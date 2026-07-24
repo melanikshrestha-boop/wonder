@@ -2,11 +2,14 @@
 
 **Product name:** Wonder (formerly Dr. Melani)  
 **Repo:** https://github.com/melanikshrestha-boop/wonder (private)  
-**Branch:** `grok/latest-dr-melani-july-21-2026`  
+**Canonical branch:** `main` (always push here for agent handoffs)  
+**Legacy work branch:** `grok/latest-dr-melani-july-21-2026`  
 **Stack:** Vite + React + TypeScript (not Next.js)  
-**Local URL:** http://127.0.0.1:5173/  
+**Local URL:** http://127.0.0.1:5173/ (Safari)  
 **Visibility:** private  
 **Date stamp:** 2026-07-23  
+
+**Standing rule:** every meaningful prompt → commit + push to `main` so Claude Code / Grok / Codex stay in sync. See `AGENTS.md`.
 
 This file is the single source of truth for agents (Codex / GPT / Claude) cloning the app without chat context.
 
@@ -44,9 +47,10 @@ Data lives in the **browser** (`localStorage`). No backend DB required for core 
 ```bash
 git clone https://github.com/melanikshrestha-boop/wonder.git
 cd wonder
-git checkout grok/latest-dr-melani-july-21-2026
+git checkout main
 npm install
 npm run dev
+open -a Safari "http://127.0.0.1:5173/"
 ```
 
 Open: **http://127.0.0.1:5173/** — that is Wonder (merged personal OS). Do not send users to a second app on :8781.

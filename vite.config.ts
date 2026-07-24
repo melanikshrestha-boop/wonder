@@ -23,6 +23,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
   return {
+    // Project site on GitHub Pages: https://melanikshrestha-boop.github.io/wonder/
+    base: process.env.GITHUB_PAGES === '1' ? '/wonder/' : '/',
     optimizeDeps: {
       include: ["react", "react-dom/client"],
     },
