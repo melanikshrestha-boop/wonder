@@ -64,6 +64,8 @@ import {
 import { MonthBookCharts, LabeledLineChart } from "./FinCharts";
 import { FinanceCopilot } from "./FinanceCopilot";
 import type { CopilotContext } from "./financeCopilot";
+import { FinanceSqlEditor } from "./FinanceSqlEditor";
+import { Spend3D } from "./Spend3D";
 import {
   answerFromBrief,
   buildSmartBrief,
@@ -92,6 +94,7 @@ import {
   saveFinance,
   seedFinanceUndoBaseline,
   FINANCE_EXTERNAL_RESTORE_EVENT,
+  initFinanceCrossTabSync,
   savingsRate,
   scaleBudget,
   spentByCategory,
@@ -165,7 +168,8 @@ type TabId =
   | "subscriptions"
   | "goals"
   | "insights"
-  | "accounts";
+  | "accounts"
+  | "sql";
 
 type SortKey = "date" | "merchant" | "category" | "amount" | "kind";
 
@@ -180,6 +184,7 @@ const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "goals", label: "Goals", icon: "◎" },
   { id: "insights", label: "Review", icon: "◈" },
   { id: "accounts", label: "Accounts", icon: "▭" },
+  { id: "sql", label: "SQL", icon: "⌗" },
 ];
 
 const KINDS: { id: AccountKind; label: string }[] = [
@@ -293,8 +298,11 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       }
     };
     window.addEventListener(FINANCE_EXTERNAL_RESTORE_EVENT, onRestore);
-    return () =>
+    const stopSync = initFinanceCrossTabSync();
+    return () => {
       window.removeEventListener(FINANCE_EXTERNAL_RESTORE_EVENT, onRestore);
+      stopSync();
+    };
   }, []);
 
   /** Apply an update only when books are loaded (vault unlocked). */
@@ -404,7 +412,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
 
     setState(next);
     setFilterMonth("all");
-    setImportNote(`Books loaded · ${notes.join(" · ")}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when vault/session is ready
   }, [vaultGate]);
 
@@ -2113,6 +2120,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   </em>
                 </div>
               </div>
+            </section>
+
+            <section className="wd-panel" aria-label="3D spend by category">
+              <div className="wd-panel-head">
+                <h2>Spend by category · 3D</h2>
+              </div>
+              <Spend3D txs={state.txs} />
             </section>
 
             <div className="wd-grid-2">
@@ -4675,6 +4689,18 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   ))}
                 </div>
               ) : null}
+            </section>
+          </div>
+        ) : null}
+
+        {/* ════════ SQL ════════ */}
+        {tab === "sql" ? (
+          <div className="wd-page">
+            <section className="wd-panel" aria-label="SQL editor">
+              <div className="wd-panel-head">
+                <h2>SQL</h2>
+              </div>
+              <FinanceSqlEditor txs={state.txs} />
             </section>
           </div>
         ) : null}

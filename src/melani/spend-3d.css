@@ -1,0 +1,106 @@
+/* Interactive 3D spend chart */
+.s3d {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.s3d-stage {
+  width: 100%;
+  height: 340px;
+  perspective: 1100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+  overflow: hidden;
+}
+.s3d-stage:active {
+  cursor: grabbing;
+}
+.s3d-scene {
+  transform-style: preserve-3d;
+  position: relative;
+  width: 0;
+  height: 0;
+  transition: transform 0.05s linear;
+}
+.s3d-floor {
+  position: absolute;
+  width: 640px;
+  height: 220px;
+  left: -320px;
+  top: -110px;
+  transform: rotateX(90deg);
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.08), transparent 70%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.s3d-bar {
+  position: absolute;
+  width: 46px;
+  transform-style: preserve-3d;
+  left: -23px;
+  top: 0;
+}
+.s3d-face {
+  position: absolute;
+  display: block;
+}
+.s3d-front,
+.s3d-back {
+  width: 46px;
+  left: 0;
+  top: 0;
+}
+.s3d-front {
+  transform: translateZ(23px);
+}
+.s3d-back {
+  transform: translateZ(-23px) rotateY(180deg);
+}
+.s3d-left,
+.s3d-right {
+  width: 46px;
+  left: 0;
+  top: 0;
+}
+.s3d-left {
+  transform: rotateY(-90deg) translateZ(23px);
+}
+.s3d-right {
+  transform: rotateY(90deg) translateZ(23px);
+}
+.s3d-top {
+  width: 46px;
+  height: 46px;
+  top: 0;
+  left: 0;
+  transform: rotateX(90deg) translateZ(23px);
+}
+.s3d-cap,
+.s3d-label {
+  position: absolute;
+  left: 50%;
+  width: 80px;
+  margin-left: -40px;
+  text-align: center;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.s3d-cap {
+  top: 0;
+  color: var(--wd-text, #fff);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.s3d-label {
+  top: 0;
+  color: var(--wd-secondary, rgba(255, 255, 255, 0.6));
+}
+.s3d-hint {
+  font-size: 11px;
+  color: var(--wd-secondary, rgba(255, 255, 255, 0.5));
+  margin: 0;
+}

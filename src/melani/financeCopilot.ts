@@ -106,6 +106,29 @@ function resolveCategory(q: string, txs: FinanceTx[]): string | null {
   return null;
 }
 
+/** Find a merchant the question names, matched against real ledger merchants. */
+function resolveMerchant(q: string, txs: FinanceTx[]): string | null {
+  // Build a set of distinct merchant "brands" (first token of each name)
+  const brands = new Map<string, string>(); // lowercase token → display
+  for (const t of txs) {
+    const raw = (t.merchant || t.note || "").trim();
+    if (!raw) continue;
+    const token = raw.replace(/[^a-zA-Z0-9 ]/g, " ").trim().split(/\s+/)[0];
+    if (token && token.length >= 3) {
+      const key = token.toLowerCase();
+      if (!brands.has(key)) brands.set(key, token);
+    }
+  }
+  // Longest brand token that appears in the question wins (avoids "the"/"pay")
+  let best: string | null = null;
+  for (const [key, display] of brands) {
+    if (new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(q)) {
+      if (!best || key.length > best.length) best = display;
+    }
+  }
+  return best;
+}
+
 function sumExpense(txs: FinanceTx[], opts: { ym?: string; category?: string }): { total: number; count: number } {
   let total = 0;
   let count = 0;
@@ -171,6 +194,82 @@ export function answerCopilot(question: string, ctx: CopilotContext): CopilotAns
   const category = resolveCategory(q, txs);
   const scope = month ? month.ym : undefined;
   const scopeLabel = month ? month.label : "all time";
+  const merchant = resolveMerchant(q, txs);
+
+  // ── A specific merchant ("how much at Amazon / on Uber") ─────────
+  if (merchant && /\b(spend|spent|spending|cost|paid|much|at|on)\b/.test(q)) {
+    let total = 0;
+    let count = 0;
+    let last = "";
+    for (const t of txs) {
+      if (t.kind !== "expense" || isTransferLike(t)) continue;
+      if (scope && !t.date.startsWith(scope)) continue;
+      if (((t.merchant || t.note || "").toLowerCase()).includes(merchant.toLowerCase())) {
+        total += t.amount;
+        count += 1;
+        if (t.date > last) last = t.date;
+      }
+    }
+    if (count > 0) {
+      return {
+        text: `You spent ${money(total)} at ${merchant} ${month ? `in ${scopeLabel}` : "across your ledger"} — ${count} charge${count === 1 ? "" : "s"}${last ? `, last on ${last}` : ""}.`,
+        sources: [`${merchant}`, month ? scopeLabel : "all transactions", `${count} rows`],
+      };
+    }
+  }
+
+  // ── Month-over-month comparison ──────────────────────────────────
+  if (/\b(compare|vs|versus|more than|less than|than last month|month over month)\b/.test(q)) {
+    const thisM = ctx.ym;
+    const [y, m] = thisM.split("-").map(Number);
+    const prevD = new Date(y, m - 2, 1);
+    const prevM = `${prevD.getFullYear()}-${String(prevD.getMonth() + 1).padStart(2, "0")}`;
+    const a = sumExpense(txs, { ym: thisM });
+    const b = sumExpense(txs, { ym: prevM });
+    const diff = a.total - b.total;
+    const dir = diff > 0 ? "more" : "less";
+    return {
+      text: `${monthLabel(thisM)}: ${money(a.total)} vs ${monthLabel(prevM)}: ${money(b.total)}. You spent ${money(Math.abs(diff))} ${dir} this month${b.total > 0 ? ` (${diff >= 0 ? "+" : "−"}${Math.abs((diff / b.total) * 100).toFixed(0)}%)` : ""}.`,
+      sources: [monthLabel(thisM), monthLabel(prevM)],
+      data: [
+        { label: monthLabel(thisM), value: money(a.total) },
+        { label: monthLabel(prevM), value: money(b.total) },
+      ],
+    };
+  }
+
+  // ── Average monthly spend ────────────────────────────────────────
+  if (/\b(average|avg|typical|per month|a month|each month|monthly spend)\b/.test(q) && /\b(spend|spent|spending|cost)\b/.test(q)) {
+    const months = new Map<string, number>();
+    for (const t of txs) {
+      if (t.kind !== "expense" || isTransferLike(t)) continue;
+      const ym = t.date.slice(0, 7);
+      months.set(ym, (months.get(ym) || 0) + t.amount);
+    }
+    const vals = [...months.values()];
+    const avg = vals.length ? vals.reduce((s, x) => s + x, 0) / vals.length : 0;
+    return {
+      text: `Your average spend is ${money(avg)}/month across ${vals.length} month${vals.length === 1 ? "" : "s"} of data.`,
+      sources: [`${vals.length} months`, "all transactions"],
+    };
+  }
+
+  // ── Biggest single transaction ───────────────────────────────────
+  if (/\b(biggest|largest|most expensive|highest)\b.*\b(purchase|transaction|charge|expense|buy|payment)\b/.test(q) ||
+      /\bbiggest (purchase|transaction|charge|expense)\b/.test(q)) {
+    let top: FinanceTx | null = null;
+    for (const t of txs) {
+      if (t.kind !== "expense" || isTransferLike(t)) continue;
+      if (scope && !t.date.startsWith(scope)) continue;
+      if (!top || t.amount > top.amount) top = t;
+    }
+    if (top) {
+      return {
+        text: `Your biggest single charge ${month ? `in ${scopeLabel}` : ""} was ${money(top.amount)} to ${top.merchant || top.note || "Unknown"} on ${top.date} (${top.category}).`,
+        sources: [month ? scopeLabel : "all transactions", "single largest expense"],
+      };
+    }
+  }
 
   // ── Subscriptions ────────────────────────────────────────────────
   if (/\b(subscription|subscriptions|recurring|paying for|memberships?)\b/.test(q)) {

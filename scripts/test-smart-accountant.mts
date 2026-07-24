@@ -364,8 +364,11 @@ const { detectSubscriptions } = await import("../src/melani/subscriptions.ts");
     newTx({ date: "2026-04-15", kind: "expense", amount: 15.49, merchant: "NETFLIX.COM", category: "Entertainment" }),
     newTx({ date: "2026-05-15", kind: "expense", amount: 15.49, merchant: "NETFLIX.COM", category: "Entertainment" }),
     newTx({ date: "2026-06-15", kind: "expense", amount: 15.49, merchant: "NETFLIX.COM", category: "Entertainment" }),
-    // Spotify: single known charge → detected as monthly
+    // Spotify: single charge → NOT a subscription (could be a one-off)
     newTx({ date: "2026-06-03", kind: "expense", amount: 11.99, merchant: "Spotify USA", category: "Entertainment" }),
+    // Hulu: two identical monthly charges → real subscription
+    newTx({ date: "2026-05-08", kind: "expense", amount: 17.99, merchant: "HULU", category: "Entertainment" }),
+    newTx({ date: "2026-06-08", kind: "expense", amount: 17.99, merchant: "HULU", category: "Entertainment" }),
     // Grocery run: two irregular charges, not a brand → NOT a subscription
     newTx({ date: "2026-06-02", kind: "expense", amount: 54.2, merchant: "TRADER JOES", category: "Food" }),
     newTx({ date: "2026-06-19", kind: "expense", amount: 88.7, merchant: "TRADER JOES", category: "Food" }),
@@ -376,11 +379,13 @@ const { detectSubscriptions } = await import("../src/melani/subscriptions.ts");
   const scan = detectSubscriptions(stxs);
   const netflix = scan.subs.find((s) => s.merchant === "Netflix");
   const spotify = scan.subs.find((s) => s.merchant === "Spotify");
+  const hulu = scan.subs.find((s) => s.merchant === "Hulu");
   const prime = scan.subs.find((s) => s.merchant === "Amazon Prime");
   const groceries = scan.subs.find((s) => /trader/i.test(s.merchant));
   check("subs: netflix detected monthly", !!netflix && netflix.cadence === "monthly", netflix);
   check("subs: netflix amount = 15.49", !!netflix && netflix.amount === 15.49, netflix);
-  check("subs: spotify single known charge detected", !!spotify, spotify);
+  check("subs: single known charge is NOT a subscription", !spotify, spotify);
+  check("subs: two identical known charges ARE a subscription", !!hulu, hulu);
   check("subs: prime detected yearly", !!prime && prime.cadence === "yearly", prime);
   check("subs: prime monthly cost ≈ 11.58", !!prime && Math.abs(prime.monthlyCost - 139 / 12) < 0.05, prime);
   check("subs: irregular groceries excluded", !groceries, groceries);
@@ -459,9 +464,50 @@ const { detectSubscriptions: detectSubs2 } = await import("../src/melani/subscri
   const nwA = answerCopilot("what's my net worth?", baseCtx as any);
   check("copilot: net worth = $5,000", nwA.text.includes("$5,000"), nwA.text);
 
+  const merchA = answerCopilot("how much did I spend at Amazon?", baseCtx as any);
+  check("copilot: merchant Amazon = $120", merchA.text.includes("$120") && /amazon/i.test(merchA.text), merchA.text);
+
+  const bigA = answerCopilot("what was my biggest purchase?", baseCtx as any);
+  check("copilot: biggest purchase = $120 Amazon", bigA.text.includes("$120"), bigA.text);
+
+  const avgA = answerCopilot("what's my average monthly spend?", baseCtx as any);
+  check("copilot: average monthly spend answered", /average/i.test(avgA.text) && /\$/.test(avgA.text), avgA.text);
+
   const emptyCtx = { ...baseCtx, state: { ...baseCtx.state, txs: [] } };
   const emptyA = answerCopilot("how much did I spend?", emptyCtx as any);
   check("copilot: empty ledger asks for import", /import/i.test(emptyA.text), emptyA.text);
+}
+
+// ── Built-in SQL engine ────────────────────────────────────────────
+const { runSql } = await import("../src/melani/financeSql.ts");
+{
+  const sqlTxs = [
+    newTx({ date: "2026-06-04", kind: "expense", amount: 60, category: "Food", merchant: "TRADER JOES" }),
+    newTx({ date: "2026-06-18", kind: "expense", amount: 40, category: "Food", merchant: "WHOLE FOODS" }),
+    newTx({ date: "2026-06-10", kind: "expense", amount: 120, category: "Shopping", merchant: "AMAZON" }),
+    newTx({ date: "2026-05-10", kind: "expense", amount: 200, category: "Shopping", merchant: "AMAZON" }),
+    newTx({ date: "2026-06-01", kind: "income", amount: 3000, category: "Income", merchant: "PAYROLL" }),
+  ];
+  const r1 = runSql("SELECT SUM(amount) FROM transactions WHERE kind = 'expense'", sqlTxs);
+  check("sql: total expense = 420", r1.rows[0]?.[0] === 420, r1);
+
+  const r2 = runSql("SELECT category, SUM(amount) FROM transactions WHERE kind = 'expense' GROUP BY category ORDER BY SUM(amount) DESC", sqlTxs);
+  check("sql: group by category top = Shopping 320", r2.rows[0]?.[0] === "Shopping" && r2.rows[0]?.[1] === 320, r2);
+
+  const r3 = runSql("SELECT date, merchant, amount FROM transactions WHERE kind = 'expense' AND amount > 100 ORDER BY amount DESC", sqlTxs);
+  check("sql: filter expense amount>100 returns 2", r3.rowCount === 2 && r3.rows[0]?.[2] === 200, r3);
+
+  const r4 = runSql("SELECT merchant FROM transactions WHERE merchant LIKE '%amazon%'", sqlTxs);
+  check("sql: LIKE amazon returns 2", r4.rowCount === 2, r4);
+
+  const r5 = runSql("SELECT COUNT(*) FROM transactions WHERE month = '2026-06'", sqlTxs);
+  check("sql: count June = 4", r5.rows[0]?.[0] === 4, r5);
+
+  const r6 = runSql("DELETE FROM transactions", sqlTxs);
+  check("sql: rejects non-SELECT", !!r6.error, r6);
+
+  const r7 = runSql("SELECT * FROM transactions LIMIT 2", sqlTxs);
+  check("sql: select star + limit", r7.rowCount === 2 && r7.columns.includes("merchant"), r7);
 }
 
 console.log("");

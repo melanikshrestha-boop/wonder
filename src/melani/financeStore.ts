@@ -344,6 +344,31 @@ export function saveFinance(state: FinanceState) {
   }
 }
 
+/**
+ * Real-time cross-tab sync. When another tab (or device sharing this
+ * browser profile) writes the ledger, the browser fires a `storage` event
+ * here; we re-broadcast it as a restore so open desks update live.
+ * Returns a cleanup function.
+ */
+export function initFinanceCrossTabSync(): () => void {
+  if (typeof window === "undefined") return () => {};
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== KEY || e.newValue == null) return;
+    if (e.newValue === financeLastJson) return; // our own write echoed back
+    try {
+      const next = JSON.parse(e.newValue) as FinanceState;
+      financeLastJson = e.newValue;
+      window.dispatchEvent(
+        new CustomEvent(FINANCE_EXTERNAL_RESTORE_EVENT, { detail: next })
+      );
+    } catch {
+      /* ignore malformed cross-tab payloads */
+    }
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
+}
+
 /** Call after loadFinance so the first edit has a baseline without undoing load */
 export function seedFinanceUndoBaseline(state: FinanceState) {
   try {

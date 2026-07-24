@@ -259,10 +259,15 @@ export function detectSubscriptions(txs: FinanceTx[]): SubscriptionScan {
     }
 
     if (isKnown) {
-      // A recognized brand is a subscription even from a single charge.
-      // A weekly/irregular rhythm on a brand is almost always monthly billing
-      // plus one-off buys (App Store, etc.) — normalize it to monthly.
-      if (list.length < 2 || cadence === "weekly" || cadence === "irregular") {
+      // Even a recognized brand must actually recur to count. A single
+      // Audible/Apple charge is a one-time purchase, not a subscription.
+      // Require 2+ charges on a roughly-regular rhythm, and don't accept a
+      // wildly varying amount (that's à-la-carte buying, not a plan).
+      if (list.length < 2) continue;
+      if (amountConsistency(amounts) > 0.45) continue; // erratic → not a plan
+      // A weekly/irregular rhythm on a brand is usually monthly billing plus
+      // one-off buys — normalize to monthly rather than inflating it.
+      if (cadence === "weekly" || cadence === "irregular") {
         cadence = "monthly";
         perMonth = 1;
         gap = 30;
