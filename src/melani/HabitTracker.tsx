@@ -53,6 +53,12 @@ function pct(n: number): string {
   return `${Math.round(n * 100)}%`;
 }
 
+/** ISO "2026-07-01" -> "7/1" (no leading zeros, no year). */
+function md(iso: string): string {
+  const p = iso.split("-");
+  return `${Number(p[1])}/${Number(p[2])}`;
+}
+
 function Ring({
   label,
   value,
@@ -198,7 +204,6 @@ export function HabitTracker() {
       <header className="hab-head">
         <button className="hab-nav" onClick={() => changeMonth(-1)} aria-label="Previous month">‹</button>
         <div className="hab-title">
-          <span className="hab-title-year">{viewYear}</span>
           <h1>{MONTHS[viewMonth]}</h1>
           <p>Habit tracker · every day, or it doesn't count</p>
         </div>
@@ -207,9 +212,9 @@ export function HabitTracker() {
 
       <section className="hab-kpi-row">
         <div className="hab-kpi-block">
-          <div className="hab-kpi"><span>Start</span><b>{monthStart}</b></div>
-          <div className="hab-kpi"><span>End</span><b>{monthEnd}</b></div>
-          <div className="hab-kpi"><span>Days left</span><b>{daysLeft}</b></div>
+          <div className="hab-kpi"><span>Start</span><b>{md(monthStart)}</b></div>
+          <div className="hab-kpi"><span>End</span><b>{md(monthEnd)}</b></div>
+          <div className="hab-kpi"><span>Left</span><b>{daysLeft}</b></div>
           <div className="hab-kpi"><span>Habits</span><b>{active.length}</b></div>
           <div className="hab-kpi"><span>Goal</span><b>{totalGoal}</b></div>
           <div className="hab-kpi hab-kpi-done"><span>Done</span><b>{totalDone}</b></div>

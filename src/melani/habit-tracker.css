@@ -72,7 +72,7 @@
 .hab-kpi-block {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
   background: var(--hab-panel);
   border: 1px solid var(--hab-line);
   border-radius: 14px;
@@ -81,17 +81,22 @@
 .hab-kpi {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  min-width: 0;
 }
 .hab-kpi span {
-  font-size: 10.5px;
+  font-size: 9.5px;
   color: var(--hab-sub);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .hab-kpi b {
-  font-size: 17px;
+  font-size: 16px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .hab-kpi-done b {
   color: #22d3ee;
