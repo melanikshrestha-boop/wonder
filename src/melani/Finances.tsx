@@ -90,7 +90,6 @@ import {
   newTx,
   runningBalanceMap,
   txTypeOf,
-  txTypeTone,
   saveFinance,
   seedFinanceUndoBaseline,
   FINANCE_EXTERNAL_RESTORE_EVENT,
@@ -177,13 +176,9 @@ type SortKey = "date" | "merchant" | "category" | "amount" | "kind";
 const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "transactions", label: "Ledger", icon: "☰" },
   { id: "overview", label: "Books", icon: "◉" },
-  { id: "worth", label: "Worth", icon: "◆" },
-  { id: "credit", label: "Credit", icon: "◈" },
   { id: "plan", label: "Plan", icon: "▦" },
   { id: "subscriptions", label: "Subscriptions", icon: "↻" },
-  { id: "goals", label: "Goals", icon: "◎" },
   { id: "insights", label: "Review", icon: "◈" },
-  { id: "accounts", label: "Accounts", icon: "▭" },
   { id: "sql", label: "SQL", icon: "⌗" },
 ];
 
@@ -308,6 +303,11 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   );
   // Ledger first — a meticulous bookkeeper opens the daybook, not a dashboard
   const [tab, setTab] = useState<TabId>("transactions");
+  // Deleted tabs (worth/credit/goals/accounts) can never display — a stray
+  // navigation to one falls back to the Ledger.
+  useEffect(() => {
+    if (!NAV.some((n) => n.id === tab)) setTab("transactions");
+  }, [tab]);
   const [filterQ, setFilterQ] = useState("");
   const [filterCat, setFilterCat] = useState("all");
   // Accountant period: year first, then Jan → current month (grows automatically)
@@ -2640,22 +2640,25 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                   />
                                 </td>
                                 <td className="wd-payee-cell">
-                                  <input
-                                    className="wd-payee-input"
-                                    value={t.merchant || t.note || ""}
-                                    title={t.merchant || t.note || ""}
-                                    placeholder="Full payee name"
-                                    onChange={(e) =>
-                                      patchTx(t.id, {
-                                        merchant: e.target.value,
-                                        note: e.target.value,
-                                      })
-                                    }
-                                  />
-                                  <span
-                                    className={`wd-txt wd-txt-${txTypeTone(txTypeOf(t))}`}
-                                  >
-                                    {txTypeOf(t)}
+                                  <span className="wd-payee-line">
+                                    <input
+                                      className="wd-payee-input"
+                                      size={Math.max(6, (t.merchant || t.note || "").length)}
+                                      value={t.merchant || t.note || ""}
+                                      title={t.merchant || t.note || ""}
+                                      placeholder="Full payee name"
+                                      onChange={(e) =>
+                                        patchTx(t.id, {
+                                          merchant: e.target.value,
+                                          note: e.target.value,
+                                        })
+                                      }
+                                    />
+                                    <span
+                                      className={`wd-txt wd-txt-${t.kind === "income" ? "in" : "out"}`}
+                                    >
+                                      ({txTypeOf(t)})
+                                    </span>
                                   </span>
                                 </td>
                                 <td>

@@ -356,15 +356,6 @@ const { txTypeOf } = await import("../src/melani/financeStore.ts");
   );
 }
 
-// ── Payment-type color tones ───────────────────────────────────────
-const { txTypeTone } = await import("../src/melani/financeStore.ts");
-{
-  check("tone: Zelle → zelle (pink)", txTypeTone("Zelle credit") === "zelle");
-  check("tone: Card payment → card", txTypeTone("Card payment") === "card");
-  check("tone: ATM → atm", txTypeTone("ATM") === "atm");
-  check("tone: Account transfer → transfer", txTypeTone("Account transfer") === "transfer");
-  check("tone: unknown → default", txTypeTone("Something else") === "default");
-}
 
 // ── Subscription detection ─────────────────────────────────────────
 const { detectSubscriptions } = await import("../src/melani/subscriptions.ts");
