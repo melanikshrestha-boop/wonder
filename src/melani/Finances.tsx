@@ -73,7 +73,6 @@ import {
 import {
   cashOnHand,
   creditOwed,
-  demoSeedTxs,
   fingerprintsFromTxs,
   invested,
   loadFinance,
@@ -1250,46 +1249,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     });
   }
 
-  function loadDemo() {
-    const seed = demoSeedTxs();
-    patchState((s) => {
-      const merged = mergeTxs(s.txs, seed);
-      const accounts = s.accounts.map((a) => {
-        if (a.kind === "checking")
-          return { ...a, balance: Math.max(a.balance, 4200) };
-        if (a.kind === "savings")
-          return { ...a, balance: Math.max(a.balance, 8500) };
-        if (a.kind === "credit")
-          return {
-            ...a,
-            balance: Math.max(a.balance, 1840),
-            creditLimit: a.creditLimit || 5000,
-          };
-        return a;
-      });
-      const goals =
-        s.goals && s.goals.length
-          ? s.goals
-          : [
-              newGoal({ name: "Emergency fund", target: 10000, saved: 6800 }),
-              newGoal({ name: "Japan trip", target: 3500, saved: 1480 }),
-              newGoal({ name: "Pay off card", target: 2400, saved: 1100 }),
-            ];
-      const budget = s.budget.map((b) => {
-        if (b.category === "Rent / housing") return { ...b, planned: 1850 };
-        if (b.category === "Food / groceries") return { ...b, planned: 450 };
-        if (b.category === "Restaurants / coffee")
-          return { ...b, planned: 280 };
-        if (b.category === "Transport") return { ...b, planned: 120 };
-        if (b.category === "Subscriptions") return { ...b, planned: 60 };
-        if (b.category === "Fun") return { ...b, planned: 200 };
-        return b;
-      });
-      return { ...s, txs: merged.txs, accounts, goals, budget };
-    });
-    setImportNote("Demo month loaded.");
-    setTab("overview");
-  }
 
   function addGoal() {
     if (!goalDraft.name.trim() || goalDraft.target <= 0) return;
@@ -1630,11 +1589,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             <button type="button" className="wd-btn" onClick={downloadCsv}>
               Export books
             </button>
-            {state.txs.length === 0 ? (
-              <button type="button" className="wd-btn" onClick={loadDemo}>
-                Demo
-              </button>
-            ) : null}
           </div>
           {importNote ? <p className="wd-note wd-top-note">{importNote}</p> : null}
           {saveErr ? (
@@ -1710,17 +1664,15 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               </div>
               {brief.dataQuality.score < 50 ? (
                 <div className="wd-brain-cta">
-                  <button
-                    type="button"
-                    className="wd-btn wd-btn-primary"
-                    onClick={() =>
-                      state.txs.length === 0 ? loadDemo() : autoBuildPlan()
-                    }
-                  >
-                    {state.txs.length === 0
-                      ? "Load demo to see the brain work"
-                      : "Auto-build plan from spend"}
-                  </button>
+                  {state.txs.length > 0 ? (
+                    <button
+                      type="button"
+                      className="wd-btn wd-btn-primary"
+                      onClick={autoBuildPlan}
+                    >
+                      Auto-build plan from spend
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="wd-btn"
@@ -3133,20 +3085,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 >
                   Loosen +10%
                 </button>
-                {state.txs.length === 0 ? (
-                  <button
-                    type="button"
-                    className="wd-btn"
-                    onClick={loadDemo}
-                  >
-                    Load demo first
-                  </button>
-                ) : null}
               </div>
-              <p className="wd-muted wd-pad">
-                No typing. Import bank CSV or connect Plaid → tap Auto-build.
-                Nudge with + / − if you want.
-              </p>
 
               {state.budget.map((b) => {
                 const spent = spentMap[b.category] || 0;

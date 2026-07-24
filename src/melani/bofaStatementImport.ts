@@ -12,7 +12,7 @@ import {
 import type { FinanceAccount, FinanceState, FinanceTx } from "./financeStore";
 
 /** Bump when BofA re-extract should force re-merge */
-export const BOFA_IMPORT_VERSION = "bofa-v1-8804-mar2026-jun2026";
+export const BOFA_IMPORT_VERSION = "bofa-v2-8804-mar2026-jun2026-nohousing";
 
 const FLAG_KEY = "wonder-finance-bofa-import-version";
 

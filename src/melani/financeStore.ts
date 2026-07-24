@@ -269,7 +269,11 @@ export function loadFinance(): FinanceState {
               creditLimit: a.creditLimit ?? null,
             }))
           : DEFAULT_ACCOUNTS,
-      txs: Array.isArray(parsed.txs) ? parsed.txs.map(migrateTx) : [],
+      // Only real imported data lives on the books. Any leftover demo/seed
+      // rows (source "manual") are dropped — the desk reflects your CSV only.
+      txs: Array.isArray(parsed.txs)
+        ? parsed.txs.map(migrateTx).filter((t) => t.source !== "manual")
+        : [],
       budget:
         Array.isArray(parsed.budget) && parsed.budget.length
           ? parsed.budget
