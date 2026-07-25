@@ -375,6 +375,119 @@
   margin-right: auto;
 }
 
+/* Barcode + Open Food Facts */
+.nut-barcode-input {
+  width: 130px;
+  flex: 0 0 auto;
+  background: var(--nut-panel-2);
+  border: 1px solid var(--nut-line);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: var(--nut-text);
+  font-size: 13px;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.nut-barcode-input:focus { outline: none; border-color: var(--nut-accent); }
+.nut-off-note {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--nut-sub);
+}
+.nut-online-lead {
+  margin: 12px 0 5px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nut-sub);
+}
+.nut-results.is-online { border-color: rgba(56, 189, 248, 0.32); }
+.nut-result-name i {
+  font-style: normal;
+  color: var(--nut-sub);
+  font-size: 11.5px;
+}
+
+/* Recipes */
+.nut-recipe-save {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.nut-recipe-save input {
+  background: var(--nut-panel-2);
+  border: 1px solid var(--nut-line);
+  border-radius: 8px;
+  padding: 5px 10px;
+  color: var(--nut-text);
+  font-size: 12px;
+  font-family: inherit;
+  width: 190px;
+}
+.nut-recipe-save input:focus { outline: none; border-color: var(--nut-accent); }
+.nut-recipe-save input:disabled { opacity: 0.45; }
+.nut-recipe-save button {
+  background: var(--nut-accent);
+  color: #0b0d12;
+  border: 0;
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.nut-recipe-save button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.nut-recipes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.nut-recipes li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px auto auto 26px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 8px;
+}
+.nut-recipes li:hover { background: var(--nut-panel-2); }
+.nut-recipe-main { min-width: 0; display: flex; flex-direction: column; }
+.nut-recipe-main b {
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nut-recipe-main span { font-size: 10.5px; color: var(--nut-sub); }
+.nut-recipe-macros {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.nut-recipe-macros b { font-size: 12.5px; }
+.nut-recipe-macros i { font-style: normal; font-size: 10px; color: var(--nut-sub); }
+.nut-recipe-log {
+  background: var(--nut-panel-2);
+  border: 1px solid var(--nut-line);
+  color: var(--nut-text);
+  border-radius: 8px;
+  padding: 4px 11px;
+  font-size: 11.5px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.nut-recipe-log:hover { border-color: var(--nut-accent); color: var(--nut-accent); }
+.nut-recipe-log.is-half { padding: 4px 9px; }
+
 /* Recents */
 .nut-recents {
   display: flex;

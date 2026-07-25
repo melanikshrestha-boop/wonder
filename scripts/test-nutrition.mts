@@ -184,6 +184,12 @@ assert("suggestions are varied across food groups",
   new Set(closers.map((c) => c.food.group)).size === closers.length);
 assert("no suggestions when the gap is already closed",
   suggestClosers({ calories: 40, protein_g: 2, carbs_g: 5, fat_g: 1, fiber_g: 1 }).length === 0);
+assert("never suggests condiments as a protein source",
+  suggestClosers({ calories: 1800, protein_g: 120, carbs_g: 200, fat_g: 60, fiber_g: 25 }, 12)
+    .every((c) => c.food.group !== "condiment"));
+assert("never suggests an absurd quantity of anything",
+  suggestClosers({ calories: 1800, protein_g: 120, carbs_g: 200, fat_g: 60, fiber_g: 25 }, 12)
+    .every((c) => c.grams <= Math.min(c.food.portions[0].grams * 4, 400)));
 
 assert("day progress is clamped to 0..1",
   dayProgress(new Date("2026-07-20T03:00:00")) === 0 &&
@@ -213,6 +219,123 @@ assert("a logged day produces coaching", fullInsights.length > 0);
 assert("insights stay readable (max 6)", fullInsights.length <= 6);
 assert("every insight has a title and detail",
   fullInsights.every((i) => i.title.length > 0 && i.detail.length > 0));
+
+console.log("\nOpen Food Facts mapping");
+const { mapOffProduct, offToFood, normaliseBarcode, isPlausibleBarcode } =
+  await import("../src/melani/nutrition/openFoodFacts.ts");
+
+const offKcal = mapOffProduct({
+  code: "3017624010701",
+  product_name: "Nutella",
+  brands: "Ferrero, Nutella",
+  serving_size: "15 g",
+  nutriments: { "energy-kcal_100g": 539, proteins_100g: 6.3, carbohydrates_100g: 57.5, fat_100g: 30.9, fiber_100g: 0 },
+})!;
+assert("maps a normal product", offKcal.name === "Nutella" && offKcal.per100g.calories === 539);
+assert("takes the first brand only", offKcal.brand === "Ferrero");
+assert("parses serving size", offKcal.servingGrams === 15);
+
+const offKj = mapOffProduct({
+  code: "111", product_name: "KJ only",
+  nutriments: { energy_100g: 2000, energy_unit: "kJ", proteins_100g: 10 },
+})!;
+assert("converts kilojoules to calories", offKj.per100g.calories === Math.round(2000 / 4.184));
+
+const offKjExplicit = mapOffProduct({
+  code: "112", product_name: "KJ key",
+  nutriments: { "energy-kj_100g": 418.4, proteins_100g: 1 },
+})!;
+assert("handles the energy-kj_100g key", offKjExplicit.per100g.calories === 100);
+
+assert("rejects products with no energy at all",
+  mapOffProduct({ code: "113", product_name: "Mystery", nutriments: { proteins_100g: 5 } }) === null);
+
+const offMissing = mapOffProduct({
+  code: "114", product_name: "Sparse", nutriments: { "energy-kcal_100g": 200 },
+})!;
+assert("missing macros default to zero, not NaN",
+  offMissing.per100g.protein_g === 0 && offMissing.per100g.fiber_g === 0);
+
+const offComma = mapOffProduct({
+  code: "115", product_name: "Comma decimals",
+  nutriments: { "energy-kcal_100g": "250,5", proteins_100g: "3,2" },
+})!;
+assert("parses European comma decimals", offComma.per100g.calories === 251 && offComma.per100g.protein_g === 3.2);
+
+const offServingParen = mapOffProduct({
+  code: "116", product_name: "Biscuits", serving_size: "2 biscuits (25 g)",
+  nutriments: { "energy-kcal_100g": 480 },
+})!;
+assert("prefers grams inside parentheses", offServingParen.servingGrams === 25);
+
+const asFood = offToFood(offKcal);
+assert("OFF product converts to a Food", asFood.id === "off-3017624010701");
+assert("brand appears in the food name", asFood.name.includes("Ferrero"));
+assert("serving is the default portion when declared", asFood.portions[0].grams === 15);
+assert("food with no serving still has portions",
+  offToFood(offKj).portions.length >= 2);
+assert("macros scale from an OFF food",
+  macrosFor(asFood, 15).calories === Math.round(539 * 0.15));
+
+assert("normalises barcodes", normaliseBarcode(" 301-762 401 0701 ") === "3017624010701");
+assert("accepts EAN-13", isPlausibleBarcode("3017624010701"));
+assert("accepts UPC-A", isPlausibleBarcode("012345678905"));
+assert("rejects nonsense", !isPlausibleBarcode("123"));
+
+console.log("\nRecipes");
+const {
+  createRecipe, recipeTotals, perServing, recipeToEntries,
+  recipeFromEntries, addRecipe, removeRecipe, updateRecipe,
+  markRecipeUsed, sortedRecipes,
+} = await import("../src/melani/nutrition/recipes.ts");
+
+const oats = foodById("oats-dry")!;
+const whey = foodById("whey-protein-powder")!;
+const recipe = createRecipe({
+  name: "Protein oats",
+  servings: 2,
+  defaultSlot: "breakfast",
+  ingredients: [
+    { name: oats.name, grams: 80, qtyLabel: "1 cup", macros: macrosFor(oats, 80), foodId: oats.id },
+    { name: whey.name, grams: 30, qtyLabel: "1 scoop", macros: macrosFor(whey, 30), foodId: whey.id },
+  ],
+});
+const totals = recipeTotals(recipe);
+assert("totals sum the ingredients",
+  totals.calories === macrosFor(oats, 80).calories + macrosFor(whey, 30).calories);
+assert("per-serving halves a 2-serving recipe",
+  perServing(recipe).calories === Math.round(totals.calories / 2));
+
+const oneServing = recipeToEntries(recipe, 1);
+assert("one serving expands to every ingredient", oneServing.length === 2);
+assert("one serving is half the batch",
+  oneServing[0].grams === 40 && oneServing[1].grams === 15);
+assert("logged ingredients keep their source food", oneServing[0].foodId === oats.id);
+assert("recipe name is carried into the label", oneServing[0].qtyLabel.includes("Protein oats"));
+
+const wholeBatch = recipeToEntries(recipe, 2);
+assert("eating the whole batch logs full weights", wholeBatch[0].grams === 80);
+assert("zero servings logs nothing", recipeToEntries(recipe, 0).length === 0);
+assert("recipes default to their own slot", oneServing[0].slot === "breakfast");
+assert("an explicit slot overrides the default",
+  recipeToEntries(recipe, 1, "snack")[0].slot === "snack");
+
+const fromDay = recipeFromEntries("Yesterday's dinner", loadDay(DAY), 1);
+assert("a recipe can be built from a logged day",
+  fromDay.ingredients.length === loadDay(DAY).length);
+
+let list = addRecipe([], recipe);
+assert("add stores the recipe", list.length === 1);
+list = updateRecipe(list, recipe.id, { servings: 4 });
+assert("servings update", list[0].servings === 4);
+list = updateRecipe(list, recipe.id, { servings: 0 });
+assert("servings can never drop below 1", list[0].servings === 1);
+list = markRecipeUsed(list, recipe.id);
+assert("use count increments", list[0].useCount === 1);
+const second = createRecipe({ name: "B", ingredients: [] });
+assert("most-used sorts first", sortedRecipes([second, ...list])[0].id === recipe.id);
+list = removeRecipe(list, recipe.id);
+assert("remove deletes it", list.length === 0);
 
 console.log("\nDate helpers");
 assert("shiftDay walks backwards", shiftDay("2026-07-01", -1) === "2026-06-30");

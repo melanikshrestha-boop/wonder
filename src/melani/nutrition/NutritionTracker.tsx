@@ -48,6 +48,25 @@ import {
   remaining,
   suggestClosers,
 } from "./nutritionInsights";
+import {
+  isPlausibleBarcode,
+  lookupBarcode,
+  offToFood,
+  searchProducts,
+  type OffProduct,
+} from "./openFoodFacts";
+import {
+  addRecipe,
+  loadRecipes,
+  markRecipeUsed,
+  perServing,
+  recipeFromEntries,
+  recipeToEntries,
+  removeRecipe,
+  saveRecipes,
+  sortedRecipes,
+  type Recipe,
+} from "./recipes";
 import "./nutrition.css";
 
 const MACRO_META = [
@@ -183,6 +202,12 @@ export function NutritionTracker() {
   const [showSettings, setShowSettings] = useState(false);
   const [flash, setFlash] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
+  const [barcode, setBarcode] = useState("");
+  const [offBusy, setOffBusy] = useState(false);
+  const [offNote, setOffNote] = useState("");
+  const [online, setOnline] = useState<OffProduct[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>(() => loadRecipes());
+  const [recipeName, setRecipeName] = useState("");
   const quickRef = useRef<HTMLInputElement>(null);
 
   const isToday = day === todayKey();
@@ -192,6 +217,7 @@ export function NutritionTracker() {
     setWater(loadWater(day));
     setTargets(loadTargets());
     setProfile(loadProfile());
+    setRecipes(loadRecipes());
   }, [day]);
 
   useEffect(() => refresh(), [refresh]);
@@ -254,6 +280,67 @@ export function NutritionTracker() {
     setPicked(null);
     setSearch("");
     say(`Added ${food.name}`);
+  }
+
+  // Packaged products are a supplement to the local database, so this runs
+  // debounced, never blocks typing, and silently yields nothing when offline.
+  useEffect(() => {
+    const q = search.trim();
+    if (q.length < 3 || picked) { setOnline([]); return; }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      searchProducts(q, 6).then((found) => {
+        if (!cancelled) setOnline(found);
+      });
+    }, 650);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [search, picked]);
+
+  async function scanBarcode() {
+    const code = barcode.trim();
+    if (!code) return;
+    setOffBusy(true);
+    setOffNote("");
+    const result = await lookupBarcode(code);
+    setOffBusy(false);
+    if (!result.ok) {
+      setOffNote(
+        result.reason === "not-found"
+          ? "No product with that barcode. Search by name instead."
+          : result.reason === "no-nutrition"
+            ? "That product has no nutrition data on Open Food Facts."
+            : result.reason === "offline"
+              ? "You're offline — barcode lookup needs a connection."
+              : "Open Food Facts is unreachable right now."
+      );
+      return;
+    }
+    const food = offToFood(result.product);
+    setPicked(food);
+    setPickQty(1);
+    setPickUnit(0);
+    setBarcode("");
+    setOffNote(result.cached ? "From your cache — no network needed." : "");
+  }
+
+  function saveTodayAsRecipe() {
+    const name = recipeName.trim();
+    if (!name || !entries.length) return;
+    const next = addRecipe(recipes, recipeFromEntries(name, entries, 1));
+    setRecipes(next);
+    saveRecipes(next);
+    setRecipeName("");
+    say(`Saved "${name}" — ${entries.length} ingredients`);
+  }
+
+  function logRecipe(recipe: Recipe, servings: number) {
+    const rows = recipeToEntries(recipe, servings, slot);
+    if (!rows.length) return;
+    addEntries(rows, day);
+    const next = markRecipeUsed(recipes, recipe.id);
+    setRecipes(next);
+    saveRecipes(next);
+    say(`Logged ${recipe.name} · ${perServing(recipe).calories * servings} cal`);
   }
 
   const pickPortion = picked ? picked.portions[pickUnit] || defaultPortion(picked) : null;
@@ -430,7 +517,23 @@ export function NutritionTracker() {
             placeholder="or search the food database…"
             onChange={(e) => { setSearch(e.target.value); setPicked(null); }}
           />
+          <input
+            className="nut-barcode-input"
+            value={barcode}
+            placeholder="barcode"
+            inputMode="numeric"
+            onChange={(e) => { setBarcode(e.target.value); setOffNote(""); }}
+            onKeyDown={(e) => { if (e.key === "Enter") void scanBarcode(); }}
+          />
+          <button
+            className="nut-quick-go"
+            disabled={offBusy || !isPlausibleBarcode(barcode)}
+            onClick={() => void scanBarcode()}
+          >
+            {offBusy ? "…" : "Find"}
+          </button>
         </div>
+        {offNote && <p className="nut-off-note">{offNote}</p>}
         {!!results.length && !picked && (
           <ul className="nut-results">
             {results.map((food) => (
@@ -444,6 +547,28 @@ export function NutritionTracker() {
               </li>
             ))}
           </ul>
+        )}
+        {!!online.length && !picked && (
+          <>
+            <p className="nut-online-lead">
+              Packaged products · Open Food Facts
+            </p>
+            <ul className="nut-results is-online">
+              {online.map((product) => (
+                <li key={product.barcode}>
+                  <button onClick={() => { setPicked(offToFood(product)); setPickQty(1); setPickUnit(0); }}>
+                    <span className="nut-result-name">
+                      {product.name}
+                      {product.brand && <i> · {product.brand}</i>}
+                    </span>
+                    <span className="nut-result-macros">
+                      {product.per100g.calories} cal · {product.per100g.protein_g}p / 100g
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
         {picked && (
           <div className="nut-portion">
@@ -488,6 +613,69 @@ export function NutritionTracker() {
               </button>
             ))}
           </div>
+        )}
+      </section>
+
+      <section className="nut-panel">
+        <div className="nut-panel-title">
+          Recipes
+          <span className="nut-recipe-save">
+            <input
+              value={recipeName}
+              placeholder={entries.length ? "name today's meal…" : "log food first"}
+              disabled={!entries.length}
+              onChange={(e) => setRecipeName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") saveTodayAsRecipe(); }}
+            />
+            <button type="button" disabled={!entries.length || !recipeName.trim()} onClick={saveTodayAsRecipe}>
+              Save today
+            </button>
+          </span>
+        </div>
+        {recipes.length === 0 ? (
+          <p className="nut-slot-empty">
+            No recipes yet. Log a meal, name it above, and it becomes one tap forever after.
+          </p>
+        ) : (
+          <ul className="nut-recipes">
+            {sortedRecipes(recipes).map((recipe) => {
+              const each = perServing(recipe);
+              return (
+                <li key={recipe.id}>
+                  <div className="nut-recipe-main">
+                    <b>{recipe.name}</b>
+                    <span>
+                      {recipe.ingredients.length} ingredient{recipe.ingredients.length === 1 ? "" : "s"}
+                      {recipe.servings > 1 ? ` · makes ${recipe.servings}` : ""}
+                      {recipe.useCount > 0 ? ` · used ${recipe.useCount}×` : ""}
+                    </span>
+                  </div>
+                  <div className="nut-recipe-macros">
+                    <b>{each.calories}</b>
+                    <i>{each.protein_g}p · {each.carbs_g}c · {each.fat_g}f / serving</i>
+                  </div>
+                  <button className="nut-recipe-log" onClick={() => logRecipe(recipe, 1)}>
+                    Log 1
+                  </button>
+                  <button className="nut-recipe-log is-half" onClick={() => logRecipe(recipe, 0.5)}>
+                    ½
+                  </button>
+                  <button
+                    className="nut-entry-x"
+                    onClick={() => {
+                      if (!confirm(`Delete the recipe "${recipe.name}"?`)) return;
+                      const next = removeRecipe(recipes, recipe.id);
+                      setRecipes(next);
+                      saveRecipes(next);
+                    }}
+                    aria-label={`Delete ${recipe.name}`}
+                  >
+                    ×
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </section>
 

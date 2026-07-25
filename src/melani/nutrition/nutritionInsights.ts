@@ -124,6 +124,9 @@ export function suggestClosers(
 
   for (const food of FOODS) {
     if (skip.has(food.id)) continue;
+    // Condiments are protein-dense per calorie but nobody eats a bowl of soy
+    // sauce. They are seasoning, not a way to close a gap.
+    if (food.group === "condiment") continue;
     const per100 = food.per100g;
     if (per100.protein_g < 8) continue;
     // Protein per calorie — the only metric that matters for closing a gap.
@@ -135,9 +138,12 @@ export function suggestClosers(
     const targetProtein = Math.min(proteinNeed, 40);
     const rawGrams = (targetProtein / per100.protein_g) * 100;
     const portion = defaultPortion(food);
+    // Never suggest more than four normal portions of anything, or 400 g. Without
+    // this the maths happily proposes 25 tablespoons of something.
+    const ceiling = Math.min(portion.grams * 4, 400);
     const units = Math.max(1, Math.round(rawGrams / portion.grams));
     const grams = Math.round(
-      portion.grams >= 20 ? units * portion.grams : Math.min(rawGrams, 400)
+      Math.min(ceiling, portion.grams >= 20 ? units * portion.grams : rawGrams)
     );
     if (grams <= 0) continue;
 
