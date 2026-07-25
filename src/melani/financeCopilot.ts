@@ -18,6 +18,8 @@ import type { SmartBrief } from "./financeIntelligence";
 import { answerFromBrief } from "./financeIntelligence";
 import type { CreditReport } from "./financeCredit";
 import type { SubscriptionScan } from "./subscriptions";
+import { conceptSuggestions, explainConcept, runScenario } from "./financeExplain";
+import type { ConceptContext } from "./financeConcepts";
 
 export type CopilotContext = {
   state: FinanceState;
@@ -235,6 +237,25 @@ export function answerCopilot(
       sources: [],
     };
   }
+
+  // ── Teaching and modelling ───────────────────────────────────────
+  // Runs before the ledger queries so "explain compound interest" and
+  // "what if I save $500/month" get a model rather than a spend total.
+  // Both return null when the question isn't theirs.
+  const conceptCtx: ConceptContext = {
+    cash: ctx.cash,
+    debt: ctx.debt,
+    worth: ctx.worth,
+    income: ctx.income,
+    expense: ctx.expense,
+    cashFlow: ctx.cashFlow,
+    utilization: ctx.credit.utilization ?? null,
+    apr: null,
+  };
+  const scenario = runScenario(question, conceptCtx);
+  if (scenario) return scenario;
+  const explained = explainConcept(question, conceptCtx);
+  if (explained) return explained;
 
   const month = resolveMonth(q, txs, ctx.ym);
   const category = resolveCategory(q, txs);
@@ -496,7 +517,7 @@ export function answerCopilot(
   }
 
   return {
-    text: "I didn't catch that. Try: \"how much on food in June\", \"top merchants\", \"chart my spending by month\", or \"can I afford $500\".",
+    text: "I didn't catch that. Try a number question (\"how much on food in June\", \"top merchants\", \"chart my spending by month\"), a what-if (\"what if I save $500 a month for 10 years\", \"how long to pay off $2,000 at 24%\"), or ask me to explain something (\"explain APR vs APY\").",
     sources: [],
   };
 }
@@ -507,10 +528,22 @@ export function copilotSuggestions(ctx: CopilotContext): string[] {
   const cats = categoryBreakdown(ctx.state.txs).slice(0, 1);
   if (cats[0]) out.push(`How much did I spend on ${cats[0].name.split(/[\s/]/)[0]}?`);
   out.push("Chart my spending by month");
-  out.push("Pie chart of spend by category");
   if (ctx.subs.count) out.push("What subscriptions am I paying for?");
-  out.push("Can I afford a $1,000 purchase?");
-  return out.slice(0, 5);
+  out.push("What if I save $500 a month for 10 years?");
+  // Teaching prompts, picked from whatever the ledger says matters right now.
+  out.push(
+    ...conceptSuggestions({
+      cash: ctx.cash,
+      debt: ctx.debt,
+      worth: ctx.worth,
+      income: ctx.income,
+      expense: ctx.expense,
+      cashFlow: ctx.cashFlow,
+      utilization: ctx.credit.utilization ?? null,
+      apr: null,
+    })
+  );
+  return out.slice(0, 6);
 }
 
 export const COPILOT_ONLINE = () =>
