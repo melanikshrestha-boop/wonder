@@ -338,6 +338,20 @@ function ensureLifePages(ws: Workspace): Workspace {
     ]
   );
 
+  // Health — Nutrition (calories + macros, item-level)
+  ensurePage(
+    "pg-nutrition",
+    "Nutrition",
+    "nutrition",
+    null,
+    [
+      newBlock(
+        "paragraph",
+        "Calories and macros, logged in plain English. Every item, every gram, with the coaching math behind it."
+      ),
+    ]
+  );
+
   // Wardrobe stays under Agents
   ensurePage("pg-fashion-os", "Wardrobe", "fashion", "pg-agents", [
     newBlock("paragraph", "Your clothes, extracted and organized."),

@@ -234,6 +234,15 @@ export function MinimalIcon({ name, size = 16, className = "" }: Props) {
           <path {...stroke} d="m15.2 17 1.4 1.5L19 15.5" />
         </svg>
       );
+    case "nutrition":
+      // segmented ring — calories + macro split
+      return (
+        <svg {...common}>
+          <circle {...stroke} cx="12" cy="12" r="8.5" />
+          <path {...stroke} d="M12 3.5v8.5l6 6" />
+          <circle {...stroke} cx="12" cy="12" r="2" />
+        </svg>
+      );
     case "journal":
       return (
         <svg {...common}>
@@ -377,6 +386,8 @@ export function iconForPage(page: Pick<Page, "id" | "title" | "kind" | "icon">):
   if (id === "pg-home" || t === "home") return "home";
   if (id === "pg-habits" || id.includes("habit") || t === "habits" || t.includes("habit tracker"))
     return "habits";
+  if (id === "pg-nutrition" || t === "nutrition" || t === "macros" || t === "calories")
+    return "nutrition";
   if (id.includes("fitness") || t === "fitness") return "fitness";
   if (id.includes("sleep") || t.includes("sleep")) return "sleep";
   if (id.includes("meal") || t.includes("meal")) return "meals";

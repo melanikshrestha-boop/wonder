@@ -281,11 +281,12 @@ export function topHabits(
 /** All active streaks, sorted longest first. */
 export function activeStreaks(
   habits: Habit[],
-  map: CheckMap
+  map: CheckMap,
+  until: string = todayKey()
 ): { habit: Habit; streak: number }[] {
   return habits
     .filter((h) => !h.archivedAt)
-    .map((habit) => ({ habit, streak: currentStreak(map, habit.id) }))
+    .map((habit) => ({ habit, streak: currentStreak(map, habit.id, until) }))
     .filter((r) => r.streak > 0)
     .sort((a, b) => b.streak - a.streak);
 }

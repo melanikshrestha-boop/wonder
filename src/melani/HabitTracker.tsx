@@ -16,7 +16,6 @@ import {
   bestStreak,
   currentStreak,
   isChecked,
-  last30Hits,
   loadChecks,
   loadHabits,
   momentum,
@@ -31,7 +30,6 @@ import {
   trendPoints,
   updateHabit,
   weeklyProgress,
-  ymd,
 } from "./habitStore";
 import type { Habit } from "./habitStore";
 import { todayKey } from "./data";

@@ -86,7 +86,7 @@ assert("trend last point matches today", pts[29].x === anchor);
 const top = topHabits(habits, checks, 3);
 assert("top-3 habit is hb-1", top[0].habit.id === "hb-1");
 
-const streaks = activeStreaks(habits, checks);
+const streaks = activeStreaks(habits, checks, anchor);
 assert("active streaks includes hb-1", streaks.some((s) => s.habit.id === "hb-1"));
 
 // Month days

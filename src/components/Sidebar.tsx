@@ -68,7 +68,7 @@ function applySidebarWidth(w: number) {
 }
 
 /** Health section roots */
-const HEALTH_ROOT_IDS = ["pg-fitness", "pg-hygiene", "pg-habits", "pg-data"] as const;
+const HEALTH_ROOT_IDS = ["pg-fitness", "pg-nutrition", "pg-hygiene", "pg-habits", "pg-data"] as const;
 /** Learn section roots — Bookshelf + World Monitor + Finances. No Work section. */
 const LEARN_ROOT_IDS = ["pg-library", "pg-world-monitor", "pg-finance"] as const;
 
