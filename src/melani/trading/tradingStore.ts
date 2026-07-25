@@ -8,7 +8,19 @@
  */
 import { newAccount, STARTING_CASH, type Account, type BrokerSettings, DEFAULT_SETTINGS } from "./broker";
 
+/**
+ * Where prices come from.
+ *   simulated — generated locally. Any speed, deterministic replay, offline.
+ *   replay    — a real past session, downloaded once and cached. Any speed.
+ *   live      — real current quotes. Market hours only, 1× only, no replay.
+ */
+export type DataMode = "simulated" | "replay" | "live";
+
 export type SessionState = {
+  mode: DataMode;
+  /** Ticker and date being replayed, when mode is "replay". */
+  replayDate: string;
+  replayTicker: string;
   /** Seed for the current trading day. Same seed replays the same prices. */
   seed: number;
   /** Which simulated day this is, counting from the account's first. */
@@ -39,6 +51,9 @@ export function onTradingChange(cb: () => void): () => void {
 
 export function freshSession(seed = Math.floor(Math.random() * 1e9)): SessionState {
   return {
+    mode: "simulated",
+    replayDate: "",
+    replayTicker: "NVDA",
     seed,
     day: 1,
     minute: 0,
@@ -57,6 +72,9 @@ export function loadSession(): SessionState {
     const parsed = JSON.parse(raw) as Partial<SessionState>;
     if (!parsed || typeof parsed.seed !== "number" || !parsed.account) return freshSession();
     return {
+      mode: (parsed.mode as SessionState["mode"]) || "simulated",
+      replayDate: parsed.replayDate || "",
+      replayTicker: parsed.replayTicker || "NVDA",
       seed: parsed.seed,
       day: parsed.day ?? 1,
       minute: Math.min(389, Math.max(0, parsed.minute ?? 0)),

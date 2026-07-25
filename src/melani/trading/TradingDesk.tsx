@@ -55,6 +55,19 @@ import {
   saveSession,
   type SessionState,
 } from "./tradingStore";
+import {
+  cachedDates,
+  fetchHistoricalDay,
+  fetchLiveQuote,
+  isMarketOpen,
+  lastTradingDay,
+  loadProviderConfig,
+  PROVIDER_INFO,
+  saveProviderConfig,
+  type LiveQuote,
+  type Provider,
+  type ProviderConfig,
+} from "./marketData";
 import { CandleChart, type ChartOverlays } from "./CandleChart";
 import "./trading.css";
 
@@ -101,6 +114,15 @@ export function TradingDesk() {
   const [stopLoss, setStopLoss] = useState("");
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null);
 
+  // Real market data
+  const [config, setConfig] = useState<ProviderConfig>(() => loadProviderConfig());
+  const [showData, setShowData] = useState(false);
+  const [realDay, setRealDay] = useState<Candle[] | null>(null);
+  const [dataNote, setDataNote] = useState("");
+  const [loadingData, setLoadingData] = useState(false);
+  const [liveQuotes, setLiveQuotes] = useState<Record<string, LiveQuote>>({});
+  const [replayDate, setReplayDate] = useState(() => session.replayDate || lastTradingDay());
+
   const sessionRef = useRef(session);
   sessionRef.current = session;
 
@@ -118,8 +140,14 @@ export function TradingDesk() {
         previousClose: session.previousCloses[symbol.ticker],
       });
     }
+    // Replay substitutes the real downloaded session for that one symbol.
+    // Everything else stays simulated rather than being blanked out, so the
+    // watchlist and any other open position keep working.
+    if (session.mode === "replay" && realDay && realDay.length) {
+      out[session.replayTicker] = realDay;
+    }
     return out;
-  }, [session.seed, session.previousCloses]);
+  }, [session.seed, session.previousCloses, session.mode, session.replayTicker, realDay]);
 
   const minute = session.minute;
 
@@ -184,6 +212,63 @@ export function TradingDesk() {
     setToast({ text, bad });
     window.setTimeout(() => setToast(null), 2600);
   }, []);
+
+  /** Download (or read from cache) one real trading session for replay. */
+  const loadReplayDay = useCallback(async (tickerToLoad: string, date: string) => {
+    setLoadingData(true);
+    setDataNote("");
+    const result = await fetchHistoricalDay(tickerToLoad, date, config);
+    setLoadingData(false);
+
+    if (!result.ok) {
+      setRealDay(null);
+      setDataNote(result.detail);
+      return false;
+    }
+    setRealDay(result.data);
+    setDataNote(
+      result.cached
+        ? `${tickerToLoad} ${date} — from cache, no request used.`
+        : `${tickerToLoad} ${date} — downloaded ${result.data.length} one-minute bars.`
+    );
+    const next: SessionState = {
+      ...sessionRef.current,
+      mode: "replay",
+      replayTicker: tickerToLoad,
+      replayDate: date,
+      minute: 0,
+    };
+    setSession(next);
+    saveSession(next);
+    setTicker(tickerToLoad);
+    return true;
+  }, [config]);
+
+  // Live quotes for the watchlist. Polled rather than streamed: free tiers do
+  // not offer websockets, and one call per symbol per 15s stays inside the
+  // tightest published limit (25/day is the binding one, hence the pause when
+  // the market is closed).
+  const market = isMarketOpen();
+  useEffect(() => {
+    if (session.mode !== "live" || !config.apiKey) return;
+    let cancelled = false;
+    const poll = async () => {
+      for (const symbol of SYMBOLS.slice(0, 4)) {
+        if (cancelled) return;
+        const result = await fetchLiveQuote(symbol.ticker, config);
+        if (cancelled) return;
+        if (result.ok) {
+          setLiveQuotes((prev) => ({ ...prev, [symbol.ticker]: result.data }));
+        } else if (result.reason === "no-key" || result.reason === "rate-limit") {
+          setDataNote(result.detail);
+          return;
+        }
+      }
+    };
+    void poll();
+    const id = window.setInterval(poll, 15000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [session.mode, config]);
 
   /** Advance one simulated minute: fill resting orders, then move the clock. */
   const step = useCallback(() => {
@@ -269,7 +354,13 @@ export function TradingDesk() {
           <span className="tr-dot" aria-hidden />
           <div>
             <h1>Paper Desk</h1>
-            <p>Simulated market · fake money · real costs</p>
+            <p>
+              {session.mode === "simulated" && "Simulated market · fake money · real costs"}
+              {session.mode === "replay" && (realDay
+                ? `Replaying ${session.replayTicker} ${session.replayDate} · real prices`
+                : "Replay — load a real day from Market data")}
+              {session.mode === "live" && `Live quotes · ${market.reason} · trades still paper`}
+            </p>
           </div>
         </div>
 
@@ -299,6 +390,29 @@ export function TradingDesk() {
           <span>Day {session.day}{atClose ? " · closed" : ""}</span>
         </div>
 
+        <div className="tr-modes">
+          {(["simulated", "replay", "live"] as const).map((m) => (
+            <button
+              key={m}
+              className={session.mode === m ? "on" : ""}
+              title={
+                m === "simulated" ? "Generated prices. Any speed, repeatable, works offline."
+                  : m === "replay" ? "A real past session, downloaded once. Any speed, repeatable."
+                  : "Real current quotes. Market hours only, real time only."
+              }
+              onClick={() => {
+                if (m === "replay" || m === "live") setShowData(true);
+                const next = { ...session, mode: m };
+                setSession(next);
+                saveSession(next);
+              }}
+            >
+              {m}
+            </button>
+          ))}
+          <button className="tr-cog" onClick={() => setShowData((s) => !s)} title="Market data source">⚙</button>
+        </div>
+
         <div className="tr-speeds">
           {SPEEDS.map((s, i) => (
             <button
@@ -314,6 +428,88 @@ export function TradingDesk() {
         </div>
       </header>
 
+      {showData && (
+        <section className="tr-data">
+          <div className="tr-panel-title">
+            Market data
+            <button className="tr-x" onClick={() => setShowData(false)} aria-label="Close">✕</button>
+          </div>
+
+          <div className="tr-data-row">
+            <label className="tr-field">
+              <span>Provider</span>
+              <select
+                value={config.provider}
+                onChange={(e) => {
+                  const next = { ...config, provider: e.target.value as Provider };
+                  setConfig(next); saveProviderConfig(next);
+                }}
+              >
+                {(Object.keys(PROVIDER_INFO) as Provider[]).map((p) => (
+                  <option key={p} value={p}>{PROVIDER_INFO[p].name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="tr-field tr-key">
+              <span>API key</span>
+              <input
+                type="password"
+                value={config.apiKey}
+                placeholder="free key — stored only in this browser"
+                onChange={(e) => {
+                  const next = { ...config, apiKey: e.target.value.trim() };
+                  setConfig(next); saveProviderConfig(next);
+                }}
+              />
+            </label>
+            <a className="tr-link" href={PROVIDER_INFO[config.provider].signupUrl} target="_blank" rel="noreferrer">
+              Get a free key ↗
+            </a>
+          </div>
+
+          <p className="tr-data-note">
+            {PROVIDER_INFO[config.provider].name} free tier: {PROVIDER_INFO[config.provider].freeLimit}
+            {" · "}
+            {PROVIDER_INFO[config.provider].realtimeOnFree ? "real-time US quotes" : "delayed quotes"}
+            {" · "}
+            {PROVIDER_INFO[config.provider].supportsIntraday ? "intraday history for replay" : "no intraday history"}
+          </p>
+
+          <div className="tr-data-row">
+            <label className="tr-field">
+              <span>Replay</span>
+              <select value={ticker} onChange={(e) => setTicker(e.target.value)}>
+                {SYMBOLS.map((s) => <option key={s.ticker} value={s.ticker}>{s.ticker}</option>)}
+              </select>
+            </label>
+            <label className="tr-field">
+              <span>Date</span>
+              <input type="date" value={replayDate} max={lastTradingDay()} onChange={(e) => setReplayDate(e.target.value)} />
+            </label>
+            <button
+              className="tr-quick-go"
+              disabled={loadingData}
+              onClick={() => void loadReplayDay(ticker, replayDate)}
+            >
+              {loadingData ? "Loading…" : "Load day"}
+            </button>
+            {cachedDates(ticker).length > 0 && (
+              <span className="tr-cached">
+                cached: {cachedDates(ticker).slice(0, 4).join(", ")}
+              </span>
+            )}
+          </div>
+
+          {dataNote && <p className={`tr-data-note${/could not|no |limit|not found/i.test(dataNote) ? " bad" : " good"}`}>{dataNote}</p>}
+
+          <p className="tr-data-fineprint">
+            Keys are stored in this browser only and never leave it except to the provider you chose.
+            Live mode follows US regular hours (09:30–16:00 ET, weekdays) — {market.reason.toLowerCase()}.
+            Simulated mode is the only one that runs at 60× and replays deterministically.
+          </p>
+        </section>
+      )}
+
       <div className="tr-body">
         {/* Watchlist */}
         <aside className="tr-watch">
@@ -322,6 +518,12 @@ export function TradingDesk() {
             <tbody>
               {SYMBOLS.map((s) => {
                 const q = quotes[s.ticker];
+                const live = session.mode === "live" ? liveQuotes[s.ticker] : undefined;
+                // In live mode the watchlist shows the real market; the desk
+                // itself still trades the simulated book, and the LIVE tag
+                // marks which number is which.
+                const shownLast = live ? live.price : q.last;
+                const shownPct = live ? live.changePct : q.changePct;
                 const held = positionFor(account, s.ticker);
                 return (
                   <tr
@@ -330,12 +532,12 @@ export function TradingDesk() {
                     onClick={() => setTicker(s.ticker)}
                   >
                     <td className="tr-w-sym">
-                      <b>{s.ticker}</b>
+                      <b>{s.ticker}{live ? <i className="tr-live-tag">{live.delayed ? "DLY" : "LIVE"}</i> : null}</b>
                       <span>{s.name}</span>
                     </td>
-                    <td className="tr-w-last">{q.last.toFixed(2)}</td>
-                    <td className={`tr-w-chg ${q.change >= 0 ? "up" : "down"}`}>
-                      {q.change >= 0 ? "+" : ""}{q.changePct.toFixed(2)}%
+                    <td className="tr-w-last">{shownLast.toFixed(2)}</td>
+                    <td className={`tr-w-chg ${shownPct >= 0 ? "up" : "down"}`}>
+                      {shownPct >= 0 ? "+" : ""}{shownPct.toFixed(2)}%
                     </td>
                     <td className="tr-w-pos">
                       {held && held.shares !== 0 ? (

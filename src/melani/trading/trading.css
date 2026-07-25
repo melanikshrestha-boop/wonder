@@ -110,6 +110,82 @@
 .tr-blotter-tabs button:disabled { opacity: 0.35; cursor: not-allowed; }
 .tr-step { color: var(--tr-text) !important; }
 
+/* Data mode switch */
+.tr-modes { display: flex; gap: 3px; align-items: center; }
+.tr-modes button {
+  background: var(--tr-panel-2);
+  border: 1px solid var(--tr-line);
+  color: var(--tr-sub);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.tr-modes button:hover { color: var(--tr-text); border-color: var(--tr-line-strong); }
+.tr-modes button.on {
+  color: var(--tr-accent);
+  border-color: rgba(245, 185, 66, 0.5);
+  background: rgba(245, 185, 66, 0.09);
+}
+.tr-cog { padding: 4px 8px !important; }
+
+/* Market data panel */
+.tr-data {
+  background: var(--tr-panel);
+  border: 1px solid var(--tr-line);
+  border-radius: 10px;
+  padding: 11px 13px 12px;
+  margin-bottom: 10px;
+}
+.tr-data-row {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 8px;
+}
+.tr-data .tr-field { flex: 0 0 auto; }
+.tr-data .tr-field span { flex: 0 0 auto; }
+.tr-data .tr-key { flex: 1 1 220px; min-width: 180px; }
+.tr-data select,
+.tr-data input {
+  background: var(--tr-panel-2);
+  border: 1px solid var(--tr-line);
+  border-radius: 6px;
+  padding: 5px 9px;
+  color: var(--tr-text);
+  font-family: inherit;
+  font-size: 12px;
+}
+.tr-data select:focus, .tr-data input:focus { outline: none; border-color: var(--tr-accent); }
+.tr-link {
+  color: var(--tr-accent);
+  font-size: 11px;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(245, 185, 66, 0.35);
+}
+.tr-link:hover { border-bottom-color: var(--tr-accent); }
+.tr-cached { font-size: 10.5px; color: var(--tr-sub); }
+.tr-data-note { margin: 0 0 8px; font-size: 11px; color: var(--tr-sub); line-height: 1.5; }
+.tr-data-note.good { color: var(--tr-up); }
+.tr-data-note.bad { color: var(--tr-down); }
+.tr-data-fineprint {
+  margin: 8px 0 0; padding-top: 8px;
+  border-top: 1px solid var(--tr-line);
+  font-size: 10.5px; color: var(--tr-sub); line-height: 1.55;
+}
+.tr-live-tag {
+  font-style: normal;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  margin-left: 5px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(245, 185, 66, 0.16);
+  color: var(--tr-accent);
+  vertical-align: middle;
+}
+
 /* ── Three-column body ───────────────────────────────────────────────── */
 .tr-body {
   display: grid;

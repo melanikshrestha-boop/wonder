@@ -248,5 +248,101 @@ const fakeStats = { ...stats, trades: 50, wins: 35, losses: 15, winRate: 70, avg
 assert("high win rate with negative expectancy is called out",
   S.verdict(fakeStats, dd).some((x) => /still losing money/i.test(x.title)));
 
+console.log("\nMarket data — parsing");
+const D = await import("../src/melani/trading/marketData.ts");
+
+assert("session minute from 09:30 is 0", D.minuteOfSession("09:30") === 0);
+assert("session minute from 10:00 is 30", D.minuteOfSession("10:00") === 30);
+assert("session minute from 15:59 is 389", D.minuteOfSession("15:59") === 389);
+assert("pre-market times are outside the session", D.minuteOfSession("08:15") === null);
+assert("post-close times are outside the session", D.minuteOfSession("16:30") === null);
+assert("garbage returns null", D.minuteOfSession("not a time") === null);
+
+// Real intraday data has holes; a sparse array would break index maths.
+const dense = D.densify([
+  { minute: 0, candle: { t: 0, open: 100, high: 101, low: 99, close: 100.5, volume: 5000 } },
+  { minute: 3, candle: { t: 3, open: 100.5, high: 102, low: 100, close: 101.5, volume: 7000 } },
+]);
+assert("gaps are filled forward", dense.length === 390);
+assert("a filled gap carries the last close", dense[1].close === 100.5 && dense[2].close === 100.5);
+assert("a filled gap has zero volume", dense[1].volume === 0);
+assert("real prints are preserved", dense[3].close === 101.5 && dense[3].volume === 7000);
+assert("candle index matches its minute", dense.every((c, i) => c.t === i));
+assert("no data yields no candles", D.densify([]).length === 0);
+
+const AV_OK = {
+  "Meta Data": { "2. Symbol": "NVDA" },
+  "Time Series (1min)": {
+    "2026-07-24 09:30:00": { "1. open": "121.40", "2. high": "121.80", "3. low": "121.20", "4. close": "121.65", "5. volume": "480000" },
+    "2026-07-24 09:31:00": { "1. open": "121.65", "2. high": "121.90", "3. low": "121.50", "4. close": "121.75", "5. volume": "310000" },
+    "2026-07-23 09:30:00": { "1. open": "119.00", "2. high": "119.50", "3. low": "118.80", "4. close": "119.20", "5. volume": "400000" },
+  },
+};
+const av = D.parseAlphaVantage(AV_OK, "2026-07-24");
+assert("Alpha Vantage parses", Array.isArray(av));
+assert("only the requested date is used", Array.isArray(av) && av[0].open === 121.4);
+assert("a second bar is picked up", Array.isArray(av) && av[1].close === 121.75);
+assert("volume is numeric", Array.isArray(av) && av[0].volume === 480000);
+
+assert("Alpha Vantage rate limit is detected",
+  (D.parseAlphaVantage({ Note: "call frequency" }, "2026-07-24") as { reason?: string }).reason === "rate-limit");
+assert("Alpha Vantage info message is treated as a limit",
+  (D.parseAlphaVantage({ Information: "premium endpoint" }, "2026-07-24") as { reason?: string }).reason === "rate-limit");
+assert("Alpha Vantage bad symbol is detected",
+  (D.parseAlphaVantage({ "Error Message": "Invalid API call" }, "2026-07-24") as { reason?: string }).reason === "not-found");
+assert("a date with no rows is reported, not returned empty",
+  (D.parseAlphaVantage(AV_OK, "2026-01-01") as { reason?: string }).reason === "not-found");
+assert("an unrecognised shape is a parse failure",
+  (D.parseAlphaVantage({ nonsense: true }, "2026-07-24") as { reason?: string }).reason === "parse");
+
+const TD_OK = {
+  values: [
+    { datetime: "2026-07-24 09:31:00", open: "121.65", high: "121.90", low: "121.50", close: "121.75", volume: "310000" },
+    { datetime: "2026-07-24 09:30:00", open: "121.40", high: "121.80", low: "121.20", close: "121.65", volume: "480000" },
+  ],
+};
+const td = D.parseTwelveData(TD_OK, "2026-07-24");
+assert("Twelve Data parses", Array.isArray(td));
+assert("rows are ordered by session minute regardless of payload order",
+  Array.isArray(td) && td[0].open === 121.4 && td[1].close === 121.75);
+assert("Twelve Data errors are surfaced",
+  (D.parseTwelveData({ status: "error", message: "symbol not found" }, "2026-07-24") as { reason?: string }).reason === "not-found");
+assert("Twelve Data limit messages are classified as rate limits",
+  (D.parseTwelveData({ status: "error", message: "API credits limit reached" }, "2026-07-24") as { reason?: string }).reason === "rate-limit");
+
+const fh = D.parseFinnhubQuote({ c: 124.38, d: 1.94, dp: 1.58, h: 125.1, l: 122.4, o: 122.6, pc: 122.44 }, "nvda");
+assert("Finnhub quote parses", (fh as { price?: number }).price === 124.38);
+assert("ticker is upper-cased", (fh as { ticker?: string }).ticker === "NVDA");
+assert("quotes declare whether they are delayed", typeof (fh as { delayed?: boolean }).delayed === "boolean");
+// Finnhub returns zeros rather than an error for an unknown symbol.
+assert("an all-zero Finnhub quote is treated as not found",
+  (D.parseFinnhubQuote({ c: 0, d: 0, dp: 0, h: 0, l: 0, o: 0, pc: 0 }, "ZZZZ") as { reason?: string }).reason === "not-found");
+
+console.log("\nMarket data — hours and fallback");
+const sat = new Date("2026-07-25T15:00:00Z");
+assert("weekends are closed", D.isMarketOpen(new Date("2026-07-26T15:00:00Z")).open === false);
+assert("weekend closure explains itself", /weekend/i.test(D.isMarketOpen(new Date("2026-07-26T15:00:00Z")).reason));
+assert("lastTradingDay never returns a weekend", (() => {
+  const d = new Date(D.lastTradingDay(new Date("2026-07-26T12:00:00Z")) + "T12:00:00Z").getUTCDay();
+  return d !== 0 && d !== 6;
+})());
+
+// Without a key nothing is attempted — this is what keeps the desk usable offline.
+const noKey = await D.fetchHistoricalDay("NVDA", "2026-07-24", { provider: "alphavantage", apiKey: "" });
+assert("no API key fails cleanly rather than calling out", noKey.ok === false && noKey.reason === "no-key");
+assert("the no-key message says what to do", noKey.ok === false && /api key/i.test(noKey.detail));
+const noKeyQuote = await D.fetchLiveQuote("NVDA", { provider: "finnhub", apiKey: "" });
+assert("live quote without a key also fails cleanly", noKeyQuote.ok === false && noKeyQuote.reason === "no-key");
+assert("a provider without intraday history says so",
+  (await D.fetchHistoricalDay("NVDA", "2026-07-24", { provider: "finnhub", apiKey: "x" })).ok === false);
+
+// Cache is what makes a replayed day cost zero requests.
+assert("nothing is cached initially", D.cachedDay("ZZZZ", "2026-07-24") === null);
+assert("cached dates start empty", D.cachedDates("ZZZZ").length === 0);
+assert("every provider is documented with a signup link",
+  (["finnhub", "alphavantage", "twelvedata"] as const).every(
+    (p) => D.PROVIDER_INFO[p].signupUrl.startsWith("https://") && D.PROVIDER_INFO[p].freeLimit.length > 0
+  ));
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);
