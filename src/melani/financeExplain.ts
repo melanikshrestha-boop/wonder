@@ -19,6 +19,7 @@
  * that hides its assumptions is just a confident guess.
  */
 import { money } from "./financeStore";
+import { renderFormula } from "./mathml";
 import type { CopilotAnswer } from "./financeCopilot";
 import {
   findConcept,
@@ -112,16 +113,23 @@ export function explainConcept(question: string, ctx: ConceptContext): CopilotAn
   if (!concept) return null;
 
   const parts: string[] = [concept.oneLine, "", concept.plain];
-  if (concept.formula) parts.push("", `Formula: ${concept.formula}`);
 
   const worked = concept.worked?.(ctx) ?? null;
   if (worked) parts.push("", `Your numbers: ${worked.text}`);
-  if (concept.gotcha) parts.push("", `Where people get caught: ${concept.gotcha}`);
+  if (concept.gotcha) parts.push("", `Where this breaks: ${concept.gotcha}`);
 
   const sources = [`concept: ${concept.name}`, concept.source];
   if (concept.reading) sources.push(`further reading: ${concept.reading}`);
 
-  return { text: parts.join("\n"), sources, data: worked?.data };
+  return {
+    text: parts.join("\n"),
+    sources,
+    data: worked?.data,
+    // Typeset separately rather than inlined into the prose, so it renders
+    // as mathematics instead of as a line of ASCII.
+    formula: concept.formula ? renderFormula(concept.formula) : undefined,
+    formulaNote: concept.formulaNote,
+  };
 }
 
 // ─── Scenarios ───────────────────────────────────────────────────────────────
@@ -195,6 +203,8 @@ function savingScenario(q: string, ctx: ConceptContext): CopilotAnswer | null {
       .filter(Boolean)
       .join("\n"),
     sources: [`${years}-year compound model`, `${rate}% nominal, ${DEFAULT_INFLATION}% inflation`],
+    formula: renderFormula("FV = PMT((1 + r)^n − 1)/r"),
+    formulaNote: `PMT = ${money(perMonth)} monthly · r = ${(rate / 12).toFixed(4)}% per month · n = ${months} months`,
     data: [
       { label: "You contribute", value: money(end.contributed) },
       { label: "Growth", value: money(end.growth) },
@@ -272,6 +282,8 @@ function payoffScenario(q: string, ctx: ConceptContext): CopilotAnswer | null {
       `At ${rate}% APR the true annual cost is ${aprToApy(rate).toFixed(1)}% once daily compounding is counted.`,
     ].join("\n"),
     sources: [`${rate}% APR`, "amortisation model"],
+    formula: renderFormula("n = −ln(1 − (B × r)/PMT)/ln(1 + r)"),
+    formulaNote: `B = ${money(balance)} balance · r = ${(rate / 12).toFixed(4)}% per month · PMT = ${money(payment)} monthly`,
     data: [
       { label: "Months", value: String(result.months) },
       { label: "Interest", value: money(result.totalInterest) },
@@ -360,6 +372,8 @@ function lumpSumScenario(q: string): CopilotAnswer | null {
       ? `Spending ${money(amount)} today costs you ${money(oc.future)} in ${years} years at ${rate}% — the price plus ${money(oc.forgone)} you gave up. That's the honest number on the tag.`
       : `${money(amount)} at ${rate}% for ${years} years becomes ${money(end)}. ${money(end - amount)} of that is growth. In today's purchasing power after ${DEFAULT_INFLATION}% inflation it's about ${money(end / Math.pow(1 + DEFAULT_INFLATION / 100, years))}.`,
     sources: [`${rate}% compound model`, `${years}-year horizon`],
+    formula: renderFormula("FV = PV(1 + r)^n"),
+    formulaNote: `PV = ${money(amount)} · r = ${rate}% per year · n = ${years} years`,
     data: [
       { label: "Today", value: money(amount) },
       { label: `In ${years} years`, value: money(end) },
@@ -382,10 +396,12 @@ function doublingScenario(q: string): CopilotAnswer | null {
   const r = rule72(rate);
   return {
     text: `At ${rate}%, money doubles in about ${r.approx.toFixed(1)} years by the rule of 72 — the exact answer is ${r.exact.toFixed(1)} years. The rule is a mental shortcut; it drifts at high rates.`,
-    sources: ["rule of 72", "exact: ln2 ÷ ln(1+r)"],
+    sources: ["rule of 72", "exact logarithmic doubling time"],
+    formula: renderFormula("n = ln(2)/ln(1 + r)"),
+    formulaNote: `r = ${rate}% per period · approximation: n ≈ 72 ÷ ${rate}`,
     data: [
-      { label: "Rule of 72", value: `${r.approx.toFixed(1)} yrs` },
-      { label: "Exact", value: `${r.exact.toFixed(1)} yrs` },
+      { label: "Rule of 72", value: `${r.approx.toFixed(2)} yrs` },
+      { label: "Exact", value: `${r.exact.toFixed(2)} yrs` },
     ],
   };
 }
@@ -401,6 +417,8 @@ function inflationScenario(q: string): CopilotAnswer | null {
   return {
     text: `${nominal}% nominal against ${inflation}% inflation is ${r.real.toFixed(2)}% real — not the ${r.naive.toFixed(2)}% you get by subtracting. Real is the number that buys things.`,
     sources: ["Fisher equation", "real vs nominal return"],
+    formula: renderFormula("real = (1 + nominal)/(1 + inflation) − 1"),
+    formulaNote: `nominal = ${nominal}% · inflation = ${inflation}% · both as decimals in the expression`,
     data: [
       { label: "Nominal", value: `${nominal}%` },
       { label: "Real", value: `${r.real.toFixed(2)}%` },

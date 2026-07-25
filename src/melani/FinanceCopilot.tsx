@@ -23,6 +23,9 @@ type Msg = {
   sources?: string[];
   data?: { label: string; value: string }[];
   chart?: CopilotChart;
+  /** MathML produced by mathml.renderFormula — never user input. */
+  formula?: string;
+  formulaNote?: string;
 };
 
 function uid() {
@@ -89,6 +92,8 @@ export function FinanceCopilot({
           sources: ans.sources,
           data: ans.data,
           chart: ans.chart,
+          formula: ans.formula,
+          formulaNote: ans.formulaNote,
         },
       ]);
       setThinking(false);
@@ -137,6 +142,19 @@ export function FinanceCopilot({
             {m.role === "assistant" ? <span className="fc-avatar" aria-hidden>✦</span> : null}
             <div className="fc-bubble">
               <p className="fc-text">{m.text}</p>
+              {m.formula ? (
+                <figure className="fc-formula">
+                  {/* MathML built by renderFormula from formula strings authored
+                      in this repo. No user input reaches this markup. */}
+                  <div
+                    className="fc-formula-math"
+                    dangerouslySetInnerHTML={{ __html: m.formula }}
+                  />
+                  {m.formulaNote ? (
+                    <figcaption className="fc-formula-note">{m.formulaNote}</figcaption>
+                  ) : null}
+                </figure>
+              ) : null}
               {m.chart ? (
                 <div className="fc-chart">
                   {m.chart.kind === "pie" ? (

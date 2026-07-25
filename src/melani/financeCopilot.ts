@@ -54,6 +54,10 @@ export type CopilotAnswer = {
   data?: { label: string; value: string }[];
   /** Chart the copilot built from the ledger (Excel-copilot style). */
   chart?: CopilotChart;
+  /** Typeset formula as MathML, rendered above the explanation. */
+  formula?: string;
+  /** What each symbol in the formula denotes. */
+  formulaNote?: string;
 };
 
 /** Last exchange, so follow-ups like "which one" have something to refer to. */

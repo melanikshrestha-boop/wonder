@@ -189,10 +189,68 @@ assert("loss aversion cites Kahneman & Tversky",
 assert("diversification cites Markowitz",
   conceptById("diversification")!.source.includes("Markowitz"));
 
+console.log("\nFormula rendering");
+const { renderFormula } = await import("../src/melani/mathml.ts");
+
+const fv = renderFormula("FV = PV(1 + r)^n");
+assert("emits a MathML root", fv.startsWith("<math") && fv.endsWith("</math>"));
+assert("exponent becomes a real superscript", fv.includes("<msup>"));
+assert("exponent attaches to the bracket, not the whole product",
+  /<msup><mrow><mo>\(<\/mo><mn>1<\/mn><mo>\+<\/mo><mi>r<\/mi><mo>\)<\/mo><\/mrow><mi>n<\/mi><\/msup>/.test(fv));
+assert("multi-letter names render upright", fv.includes('<mi mathvariant="normal">FV</mi>'));
+assert("single letters render as italic variables", fv.includes("<mi>r</mi>"));
+
+const apy = renderFormula("APY = (1 + APR/n)^n − 1");
+assert("slash becomes a stacked fraction", apy.includes("<mfrac>"));
+assert("fraction operands are not doubly wrapped", !apy.includes("<mrow><mrow>"));
+
+const pmt = renderFormula("PMT = (P × r)/(1 − (1 + r)^(−n))");
+assert("grouping parens are dropped inside a fraction",
+  pmt.includes("<mfrac><mrow><mi>P</mi><mo>×</mo><mi>r</mi></mrow>"));
+assert("negative exponent loses its parentheses",
+  pmt.includes("<msup><mrow><mo>(</mo><mn>1</mn><mo>+</mo><mi>r</mi><mo>)</mo></mrow><mrow><mo>−</mo><mi>n</mi></mrow></msup>"));
+
+const npvF = renderFormula("NPV = Σ_(t=0)^n (CF_t/(1 + r)^t)");
+assert("summation uses limits above and below", npvF.includes("<munderover>"));
+assert("subscripts render", npvF.includes("<msub>"));
+
+const ln = renderFormula("n = ln(2)/ln(1 + r)");
+assert("functions render upright with an apply operator", ln.includes("<mi>ln</mi><mo>⁡</mo>"));
+
+assert("hyphen is rendered as a true minus sign",
+  renderFormula("a - b").includes("<mo>−</mo>"));
+assert("markup characters are escaped",
+  renderFormula("a < b").includes("&lt;"));
+assert("empty input does not throw", renderFormula("").includes("<math"));
+assert("unbalanced parens do not throw", renderFormula("(1 + r").includes("<math"));
+assert("every concept formula renders",
+  CONCEPTS.every((c) => !c.formula || renderFormula(c.formula).startsWith("<math")));
+assert("every formula is accompanied by a symbol key",
+  CONCEPTS.every((c) => !c.formula || (c.formulaNote && c.formulaNote.length > 10)));
+
+console.log("\nWriting style");
+// The brief was explicit: definitions, not analogies. These are the specific
+// constructions that were removed, and that must not creep back in.
+const BANNED = [
+  "sticker", "think of it as", "imagine", "it's like", "like a ",
+  "the whole game", "pointed in the other direction", "masquerad",
+  "wearing a suit", "is an opinion", "in a nutshell", "basically",
+];
+const prose = CONCEPTS.map((c) => `${c.oneLine} ${c.plain} ${c.gotcha || ""}`).join(" ").toLowerCase();
+for (const phrase of BANNED) {
+  assert(`no "${phrase}"`, !prose.includes(phrase));
+}
+assert("every definition states what the thing is, at length",
+  CONCEPTS.every((c) => c.plain.length >= 200));
+assert("every one-liner is a definition rather than a fragment",
+  CONCEPTS.every((c) => c.oneLine.length >= 40));
+
 console.log("\nCopilot routing");
 const ex = explainConcept("explain compound interest", CTX);
-assert("explains a concept", ex !== null && ex.text.includes("Growth that earns growth"));
-assert("explanation includes the formula", ex !== null && ex.text.includes("FV = PV"));
+assert("explains a concept", ex !== null && /interest is added to the balance/i.test(ex.text));
+assert("formula is typeset, not inlined as text in the prose",
+  ex !== null && !ex.text.includes("FV = PV") && (ex.formula || "").includes("<msup>"));
+assert("formula carries its symbol key", ex !== null && (ex.formulaNote || "").includes("PV ="));
 assert("explanation uses her own numbers", ex !== null && ex.text.includes("Your numbers"));
 assert("explanation cites its source", ex !== null && ex.sources.length >= 2);
 assert("a plain data question is not hijacked into a lecture",

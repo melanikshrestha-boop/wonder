@@ -171,6 +171,35 @@
   margin: 0;
   white-space: pre-wrap;
 }
+/* Typeset formula block. MathML is rendered natively by the browser, so the
+   only job here is to give it room and a slightly larger size than body text. */
+.fc-formula {
+  margin: 10px 0 4px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.fc-formula-math {
+  font-size: 1.18em;
+  line-height: 1.5;
+  /* Fallback for any engine that ignores MathML: the source stays legible. */
+  text-align: center;
+}
+.fc-formula-math math {
+  font-size: inherit;
+}
+.fc-formula-note {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: left;
+}
+
 .fc-chart {
   margin-top: 10px;
   background: rgba(255, 255, 255, 0.03);
