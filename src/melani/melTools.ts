@@ -77,6 +77,7 @@ const PAGE_ALIASES: Array<{ pattern: RegExp; pageId: string; title: string }> = 
   { pattern: /^(?:my\s+)?(?:shopping|grocer(?:y|ies)|inventory|restock)$/i, pageId: "pg-agent-shopping", title: "Shopping" },
   { pattern: /^(?:my\s+)?(?:gmail|email|inbox)$/i, pageId: "pg-agent-gmail", title: "Gmail" },
   { pattern: /^(?:my\s+)?(?:care|care concierge|appointments?|dentist|doctor appointments?)$/i, pageId: "pg-agent-care", title: "Care Concierge" },
+  { pattern: /^(?:my\s+)?(?:paper (?:desk|trading)|day trading|trading desk|simulator|trade sim)$/i, pageId: "pg-paper-trading", title: "Paper Desk" },
   // Nutrition owns calories/macros; "meals" still opens the Fitness meal plan.
   { pattern: /^(?:my\s+)?(?:nutrition|macros?|calories|cals|food log|what i ate)$/i, pageId: "pg-nutrition", title: "Nutrition" },
   { pattern: /^(?:my\s+)?(?:meals?|food)$/i, pageId: "pg-meals", title: "Meals" },

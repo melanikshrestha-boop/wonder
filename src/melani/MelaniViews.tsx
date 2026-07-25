@@ -31,6 +31,7 @@ import { CareConcierge, isCareConciergePage } from "./CareConcierge";
 import { Finances, isFinancesPage } from "./Finances";
 import { HabitTracker, isHabitsPage } from "./HabitTracker";
 import { NutritionTracker, isNutritionPage } from "./nutrition/NutritionTracker";
+import { TradingDesk, isTradingPage } from "./trading/TradingDesk";
 import "./melani.css";
 
 const WardrobeNative = lazy(async () => {
@@ -352,6 +353,7 @@ export function isMelaniRichPage(pageId: string): boolean {
     isFinancesPage(pageId) ||
     isHabitsPage(pageId) ||
     isNutritionPage(pageId) ||
+    isTradingPage(pageId) ||
     pageId === "pg-data" ||
     pageId === "pg-my-data"
   );
@@ -415,6 +417,11 @@ export function MelaniRichPage({
   // Health → Nutrition (calories + macros)
   if (isNutritionPage(pageId)) {
     return <NutritionTracker />;
+  }
+
+  // Learn → Paper trading desk
+  if (isTradingPage(pageId)) {
+    return <TradingDesk />;
   }
 
   // Learn → Bookshelf

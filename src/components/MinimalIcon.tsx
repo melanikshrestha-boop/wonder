@@ -234,6 +234,16 @@ export function MinimalIcon({ name, size = 16, className = "" }: Props) {
           <path {...stroke} d="m15.2 17 1.4 1.5L19 15.5" />
         </svg>
       );
+    case "trading":
+      // candlestick — paper trading desk
+      return (
+        <svg {...common}>
+          <path {...stroke} d="M7 4v3.2M7 16.8V20" />
+          <rect {...stroke} x="4.8" y="7.2" width="4.4" height="9.6" rx="1" />
+          <path {...stroke} d="M17 3v4.6M17 15.4V21" />
+          <rect {...stroke} x="14.8" y="7.6" width="4.4" height="7.8" rx="1" />
+        </svg>
+      );
     case "nutrition":
       // segmented ring — calories + macro split
       return (
@@ -386,6 +396,8 @@ export function iconForPage(page: Pick<Page, "id" | "title" | "kind" | "icon">):
   if (id === "pg-home" || t === "home") return "home";
   if (id === "pg-habits" || id.includes("habit") || t === "habits" || t.includes("habit tracker"))
     return "habits";
+  if (id === "pg-paper-trading" || t === "paper desk" || t.includes("trading"))
+    return "trading";
   if (id === "pg-nutrition" || t === "nutrition" || t === "macros" || t === "calories")
     return "nutrition";
   if (id.includes("fitness") || t === "fitness") return "fitness";

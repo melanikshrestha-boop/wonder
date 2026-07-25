@@ -338,6 +338,20 @@ function ensureLifePages(ws: Workspace): Workspace {
     ]
   );
 
+  // Learn — Paper trading desk (simulated market, fake money)
+  ensurePage(
+    "pg-paper-trading",
+    "Paper Desk",
+    "trading",
+    null,
+    [
+      newBlock(
+        "paragraph",
+        "Day trading simulator. Simulated market, fake money, real spreads and slippage."
+      ),
+    ]
+  );
+
   // Health — Nutrition (calories + macros, item-level)
   ensurePage(
     "pg-nutrition",

@@ -70,7 +70,7 @@ function applySidebarWidth(w: number) {
 /** Health section roots */
 const HEALTH_ROOT_IDS = ["pg-fitness", "pg-nutrition", "pg-hygiene", "pg-habits", "pg-data"] as const;
 /** Learn section roots — Bookshelf + World Monitor + Finances. No Work section. */
-const LEARN_ROOT_IDS = ["pg-library", "pg-world-monitor", "pg-finance"] as const;
+const LEARN_ROOT_IDS = ["pg-library", "pg-world-monitor", "pg-finance", "pg-paper-trading"] as const;
 
 /** true = closed (kids hidden). Opening a parent always forces its kids closed. */
 function markClosed(ids: readonly string[], map: Record<string, boolean>) {
