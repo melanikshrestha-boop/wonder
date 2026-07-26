@@ -102,6 +102,17 @@ export type CareReceipt = {
   details?: Record<string, unknown>;
 };
 
+/**
+ * Everything a receptionist asks for before they will give you a slot.
+ *
+ * All fields are optional beyond the original six so existing saved profiles
+ * keep loading. The composer reports which of these are missing rather than
+ * sending an incomplete request, because an email that omits the member ID
+ * just produces a phone call asking for it.
+ *
+ * This is stored in the browser's localStorage and never transmitted except
+ * inside a message the owner has authorised.
+ */
 export type CareProfile = {
   firstName: string;
   lastName: string;
@@ -110,6 +121,38 @@ export type CareProfile = {
   city: string;
   state: string;
   insuranceCarrier: string;
+
+  /** Identity — every office verifies these two before booking. */
+  dateOfBirth?: string;
+  legalSex?: "female" | "male" | "intersex" | "";
+
+  /** Insurance. Member and group are what the front desk actually keys in. */
+  insuranceMemberId?: string;
+  insuranceGroupNumber?: string;
+  insurancePlanName?: string;
+  /** Whose policy it is, when not the patient's own. */
+  policyHolderName?: string;
+  policyHolderRelation?: "self" | "parent" | "spouse" | "other" | "";
+
+  /** Primary care — the referral source most specialists require. */
+  primaryCareName?: string;
+  primaryCarePhone?: string;
+
+  pharmacyName?: string;
+  pharmacyPhone?: string;
+  pharmacyAddress?: string;
+
+  /** Clinical context worth putting in a booking request. */
+  allergies?: string;
+  conditions?: string;
+  medications?: string;
+
+  /** Logistics that decide which slots are even possible. */
+  preferredDays?: number[];
+  earliestTime?: string;
+  latestTime?: string;
+  needsInterpreter?: string;
+  transportNotes?: string;
 };
 
 export type CareSettings = {

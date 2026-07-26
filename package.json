@@ -20,7 +20,8 @@
     "test:habits": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-habits.mts",
     "test:nutrition": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-nutrition.mts",
     "test:models": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-finance-models.mts",
-    "test:trading": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-trading.mts"
+    "test:trading": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-trading.mts",
+    "test:care-agent": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-care-agent.mts"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",
