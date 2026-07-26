@@ -37,7 +37,7 @@ export function ShelfBrief({ books, onOpen, onStart, onSearch }: Props) {
 
   const pace = brief.pace;
   const paceLine = pace.confident
-    ? `${pace.booksPerMonth} books a month · median ${pace.medianDaysToFinish} days each`
+    ? `${pace.booksPerMonth} book${pace.booksPerMonth === 1 ? "" : "s"} a month · median ${pace.medianDaysToFinish} days each`
     : pace.finishedTotal
       ? `${pace.finishedTotal} finished so far`
       : "Finish a book to start measuring your pace";

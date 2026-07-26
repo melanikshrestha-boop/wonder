@@ -396,6 +396,33 @@ const searchShelf: Book[] = [
 }
 
 {
+  // A half-remembered sentence should land on the one book that contains it,
+  // not on every book with the word "you" somewhere in it.
+  const hits = searchBooks(searchShelf, "solitude matters for some people");
+  assert("a remembered sentence finds one book", hits.length === 1, hits.map((h) => h.book.title));
+  assert("and it's the right one", hits[0]?.book.title === "Quiet Notes");
+}
+
+{
+  const hits = searchBooks(searchShelf, "the and with your");
+  assert("common words alone match nothing", hits.length === 0, hits.map((h) => h.book.title));
+}
+
+{
+  const hits = searchBooks(searchShelf, "kahneman zzzznope qqqnope");
+  assert(
+    "one hit among many misses is discarded",
+    hits.length === 0,
+    hits.map((h) => h.book.title)
+  );
+}
+
+{
+  const hits = searchBooks(searchShelf, "physics epistemology");
+  assert("all terms matching ranks it first", hits[0]?.book.title === "The Beginning of Infinity", hits[0]);
+}
+
+{
   const title = searchBooks(searchShelf, "thinking")[0];
   assert("a title match outranks a passing mention", title?.book.title === "Thinking, Fast and Slow");
   assert("hits are scored", (title?.score || 0) > 0, title?.score);

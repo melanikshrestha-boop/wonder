@@ -64,7 +64,7 @@
 
 .sb-body {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
   gap: 4px 20px;
   padding: 2px 13px 13px;
   border-top: 1px solid var(--sb-line);
@@ -135,12 +135,16 @@
   text-underline-offset: 2px;
 }
 
+/* The reason is the useful part, so let it take a second line rather than
+   truncating it mid-sentence. */
 .sb-row-note {
+  display: -webkit-box;
   overflow: hidden;
   color: var(--sb-faint);
   font-size: 10.5px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .sb-row.is-stalled .sb-row-note {

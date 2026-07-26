@@ -724,15 +724,17 @@ export function shelfInsights(books: Book[], now = Date.now()): ShelfBrief {
   }
 
   if (pace.confident) {
+    const queue =
+      pace.booksPerMonth > 0
+        ? `about ${Math.round(
+            unread.length / Math.max(0.1, pace.booksPerMonth)
+          )} months of reading`
+        : "an open-ended queue";
     insights.push({
       id: "pace",
       kind: "pace",
-      headline: `${pace.booksPerMonth} books a month`,
-      detail: `Median ${pace.medianDaysToFinish} days per book across ${pace.finishedTotal} finished. At this pace your ${unread.length} unread books are ${
-        pace.booksPerMonth > 0
-          ? `about ${Math.round(unread.length / Math.max(0.1, pace.booksPerMonth))} months`
-          : "an open-ended queue"
-      }.`,
+      headline: `${pace.booksPerMonth} book${pace.booksPerMonth === 1 ? "" : "s"} a month`,
+      detail: `Median ${pace.medianDaysToFinish} days per book across ${pace.finishedTotal} finished. At this pace your ${unread.length} unread books are ${queue}.`,
       bookIds: [],
     });
   } else if (finished.length) {
@@ -798,6 +800,19 @@ const FIELD_WEIGHT: Record<string, number> = {
 };
 
 /**
+ * Words too common to distinguish one book from another. Without this, typing a
+ * remembered sentence matches every book containing the word "you".
+ */
+const STOPWORDS = new Set([
+  "the", "and", "for", "with", "that", "this", "was", "are", "but", "not",
+  "you", "your", "his", "her", "its", "our", "their", "from", "have", "has",
+  "had", "all", "any", "how", "why", "who", "what", "when", "where", "than",
+  "then", "there", "here", "them", "they", "she", "him", "one", "two", "out",
+  "about", "into", "over", "some", "more", "most", "such", "only", "very",
+  "can", "will", "just", "like", "book", "books",
+]);
+
+/**
  * Search titles, authors, subjects, quotes, and notes at once. Results are
  * ranked by where the match landed, so typing an author's name surfaces their
  * books before a book that merely mentions them.
@@ -809,8 +824,18 @@ export function searchBooks(
 ): SearchHit[] {
   const cleaned = normalize(query);
   if (!cleaned) return [];
-  const terms = cleaned.split(" ").filter((term) => term.length >= 2);
-  if (!terms.length) return [];
+  const words = cleaned.split(" ").filter(Boolean);
+  // Common words can't distinguish one book from another, so a query made of
+  // nothing but them has no answer to give.
+  const meaningful = words.filter((word) => !STOPWORDS.has(word));
+  if (!meaningful.length) return [];
+  const terms = meaningful.filter((term) => term.length >= 3);
+  if (!terms.length) {
+    // A deliberately short query like "AI" still deserves an answer.
+    terms.push(...meaningful.filter((word) => word.length >= 2));
+    if (!terms.length) return [];
+  }
+  const phrase = terms.length > 1 ? cleaned : "";
   const limit = options?.limit ?? 40;
 
   const hits: SearchHit[] = [];
@@ -827,8 +852,26 @@ export function searchBooks(
     ];
 
     let score = 0;
+    let termsMatched = 0;
     const matched = new Set<string>();
     let matchedQuote: string | undefined;
+
+    // A remembered sentence should land on the book that actually contains it.
+    if (phrase) {
+      for (const field of fields) {
+        if (field.text && field.text.includes(phrase)) {
+          score += FIELD_WEIGHT[field.name] * 2;
+          matched.add(field.name);
+        }
+      }
+      for (const quote of book.quotes) {
+        if (normalize(quote.text).includes(phrase)) {
+          score += FIELD_WEIGHT.quote * 3;
+          matched.add("quote");
+          if (!matchedQuote) matchedQuote = quote.text;
+        }
+      }
+    }
 
     for (const term of terms) {
       let termMatched = false;
@@ -858,9 +901,12 @@ export function searchBooks(
       }
 
       // Every term should contribute, so an unmatched term costs the result.
-      if (!termMatched) score -= 2;
+      if (termMatched) termsMatched += 1;
+      else score -= 2;
     }
 
+    // Matching one word out of five is a coincidence, not a result.
+    if (terms.length > 1 && termsMatched * 2 < terms.length) continue;
     if (score <= 0) continue;
 
     // A book you're reading is more likely the one you meant.

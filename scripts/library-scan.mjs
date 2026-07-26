@@ -550,21 +550,55 @@ export function createLibraryScanner(options = {}) {
    */
   function dedupe(candidates) {
     const byKey = new Map();
+    // Prefer a copy you can actually open: downloaded over placeholder, EPUB
+    // over anything else, a local disk over a cloud folder, and richer metadata
+    // over a bare filename. File size breaks the last tie, since a truncated
+    // download is smaller than the real thing.
     const score = (item) =>
-      (item.placeholder ? 0 : 4) +
-      (item.format === "epub" ? 2 : 0) +
-      (item.driveKind === "local" || item.driveKind === "apple" ? 1 : 0);
+      (item.placeholder ? 0 : 40) +
+      (item.format === "epub" ? 20 : 0) +
+      (item.driveKind === "local" || item.driveKind === "apple" ? 10 : 0) +
+      (item.subjects?.length ? 5 : 0) +
+      (item.author ? 2 : 0);
 
     for (const item of candidates) {
-      const key = `${item.titleKey}|${item.format}|${item.size || 0}`;
+      // The same title by the same author is one book, even when two drives
+      // hold copies of slightly different sizes.
+      const authorKey = (item.author || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      const key = `${item.titleKey}|${authorKey}|${item.format}`;
       const existing = byKey.get(key);
-      if (!existing || score(item) > score(existing)) {
-        byKey.set(key, { ...item, copies: (existing?.copies || 0) + 1 });
+      if (!existing) {
+        byKey.set(key, { ...item, copies: 1 });
+        continue;
+      }
+      const copies = (existing.copies || 1) + 1;
+      const better =
+        score(item) > score(existing) ||
+        (score(item) === score(existing) && (item.size || 0) > (existing.size || 0));
+      if (better) {
+        byKey.set(key, { ...item, copies });
       } else {
-        existing.copies = (existing.copies || 1) + 1;
+        existing.copies = copies;
       }
     }
-    return [...byKey.values()];
+
+    // A copy whose filename never named an author is still the same book as the
+    // one whose metadata did, so fold it into the named entry.
+    const kept = [...byKey.values()];
+    const named = new Map();
+    for (const item of kept) {
+      if (item.author) named.set(`${item.titleKey}|${item.format}`, item);
+    }
+    return kept.filter((item) => {
+      if (item.author) return true;
+      const match = named.get(`${item.titleKey}|${item.format}`);
+      if (!match) return true;
+      match.copies = (match.copies || 1) + (item.copies || 1);
+      return false;
+    });
   }
 
   async function scanOnce() {

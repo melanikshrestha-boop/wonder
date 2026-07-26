@@ -1376,7 +1376,7 @@ export function BooksLibrary({
             placeholder={
               filter === "want"
                 ? "Want a book? Type the title + Enter (legal free/catalog search)"
-                : "Search titles, authors, notes, or quotes"
+                : "Search titles, authors, subjects, notes, or quotes — typos are fine"
             }
           />
           {filter === "want" ? (
