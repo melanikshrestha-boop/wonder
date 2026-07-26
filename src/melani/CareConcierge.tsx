@@ -1,3 +1,4 @@
+import { CareAgentPanel } from "./care/CareAgentPanel";
 import {
   ArrowRight,
   CalendarBlank,
@@ -596,6 +597,10 @@ export function CareConcierge() {
           </button>
         </div>
       </header>
+
+      {/* The agent half: what it found on its own, the vault it draws on,
+          and the standing authorisation that lets it send. */}
+      <CareAgentPanel />
 
       {profileOpen ? (
         <section className="care-profile-panel">

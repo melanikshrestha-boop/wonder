@@ -170,6 +170,21 @@ export type CareState = {
   appointments: CareAppointment[];
   receipts: CareReceipt[];
   settings: CareSettings;
+  /** Last-visit dates and interval overrides feeding the due engine. */
+  history?: {
+    lastDone: Record<string, string>;
+    disabled: string[];
+    intervalOverride: Record<string, number>;
+  };
+  /** Standing send authorisation and its audit log. */
+  grant?: {
+    enabled: boolean;
+    grantedAt: string | null;
+    channels: ("email" | "phone" | "portal")[];
+    allowCancellations: boolean;
+    dailyLimit: number;
+    log: { at: string; to: string; subject: string; channel: string }[];
+  };
 };
 
 export type CareParseResult = {
