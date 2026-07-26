@@ -4,7 +4,7 @@
  */
 
 import type { Book } from "./booksStore";
-import { categorizeBook } from "./booksStore";
+import { classifyBook } from "./bookIntelligence";
 
 export type CoverLookup = {
   title: string;
@@ -88,8 +88,11 @@ export async function enrichBooksWithCovers(
       fixUnsorted &&
       book.category === "Unsorted" &&
       !book.categoryOverride;
+    // Subjects are what make the shelf smart, so fetch them even when the
+    // cover and shelf are already settled.
+    const needsSubjects = !book.subjects?.length;
 
-    if (!needsCover && !needsSort) continue;
+    if (!needsCover && !needsSort && !needsSubjects) continue;
     if (!book.title.trim()) continue;
 
     processed += 1;
@@ -106,15 +109,17 @@ export async function enrichBooksWithCovers(
       continue;
     }
 
-    const category =
-      needsSort
-        ? categorizeBook(
-            hit.title || book.title,
-            hit.author || book.author,
-            "",
-            (hit.subjects || []).join(" ")
-          )
-        : book.category;
+    const subjects = Array.from(
+      new Set([...(book.subjects || []), ...(hit.subjects || [])])
+    ).slice(0, 24);
+
+    const shelf = needsSort
+      ? classifyBook({
+          title: hit.title || book.title,
+          author: hit.author || book.author,
+          subjects,
+        })
+      : null;
 
     next[i] = {
       ...book,
@@ -125,7 +130,9 @@ export async function enrichBooksWithCovers(
         hit.catalogUrl ||
         goodreadsSearchUrl(book.title, book.author),
       category:
-        needsSort && category !== "Unsorted" ? category : book.category,
+        shelf && shelf.category !== "Unsorted" ? shelf.category : book.category,
+      subjects: subjects.length ? subjects : book.subjects,
+      publishedYear: book.publishedYear ?? hit.year ?? null,
       description: book.description || undefined,
       updatedAt: Date.now(),
     };

@@ -8,12 +8,12 @@
  */
 import {
   SPINE_COLORS,
-  categorizeBook,
   keepBook,
   newBook,
   type Book,
   type BookFormat,
 } from "./booksStore";
+import { classifyBook } from "./bookIntelligence";
 
 export type DriveKind = "local" | "apple" | "icloud" | "cloud" | "external";
 
@@ -39,6 +39,14 @@ export type LocalBookRecord = {
   readerUrl: string;
   fileUrl: string;
   source: "local-file";
+  /** Subject tags out of the EPUB's own metadata */
+  subjects?: string[];
+  publisher?: string;
+  language?: string;
+  publishedYear?: number | null;
+  seriesName?: string;
+  seriesIndex?: number | null;
+  description?: string;
 };
 
 export type DriveSummary = {
@@ -169,8 +177,16 @@ export function mergeLocalBooks(
   const addedTitles: string[] = [];
 
   for (const item of incoming) {
-    const category = categorizeBook(item.title, item.author);
+    // Subject tags from the file's own metadata beat guessing off the filename.
+    const shelf = classifyBook({
+      title: item.title,
+      author: item.author,
+      subjects: item.subjects,
+      description: item.description,
+    });
+    const category = shelf.category;
     if (!keepBook({ title: item.title, category })) continue;
+    const subjects = item.subjects?.length ? item.subjects : undefined;
 
     const index = next.findIndex(
       (book) => book.sourceId === item.id || sameBook(book, item)
@@ -201,8 +217,13 @@ export function mergeLocalBooks(
             : existing.externalUrl,
         format: isApple ? existing.format : bookFormat(item),
         cloudOnly: isApple ? existing.cloudOnly : item.cloudOnly,
-        description: existing.description || driveNote(item),
+        description: existing.description || item.description || driveNote(item),
         category: nextCategory,
+        subjects: subjects || existing.subjects,
+        seriesName: existing.seriesName || item.seriesName || undefined,
+        seriesIndex: existing.seriesIndex || item.seriesIndex || undefined,
+        publishedYear: existing.publishedYear || item.publishedYear || null,
+        drive: item.drive || existing.drive,
         updatedAt: Date.now(),
       };
       continue;
@@ -225,8 +246,13 @@ export function mergeLocalBooks(
         format: bookFormat(item),
         cloudOnly: item.cloudOnly,
         readingFormat: "digital",
-        description: driveNote(item),
+        description: item.description || driveNote(item),
         color: stableColor(item.id),
+        subjects,
+        seriesName: item.seriesName || undefined,
+        seriesIndex: item.seriesIndex || undefined,
+        publishedYear: item.publishedYear || null,
+        drive: item.drive,
       })
     );
   }

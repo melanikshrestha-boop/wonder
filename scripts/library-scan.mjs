@@ -398,6 +398,35 @@ function firstTag(xml, tag) {
     .trim();
 }
 
+function allTags(xml, tag) {
+  const matches = xml.matchAll(
+    new RegExp(`<(?:dc:)?${tag}\\b[^>]*>([\\s\\S]*?)</(?:dc:)?${tag}>`, "gi")
+  );
+  const out = [];
+  for (const match of matches) {
+    const value = match[1]
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;|&apos;/gi, "'")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (value && !out.includes(value)) out.push(value);
+  }
+  return out;
+}
+
+/** `<meta name="calibre:series" content="Foundation"/>` and friends. */
+function metaContent(xml, name) {
+  const match = xml.match(
+    new RegExp(`<meta[^>]*name=["']${name}["'][^>]*content=["']([^"']+)["']`, "i")
+  ) ||
+    xml.match(
+      new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*name=["']${name}["']`, "i")
+    );
+  return match ? match[1].trim() : "";
+}
+
 async function readEpubMeta(filePath) {
   try {
     const { stdout } = await execFileAsync("/usr/bin/unzip", ["-p", filePath, "*.opf"], {
@@ -407,8 +436,33 @@ async function readEpubMeta(filePath) {
     const head = stdout.slice(0, 60_000);
     const title = firstTag(head, "title");
     const author = firstTag(head, "creator");
-    if (!title && !author) return null;
-    return { title, author };
+    // Subject tags come from the publisher, so they shelve far better than a
+    // filename ever will.
+    const subjects = allTags(head, "subject")
+      .flatMap((subject) => subject.split(/\s*[;/]\s*/))
+      .map((subject) => subject.trim())
+      .filter((subject) => subject.length > 2 && subject.length < 60)
+      .slice(0, 12);
+    const publisher = firstTag(head, "publisher");
+    const language = firstTag(head, "language");
+    const date = firstTag(head, "date");
+    const year = Number((date.match(/\b(1[5-9]\d{2}|20\d{2})\b/) || [])[1]) || null;
+    const seriesName = metaContent(head, "calibre:series");
+    const seriesIndex = Number(metaContent(head, "calibre:series_index")) || null;
+    const description = firstTag(head, "description").slice(0, 600);
+
+    if (!title && !author && !subjects.length) return null;
+    return {
+      title,
+      author,
+      subjects,
+      publisher,
+      language,
+      year,
+      seriesName,
+      seriesIndex,
+      description,
+    };
   } catch {
     return null;
   }
@@ -547,20 +601,20 @@ export function createLibraryScanner(options = {}) {
         const parsed = parseBookName(hit.effective);
         let title = parsed.title;
         let author = parsed.author;
+        let meta = null;
 
         if (format === "epub" && fileStat) {
           const cached = metaCache.get(filePath, fileStat.size, fileStat.mtimeMs);
           if (cached) {
-            title = cached.title || title;
-            author = cached.author || author;
+            meta = cached;
           } else if (metaBudget > 0) {
             metaBudget -= 1;
-            const meta = await readEpubMeta(filePath);
+            meta = await readEpubMeta(filePath);
             metaCache.set(filePath, fileStat.size, fileStat.mtimeMs, meta || {});
-            if (meta) {
-              title = meta.title || title;
-              author = meta.author || author;
-            }
+          }
+          if (meta) {
+            title = meta.title || title;
+            author = meta.author || author;
           }
         }
 
@@ -580,6 +634,13 @@ export function createLibraryScanner(options = {}) {
           placeholder: hit.placeholder,
           format,
           fromOcean: parsed.fromOcean,
+          subjects: meta?.subjects || [],
+          publisher: meta?.publisher || "",
+          language: meta?.language || "",
+          publishedYear: meta?.year || null,
+          seriesName: meta?.seriesName || "",
+          seriesIndex: meta?.seriesIndex || null,
+          description: meta?.description || "",
         });
       }
     }
@@ -601,6 +662,13 @@ export function createLibraryScanner(options = {}) {
         mtimeMs: item.mtimeMs,
         fromOcean: item.fromOcean,
         format: item.format,
+        subjects: item.subjects || [],
+        publisher: item.publisher || "",
+        language: item.language || "",
+        publishedYear: item.publishedYear || null,
+        seriesName: item.seriesName || "",
+        seriesIndex: item.seriesIndex || null,
+        description: item.description || "",
         readable: READABLE_RE.test(item.fileName) && !item.placeholder,
         cloudOnly: item.placeholder,
         copies: item.copies || 1,

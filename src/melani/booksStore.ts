@@ -77,6 +77,17 @@ export type Book = {
   finishedAt?: string;
   createdAt: number;
   updatedAt: number;
+  /** Subject tags from EPUB metadata or Open Library — drives smart shelving */
+  subjects?: string[];
+  /** Series name and position when the book is part of one */
+  seriesName?: string;
+  seriesIndex?: number;
+  /** First publication year, when known */
+  publishedYear?: number | null;
+  /** Last time reading progress actually moved — powers stall detection */
+  lastReadAt?: number;
+  /** Which drive the file came from, e.g. "iCloud Drive" */
+  drive?: string;
 };
 
 const KEY = "wonder-books-library-v1";
@@ -398,6 +409,30 @@ function normalizeStoredBook(value: Partial<Book>, index: number): Book {
     finishedAt: value.finishedAt,
     createdAt: Number(value.createdAt) || now,
     updatedAt: Number(value.updatedAt) || now,
+    subjects: Array.isArray(value.subjects)
+      ? Array.from(
+          new Set(
+            value.subjects
+              .filter((subject): subject is string => typeof subject === "string")
+              .map((subject) => subject.trim())
+              .filter(Boolean)
+          )
+        ).slice(0, 24)
+      : undefined,
+    seriesName:
+      typeof value.seriesName === "string" && value.seriesName.trim()
+        ? value.seriesName.trim()
+        : undefined,
+    seriesIndex:
+      Number.isFinite(Number(value.seriesIndex)) && Number(value.seriesIndex) > 0
+        ? Number(value.seriesIndex)
+        : undefined,
+    publishedYear:
+      Number.isFinite(Number(value.publishedYear)) && Number(value.publishedYear) > 0
+        ? Number(value.publishedYear)
+        : null,
+    lastReadAt: Number(value.lastReadAt) || undefined,
+    drive: typeof value.drive === "string" ? value.drive : undefined,
   };
 }
 
