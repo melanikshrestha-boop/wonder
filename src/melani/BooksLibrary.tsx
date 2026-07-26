@@ -75,6 +75,8 @@ import {
   type BookDiscoveryRequest,
   type BookDiscoveryResult,
 } from "./bookDiscovery";
+import { searchBooks } from "./bookIntelligence";
+import { ShelfBrief } from "./ShelfBrief";
 import "./books-library.css";
 
 const BookReader = lazy(async () => {
@@ -518,23 +520,20 @@ export function BooksLibrary({
   );
 
   const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    return books.filter((book) => {
-      if (filter !== "all" && book.status !== filter) return false;
-      if (!query) return true;
-      return [
-        book.title,
-        book.author,
-        book.category,
-        book.notes,
-        book.description || "",
-        ...book.quotes.flatMap((quote) => [
-          quote.text,
-          quote.note || "",
-          quote.interpretation || "",
-        ]),
-      ].some((value) => value.toLowerCase().includes(query));
-    });
+    const pool =
+      filter === "all" ? books : books.filter((book) => book.status === filter);
+    const query = q.trim();
+    if (!query) return pool;
+    // Ranked across titles, authors, subjects, and quotes, and forgiving of a
+    // typo, so a half-remembered book still comes back.
+    const ranked = searchBooks(pool, query, { limit: 200 });
+    if (ranked.length) return ranked.map((hit) => hit.book);
+    const loose = query.toLowerCase();
+    return pool.filter((book) =>
+      [book.title, book.author, book.notes, book.description || ""].some((value) =>
+        value.toLowerCase().includes(loose)
+      )
+    );
   }, [books, filter, q]);
 
   const groups = useMemo<ShelfGroup[]>(() => {
@@ -849,6 +848,10 @@ export function BooksLibrary({
               localReaderProgress: localProgress,
               readerProgress: Math.max(localProgress, reader.appleProgress || 0),
               status: reader.status === "finished" ? "finished" : "reading",
+              // Stall detection needs the last time reading actually moved,
+              // not the last time anything on the record changed.
+              lastReadAt: Date.now(),
+              startedAt: reader.startedAt || new Date().toISOString().slice(0, 10),
             });
           }}
           onBookmark={(smartBookmark) => patchBook(reader.id, { smartBookmark })}
@@ -1318,6 +1321,36 @@ export function BooksLibrary({
           pirate sites.)
         </p>
       </header>
+
+      <ShelfBrief
+        books={books}
+        onOpen={(book) => setOpenId(book.id)}
+        onStart={(book) => {
+          if (book.readerUrl) {
+            patchBook(book.id, {
+              status: "reading",
+              startedAt: book.startedAt || new Date().toISOString().slice(0, 10),
+              lastReadAt: Date.now(),
+            });
+            readBook(book.id, book.readerCfi);
+            return;
+          }
+          patchBook(book.id, {
+            status: "reading",
+            startedAt: book.startedAt || new Date().toISOString().slice(0, 10),
+          });
+          setOpenId(book.id);
+          setToast(
+            book.cloudOnly
+              ? `${book.title} isn't downloaded yet — open it once on this Mac.`
+              : `${book.title} moved to Reading.`
+          );
+        }}
+        onSearch={(query) => {
+          setQ(query);
+          setFilter("all");
+        }}
+      />
 
       <div className="bl-toolbar">
         <form

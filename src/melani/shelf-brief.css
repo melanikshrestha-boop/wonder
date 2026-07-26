@@ -1,0 +1,261 @@
+/* Shelf brief — quiet panel above the shelf, same black reading room. */
+
+.sb {
+  --sb-ink: rgba(255, 255, 255, 0.92);
+  --sb-soft: rgba(255, 255, 255, 0.56);
+  --sb-faint: rgba(255, 255, 255, 0.32);
+  --sb-line: rgba(255, 255, 255, 0.09);
+  margin: 0 0 14px;
+  border: 1px solid var(--sb-line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.022);
+  color: var(--sb-ink);
+  font-family: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif;
+}
+
+.sb-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 13px;
+  border: 0;
+  background: none;
+  color: var(--sb-soft);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sb-toggle:hover {
+  color: var(--sb-ink);
+}
+
+.sb-toggle svg:first-child {
+  color: #d9c48a;
+  flex: none;
+}
+
+.sb-toggle-title {
+  color: var(--sb-ink);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.sb-toggle-note {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--sb-faint);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sb-caret {
+  flex: none;
+  color: var(--sb-faint);
+  transition: transform 0.16s ease;
+}
+
+.sb.is-open .sb-caret {
+  transform: rotate(90deg);
+}
+
+.sb-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 4px 20px;
+  padding: 2px 13px 13px;
+  border-top: 1px solid var(--sb-line);
+}
+
+.sb-block {
+  min-width: 0;
+  padding-top: 11px;
+}
+
+.sb-block-wide {
+  grid-column: 1 / -1;
+}
+
+.sb-h {
+  margin: 0 0 7px;
+  color: var(--sb-faint);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sb-list,
+.sb-insights,
+.sb-subjects {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  gap: 5px;
+  list-style: none;
+}
+
+.sb-row {
+  display: grid;
+  position: relative;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding-bottom: 5px;
+}
+
+.sb-row-main {
+  display: grid;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  gap: 2px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sb-row-title {
+  overflow: hidden;
+  color: var(--sb-ink);
+  font-size: 12.5px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sb-row-main:hover .sb-row-title {
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.3);
+  text-underline-offset: 2px;
+}
+
+.sb-row-note {
+  overflow: hidden;
+  color: var(--sb-faint);
+  font-size: 10.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sb-row.is-stalled .sb-row-note {
+  color: #d59a6a;
+}
+
+/* Hairline progress rule under each in-progress book. */
+.sb-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--sb-line);
+}
+
+.sb-bar::after {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--sb-fill, 0%);
+  background: #7fb894;
+  content: "";
+}
+
+.sb-start {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--sb-line);
+  border-radius: 999px;
+  background: none;
+  color: var(--sb-soft);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.sb-start:hover {
+  border-color: rgba(255, 255, 255, 0.24);
+  color: var(--sb-ink);
+}
+
+.sb-insight {
+  display: grid;
+  gap: 2px;
+  padding-left: 9px;
+  border-left: 2px solid var(--sb-line);
+}
+
+.sb-insight b {
+  color: var(--sb-ink);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.sb-insight span {
+  color: var(--sb-faint);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.sb-insight.is-stall {
+  border-left-color: #d59a6a;
+}
+
+.sb-insight.is-cloud {
+  border-left-color: #7ba7c9;
+}
+
+.sb-insight.is-pace {
+  border-left-color: #7fb894;
+}
+
+.sb-insight.is-series {
+  border-left-color: #a78bd4;
+}
+
+.sb-subjects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.sb-subjects button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--sb-line);
+  border-radius: 999px;
+  background: none;
+  color: var(--sb-soft);
+  font: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.sb-subjects button:hover {
+  border-color: rgba(255, 255, 255, 0.24);
+  color: var(--sb-ink);
+}
+
+.sb-subjects b {
+  color: var(--sb-faint);
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+.sb-series {
+  margin: 9px 0 0;
+  color: var(--sb-faint);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
