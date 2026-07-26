@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type DragEvent,
@@ -32,7 +33,13 @@ import {
   mergeAppleBooks,
   mergeWonderBookPages,
 } from "./appleBooks";
-import { fetchLocalBooks, mergeLocalBooks } from "./localBooks";
+import {
+  driveSyncLabel,
+  fetchLocalBooks,
+  mergeLocalBooks,
+  resetLocalRevision,
+  type DriveSummary,
+} from "./localBooks";
 import {
   enrichBooksWithCovers,
   goodreadsSearchUrl,
@@ -68,6 +75,8 @@ import {
   type BookDiscoveryRequest,
   type BookDiscoveryResult,
 } from "./bookDiscovery";
+import { searchBooks } from "./bookIntelligence";
+import { ShelfBrief } from "./ShelfBrief";
 import "./books-library.css";
 
 const BookReader = lazy(async () => {
@@ -173,8 +182,14 @@ export function BooksLibrary({
   const [interpretationDraft, setInterpretationDraft] = useState("");
   const [sync, setSync] = useState<SyncState>({
     state: "idle",
-    message: "Apple Books",
+    message: "Syncing drives",
   });
+  /** Which drives the scanner can see right now (Downloads, iCloud, USB…) */
+  const [drives, setDrives] = useState<DriveSummary[]>([]);
+  /** Apple Books status, kept apart from the drive sync chip */
+  const [appleNote, setAppleNote] = useState("");
+  /** Latest shelf without re-subscribing the drive poll on every change */
+  const booksRef = useRef<Book[]>(books);
 
   // Auto-hide placement toast after a few seconds
   useEffect(() => {
@@ -184,6 +199,7 @@ export function BooksLibrary({
   }, [toast]);
 
   useEffect(() => {
+    booksRef.current = books;
     saveBooks(books);
   }, [books]);
 
@@ -204,66 +220,82 @@ export function BooksLibrary({
     setBooks((current) => mergeWonderBookPages(current, workspacePages));
   }, [workspacePages]);
 
+  /**
+   * Apple Books reading progress, highlights, and cloud-only titles.
+   * Reported separately from the drive scan so a missing Apple library never
+   * hides a successful drive sync.
+   */
   const syncApple = useCallback(async () => {
-    setSync({ state: "syncing", message: "Syncing Apple Books" });
     try {
       const result = await fetchAppleBooks();
       setBooks((current) => mergeAppleBooks(current, result.books));
-      setSync({
-        state: "done",
-        message: `${result.count} from Apple Books`,
-      });
+      setAppleNote(
+        result.count
+          ? `Apple Books · ${result.count} synced`
+          : "Apple Books · nothing to sync"
+      );
     } catch {
       // No backend reachable (e.g. the shared web link, or the local server
       // isn't running). Apple Books can only be read from your own Mac.
-      setSync({
-        state: "error",
-        message: "Apple Books syncs on your Mac — run Wonder locally to pull your library",
-      });
+      setAppleNote("Apple Books syncs on your Mac");
     }
   }, []);
 
   /**
-   * Pull EPUBs from Downloads + Documents books folders.
-   * New Ocean of PDF downloads show up automatically while Bookshelf is open.
+   * Pull books off every drive the scanner can reach: Downloads, Desktop,
+   * Documents, Apple Books, iCloud Drive, Google Drive / Dropbox / OneDrive,
+   * and mounted USB or external volumes.
+   *
+   * Polls are cheap — the server answers `unchanged` (no book payload, no
+   * merge, no re-render) whenever nothing on disk moved.
    */
-  const syncLocalFiles = useCallback(async (options?: { quiet?: boolean }) => {
-    if (!options?.quiet) {
-      setSync({ state: "syncing", message: "Scanning Downloads" });
-    }
-    try {
-      const result = await fetchLocalBooks();
-      setBooks((current) => {
-        const merged = mergeLocalBooks(current, result.books);
-        if (merged.addedCount > 0) {
-          const names = merged.addedTitles.slice(0, 2).join(" · ");
-          const msg =
-            merged.addedCount === 1
-              ? `New book · ${names}`
-              : `${merged.addedCount} new books · ${names}${
-                  merged.addedCount > 2 ? "…" : ""
-                }`;
-          // Toast after React applies the shelf update
-          window.queueMicrotask(() => setToast(msg));
+  const syncLocalFiles = useCallback(
+    async (options?: { quiet?: boolean; force?: boolean }) => {
+      if (!options?.quiet) {
+        setSync({ state: "syncing", message: "Scanning drives" });
+      }
+      try {
+        if (options?.force) resetLocalRevision();
+        const result = await fetchLocalBooks({ force: options?.force });
+        if (result.drives?.length) setDrives(result.drives);
+
+        if (result.unchanged) {
+          if (!options?.quiet) {
+            setSync({ state: "done", message: driveSyncLabel(result) });
+          }
+          return;
         }
-        return merged.books;
-      });
-      if (!options?.quiet) {
-        setSync({
-          state: "done",
-          message: `${result.count} local EPUB${result.count === 1 ? "" : "s"}`,
+
+        setBooks((current) => {
+          const merged = mergeLocalBooks(current, result.books);
+          if (merged.addedCount > 0) {
+            const names = merged.addedTitles.slice(0, 2).join(" · ");
+            const msg =
+              merged.addedCount === 1
+                ? `New book · ${names}`
+                : `${merged.addedCount} new books · ${names}${
+                    merged.addedCount > 2 ? "…" : ""
+                  }`;
+            // Toast after React applies the shelf update
+            window.queueMicrotask(() => setToast(msg));
+          }
+          return merged.books;
         });
+        if (!options?.quiet) {
+          setSync({ state: "done", message: driveSyncLabel(result) });
+        }
+      } catch (error) {
+        if (!options?.quiet) {
+          setSync({
+            state: "error",
+            message:
+              error instanceof Error ? error.message : "Book drives unavailable",
+          });
+        }
       }
-    } catch (error) {
-      if (!options?.quiet) {
-        setSync({
-          state: "error",
-          message:
-            error instanceof Error ? error.message : "Local books unavailable",
-        });
-      }
-    }
-  }, []);
+    },
+    []
+  );
 
   /** Pull covers from Open Library for books that only show a plain spine */
   const enrichCovers = useCallback(async (options?: { quiet?: boolean }) => {
@@ -308,8 +340,9 @@ export function BooksLibrary({
   }, []);
 
   const syncAll = useCallback(async () => {
+    // Drives first — that's where new files land — then Apple Books, then art.
+    await syncLocalFiles({ force: true });
     await syncApple();
-    await syncLocalFiles();
     await enrichCovers({ quiet: true });
   }, [syncApple, syncLocalFiles, enrichCovers]);
 
@@ -317,21 +350,40 @@ export function BooksLibrary({
     void syncAll();
   }, [syncAll]);
 
-  // Keep scanning while Bookshelf is open — new Downloads appear without refresh
+  /**
+   * Live drive sync while Bookshelf is open. The poll is deliberately short
+   * because an unchanged library costs one revision comparison on the server
+   * and nothing on the client. Covers only run when a poll actually added
+   * something, so idle tabs stay quiet.
+   */
   useEffect(() => {
-    const tick = () => {
+    let stopped = false;
+    let busy = false;
+
+    const tick = async () => {
+      if (stopped || busy) return;
       if (document.visibilityState !== "visible") return;
-      void syncLocalFiles({ quiet: true }).then(() =>
-        enrichCovers({ quiet: true })
-      );
+      busy = true;
+      try {
+        const before = booksRef.current.length;
+        await syncLocalFiles({ quiet: true });
+        if (booksRef.current.length !== before) {
+          await enrichCovers({ quiet: true });
+        }
+      } finally {
+        busy = false;
+      }
     };
-    const timer = window.setInterval(tick, 20_000);
-    window.addEventListener("focus", tick);
-    document.addEventListener("visibilitychange", tick);
+
+    const timer = window.setInterval(() => void tick(), 6_000);
+    const onWake = () => void tick();
+    window.addEventListener("focus", onWake);
+    document.addEventListener("visibilitychange", onWake);
     return () => {
+      stopped = true;
       window.clearInterval(timer);
-      window.removeEventListener("focus", tick);
-      document.removeEventListener("visibilitychange", tick);
+      window.removeEventListener("focus", onWake);
+      document.removeEventListener("visibilitychange", onWake);
     };
   }, [syncLocalFiles, enrichCovers]);
 
@@ -468,23 +520,20 @@ export function BooksLibrary({
   );
 
   const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    return books.filter((book) => {
-      if (filter !== "all" && book.status !== filter) return false;
-      if (!query) return true;
-      return [
-        book.title,
-        book.author,
-        book.category,
-        book.notes,
-        book.description || "",
-        ...book.quotes.flatMap((quote) => [
-          quote.text,
-          quote.note || "",
-          quote.interpretation || "",
-        ]),
-      ].some((value) => value.toLowerCase().includes(query));
-    });
+    const pool =
+      filter === "all" ? books : books.filter((book) => book.status === filter);
+    const query = q.trim();
+    if (!query) return pool;
+    // Ranked across titles, authors, subjects, and quotes, and forgiving of a
+    // typo, so a half-remembered book still comes back.
+    const ranked = searchBooks(pool, query, { limit: 200 });
+    if (ranked.length) return ranked.map((hit) => hit.book);
+    const loose = query.toLowerCase();
+    return pool.filter((book) =>
+      [book.title, book.author, book.notes, book.description || ""].some((value) =>
+        value.toLowerCase().includes(loose)
+      )
+    );
   }, [books, filter, q]);
 
   const groups = useMemo<ShelfGroup[]>(() => {
@@ -799,6 +848,10 @@ export function BooksLibrary({
               localReaderProgress: localProgress,
               readerProgress: Math.max(localProgress, reader.appleProgress || 0),
               status: reader.status === "finished" ? "finished" : "reading",
+              // Stall detection needs the last time reading actually moved,
+              // not the last time anything on the record changed.
+              lastReadAt: Date.now(),
+              startedAt: reader.startedAt || new Date().toISOString().slice(0, 10),
             });
           }}
           onBookmark={(smartBookmark) => patchBook(reader.id, { smartBookmark })}
@@ -1206,7 +1259,7 @@ export function BooksLibrary({
             type="button"
             className={`bl-sync${sync.state === "syncing" ? " is-syncing" : ""}`}
             onClick={() => void syncAll()}
-            title="Refresh Apple Books + Downloads EPUBs + covers"
+            title="Rescan Apple Books, iCloud, Google Drive, Dropbox, external drives, and covers"
           >
             <ArrowsClockwise size={15} aria-hidden />
             <span>{sync.message}</span>
@@ -1238,13 +1291,66 @@ export function BooksLibrary({
           <span><b>{stats.finished}</b> finished</span>
           <span><b>{stats.quotes}</b> quotes</span>
         </div>
+        {drives.length ? (
+          <ul className="bl-drives" aria-label="Connected book drives">
+            {appleNote ? (
+              <li className="bl-drive is-note" title="Apple Books library">
+                <span className="bl-drive-label">{appleNote}</span>
+              </li>
+            ) : null}
+            {drives.map((drive) => (
+              <li
+                key={drive.id}
+                className={`bl-drive is-${drive.kind}${
+                  drive.count ? " has-books" : ""
+                }`}
+                title={drive.path}
+              >
+                <span className="bl-drive-label">{drive.label}</span>
+                <span className="bl-drive-count">{drive.count}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <p className="bl-download-hint">
-          New EPUB? Drop it in{" "}
-          <strong>Downloads</strong> — the shelf picks it up automatically.
-          Covers load from Open Library. Goodreads: export your library CSV and
-          import here. (We don’t auto-download from pirate sites.)
+          Books sync themselves from{" "}
+          <strong>Apple Books, iCloud Drive, Google Drive, Dropbox, Downloads
+          and any plugged-in drive</strong> — drop a file anywhere and it lands
+          on the shelf within seconds. Covers load from Open Library. Goodreads:
+          export your library CSV and import here. (We don’t auto-download from
+          pirate sites.)
         </p>
       </header>
+
+      <ShelfBrief
+        books={books}
+        onOpen={(book) => setOpenId(book.id)}
+        onStart={(book) => {
+          if (book.readerUrl) {
+            patchBook(book.id, {
+              status: "reading",
+              startedAt: book.startedAt || new Date().toISOString().slice(0, 10),
+              lastReadAt: Date.now(),
+            });
+            readBook(book.id, book.readerCfi);
+            return;
+          }
+          patchBook(book.id, {
+            status: "reading",
+            startedAt: book.startedAt || new Date().toISOString().slice(0, 10),
+          });
+          setOpenId(book.id);
+          setToast(
+            book.cloudOnly
+              ? `${book.title} isn't downloaded yet — open it once on this Mac.`
+              : `${book.title} moved to Reading.`
+          );
+        }}
+        onSearch={(query) => {
+          setQ(query);
+          setFilter("all");
+        }}
+      />
 
       <div className="bl-toolbar">
         <form
@@ -1270,7 +1376,7 @@ export function BooksLibrary({
             placeholder={
               filter === "want"
                 ? "Want a book? Type the title + Enter (legal free/catalog search)"
-                : "Search titles, authors, notes, or quotes"
+                : "Search titles, authors, subjects, notes, or quotes — typos are fine"
             }
           />
           {filter === "want" ? (

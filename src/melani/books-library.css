@@ -414,6 +414,51 @@
   color: #fff;
 }
 
+/* Connected drives: Downloads, Apple Books, iCloud, Google Drive, USB… */
+.bl-drives {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bl-drive {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--bl-line);
+  border-radius: 999px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.bl-drive.has-books {
+  color: rgba(255, 255, 255, 0.78);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.bl-drive-count {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.bl-drive.has-books .bl-drive-count {
+  color: #30d158;
+}
+
+.bl-drive.is-external.has-books,
+.bl-drive.is-cloud.has-books,
+.bl-drive.is-icloud.has-books {
+  border-color: rgba(48, 209, 88, 0.28);
+}
+
+.bl-drive.is-note {
+  border-style: dashed;
+}
+
 .bl-download-hint {
   margin: 8px 0 0;
   max-width: 42rem;
