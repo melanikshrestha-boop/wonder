@@ -87,4 +87,12 @@ export const GREATS_AUTHORS: GreatsAuthor[] = [
       },
     ],
   },
+  {
+    id: "melani-laurent",
+    name: "Melani Laurent",
+    homeUrl: "https://itsmelanilaurent.com/",
+    kind: "blog",
+    accent: "#e58fa3",
+    posts: [],
+  },
 ];

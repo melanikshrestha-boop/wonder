@@ -2025,51 +2025,6 @@ html.theme-light .bl .bl-greats-after-books {
   text-align: right;
 }
 
-.bl-imprint-btn {
-  flex-shrink: 0;
-  min-height: 38px;
-  padding: 0 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(249, 168, 212, 0.42);
-  background:
-    linear-gradient(165deg, rgba(249, 168, 212, 0.22), rgba(249, 168, 212, 0.06));
-  color: #fbcfe8;
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  box-shadow:
-    0 0 0 1px rgba(249, 168, 212, 0.08) inset,
-    0 6px 20px rgba(249, 168, 212, 0.12);
-  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease, color 0.15s ease;
-}
-
-.bl-imprint-btn:hover:not(:disabled) {
-  background:
-    linear-gradient(165deg, rgba(249, 168, 212, 0.32), rgba(249, 168, 212, 0.1));
-  color: #fff;
-  box-shadow:
-    0 0 0 1px rgba(249, 168, 212, 0.14) inset,
-    0 8px 28px rgba(249, 168, 212, 0.22);
-  transform: translateY(-1px);
-}
-
-.bl-imprint-btn:disabled {
-  opacity: 0.38;
-  cursor: default;
-  box-shadow: none;
-  transform: none;
-}
-
-.bl-imprint-error {
-  margin: 0;
-  padding: 6px 12px 0;
-  font-size: 11px;
-  color: #f9a8d4;
-}
-
 .bl-reader-stage-wrap {
   position: relative;
   height: auto;
@@ -2138,6 +2093,20 @@ html.theme-light .bl .bl-greats-after-books {
   overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior-x: none;
+}
+
+.bl-reader.is-scroll-reader .bl-reader-stage .epub-container {
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain;
+}
+
+.bl-reader.is-scroll-reader .bl-reader-stage .epub-view {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.bl-reader.is-page-reader .bl-reader-stage .epub-container {
+  overflow: hidden !important;
 }
 
 .bl-reader.is-page-reader .bl-reader-stage {
@@ -2615,6 +2584,48 @@ html.theme-light .bl .bl-greats-after-books {
   color: #fff;
 }
 
+.bl-reader-mode {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.bl-reader-mode button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.52);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bl-reader-mode button:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.bl-reader-mode button.is-on {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+  box-shadow:
+    0 2px 7px rgba(0, 0, 0, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset;
+}
+
 .bl-reader-size {
   display: inline-flex;
   align-items: center;
@@ -2710,7 +2721,6 @@ html.theme-light .bl .bl-greats-after-books {
   .bl-reader-chapters-wrap { flex: 1 1 100%; }
   .bl-reader-chapters { width: 100%; max-width: none; }
   .bl-reader-size { flex-shrink: 0; }
-  .bl-imprint-btn { min-height: 40px; }
   .bl-reader-stage-wrap { height: auto; min-height: 0; }
   .bl-reader-toc { padding-top: 24px; }
   .bl-reader-toc-inner { width: min(100%, 720px); }
@@ -3148,6 +3158,7 @@ html.theme-light .bl-reader[data-reader-theme="light"] {
 }
 
 .bl-reader[data-reader-theme] .bl-reader-chapters,
+.bl-reader[data-reader-theme] .bl-reader-mode,
 .bl-reader[data-reader-theme] .bl-reader-size,
 .bl-reader[data-reader-theme] .bl-reader-appearance {
   border-color: var(--reader-line);
@@ -3180,9 +3191,22 @@ html.theme-light .bl-reader[data-reader-theme="light"] {
 }
 
 .bl-reader[data-reader-theme] .bl-size-btn:hover,
+.bl-reader[data-reader-theme] .bl-reader-mode button:hover,
 .bl-reader[data-reader-theme] .bl-reader-theme button:hover {
   background: rgba(167, 139, 212, 0.14);
   color: var(--reader-strong);
+}
+
+.bl-reader[data-reader-theme] .bl-reader-mode button {
+  color: var(--reader-muted);
+}
+
+.bl-reader[data-reader-theme] .bl-reader-mode button.is-on {
+  background: var(--reader-control-on);
+  color: var(--reader-strong);
+  box-shadow:
+    0 2px 7px var(--reader-shadow),
+    0 1px 0 rgba(255, 255, 255, 0.12) inset;
 }
 
 .bl-reader-appearance {

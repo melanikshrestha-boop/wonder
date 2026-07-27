@@ -103,7 +103,6 @@ type ShelfGroup = {
   books: Book[];
   accent: string;
   canRename: boolean;
-  custom: boolean;
 };
 
 const LIBRARY_CHIPS: { id: Filter; label: string }[] = [
@@ -629,8 +628,6 @@ export function BooksLibrary({
   const groups = useMemo<ShelfGroup[]>(() => {
     if (filter === "blogs") return [];
     if (groupMode === "subjects") {
-      const showEmptyCustom =
-        (filter === "all" || filter === "books") && !q.trim();
       return folders
         .map((folder) => ({
           id: folder.id,
@@ -638,11 +635,8 @@ export function BooksLibrary({
           books: filtered.filter((book) => book.category === folder.id),
           accent: folder.accent,
           canRename: true,
-          custom: !folder.builtIn,
         }))
-        .filter(
-          (group) => group.books.length > 0 || (group.custom && showEmptyCustom)
-        );
+        .filter((group) => group.books.length > 0);
     }
     return STATUS_ORDER.map((status) => ({
       id: status,
@@ -650,9 +644,8 @@ export function BooksLibrary({
       books: filtered.filter((book) => book.status === status),
       accent: STATUS_TONES[status],
       canRename: false,
-      custom: false,
     })).filter((group) => group.books.length);
-  }, [filter, filtered, folders, groupMode, q]);
+  }, [filter, filtered, folders, groupMode]);
 
   /** Blogs under books on All, or alone on Blogs. */
   const showBlogs = filter === "all" || filter === "blogs";
@@ -813,7 +806,8 @@ export function BooksLibrary({
     setFolders((current) => [...current, folder]);
     setFolderNameDraft("");
     setAddingFolder(false);
-    setOpenFolders((current) => ({ ...current, [folder.id]: true }));
+    setDraftCategory(folder.id);
+    setAdding(true);
   }
 
   function beginRenameFolder(folder: ShelfGroup) {
@@ -1501,6 +1495,7 @@ export function BooksLibrary({
         </div>
       </header>
 
+      {filter !== "blogs" ? (
       <div className="bl-toolbar">
         <form
           className="bl-search-wrap"
@@ -1594,8 +1589,9 @@ export function BooksLibrary({
           {adding ? "Close" : "Add book"}
         </button>
       </div>
+      ) : null}
 
-      {addingFolder ? (
+      {filter !== "blogs" && addingFolder ? (
         <form
           className="bl-folder-create"
           onSubmit={(event) => {
@@ -1635,7 +1631,7 @@ export function BooksLibrary({
         </form>
       ) : null}
 
-      {finderOpen ? (
+      {filter !== "blogs" && finderOpen ? (
         <section className="bl-finder" aria-label="Book Finder">
           <div className="bl-finder-head">
             <div>
@@ -1760,7 +1756,7 @@ export function BooksLibrary({
         ))}
       </div>
 
-      {adding ? (
+      {filter !== "blogs" && adding ? (
         <div className="bl-add-panel">
           <input
             className="bl-input bl-input-title"

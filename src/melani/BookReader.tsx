@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowLeft,
+  BookOpenText,
   CaretRight,
   Minus,
   Plus,
@@ -12,6 +13,7 @@ import {
   X,
   Sun,
   TextAa,
+  Rows,
 } from "@phosphor-icons/react";
 import ePub, {
   type Book as EpubBook,
@@ -20,15 +22,6 @@ import ePub, {
   type Rendition,
 } from "epubjs";
 import { newQuote, type Book, type BookQuote } from "./booksStore";
-import {
-  buildChapterImprint,
-  extractChapterText,
-  htmlToPlainText,
-  loadImprint,
-  saveImprint,
-  type ChapterImprint,
-} from "./chapterImprint";
-import { ChapterImprintView } from "./ChapterImprintView";
 import {
   readingFontStack,
   READING_FONT_OPTIONS,
@@ -52,6 +45,7 @@ const HIGHLIGHT_CLASS = "reader-quote-highlight";
 const DISPLAY_TIMEOUT_MS = 1_600; // one display() attempt
 const FALLBACK_DISPLAY_MS = 2_200; // bare display()
 const NAV_TIMEOUT_MS = 3_000; // TOC parse after first page is already showing
+const CHAPTER_DISPLAY_TIMEOUT_MS = 12_000; // continuous chapter may span many files
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label = "timeout"): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -91,6 +85,25 @@ type ReaderNotePopover = {
 };
 
 type FlipDir = "next" | "prev";
+type ReaderMode = "scroll" | "pages";
+
+type MutableSpineSection = {
+  index: number;
+  href: string;
+  linear?: boolean;
+  next: () => MutableSpineSection | undefined;
+  prev: () => MutableSpineSection | undefined;
+};
+
+type ChapterRange = {
+  href: string;
+  label: string;
+  startIndex: number;
+  endIndex: number;
+  fromToc: boolean;
+};
+
+const READER_MODE_KEY = "wonder-reader-mode-v1";
 
 /**
  * Free page pose — the leaf can move any direction, not only left/right.
@@ -156,19 +169,130 @@ function sameDocument(left: string, right: string): boolean {
   return Boolean(a && b) && (a === b || a.endsWith(`/${b}`) || b.endsWith(`/${a}`));
 }
 
-function readerThemeRules(theme: BooksTheme, font: ReadingFont) {
+function spineSections(epub: EpubBook): MutableSpineSection[] {
+  const sections: MutableSpineSection[] = [];
+  epub.spine.each((section: unknown) => {
+    if (section && typeof section === "object") {
+      sections.push(section as MutableSpineSection);
+    }
+  });
+  return sections;
+}
+
+function resolveSpineSection(
+  epub: EpubBook,
+  target?: string
+): MutableSpineSection | undefined {
+  if (target) {
+    try {
+      const direct = epub.spine.get(target);
+      if (direct) return direct as unknown as MutableSpineSection;
+    } catch {
+      /* fall through to normalized matching */
+    }
+  } else {
+    const first = epub.spine.get();
+    return first ? (first as unknown as MutableSpineSection) : undefined;
+  }
+
+  return spineSections(epub).find((section) =>
+    sameDocument(section.href, target)
+  );
+}
+
+function buildChapterRanges(
+  epub: EpubBook,
+  chapters: Array<NavItem & { depth: number }>
+): ChapterRange[] {
+  const sections = spineSections(epub);
+  if (!sections.length) return [];
+
+  const boundaryByIndex = new Map<
+    number,
+    { href: string; label: string }
+  >();
+  for (const chapter of chapters) {
+    const section = resolveSpineSection(epub, chapter.href);
+    if (!section || boundaryByIndex.has(section.index)) continue;
+    boundaryByIndex.set(section.index, {
+      href: chapter.href,
+      label: chapter.label.trim(),
+    });
+  }
+
+  const boundaries = Array.from(boundaryByIndex, ([startIndex, chapter]) => ({
+    ...chapter,
+    startIndex,
+  })).sort((left, right) => left.startIndex - right.startIndex);
+
+  // EPUBs without a navigation document remain readable and safely bounded.
+  if (!boundaries.length) {
+    return sections.map((section) => ({
+      href: section.href,
+      label: "Current section",
+      startIndex: section.index,
+      endIndex: section.index,
+      fromToc: false,
+    }));
+  }
+
+  const ranges: ChapterRange[] = [];
+  if (boundaries[0].startIndex > 0) {
+    ranges.push({
+      href: sections[0].href,
+      label: "Front matter",
+      startIndex: 0,
+      endIndex: boundaries[0].startIndex - 1,
+      fromToc: false,
+    });
+  }
+  boundaries.forEach((boundary, index) => {
+    ranges.push({
+      href: boundary.href,
+      label: boundary.label,
+      startIndex: boundary.startIndex,
+      endIndex:
+        index + 1 < boundaries.length
+          ? boundaries[index + 1].startIndex - 1
+          : sections[sections.length - 1].index,
+      fromToc: true,
+    });
+  });
+  return ranges;
+}
+
+function rangeForSection(
+  ranges: ChapterRange[],
+  index: number
+): ChapterRange | undefined {
+  return ranges.find(
+    (range) => index >= range.startIndex && index <= range.endIndex
+  );
+}
+
+function readerThemeRules(
+  theme: BooksTheme,
+  font: ReadingFont,
+  mode: ReaderMode
+) {
   const light = theme === "light";
   const ink = light ? "#29251f" : "#eee9df";
   const heading = light ? "#17140f" : "#fffaf0";
   const paper = light ? "#fffaf1" : "#151311";
+  const horizontalPadding = "clamp(24px, 7vw, 82px)";
+  const verticalPadding = "clamp(28px, 6vh, 68px)";
   return {
     "html, body": {
       color: `${ink} !important`,
       background: `${paper} !important`,
       "font-family": `${readingFontStack(font)} !important`,
-      width: "100% !important",
-      "max-width": "100% !important",
-      "overflow-x": "hidden !important",
+      ...(mode === "scroll"
+        ? {
+            width: "100% !important",
+            "max-width": "100% !important",
+            "overflow-x": "hidden !important",
+          }
+        : {}),
       "box-sizing": "border-box !important",
     },
     body: {
@@ -177,10 +301,20 @@ function readerThemeRules(theme: BooksTheme, font: ReadingFont) {
       "font-family": `${readingFontStack(font)} !important`,
       "font-kerning": "normal !important",
       "line-height": "1.58 !important",
+      outline: "none !important",
       margin: "0 auto !important",
-      padding: "clamp(28px, 6vh, 68px) clamp(24px, 7vw, 82px) !important",
-      "max-width": "52rem !important",
+      padding:
+        mode === "scroll"
+          ? `0 ${horizontalPadding} !important`
+          : `${verticalPadding} ${horizontalPadding} !important`,
+      ...(mode === "scroll" ? { "max-width": "52rem !important" } : {}),
       "box-sizing": "border-box !important",
+    },
+    "body.wonder-chapter-first": {
+      "padding-top": `${verticalPadding} !important`,
+    },
+    "body.wonder-chapter-last": {
+      "padding-bottom": `${verticalPadding} !important`,
     },
     "p, li, dd, dt, blockquote": {
       color: `${ink} !important`,
@@ -206,6 +340,7 @@ function readerThemeRules(theme: BooksTheme, font: ReadingFont) {
       "letter-spacing": "-0.018em !important",
     },
     a: { color: `${light ? "#7655a6" : "#c5a9f0"} !important` },
+    'a[href*="oceanofpdf" i]': { display: "none !important" },
     hr: {
       border: "0 !important",
       "border-top": `1px solid ${light ? "#ded4c5" : "#39342f"} !important`,
@@ -234,12 +369,23 @@ export function BookReader({
   const progressCallback = useRef(onProgress);
   const bookmarkCallback = useRef(onBookmark);
   const quoteCallback = useRef(onSaveQuote);
+  const themeRef = useRef(theme);
+  const fontRef = useRef(font);
+  themeRef.current = theme;
+  fontRef.current = font;
   const bookmarkRef = useRef<Book["smartBookmark"]>(book.smartBookmark);
-  const initialQuotes = useRef(book.quotes);
   const initialCfi = useRef(resumableCfi);
   const chaptersRef = useRef<Array<NavItem & { depth: number }>>([]);
+  const chapterRangesRef = useRef<ChapterRange[]>([]);
+  const activeChapterRangeRef = useRef<ChapterRange | null>(null);
+  const displayTargetRef = useRef<
+    ((target?: string) => Promise<void>) | null
+  >(null);
+  const chapterNavigateRef = useRef<
+    ((direction: FlipDir) => Promise<void>) | null
+  >(null);
   const lastProgress = useRef(book.readerProgress || 0);
-  const lastCfi = useRef(startCfi || book.smartBookmark?.cfi || book.readerCfi || "");
+  const lastCfi = useRef(resumableCfi || "");
   const wheelState = useRef({ amount: 0, lastDirection: 0, lastTurnAt: 0 });
   const flipBusy = useRef(false);
   /**
@@ -260,7 +406,17 @@ export function BookReader({
   } | null>(null);
   /** Live leaf pose while dragging / flying (ref stays fresh mid-gesture) */
   const leafRef = useRef<LeafPose>(IDLE_LEAF);
-  const readingModeRef = useRef<"pages" | "scroll">("scroll");
+  const [readerMode, setReaderMode] = useState<ReaderMode>(() => {
+    try {
+      return window.localStorage.getItem(READER_MODE_KEY) === "pages"
+        ? "pages"
+        : "scroll";
+    } catch {
+      return "scroll";
+    }
+  });
+  const readingModeRef = useRef<ReaderMode>(readerMode);
+  readingModeRef.current = readerMode;
   const [chapters, setChapters] = useState<Array<NavItem & { depth: number }>>([]);
   const [chapterHref, setChapterHref] = useState("");
   const [showContents, setShowContents] = useState(() => !resumableCfi);
@@ -276,6 +432,8 @@ export function BookReader({
   const [closePrompt, setClosePrompt] = useState(false);
   const [bookmark, setBookmark] = useState(book.smartBookmark);
   const [readerQuotes, setReaderQuotes] = useState(book.quotes);
+  const readerQuotesRef = useRef(book.quotes);
+  readerQuotesRef.current = readerQuotes;
   const [notesOpen, setNotesOpen] = useState(false);
   const [notePopover, setNotePopover] = useState<ReaderNotePopover | null>(null);
   /**
@@ -283,9 +441,6 @@ export function BookReader({
    * Not locked to right-to-left — you steer it.
    */
   const [leaf, setLeaf] = useState<LeafPose>(IDLE_LEAF);
-  const [imprint, setImprint] = useState<ChapterImprint | null>(null);
-  const [imprintBusy, setImprintBusy] = useState(false);
-  const [imprintError, setImprintError] = useState("");
   const locationHrefRef = useRef("");
 
   function easeOutCubic(t: number): number {
@@ -492,14 +647,14 @@ export function BookReader({
     const now = Date.now();
     if (throttle && now - wheelState.current.lastTurnAt < 420) return;
     wheelState.current.lastTurnAt = now;
-    // Paginated mode gets the free page animation; scroll mode just steps
+    // Paginated mode gets the free page animation. Chapter Scroll moves
+    // deliberately between TOC chapters instead of leaking into the whole book.
     if (readingModeRef.current === "pages") {
       void animatePresetTurn(direction);
       return;
     }
-    if (!renditionRef.current || flipBusy.current) return;
-    if (direction === "next") void renditionRef.current.next();
-    else void renditionRef.current.prev();
+    if (flipBusy.current) return;
+    void chapterNavigateRef.current?.(direction);
   }
 
   /**
@@ -789,8 +944,21 @@ export function BookReader({
       }
     }
 
-    const next = key === "ArrowRight" || key === "Enter";
-    const prev = key === "ArrowLeft" || key === "Backspace";
+    const paginated = readingModeRef.current === "pages";
+    const next =
+      key === "ArrowRight" ||
+      key === "Enter" ||
+      (paginated &&
+        (key === "ArrowDown" ||
+          key === "PageDown" ||
+          (key === " " && !event.shiftKey)));
+    const prev =
+      key === "ArrowLeft" ||
+      key === "Backspace" ||
+      (paginated &&
+        (key === "ArrowUp" ||
+          key === "PageUp" ||
+          (key === " " && event.shiftKey)));
     if (!next && !prev) return;
     event.preventDefault();
     event.stopPropagation();
@@ -861,6 +1029,14 @@ export function BookReader({
   }, [book.quotes]);
 
   useEffect(() => {
+    try {
+      window.localStorage.setItem(READER_MODE_KEY, readerMode);
+    } catch {
+      /* private browsing / blocked storage: keep the in-memory preference */
+    }
+  }, [readerMode]);
+
+  useEffect(() => {
     const warnBeforeTabClose = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
@@ -873,22 +1049,153 @@ export function BookReader({
     const stage = stageRef.current;
     if (!stage || !book.readerUrl) return;
 
+    chapterRangesRef.current = [];
+    activeChapterRangeRef.current = null;
     const epub = ePub(book.readerUrl);
+    const cleanReaderSource = (
+      readerDocument: Document,
+      section: MutableSpineSection
+    ) => {
+      // Strip the download-site stamp in memory before epub.js measures the
+      // iframe. The Apple Books source file itself is never modified.
+      for (const link of Array.from(
+        readerDocument.querySelectorAll<HTMLAnchorElement>(
+          'a[href*="oceanofpdf" i]'
+        )
+      )) {
+        let wrapper = link.parentElement;
+        let removedWrapper = false;
+        while (wrapper && wrapper !== readerDocument.body) {
+          const onlySource =
+            wrapper.textContent
+              ?.replace(/\s+/g, " ")
+              .trim()
+              .toLowerCase() === "oceanofpdf.com";
+          if (
+            onlySource &&
+            (wrapper.tagName === "P" || wrapper.tagName === "DIV")
+          ) {
+            wrapper.remove();
+            removedWrapper = true;
+            break;
+          }
+          wrapper = wrapper.parentElement;
+        }
+        if (!removedWrapper) link.remove();
+      }
+
+      const body =
+        readerDocument.body || readerDocument.querySelector("body");
+      if (!body) return;
+      body.setAttribute("tabindex", "0");
+      if (readerMode !== "scroll") return;
+      body.classList.add("wonder-scroll-section");
+      const range = rangeForSection(
+        chapterRangesRef.current,
+        section.index
+      );
+      if (range?.startIndex === section.index) {
+        body.classList.add("wonder-chapter-first");
+      }
+      if (range?.endIndex === section.index) {
+        body.classList.add("wonder-chapter-last");
+      }
+    };
+    epub.spine.hooks.content.register(cleanReaderSource);
+
     const rendition = epub.renderTo(stage, {
       width: "100%",
       height: "100%",
-      flow: "scrolled-doc",
+      flow: readerMode === "scroll" ? "scrolled-continuous" : "paginated",
       spread: "none",
-      manager: "default",
+      manager: readerMode === "scroll" ? "continuous" : "default",
+      overflow: readerMode === "scroll" ? "auto" : "hidden",
     });
     epubRef.current = epub;
     renditionRef.current = rendition;
 
-    rendition.themes.default(readerThemeRules(theme, font));
+    rendition.themes.default(
+      readerThemeRules(themeRef.current, fontRef.current, readerMode)
+    );
 
     let disposed = false;
+    let restoreFence: (() => void) | null = null;
     const contentCleanups: Array<() => void> = [];
     const attachedDocuments = new WeakSet<Document>();
+
+    const applyChapterFence = (target?: string): ChapterRange | undefined => {
+      const section = resolveSpineSection(epub, target);
+      if (!section) return undefined;
+      let range = rangeForSection(
+        chapterRangesRef.current,
+        section.index
+      );
+      if (!range && readerMode === "scroll") {
+        range = {
+          href: section.href,
+          label: "Current section",
+          startIndex: section.index,
+          endIndex: section.index,
+          fromToc: false,
+        };
+        chapterRangesRef.current = [range];
+      }
+      if (!range) return undefined;
+
+      restoreFence?.();
+      restoreFence = null;
+      activeChapterRangeRef.current = range;
+      if (readerMode !== "scroll") return range;
+
+      const start = resolveSpineSection(epub, String(range.startIndex));
+      const end = resolveSpineSection(epub, String(range.endIndex));
+      if (!start || !end) return range;
+      const originalPrev = start.prev;
+      const originalNext = end.next;
+      start.prev = () => undefined;
+      end.next = () => undefined;
+      restoreFence = () => {
+        start.prev = originalPrev;
+        end.next = originalNext;
+      };
+      return range;
+    };
+
+    const displayTarget = async (target?: string) => {
+      const range = applyChapterFence(target);
+      if (range?.fromToc) setChapterHref(range.href);
+      else if (range) setChapterHref("");
+      await rendition.display(target);
+    };
+    displayTargetRef.current = displayTarget;
+
+    chapterNavigateRef.current = async (direction) => {
+      const ranges = chapterRangesRef.current;
+      const active = activeChapterRangeRef.current;
+      if (!ranges.length || !active || disposed) return;
+      const currentIndex = ranges.findIndex(
+        (range) =>
+          range.startIndex === active.startIndex &&
+          range.endIndex === active.endIndex
+      );
+      const nextIndex = currentIndex + (direction === "next" ? 1 : -1);
+      const target = ranges[nextIndex];
+      if (!target) return;
+      setShowContents(false);
+      setSelection(null);
+      setAddingThought(false);
+      setThoughtDraft("");
+      setNotePopover(null);
+      setMessage(
+        direction === "next" ? "Opening next chapter..." : "Opening previous chapter..."
+      );
+      try {
+        await displayTarget(target.href);
+        if (!disposed) setMessage("");
+      } catch {
+        if (!disposed) setMessage("That chapter could not be opened.");
+      }
+    };
 
     const attachReaderInput = (contents: ReaderContents) => {
       const readerDocument = contents.document;
@@ -947,11 +1254,16 @@ export function BookReader({
         : lastProgress.current;
       lastProgress.current = nextProgress;
       setProgress(nextProgress);
-      const activeChapter = chaptersRef.current.find((chapter) =>
-        sameDocument(chapter.href, location.start.href || "")
+      const activeRange = rangeForSection(
+        chapterRangesRef.current,
+        location.start.index
       );
-      locationHrefRef.current = location.start.href || activeChapter?.href || "";
-      setChapterHref(activeChapter?.href || location.start.href || "");
+      if (activeRange) activeChapterRangeRef.current = activeRange;
+      locationHrefRef.current =
+        location.start.href || activeRange?.href || "";
+      setChapterHref(
+        activeRange?.fromToc ? activeRange.href : ""
+      );
       lastCfi.current = location.start.cfi;
       progressCallback.current(location.start.cfi, nextProgress);
       const saved = bookmarkRef.current;
@@ -1001,78 +1313,148 @@ export function BookReader({
 
     void (async () => {
       try {
-        // ── FAST PATH: paint a page before waiting on full TOC ──────────
-        // Old flow awaited navigation first → long “Opening book…” on big EPUBs.
         let opened = false;
-        const resume = initialCfi.current;
+        let navigation:
+          | {
+              toc?: NavItem[];
+              landmarks?: Array<{ type?: string; href?: string }>;
+            }
+          | undefined;
+        const resume = lastCfi.current || initialCfi.current;
+        const displayTimeout =
+          readerMode === "scroll"
+            ? CHAPTER_DISPLAY_TIMEOUT_MS
+            : DISPLAY_TIMEOUT_MS;
+        const navigationPromise = withTimeout(
+          epub.loaded.navigation as Promise<{
+            toc?: NavItem[];
+            landmarks?: Array<{ type?: string; href?: string }>;
+          }>,
+          NAV_TIMEOUT_MS,
+          "nav-timeout"
+        );
+
+        const installNavigation = (
+          loaded:
+            | {
+                toc?: NavItem[];
+                landmarks?: Array<{ type?: string; href?: string }>;
+              }
+            | undefined
+        ) => {
+          const nextChapters = flattenToc(loaded?.toc || []).filter(
+            (chapter) => Boolean(chapter.href && chapter.label?.trim())
+          );
+          chaptersRef.current = nextChapters;
+          chapterRangesRef.current = buildChapterRanges(epub, nextChapters);
+          setChapters(nextChapters);
+
+          const currentSection = resolveSpineSection(
+            epub,
+            lastCfi.current || resume
+          );
+          const activeRange = currentSection
+            ? rangeForSection(
+                chapterRangesRef.current,
+                currentSection.index
+              )
+            : undefined;
+          if (activeRange) {
+            activeChapterRangeRef.current = activeRange;
+            setChapterHref(activeRange.fromToc ? activeRange.href : "");
+          }
+        };
+
+        /*
+         * Chapter Scroll must know the TOC boundaries before first paint.
+         * Otherwise epub.js's continuous manager would keep appending the
+         * entire book. Pages can paint immediately while navigation loads.
+         */
+        if (readerMode === "scroll") {
+          try {
+            navigation = await navigationPromise;
+          } catch {
+            navigation = undefined;
+          }
+          try {
+            await withTimeout(epub.ready, NAV_TIMEOUT_MS, "book-ready-timeout");
+          } catch {
+            /* displayTarget still fences the current section as a safe fallback */
+          }
+          if (disposed) return;
+          installNavigation(navigation);
+        }
+
         if (resume) {
           try {
-            await withTimeout(rendition.display(resume), DISPLAY_TIMEOUT_MS, "display-cfi");
+            await withTimeout(
+              displayTarget(resume),
+              displayTimeout,
+              "display-cfi"
+            );
             opened = true;
           } catch {
-            /* bad/slow CFI — fall through */
+            // A continuous chapter can paint before epub.js finishes filling
+            // its neighboring split documents. Do not start a second display
+            // and race the manager only when the first view is already visible.
+            opened = Boolean(stage.querySelector("iframe"));
           }
         }
         if (!opened) {
           try {
-            await withTimeout(rendition.display(), FALLBACK_DISPLAY_MS, "display-default");
+            await withTimeout(
+              displayTarget(),
+              readerMode === "scroll"
+                ? CHAPTER_DISPLAY_TIMEOUT_MS
+                : FALLBACK_DISPLAY_MS,
+              "display-default"
+            );
             opened = true;
           } catch {
-            /* still try TOC targets below */
+            opened = Boolean(stage.querySelector("iframe"));
           }
         }
-        // Clear spinner as soon as anything painted (don't block on TOC)
         if (opened && !disposed) setMessage("");
 
-        // ── TOC + optional better landing (parallel after first paint) ──
-        try {
-          const navigation = await withTimeout(
-            epub.loaded.navigation as Promise<{
-              toc?: NavItem[];
-              landmarks?: Array<{ type?: string; href?: string }>;
-            }>,
-            NAV_TIMEOUT_MS,
-            "nav-timeout"
-          );
+        if (readerMode === "pages") {
+          try {
+            navigation = await navigationPromise;
+          } catch {
+            navigation = undefined;
+          }
           if (disposed) return;
-          const nextChapters = flattenToc(navigation.toc || []).filter(
-            (chapter) => Boolean(chapter.href && chapter.label?.trim())
-          );
-          chaptersRef.current = nextChapters;
-          setChapters(nextChapters);
+          installNavigation(navigation);
+        }
 
-          // Only re-navigate if we never painted (or CFI failed earlier)
-          if (!opened) {
-            const contentsLandmark = navigation.landmarks?.find(
+        // If the default/resume target failed, use the TOC as a safe landing.
+        if (!opened) {
+          const contentsLandmark = navigation?.landmarks?.find(
               (item) => item.type?.toLowerCase() === "toc"
             )?.href;
-            const contentsItem = nextChapters.find((item) =>
-              /^(?:table\s+of\s+)?contents$/i.test(item.label.trim())
-            )?.href;
-            const targets = [
-              contentsLandmark,
-              contentsItem,
-              nextChapters[0]?.href,
-            ].filter(
-              (target, index, all): target is string =>
-                Boolean(target) && all.indexOf(target) === index
-            );
-            for (const target of targets) {
-              try {
-                await withTimeout(
-                  rendition.display(target),
-                  DISPLAY_TIMEOUT_MS,
-                  "display-target"
-                );
-                opened = true;
-                break;
-              } catch {
-                /* next target */
-              }
+          const contentsItem = chaptersRef.current.find((item) =>
+            /^(?:table\s+of\s+)?contents$/i.test(item.label.trim())
+          )?.href;
+          const targets = [
+            contentsLandmark,
+            contentsItem,
+            chaptersRef.current[0]?.href,
+          ].filter(
+            (target, index, all): target is string =>
+              Boolean(target) && all.indexOf(target) === index
+          );
+          for (const target of targets) {
+            try {
+              await withTimeout(
+                displayTarget(target),
+                displayTimeout,
+                "display-target"
+              );
+              opened = true;
+              break;
+            } catch {
+              /* next target */
             }
           }
-        } catch {
-          /* TOC optional — book can still be readable without chapter list */
         }
 
         if (disposed) return;
@@ -1082,7 +1464,7 @@ export function BookReader({
         }
         setMessage("");
 
-        for (const quote of initialQuotes.current) {
+        for (const quote of readerQuotesRef.current) {
           try {
             addPinkHighlight(quote);
           } catch {
@@ -1106,25 +1488,46 @@ export function BookReader({
 
     return () => {
       disposed = true;
+      restoreFence?.();
       rendition.off("relocated", relocated);
       rendition.off("selected", selected);
       rendition.hooks.content.deregister(attachReaderInput);
+      epub.spine.hooks.content.deregister(cleanReaderSource);
       contentCleanups.forEach((cleanup) => cleanup());
       rendition.destroy();
       epub.destroy();
-      renditionRef.current = null;
-      epubRef.current = null;
+      if (renditionRef.current === rendition) renditionRef.current = null;
+      if (epubRef.current === epub) epubRef.current = null;
+      if (displayTargetRef.current === displayTarget) {
+        displayTargetRef.current = null;
+        chapterNavigateRef.current = null;
+      }
     };
-  }, [book.id, book.readerUrl]);
+  }, [book.id, book.readerUrl, readerMode]);
 
   function openChapter(href: string) {
-    if (!href || !renditionRef.current) return;
+    const displayTarget = displayTargetRef.current;
+    if (!href || !displayTarget) return;
     setShowContents(false);
     setChapterHref(href);
     setMessage("Opening chapter...");
-    void renditionRef.current.display(href)
+    void displayTarget(href)
       .then(() => setMessage(""))
       .catch(() => setMessage("That chapter could not be opened."));
+  }
+
+  function changeReaderMode(nextMode: ReaderMode) {
+    if (nextMode === readerMode) return;
+    flipBusy.current = false;
+    applyLeaf(IDLE_LEAF);
+    setSelection(null);
+    setAddingThought(false);
+    setThoughtDraft("");
+    setNotePopover(null);
+    setMessage(
+      nextMode === "scroll" ? "Opening full chapter..." : "Fitting page..."
+    );
+    setReaderMode(nextMode);
   }
 
   function savePlace(candidate = selection) {
@@ -1152,9 +1555,11 @@ export function BookReader({
   function saveHighlight(note = "") {
     if (!selection) return;
     const sectionLabel =
+      activeChapterRangeRef.current?.label ||
       chaptersRef.current.find((chapter) =>
         sameDocument(chapter.href, locationHrefRef.current || chapterHref)
-      )?.label?.trim() || "Current section";
+      )?.label?.trim() ||
+      "Current section";
     const quote = newQuote(selection.text, sectionLabel, note, selection.cfi);
     try {
       // Remove any sloppy partial mark at this CFI first
@@ -1189,93 +1594,24 @@ export function BookReader({
     setClosePrompt(true);
   }
 
-  async function openChapterImprint(forceRebuild = false) {
-    const href = chapterHref || locationHrefRef.current;
-    if (!href || !epubRef.current) {
-      setImprintError("Open a chapter first (leave the table of contents).");
-      return;
-    }
-    const label =
-      chapters.find((c) => sameDocument(c.href, href))?.label?.trim() ||
-      "Current chapter";
-
-    if (!forceRebuild) {
-      const cached = loadImprint(book.id, href);
-      if (cached?.cards?.length) {
-        setImprint(cached);
-        setImprintError("");
-        return;
-      }
-    }
-
-    setImprintBusy(true);
-    setImprintError("");
-    try {
-      let plain = await extractChapterText(epubRef.current, href);
-      // Fallback: live rendered document text
-      if (plain.length < 120) {
-        try {
-          const contents = renditionRef.current?.getContents?.() as
-            | Array<{ document?: Document }>
-            | { document?: Document }
-            | undefined;
-          const list = Array.isArray(contents)
-            ? contents
-            : contents
-              ? [contents]
-              : [];
-          const chunks = list
-            .map((c) => c.document?.body?.innerText || "")
-            .filter(Boolean);
-          if (chunks.length) plain = chunks.join("\n\n");
-        } catch {
-          /* ignore */
-        }
-      }
-      if (plain.length < 80) {
-        plain = htmlToPlainText(plain);
-      }
-      if (plain.trim().length < 80) {
-        setImprintError(
-          "Not enough chapter text to imprint. Try a content chapter, not the cover or TOC."
-        );
-        return;
-      }
-      const built = buildChapterImprint({
-        bookId: book.id,
-        chapterHref: href,
-        chapterLabel: label,
-        plainText: plain,
-      });
-      if (!built.cards.length || built.cards.length < 2) {
-        setImprintError("Could not distill enough ideas from this chapter.");
-        return;
-      }
-      saveImprint(built);
-      setImprint(built);
-    } catch {
-      setImprintError("Imprint failed on this chapter. Try another section.");
-    } finally {
-      setImprintBusy(false);
-    }
-  }
-
   useEffect(() => {
     renditionRef.current?.themes.fontSize(`${fontSize}%`);
   }, [fontSize]);
 
   useEffect(() => {
-    renditionRef.current?.themes.default(readerThemeRules(theme, font));
-  }, [theme, font]);
+    renditionRef.current?.themes.default(
+      readerThemeRules(theme, font, readerMode)
+    );
+  }, [theme, font, readerMode]);
 
   function openSavedQuote(quote: BookQuote) {
-    if (!quote.location || !renditionRef.current) return;
+    const displayTarget = displayTargetRef.current;
+    if (!quote.location || !displayTarget) return;
     setShowContents(false);
     setNotesOpen(false);
     setNotePopover(null);
     setMessage("Opening highlight...");
-    void renditionRef.current
-      .display(quote.location)
+    void displayTarget(quote.location)
       .then(() => setMessage(""))
       .catch(() => setMessage("That highlight could not be opened."));
   }
@@ -1293,9 +1629,12 @@ export function BookReader({
 
   return (
     <div
-      className="bl-reader is-scroll-reader"
+      className={`bl-reader ${
+        readerMode === "scroll" ? "is-scroll-reader" : "is-page-reader"
+      }`}
       data-reader-theme={theme}
       data-reader-font={font}
+      data-reader-mode={readerMode}
     >
       <header className="bl-reader-head">
         <button
@@ -1346,6 +1685,33 @@ export function BookReader({
             ))}
           </select>
         </label>
+
+        <div
+          className="bl-reader-mode"
+          role="group"
+          aria-label="Reading mode"
+        >
+          <button
+            type="button"
+            className={readerMode === "scroll" ? "is-on" : ""}
+            aria-pressed={readerMode === "scroll"}
+            onClick={() => changeReaderMode("scroll")}
+            title="Scroll through one complete chapter"
+          >
+            <Rows size={14} aria-hidden />
+            <span>Chapter scroll</span>
+          </button>
+          <button
+            type="button"
+            className={readerMode === "pages" ? "is-on" : ""}
+            aria-pressed={readerMode === "pages"}
+            onClick={() => changeReaderMode("pages")}
+            title="Fit one page and turn with the keyboard or a swipe"
+          >
+            <BookOpenText size={14} aria-hidden />
+            <span>Pages</span>
+          </button>
+        </div>
 
         <div className="bl-reader-size" aria-label="Text size">
           <button
@@ -1417,17 +1783,7 @@ export function BookReader({
           </label>
         </div>
 
-        <button
-          type="button"
-          className="bl-imprint-btn"
-          disabled={imprintBusy || showContents}
-          onClick={() => void openChapterImprint(false)}
-          title="Animated chapter summary + quiz"
-        >
-          {imprintBusy ? "…" : "Imprint"}
-        </button>
       </div>
-      {imprintError ? <p className="bl-imprint-error">{imprintError}</p> : null}
 
       <div className={`bl-reader-stage-wrap${leaf.active ? " is-free-leaf" : ""}`}>
         {showContents ? (
@@ -1479,7 +1835,9 @@ export function BookReader({
                 <p>This EPUB does not include a chapter list.</p>
               )}
               <p className="bl-reader-toc-hint">
-                ↓ scroll · ← back · Enter or → next
+                {readerMode === "scroll"
+                  ? "↓ scroll this chapter · Enter or → next chapter"
+                  : "← previous page · Enter or → next page"}
               </p>
             </div>
           </section>
@@ -1684,13 +2042,6 @@ export function BookReader({
 
       {closePrompt && <div className="bl-bookmark-prompt" role="dialog" aria-modal="true" aria-label="Save reading position"><div><p>Where did you leave off?</p><h2>{selection ? "Use the sentence you highlighted?" : "Highlight a sentence, or save this page."}</h2><div>{selection && <button type="button" className="is-primary" onClick={() => savePlace(selection)}>Save highlighted point</button>}<button type="button" onClick={() => savePlace(null)}>Save current page</button><button type="button" onClick={onClose}>Close without changing bookmark</button><button type="button" className="bl-prompt-cancel" onClick={() => setClosePrompt(false)}>Keep reading</button></div></div></div>}
 
-      {imprint ? (
-        <ChapterImprintView
-          imprint={imprint}
-          onClose={() => setImprint(null)}
-          onRebuild={() => void openChapterImprint(true)}
-        />
-      ) : null}
     </div>
   );
 }
