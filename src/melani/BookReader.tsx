@@ -7,8 +7,11 @@ import {
   Plus,
   BookmarkSimple,
   HighlighterCircle,
+  Moon,
   NotePencil,
   X,
+  Sun,
+  TextAa,
 } from "@phosphor-icons/react";
 import ePub, {
   type Book as EpubBook,
@@ -26,6 +29,12 @@ import {
   type ChapterImprint,
 } from "./chapterImprint";
 import { ChapterImprintView } from "./ChapterImprintView";
+import {
+  readingFontStack,
+  READING_FONT_OPTIONS,
+  type BooksTheme,
+  type ReadingFont,
+} from "./booksPreferences";
 
 /** Soft light-pink default for highlights (clean, not muddy yellow) */
 const HIGHLIGHT_PINK = {
@@ -97,6 +106,10 @@ const IDLE_LEAF: LeafPose = {
 type ReaderProps = {
   book: Book;
   startCfi?: string;
+  theme: BooksTheme;
+  font: ReadingFont;
+  onThemeChange: (theme: BooksTheme) => void;
+  onFontChange: (font: ReadingFont) => void;
   onClose: () => void;
   onProgress: (cfi: string, progress: number) => void;
   onBookmark: (bookmark: Book["smartBookmark"] | undefined) => void;
@@ -127,7 +140,59 @@ function sameDocument(left: string, right: string): boolean {
   return Boolean(a && b) && (a === b || a.endsWith(`/${b}`) || b.endsWith(`/${a}`));
 }
 
-export function BookReader({ book, startCfi, onClose, onProgress, onBookmark, onSaveQuote }: ReaderProps) {
+function readerThemeRules(theme: BooksTheme, font: ReadingFont) {
+  const light = theme === "light";
+  const ink = light ? "#29251f" : "#eee9df";
+  const heading = light ? "#17140f" : "#fffaf0";
+  const paper = light ? "#fffaf1" : "#151311";
+  return {
+    "html, body": {
+      color: `${ink} !important`,
+      background: `${paper} !important`,
+      "font-family": `${readingFontStack(font)} !important`,
+    },
+    body: {
+      color: `${ink} !important`,
+      background: `${paper} !important`,
+      "font-family": `${readingFontStack(font)} !important`,
+      "font-kerning": "normal !important",
+      "line-height": "1.58 !important",
+      margin: "0 auto !important",
+      padding: "clamp(28px, 6vh, 68px) clamp(24px, 7vw, 82px) !important",
+      "max-width": "52rem !important",
+      "box-sizing": "border-box !important",
+    },
+    "p, li, dd, dt, blockquote": {
+      color: `${ink} !important`,
+      "font-family": `${readingFontStack(font)} !important`,
+      "line-height": "1.58 !important",
+    },
+    "h1, h2, h3, h4, h5, h6": {
+      color: `${heading} !important`,
+      "font-family": `${readingFontStack(font)} !important`,
+      "line-height": "1.12 !important",
+      "letter-spacing": "-0.018em !important",
+    },
+    a: { color: `${light ? "#7655a6" : "#c5a9f0"} !important` },
+    hr: {
+      border: "0 !important",
+      "border-top": `1px solid ${light ? "#ded4c5" : "#39342f"} !important`,
+    },
+  };
+}
+
+export function BookReader({
+  book,
+  startCfi,
+  theme,
+  font,
+  onThemeChange,
+  onFontChange,
+  onClose,
+  onProgress,
+  onBookmark,
+  onSaveQuote,
+}: ReaderProps) {
   const resumableCfi = startCfi
     || book.smartBookmark?.cfi
     || ((book.localReaderProgress || 0) >= 0.01 ? book.readerCfi : undefined);
@@ -660,20 +725,7 @@ export function BookReader({ book, startCfi, onClose, onProgress, onBookmark, on
     epubRef.current = epub;
     renditionRef.current = rendition;
 
-    rendition.themes.default({
-      body: {
-        color: "#e9e7e2 !important",
-        background: "#080808 !important",
-        "font-family": 'Georgia, "Times New Roman", serif !important',
-        "line-height": "1 !important",
-        padding: "0 3% !important",
-      },
-      p: { color: "#e9e7e2 !important" },
-      h1: { color: "#ffffff !important" },
-      h2: { color: "#ffffff !important" },
-      h3: { color: "#ffffff !important" },
-      a: { color: "#9bbce7 !important" },
-    });
+    rendition.themes.default(readerThemeRules(theme, font));
 
     let disposed = false;
     const contentCleanups: Array<() => void> = [];
@@ -1024,10 +1076,18 @@ export function BookReader({ book, startCfi, onClose, onProgress, onBookmark, on
     renditionRef.current?.themes.fontSize(`${fontSize}%`);
   }, [fontSize]);
 
+  useEffect(() => {
+    renditionRef.current?.themes.default(readerThemeRules(theme, font));
+  }, [theme, font]);
+
   const progressLabel = `${Math.round(progress * 100)}%`;
 
   return (
-    <div className={`bl-reader ${isNarrow ? "is-scroll-reader" : "is-page-reader"}`}>
+    <div
+      className={`bl-reader ${isNarrow ? "is-scroll-reader" : "is-page-reader"}`}
+      data-reader-theme={theme}
+      data-reader-font={font}
+    >
       <header className="bl-reader-head">
         <button
           type="button"
@@ -1122,6 +1182,52 @@ export function BookReader({ book, startCfi, onClose, onProgress, onBookmark, on
           >
             <Plus size={14} weight="bold" aria-hidden />
           </button>
+        </div>
+
+        <div className="bl-reader-appearance" aria-label="Reader appearance">
+          <div
+            className="bl-reader-theme"
+            role="group"
+            aria-label="Reading theme"
+          >
+            <button
+              type="button"
+              className={theme === "light" ? "is-on" : ""}
+              aria-pressed={theme === "light"}
+              onClick={() => onThemeChange("light")}
+              title="Light reading theme"
+            >
+              <Sun size={14} aria-hidden />
+              <span>Light</span>
+            </button>
+            <button
+              type="button"
+              className={theme === "dark" ? "is-on" : ""}
+              aria-pressed={theme === "dark"}
+              onClick={() => onThemeChange("dark")}
+              title="Dark reading theme"
+            >
+              <Moon size={14} aria-hidden />
+              <span>Dark</span>
+            </button>
+          </div>
+          <label className="bl-reader-font">
+            <TextAa size={15} aria-hidden />
+            <span className="bl-sr-only">Reading font</span>
+            <select
+              aria-label="Reading font"
+              value={font}
+              onChange={(event) =>
+                onFontChange(event.target.value as ReadingFont)
+              }
+            >
+              {READING_FONT_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <button

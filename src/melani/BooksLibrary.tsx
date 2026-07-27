@@ -20,10 +20,13 @@ import {
   FolderPlus,
   FolderSimple,
   MagnifyingGlass,
+  Moon,
   NotePencil,
   PencilSimple,
   Plus,
   Quotes,
+  Sun,
+  TextAa,
   X,
 } from "@phosphor-icons/react";
 import { MinimalIcon } from "../components/MinimalIcon";
@@ -70,6 +73,13 @@ import {
   type BookDiscoveryRequest,
   type BookDiscoveryResult,
 } from "./bookDiscovery";
+import {
+  loadBooksPreferences,
+  READING_FONT_OPTIONS,
+  saveBooksPreferences,
+  type BooksTheme,
+  type ReadingFont,
+} from "./booksPreferences";
 import "./books-library.css";
 
 const BookReader = lazy(async () => {
@@ -113,6 +123,66 @@ function isBookStatusFilter(filter: Filter): filter is BookStatus {
     filter === "paused"
   );
 }
+
+function BooksAppearanceControls({
+  theme,
+  font,
+  onTheme,
+  onFont,
+  compact = false,
+}: {
+  theme: BooksTheme;
+  font: ReadingFont;
+  onTheme: (theme: BooksTheme) => void;
+  onFont: (font: ReadingFont) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={`bl-appearance${compact ? " is-compact" : ""}`}
+      aria-label="Bookshelf appearance"
+    >
+      <div className="bl-theme-choice" role="group" aria-label="Reading theme">
+        <button
+          type="button"
+          className={theme === "light" ? "is-on" : ""}
+          aria-pressed={theme === "light"}
+          onClick={() => onTheme("light")}
+          title="Light reading theme"
+        >
+          <Sun size={14} aria-hidden />
+          <span>Light</span>
+        </button>
+        <button
+          type="button"
+          className={theme === "dark" ? "is-on" : ""}
+          aria-pressed={theme === "dark"}
+          onClick={() => onTheme("dark")}
+          title="Dark reading theme"
+        >
+          <Moon size={14} aria-hidden />
+          <span>Dark</span>
+        </button>
+      </div>
+      <label className="bl-font-choice">
+        <TextAa size={15} aria-hidden />
+        <span className="bl-sr-only">Reading font</span>
+        <select
+          aria-label="Reading font"
+          value={font}
+          onChange={(event) => onFont(event.target.value as ReadingFont)}
+        >
+          {READING_FONT_OPTIONS.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
 type SyncState =
   | { state: "idle"; message: string }
   | { state: "syncing"; message: string }
@@ -165,6 +235,9 @@ export function BooksLibrary({
   workspacePages?: Page[];
 }) {
   const [books, setBooks] = useState<Book[]>(() => loadBooks());
+  const [booksPreferences, setBooksPreferences] = useState(() =>
+    loadBooksPreferences()
+  );
   const [folders, setFolders] = useState<BookFolder[]>(() =>
     includeBookFolders(loadBookFolders(), loadBooks())
   );
@@ -205,6 +278,18 @@ export function BooksLibrary({
   });
   /** Deep-link applied once: ?page=pg-library&book=id&read=1 */
   const deepLinkDone = useRef(false);
+
+  useEffect(() => {
+    saveBooksPreferences(booksPreferences);
+  }, [booksPreferences]);
+
+  function setBooksTheme(theme: BooksTheme) {
+    setBooksPreferences((current) => ({ ...current, theme }));
+  }
+
+  function setReadingFont(font: ReadingFont) {
+    setBooksPreferences((current) => ({ ...current, font }));
+  }
 
   // Auto-hide placement toast after a few seconds
   useEffect(() => {
@@ -925,6 +1010,10 @@ export function BooksLibrary({
         <BookReader
           book={reader}
           startCfi={readerStartCfi}
+          theme={booksPreferences.theme}
+          font={booksPreferences.font}
+          onThemeChange={setBooksTheme}
+          onFontChange={setReadingFont}
           onClose={() => {
             setReaderId(null);
             setReaderStartCfi(undefined);
@@ -959,10 +1048,21 @@ export function BooksLibrary({
       (quote) => quote.source === "apple-books"
     ).length;
     return (
-      <div className="bl bl-detail">
+      <div
+        className="bl bl-detail"
+        data-books-theme={booksPreferences.theme}
+        data-books-font={booksPreferences.font}
+      >
         <button type="button" className="bl-back" onClick={() => setOpenId(null)}>
           ← Bookshelf
         </button>
+        <BooksAppearanceControls
+          compact
+          theme={booksPreferences.theme}
+          font={booksPreferences.font}
+          onTheme={setBooksTheme}
+          onFont={setReadingFont}
+        />
 
         <div className="bl-detail-head">
           <BookCover
@@ -1344,7 +1444,11 @@ export function BooksLibrary({
   }
 
   return (
-    <div className="bl">
+    <div
+      className="bl"
+      data-books-theme={booksPreferences.theme}
+      data-books-font={booksPreferences.font}
+    >
       <header className="bl-head">
         <div className="bl-head-main">
           <div>
@@ -1382,6 +1486,12 @@ export function BooksLibrary({
               }}
             />
           </label>
+          <BooksAppearanceControls
+            theme={booksPreferences.theme}
+            font={booksPreferences.font}
+            onTheme={setBooksTheme}
+            onFont={setReadingFont}
+          />
         </div>
         <div className="bl-stats">
           <span><b>{stats.total}</b> books</span>
