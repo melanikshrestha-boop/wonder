@@ -33,6 +33,8 @@
   --page-max: 920px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --dur: 0.18s;
+  /* Single spacing everywhere */
+  --line-height: 1;
 }
 
 * {
@@ -54,7 +56,7 @@ html {
 body {
   font-family: var(--notion-serif);
   font-size: 15px;
-  line-height: 1.55;
+  line-height: var(--line-height);
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -95,7 +97,7 @@ select {
 
 .block-input {
   letter-spacing: 0.005em;
-  line-height: 1.65;
+  line-height: var(--line-height);
 }
 
 .block-input.type-code {
@@ -117,28 +119,47 @@ textarea {
     box-shadow var(--dur) var(--ease);
 }
 
-/* Soft scrollbars (less choppy feel) */
+/* Scrollbars — hairline only, no pill borders / no fat rounded chrome */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 *::-webkit-scrollbar-track {
   background: transparent;
+  border: none;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html.theme-light * {
+  scrollbar-color: rgba(26, 28, 34, 0.18) transparent;
+}
+
+html.theme-light *::-webkit-scrollbar-thumb {
+  background: rgba(26, 28, 34, 0.16);
+}
+
+html.theme-light *::-webkit-scrollbar-thumb:hover {
+  background: rgba(26, 28, 34, 0.28);
 }
 
 /* ── App shell ── */
@@ -390,7 +411,7 @@ html.is-sidebar-resizing {
 
 .sidebar-footer-note {
   font-size: 11px;
-  line-height: 1.35;
+  line-height: 1;
   color: var(--text-faint);
   padding: 4px 6px;
 }
@@ -520,7 +541,7 @@ html.is-sidebar-resizing {
 .sidebar-section-name {
   flex: 0 1 auto;
   min-width: 0;
-  line-height: 26px;
+  line-height: 1;
   display: block;
 }
 
@@ -690,6 +711,75 @@ html.is-sidebar-resizing {
   color: #fff;
 }
 
+/* Light mode: icons/text that were white on black → black on white
+   (exclude Hygiene nav accents — those stay bright color) */
+html.theme-light .side-icon,
+html.theme-light .side-icon .min-icon,
+html.theme-light .min-icon:not(.hx-nav-ic):not(.hx-title-icon):not(.hx-today-icon):not(.hx-week-ic) {
+  color: rgba(26, 28, 34, 0.72) !important;
+}
+
+html.theme-light .page-row.is-active .side-icon,
+html.theme-light .page-row:hover .side-icon,
+html.theme-light .page-row.is-active .side-icon .min-icon,
+html.theme-light .page-row:hover .side-icon .min-icon {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .sidebar-icon-btn,
+html.theme-light .sidebar-home-pill,
+html.theme-light .sidebar-search,
+html.theme-light .sidebar-section-label,
+html.theme-light .sidebar-section-toggle,
+html.theme-light .sidebar-bottom-link,
+html.theme-light .sidebar-new,
+html.theme-light .page-title-side,
+html.theme-light .page-row,
+html.theme-light .workspace-name,
+html.theme-light .sidebar-section-chev {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .sidebar-section-label:not(.is-tappable),
+html.theme-light .sidebar-section-label.is-tappable {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+
+html.theme-light .sidebar-section-label.is-tappable:hover {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .sidebar-bottom-link {
+  color: rgba(26, 28, 34, 0.55) !important;
+}
+
+html.theme-light .sidebar-bottom-link:hover,
+html.theme-light .sidebar-bottom-link.is-active {
+  color: #1a1c22 !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+html.theme-light .page-row .page-title-side {
+  color: rgba(26, 28, 34, 0.78) !important;
+}
+
+html.theme-light .page-row.is-active .page-title-side,
+html.theme-light .page-row:hover .page-title-side {
+  color: #1a1c22 !important;
+}
+
+/* SVG strokes inherit currentColor — force black in light */
+html.theme-light .sidebar svg,
+html.theme-light .sidebar svg * {
+  stroke: currentColor;
+}
+
+html.theme-light .sidebar .side-icon svg,
+html.theme-light .sidebar .sidebar-icon-btn svg,
+html.theme-light .sidebar .sidebar-search svg {
+  color: #1a1c22 !important;
+}
+
 /* Spacer when no children — same width as collapse so icons line up */
 .page-collapse-spacer {
   width: 18px;
@@ -768,7 +858,7 @@ html.is-sidebar-resizing {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 400;
-  line-height: 1.2;
+  line-height: 1;
   display: flex;
   align-items: center;
 }
@@ -873,6 +963,39 @@ html.is-sidebar-resizing {
   padding: 0 12px;
   flex-shrink: 0;
   z-index: 5;
+}
+
+/* Light · star · search · more — same box size, almost touching */
+.topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.topbar-actions .topbar-btn {
+  height: 28px;
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+  padding: 0;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: 0;
+  border-radius: 6px;
+}
+
+/* Theme label fits same height; slightly wider for "Light"/"Dark" text only */
+.topbar-actions .topbar-theme-btn {
+  width: auto;
+  min-width: 28px;
+  max-width: none;
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .topbar-btn {
@@ -1003,7 +1126,7 @@ html.is-sidebar-resizing {
     border: 0;
     background: rgba(0, 0, 0, 0.48);
     backdrop-filter: blur(2px);
-    cursor: default;
+    cursor: pointer;
   }
 
   .topbar {
@@ -1019,9 +1142,19 @@ html.is-sidebar-resizing {
   }
 }
 
+/* Desktop: never dim the page with a drawer scrim (even if the node is present) */
+.sidebar-backdrop {
+  display: none;
+}
+@media (max-width: 768px) {
+  .sidebar-backdrop {
+    display: block;
+  }
+}
 @media (min-width: 769px) {
   .sidebar-backdrop {
-    display: none;
+    display: none !important;
+    pointer-events: none !important;
   }
 }
 
@@ -1056,7 +1189,7 @@ html.is-sidebar-resizing {
   background: transparent;
   font-size: 18px; /* synced with H1 — not poster-sized */
   font-weight: 650;
-  line-height: 1.3;
+  line-height: 1;
   letter-spacing: 0;
   color: var(--text);
   padding: 2px 0;
@@ -1191,7 +1324,7 @@ html.is-sidebar-resizing {
   color: var(--text);
   font-family: var(--notion-font);
   font-size: 14px; /* body — synced with rest of app */
-  line-height: 1.45;
+  line-height: 1;
   padding: 1px 2px;
   margin: 0;
   resize: none;
@@ -1219,7 +1352,7 @@ html.is-sidebar-resizing {
 .block-input.type-heading1 {
   font-size: 18px; /* same as page title */
   font-weight: 650;
-  line-height: 1.3;
+  line-height: 1;
   margin-top: 0.75rem;
   margin-bottom: 2px;
 }
@@ -1227,7 +1360,7 @@ html.is-sidebar-resizing {
 .block-input.type-heading2 {
   font-size: 15px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1;
   margin-top: 0.65rem;
   margin-bottom: 1px;
 }
@@ -1235,7 +1368,7 @@ html.is-sidebar-resizing {
 .block-input.type-heading3 {
   font-size: 14px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1;
   margin-top: 0.55rem;
   margin-bottom: 1px;
 }
@@ -1268,7 +1401,7 @@ html.is-sidebar-resizing {
   background: var(--code-bg);
   border-radius: 4px;
   padding: 8px 12px;
-  line-height: 1.45;
+  line-height: 1;
 }
 
 .block-bullet,
@@ -1288,7 +1421,7 @@ html.is-sidebar-resizing {
   padding-top: 4px;
   color: var(--text);
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1;
   user-select: none;
 }
 
@@ -1348,7 +1481,7 @@ hr.block-divider {
 
 .block-callout-icon {
   font-size: 18px;
-  line-height: 1.4;
+  line-height: 1;
   flex-shrink: 0;
 }
 
@@ -1417,13 +1550,13 @@ hr.block-divider {
 .slash-item-name {
   font-size: 14px;
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 1;
 }
 
 .slash-item-desc {
   font-size: 12px;
   color: var(--text-faint);
-  line-height: 1.3;
+  line-height: 1;
   margin-top: 1px;
 }
 
@@ -1826,7 +1959,7 @@ hr.block-divider {
   flex: 1;
   min-width: 0;
   font-size: 14px;
-  line-height: 1.35;
+  line-height: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2015,6 +2148,264 @@ textarea {
 .main.is-melani .main-scroll {
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+/* Finances + Habits: light desk fills the main column (not black holes around content) */
+.main.is-finances,
+.main.is-habits,
+.main.is-finances .main-scroll,
+.main.is-habits .main-scroll {
+  background: #f7f7fa !important;
+}
+
+.main.is-finances .topbar,
+.main.is-habits .topbar {
+  background: #f7f7fa !important;
+  border-bottom: 0 !important;
+  color: #1a1c22;
+}
+
+.main.is-finances .topbar-meta,
+.main.is-finances .topbar-btn,
+.main.is-finances .breadcrumb-title,
+.main.is-finances .breadcrumb-sep,
+.main.is-finances .breadcrumb-link,
+.main.is-habits .topbar-meta,
+.main.is-habits .topbar-btn,
+.main.is-habits .breadcrumb-title,
+.main.is-habits .breadcrumb-sep,
+.main.is-habits .breadcrumb-link {
+  color: #1a1c22 !important;
+}
+
+.main.is-finances .topbar-btn:hover,
+.main.is-habits .topbar-btn:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+.main.is-finances .breadcrumb-link:hover,
+.main.is-habits .breadcrumb-link:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL LIGHT MODE — Habits desk white + Source Serif everywhere
+   Toggle: topbar “Light” / “Dark”. Habits page is ALWAYS light.
+   ═══════════════════════════════════════════════════════════ */
+
+html.theme-light {
+  --bg: #f7f7fa;
+  --sidebar-bg: #eef0f5;
+  --sidebar-hover: rgba(0, 0, 0, 0.05);
+  --sidebar-active: rgba(0, 0, 0, 0.08);
+  --text: #1a1c22;
+  --text-muted: rgba(26, 28, 34, 0.58);
+  --text-faint: rgba(26, 28, 34, 0.4);
+  --text-placeholder: rgba(26, 28, 34, 0.35);
+  --border: rgba(0, 0, 0, 0.08);
+  --blue: #2563eb;
+  --blue-soft: rgba(37, 99, 235, 0.1);
+  --selection: rgba(37, 99, 235, 0.18);
+  --callout-bg: rgba(0, 0, 0, 0.03);
+  --code-bg: rgba(0, 0, 0, 0.04);
+  --shadow-menu: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 16px 40px rgba(0, 0, 0, 0.12);
+  color-scheme: light;
+}
+
+html.theme-light body,
+html.theme-light #root {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+html.theme-light .sidebar {
+  background: var(--sidebar-bg) !important;
+  border-right-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+html.theme-light .main,
+html.theme-light .main-scroll,
+html.theme-light .topbar {
+  background: #f7f7fa !important;
+  color: var(--text) !important;
+}
+
+html.theme-light .topbar {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+html.theme-light .topbar-meta,
+html.theme-light .topbar-btn,
+html.theme-light .breadcrumb-title,
+html.theme-light .breadcrumb-sep,
+html.theme-light .breadcrumb-link {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .topbar-btn:hover,
+html.theme-light .breadcrumb-link:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+html.theme-light .topbar-theme-btn {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+html.theme-light .page-title-input,
+html.theme-light .block-input,
+html.theme-light .page-inner {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .sidebar .page-title-side,
+html.theme-light .sidebar .page-row,
+html.theme-light .sidebar-section-label,
+html.theme-light .sidebar-bottom-link,
+html.theme-light .sidebar-home-pill,
+html.theme-light .sidebar-search,
+html.theme-light .sidebar-new,
+html.theme-light .sidebar-tool-btn {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .sidebar-bottom-link:hover,
+html.theme-light .page-row:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #1a1c22 !important;
+}
+
+html.theme-light .more-menu,
+html.theme-light .search-modal,
+html.theme-light .slash-menu {
+  background: #fff !important;
+  color: #1a1c22 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.theme-light .more-menu button,
+html.theme-light .search-row,
+html.theme-light .slash-item {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .more-menu button:hover,
+html.theme-light .search-row:hover,
+html.theme-light .slash-item:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Mel AI panel light */
+html.theme-light .mai-root,
+html.theme-light .mai-panel {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL LIGHT TEXT SAFETY — white-on-white killers
+   Any page on the paper canvas must read as near-black type.
+   Semantic colors (green deltas, red HIGH) re-asserted in modules.
+   ═══════════════════════════════════════════════════════════ */
+html.theme-light .main-scroll,
+html.theme-light .page-inner,
+html.theme-light .notion-melani-page,
+html.theme-light .notion-melani-body,
+html.theme-light .melani-shell,
+html.theme-light .fx-page,
+html.theme-light .gx-page,
+html.theme-light .wm-page,
+html.theme-light .ct-page,
+html.theme-light .hab,
+html.theme-light .fin-page,
+html.theme-light .tasks-page,
+html.theme-light .nbb-page,
+html.theme-light .st-page,
+html.theme-light .care-page {
+  color: #1a1c22;
+}
+
+html.theme-light .main-scroll p,
+html.theme-light .page-inner p,
+html.theme-light .notion-melani-body p,
+html.theme-light .melani-shell p,
+html.theme-light .fx-page p,
+html.theme-light .lab-section-blurb,
+html.theme-light .lab-expand-text {
+  color: rgba(26, 28, 34, 0.82);
+}
+
+html.theme-light .main-scroll h1,
+html.theme-light .main-scroll h2,
+html.theme-light .main-scroll h3,
+html.theme-light .page-inner h1,
+html.theme-light .page-inner h2,
+html.theme-light .page-inner h3 {
+  color: #1a1c22;
+}
+
+/* Muted labels stay readable (not ghost) — only explicit muted classes */
+html.theme-light .text-muted,
+html.theme-light .muted {
+  color: rgba(26, 28, 34, 0.55) !important;
+}
+
+/* Fitness / Gym black canvases → Habits white when light is on */
+/* Token flip lives in fitness-exact.css — only force page bg here if needed */
+html.theme-light .fx-page {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+
+/* Fitness Yes/No + chips: leave color/bg to fitness-exact.css (selected must read) */
+html.theme-light .fx-page .fx-bm-feel,
+html.theme-light .fx-page .fx-bm-color {
+  color: rgba(26, 28, 34, 0.5);
+}
+
+html.theme-light .fx-page .fx-bm-tip {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+  color: #1a1c22;
+}
+
+html.theme-light .fx-page .fx-bm-tip-title {
+  color: #1a1c22;
+}
+
+html.theme-light .fx-page .fx-bm-tip p {
+  color: rgba(26, 28, 34, 0.65);
+}
+
+html.theme-light .fx-page .fx-bm-tip strong {
+  color: rgba(26, 28, 34, 0.4);
+}
+
+html.theme-light .gx-page,
+html.theme-light .wm-page {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+
+/* Melani dark shells → light */
+html.theme-light .main.is-melani .main-scroll {
+  background: #f7f7fa !important;
+}
+
+/* ── HABITS ALWAYS WHITE (even when global theme is dark) ── */
+.main.is-habits,
+.main.is-habits .main-scroll,
+.main.is-habits .topbar {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+
+.main.is-habits .hab {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
 }
 
 /* The upstream Wardrobe app owns its canvas; Wonder only supplies the shell. */
@@ -2235,6 +2626,7 @@ html body select {
 .notion-melani-body > .hx,
 .notion-melani-body > .wm-root,
 .notion-melani-body > .bl,
+.notion-melani-body > .hab,
 .notion-melani-body > .fx-page,
 .notion-melani-body > .fitness-exact,
 .notion-melani-body > .gym-exact,
@@ -2282,4 +2674,760 @@ html body select {
 .workspace-name {
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIGHT MODE — force EVERY agent/surface off pure black
+   (Shopping, Fitness, Books, Care, Melani, World Monitor, etc.)
+   No bordered black cards on white chrome.
+   ═══════════════════════════════════════════════════════════ */
+
+html.theme-light .notion-melani-page,
+html.theme-light .notion-melani-body,
+html.theme-light .main.is-melani,
+html.theme-light .main.is-melani .main-scroll {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+
+/* Generic black canvases → Habits white */
+html.theme-light .fx-page,
+html.theme-light .gx-page,
+html.theme-light .wm-page,
+html.theme-light .bl-page,
+html.theme-light .care-page,
+html.theme-light .melani-page,
+html.theme-light .mai-root,
+html.theme-light .mai-panel,
+html.theme-light .nbb-page,
+html.theme-light .twin-page,
+html.theme-light .hygiene-page,
+html.theme-light .tasks-page,
+html.theme-light .shop-agent {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+
+/* Kill heavy dark cards / bordered panels in light mode */
+html.theme-light .shop-run,
+html.theme-light .shop-agent [class*="card"],
+html.theme-light .fx-page [class*="card"],
+html.theme-light .bl-card,
+html.theme-light .care-panel,
+html.theme-light .mai-bubble,
+html.theme-light .wm-card {
+  background: transparent !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: none !important;
+}
+
+/* World Monitor light */
+html.theme-light .wm-page,
+html.theme-light .wm-page h1,
+html.theme-light .wm-page h2,
+html.theme-light .wm-page h3 {
+  color: #1a1c22 !important;
+}
+
+/* Books light */
+html.theme-light .bl-page,
+html.theme-light .books-library,
+html.theme-light [class^="bl-"] {
+  color: #1a1c22;
+}
+
+html.theme-light .bl-page {
+  background: #f7f7fa !important;
+}
+
+/* Care / melani — full light surface, never a half-dimmed dark canvas */
+html.theme-light .care-root,
+html.theme-light .care-concierge,
+html.theme-light .melani-root {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+html.theme-light .care-concierge .ca,
+html.theme-light .care-concierge .care-command-bar,
+html.theme-light .care-concierge .care-profile-panel {
+  background: transparent !important;
+  color: #1a1c22 !important;
+}
+/* Dark shell: Care stays black canvas */
+html.theme-dark .care-concierge,
+html:not(.theme-light) .care-concierge {
+  background: #050505 !important;
+}
+
+/* Inputs in light: no black boxes */
+/* Fitness inputs stay flat (no light-only white boxes) */
+html.theme-light .fx-page input.fx-input,
+html.theme-light .fx-page .fx-input {
+  background: transparent !important;
+  color: #1a1c22 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html.theme-light .shop-agent input,
+html.theme-light .shop-agent select,
+html.theme-light .wm-page input,
+html.theme-light .bl-page input {
+  background: #fff !important;
+  color: #1a1c22 !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color-scheme: light;
+}
+
+/* Theme toggle — same size language as neighbors (no fat pill) */
+.topbar-theme-btn {
+  font-weight: 500 !important;
+  letter-spacing: 0;
+}
+html.theme-light .topbar-theme-btn {
+  background: transparent !important;
+  border-radius: 6px !important;
+  padding: 0 6px !important;
+  min-width: 28px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIGHT MODE — readable text on every dark-first surface
+   (bg was flipped earlier; hard-coded white text still lost)
+   ═══════════════════════════════════════════════════════════ */
+
+/* Sidebar soft actions */
+html.theme-light .sidebar-new-soft {
+  color: rgba(26, 28, 34, 0.48) !important;
+}
+html.theme-light .sidebar-new-soft:hover {
+  color: #1a1c22 !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+html.theme-light .sidebar-tool-btn:hover {
+  color: #1a1c22 !important;
+}
+
+/* Whoop import bar (Fitness) */
+html.theme-light .whoop-bar-link {
+  color: rgba(26, 28, 34, 0.42) !important;
+}
+html.theme-light .whoop-bar-link:hover:not(:disabled) {
+  color: rgba(26, 28, 34, 0.78) !important;
+}
+html.theme-light .whoop-bar-status {
+  color: rgba(26, 28, 34, 0.4) !important;
+}
+
+/* ── Hygiene light mode: black text where dark uses white; keep accent icons ──
+   (rules live primarily in hygiene-exact.css; shell stays light with the app) */
+
+/* ── Gym — full light-mode ink (session checklist, home, week) ── */
+html.theme-light .gx,
+html.theme-light .gx-page {
+  color: #1a1c22 !important;
+  background: transparent !important;
+}
+html.theme-light .gx .gx-h2,
+html.theme-light .gx .gx-title,
+html.theme-light .gx .gx-sec-title,
+html.theme-light .gx .gx-ex-name,
+html.theme-light .gx h2,
+html.theme-light .gx h3,
+html.theme-light .gx h4 {
+  color: #111318 !important;
+}
+html.theme-light .gx .gx-sub,
+html.theme-light .gx .gx-back,
+html.theme-light .gx .gx-muted,
+html.theme-light .gx .gx-ex-sub,
+html.theme-light .gx .gx-ex-meta,
+html.theme-light .gx .gx-nav-text small,
+html.theme-light .gx .gx-track-body small,
+html.theme-light .gx .gx-weight-empty,
+html.theme-light .gx .gx-week-range {
+  color: rgba(26, 28, 34, 0.55) !important;
+}
+html.theme-light .gx .gx-warmup-item,
+html.theme-light .gx .gx-nav-row,
+html.theme-light .gx .gx-track-card,
+html.theme-light .gx .gx-body-key,
+html.theme-light .gx .gx-body-unit,
+html.theme-light .gx .gx-plan-type-label {
+  color: #1a1c22 !important;
+}
+html.theme-light .gx .gx-warmup-item.is-done {
+  color: rgba(26, 28, 34, 0.38) !important;
+}
+/* Blue set rows — same structure as dark mode, readable on cream */
+html.theme-light .gx .gx-set {
+  color: #2563eb !important;
+}
+html.theme-light .gx .gx-set.is-done {
+  color: rgba(26, 28, 34, 0.4) !important;
+  text-decoration: none !important;
+}
+html.theme-light .gx .gx-set.is-fail {
+  color: #db2777 !important;
+}
+html.theme-light .gx .gx-today-link,
+html.theme-light .gx .gx-save-week,
+html.theme-light .gx .gx-track-prog,
+html.theme-light .gx .gx-notes summary {
+  color: #2563eb !important;
+}
+html.theme-light .gx .gx-btn {
+  color: #1a1c22 !important;
+  border: 1px solid rgba(26, 28, 34, 0.18) !important;
+  background: rgba(26, 28, 34, 0.04) !important;
+}
+html.theme-light .gx .gx-back:hover {
+  color: #111318 !important;
+}
+html.theme-light .gx button:not(.gx-set):not(.gx-today-link):not(.gx-save-week):not(.gx-day-pick):not(.gx-weight-chart-toggle) {
+  color: #1a1c22;
+}
+html.theme-light .gx input,
+html.theme-light .gx select,
+html.theme-light .gx textarea {
+  background: transparent !important;
+  color: #1a1c22 !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ── Books / Library ── */
+html.theme-light .bl,
+html.theme-light .bl-reader,
+html.theme-light .bl-page,
+html.theme-light .books-library {
+  --bl-ink: #1a1c22 !important;
+  --bl-soft: rgba(26, 28, 34, 0.62) !important;
+  --bl-faint: rgba(26, 28, 34, 0.45) !important;
+  --bl-line: rgba(0, 0, 0, 0.1) !important;
+  --bl-panel: rgba(0, 0, 0, 0.03) !important;
+  --bl-accent: #7c5cbf !important;
+  color: #1a1c22 !important;
+  background: #f7f7fa !important;
+}
+/* Chrome / labels — NOT every button (folder icons keep their accent) */
+html.theme-light .bl .bl-title,
+html.theme-light .bl .bl-stats,
+html.theme-light .bl .bl-stats b,
+html.theme-light .bl .bl-view-tabs button,
+html.theme-light .bl .bl-toolbar button,
+html.theme-light .bl .bl-sync,
+html.theme-light .bl .bl-add-btn,
+html.theme-light .bl .bl-folder-add-btn,
+html.theme-light .bl .bl-folder-edit,
+html.theme-light .bl .bl-folder-caret {
+  color: rgba(26, 28, 34, 0.72) !important;
+}
+html.theme-light .bl .bl-folder {
+  color: #1a1c22 !important;
+  background: transparent !important;
+}
+html.theme-light .bl .bl-folder strong {
+  color: #1a1c22 !important;
+}
+html.theme-light .bl .bl-folder small {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+/* Per-folder accent colors must survive light mode (do not paint icons black) */
+html.theme-light .bl .bl-folder-icon,
+html.theme-light .bl .bl-folder-icon svg,
+html.theme-light .bl .bl-shelf .bl-folder-icon {
+  color: var(--bl-folder-accent) !important;
+  fill: var(--bl-folder-accent) !important;
+}
+html.theme-light .bl .bl-folder:hover,
+html.theme-light .bl .bl-shelf.is-open .bl-folder {
+  background: color-mix(in srgb, var(--bl-folder-accent) 12%, transparent) !important;
+}
+html.theme-light .bl .bl-shelf.is-drop-target {
+  background: color-mix(in srgb, var(--bl-folder-accent) 14%, transparent) !important;
+  outline-color: color-mix(in srgb, var(--bl-folder-accent) 55%, transparent) !important;
+}
+html.theme-light .bl .bl-view-tabs button.is-on {
+  color: #1a1c22 !important;
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+/* Status chips keep their tone colors in light mode */
+html.theme-light .bl .bl-chip.is-on,
+html.theme-light .bl .bl-status-pill.is-on,
+html.theme-light .bl .bl-page-leaf.is-on {
+  color: #1a1c22 !important;
+}
+html.theme-light .bl .bl-status-pill[data-status="reading"],
+html.theme-light .bl .bl-chip[data-status="reading"] {
+  color: #0e7490 !important;
+}
+html.theme-light .bl .bl-status-pill[data-status="want"],
+html.theme-light .bl .bl-chip[data-status="want"] {
+  color: #6d28d9 !important;
+}
+html.theme-light .bl .bl-status-pill[data-status="paused"],
+html.theme-light .bl .bl-chip[data-status="paused"] {
+  color: #a16207 !important;
+}
+html.theme-light .bl .bl-status-pill[data-status="finished"],
+html.theme-light .bl .bl-chip[data-status="finished"] {
+  color: #047857 !important;
+}
+html.theme-light .bl .bl-faint,
+html.theme-light .bl .bl-want-hint,
+html.theme-light .bl .bl-reader-loading {
+  color: rgba(26, 28, 34, 0.42) !important;
+}
+html.theme-light .bl .bl-greats-link {
+  color: #1d4ed8 !important;
+}
+html.theme-light .bl .bl-greats-link:hover {
+  color: #1e40af !important;
+}
+html.theme-light .bl .bl-greats-link-url {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+html.theme-light .bl input,
+html.theme-light .bl select,
+html.theme-light .bl textarea {
+  background: #fff !important;
+  color: #1a1c22 !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ── World Monitor ── */
+html.theme-light .wm-page {
+  --wm-bg: #f7f7fa !important;
+  --wm-text: #1a1c22 !important;
+  --wm-muted: rgba(26, 28, 34, 0.55) !important;
+  --wm-faint: rgba(26, 28, 34, 0.4) !important;
+  --wm-line: rgba(0, 0, 0, 0.08) !important;
+  --wm-line-strong: rgba(0, 0, 0, 0.12) !important;
+  --wm-panel: transparent !important;
+  --wm-panel-2: transparent !important;
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+html.theme-light .wm-page .wm-title,
+html.theme-light .wm-page h1,
+html.theme-light .wm-page h2,
+html.theme-light .wm-page h3,
+html.theme-light .wm-page strong {
+  color: #1a1c22 !important;
+}
+html.theme-light .wm-page .wm-kicker,
+html.theme-light .wm-page .wm-sub,
+html.theme-light .wm-page .wm-status-line,
+html.theme-light .wm-page .wm-text-btn,
+html.theme-light .wm-page button {
+  color: rgba(26, 28, 34, 0.55) !important;
+}
+html.theme-light .wm-page .wm-text-btn:hover,
+html.theme-light .wm-page button:hover {
+  color: #1a1c22 !important;
+}
+html.theme-light .wm-page input,
+html.theme-light .wm-page select,
+html.theme-light .wm-page textarea {
+  background: #fff !important;
+  color: #1a1c22 !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ── Gmail connector ── */
+html.theme-light .gc {
+  color: #1a1c22 !important;
+  background: #f7f7fa !important;
+}
+html.theme-light .gc .gc-h2 {
+  color: #1a1c22 !important;
+}
+html.theme-light .gc .gc-muted,
+html.theme-light .gc .gc-label {
+  color: rgba(26, 28, 34, 0.5) !important;
+}
+html.theme-light .gc .gc-steps,
+html.theme-light .gc li,
+html.theme-light .gc p,
+html.theme-light .gc span {
+  color: rgba(26, 28, 34, 0.78) !important;
+}
+html.theme-light .gc .gc-link {
+  color: #2563eb !important;
+}
+html.theme-light .gc .gc-input {
+  background: #fff !important;
+  color: #1a1c22 !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+html.theme-light .gc .gc-btn {
+  color: #1a1c22 !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  background: #fff !important;
+}
+
+/* ── Tasks ── */
+html.theme-light .tasks-page {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+html.theme-light .tasks-page header span,
+html.theme-light .tasks-page article span,
+html.theme-light .tasks-empty {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+html.theme-light .tasks-page article strong,
+html.theme-light .tasks-page header h1 {
+  color: #1a1c22 !important;
+}
+html.theme-light .tasks-add input {
+  color: #1a1c22 !important;
+  border-bottom-color: rgba(0, 0, 0, 0.15) !important;
+}
+html.theme-light .tasks-add button {
+  background: #1a1c22 !important;
+  color: #fff !important;
+}
+html.theme-light .tasks-check {
+  border-color: rgba(0, 0, 0, 0.25) !important;
+}
+html.theme-light .is-done .tasks-check {
+  background: #1a1c22 !important;
+  color: #fff !important;
+}
+html.theme-light .tasks-page section,
+html.theme-light .tasks-page article {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ── Fitness residual ink (do NOT force .fx-bf-tap — kills Yes/No on-state) ── */
+html.theme-light .fx-page {
+  color: #1a1c22 !important;
+}
+html.theme-light .fx-page .fx-h2,
+html.theme-light .fx-page .fx-muted,
+html.theme-light .fx-page .fx-bowel-meta,
+html.theme-light .fx-page .fx-bf-summary {
+  color: rgba(26, 28, 34, 0.5) !important;
+}
+/* Unselected Yes/No only — never blanket-override .is-on */
+html.theme-light .fx-page .fx-bf-tap:not(.is-on) {
+  color: rgba(26, 28, 34, 0.55);
+}
+html.theme-light .fx-page .fx-val,
+html.theme-light .fx-page .fx-key,
+html.theme-light .fx-page .fx-line {
+  color: #1a1c22 !important;
+}
+
+/* Final lock: bowel selected states always win over later theme rules */
+html.theme-light .fx-page .fx-bm-yes.is-on {
+  color: #16a34a !important;
+  background: rgba(22, 163, 74, 0.12) !important;
+}
+html.theme-light .fx-page .fx-bm-no.is-on {
+  color: #dc2626 !important;
+  background: rgba(220, 38, 38, 0.1) !important;
+}
+html.theme-light .fx-page .fx-bf-day.is-bm {
+  color: #16a34a !important;
+  background: rgba(22, 163, 74, 0.1) !important;
+}
+html.theme-light .fx-page .fx-bf-day.is-bm-no {
+  color: #dc2626 !important;
+  background: rgba(220, 38, 38, 0.08) !important;
+}
+html.theme-light .fx-page .fx-bm-chip.is-on .fx-bm-chip-btn {
+  color: #14532d !important;
+  background: rgba(22, 163, 74, 0.16) !important;
+  box-shadow: inset 0 0 0 1.5px rgba(22, 163, 74, 0.7) !important;
+}
+
+/* Mel — light canvas; bubble is flat topbar control (not a white ball) */
+html.theme-light .mai-root,
+html.theme-light .mai-panel {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+html.theme-light .mai-bubble {
+  background: transparent !important;
+  color: rgba(26, 28, 34, 0.55) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+html.theme-light .mai-msg.is-user,
+html.theme-light .mai-msg.is-ai {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #1a1c22 !important;
+}
+html.theme-light .mai-msg.is-user {
+  color: rgba(26, 28, 34, 0.62) !important;
+}
+html.theme-light .mai-input {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(26, 28, 34, 0.14) !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+html.theme-light .mai-send {
+  background: transparent !important;
+  color: rgba(26, 28, 34, 0.55) !important;
+  border-radius: 0 !important;
+}
+
+/* Gym week strip + plan headings */
+html.theme-light .gx .gx-plan-heading,
+html.theme-light .gx .gx-week-date,
+html.theme-light .gx .gx-week-range {
+  color: rgba(26, 28, 34, 0.55) !important;
+}
+html.theme-light .gx .gx-plan-heading {
+  color: #1a1c22 !important;
+}
+html.theme-light .gx .gx-week-day {
+  color: #1a1c22 !important;
+}
+html.theme-light .gx .gx-week-date {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+html.theme-light .gx .gx-week-cell.is-today .gx-week-day {
+  color: #2563eb !important;
+}
+html.theme-light .gx .gx-day-pick {
+  color: rgba(26, 28, 34, 0.35) !important;
+}
+html.theme-light .gx .gx-day-pick.is-on {
+  color: #2563eb !important;
+}
+html.theme-light .gx .gx-choose-toggle {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+/* Square set checkboxes must keep all four borders (global hairline kill strips top/bottom) */
+html.theme-light .gx .gx-set-box,
+.gx .gx-set-box {
+  border-top-width: 1.5px !important;
+  border-right-width: 1.5px !important;
+  border-bottom-width: 1.5px !important;
+  border-left-width: 1.5px !important;
+  border-top-style: solid !important;
+  border-right-style: solid !important;
+  border-bottom-style: solid !important;
+  border-left-style: solid !important;
+}
+html.theme-light .gx .gx-set-box {
+  border-color: rgba(26, 28, 34, 0.45) !important;
+  background: transparent !important;
+  color: #1a1c22 !important;
+}
+html.theme-light .gx .gx-set.is-done .gx-set-box {
+  border-color: #16a34a !important;
+  background: #16a34a !important;
+  color: #fff !important;
+}
+html.theme-light .gx {
+  color: #1a1c22 !important;
+}
+
+/* World Monitor metric values */
+html.theme-light .wm-page .val,
+html.theme-light .wm-page .wm-macro-cell .val,
+html.theme-light .wm-page .wm-macro-cell,
+html.theme-light .wm-page span,
+html.theme-light .wm-page p {
+  color: inherit;
+}
+html.theme-light .wm-page .val {
+  color: #1a1c22 !important;
+}
+
+/* Books toolbar / view tabs residual */
+html.theme-light .bl .bl-toolbar,
+html.theme-light .bl .bl-toolbar button,
+html.theme-light .bl .bl-view-tabs button,
+html.theme-light .bl .bl-sync,
+html.theme-light .bl .bl-add-btn {
+  color: rgba(26, 28, 34, 0.65) !important;
+}
+html.theme-light .bl .bl-view-tabs button.is-on {
+  color: #1a1c22 !important;
+  font-weight: 600;
+}
+html.theme-light .bl .bl-title {
+  color: #1a1c22 !important;
+}
+
+/* Gmail ghost / secondary buttons */
+html.theme-light .gc .gc-btn-ghost,
+html.theme-light .gc a.gc-btn-ghost {
+  color: rgba(26, 28, 34, 0.65) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  background: transparent !important;
+}
+
+/* Hygiene nav labels: light mode black text (icons keep accents in hygiene-exact.css) */
+html.theme-light .hx .hx-nav-label,
+html.theme-light .hx .hx-nav-row .hx-nav-label,
+html.theme-light .hx .hx-nav-pm .hx-nav-label {
+  color: #1a1c22 !important;
+}
+html.theme-light .hx .hx-nav-row:hover .hx-nav-label,
+html.theme-light .hx .hx-nav-row.is-on .hx-nav-label {
+  color: #0a0b0e !important;
+}
+html.theme-light .hx .hx-nav-chev,
+html.theme-light .hx .hx-nav-pm .hx-nav-chev {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+html.theme-light .hx .hx-nav-sub,
+html.theme-light .hx .hx-nav-pm .hx-nav-sub {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+
+/* Books download hint */
+html.theme-light .bl .bl-download-hint,
+html.theme-light .bl .bl-download-hint strong {
+  color: rgba(26, 28, 34, 0.62) !important;
+}
+html.theme-light .bl .bl-download-hint strong {
+  color: #1a1c22 !important;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NO DIVIDERS — user ban on hairlines / border-top / border-bottom
+   across Wonder content (structure stays; chrome lines die)
+   ═══════════════════════════════════════════════════════════ */
+
+html,
+html.theme-light,
+html.theme-dark {
+  --wd-hairline: transparent !important;
+  --wd-hairline-strong: transparent !important;
+  --bl-line: transparent !important;
+  --wm-line: transparent !important;
+  --wm-line-strong: transparent !important;
+  --fx-line: transparent !important;
+  --m-border: transparent !important;
+  --line: transparent !important;
+  --fc-line: transparent !important;
+  --fc-line-strong: transparent !important;
+}
+
+/* Fitness / Gym / Hygiene / Finances / WM / Shop / Books / Mel / Habits */
+.fx-page,
+.fx-page *:not(.gx-set-box):not(.gx-body-input),
+.gx-page,
+.gx-page *:not(.gx-set-box):not(.gx-body-input),
+.hx,
+.hx *,
+.wd,
+.wd *,
+.wm-page,
+.wm-page *,
+.shop-agent,
+.shop-agent *,
+.bl,
+.bl *,
+.bl-page,
+.bl-page *,
+.hab,
+.hab *,
+.mai-root,
+.mai-root *:not(.mai-input):not(.mai-quick):not(.mai-form),
+.mai-panel,
+.mai-panel *:not(.mai-input):not(.mai-quick):not(.mai-form),
+.care-concierge,
+.care-concierge *,
+.gc,
+.gc *,
+.nbb-page,
+.nbb-page *,
+.tasks-page,
+.tasks-page *,
+.main-scroll,
+.main-scroll *:not(.gx-set-box):not(.gx-body-input),
+.topbar,
+.sidebar,
+.sidebar * {
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+  border-top-style: none !important;
+  border-bottom-style: none !important;
+}
+
+/* Explicit class kill list (common dividers) */
+.fx-subnav,
+.wd-subnav,
+.wd-subnav-bar,
+.shop-hero,
+.shop-connect,
+.shop-order-list article,
+.shop-stock-row,
+.wm-head,
+.wm-section,
+.bl-head,
+.collection-nav,
+.hab-head,
+.page-row,
+.section-label,
+.sidebar-section-label {
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ═══════════════════════════════════════════
+   Universal single spacing — every page
+   line-height is 1 everywhere (one token).
+   Icon chrome may keep lh 0 where needed.
+   ═══════════════════════════════════════════ */
+/* Hard lock: single-spaced text on every surface */
+html,
+body,
+#root,
+.main-scroll,
+.page-scroll,
+.page-inner,
+.page-content,
+.block-input,
+textarea,
+input,
+select,
+.main-scroll p,
+.main-scroll li,
+.main-scroll td,
+.main-scroll th,
+.main-scroll label,
+.main-scroll h1,
+.main-scroll h2,
+.main-scroll h3,
+.main-scroll h4,
+.main-scroll h5,
+.main-scroll h6,
+.main-scroll a,
+.main-scroll span,
+.main-scroll div,
+.mai-root,
+.mai-msg,
+.mai-bubble,
+.mai-input,
+.fin,
+.bl,
+.hab,
+.fx,
+.gx,
+.hx,
+.shop,
+.wd,
+.care-concierge,
+.gc,
+.tasks-page,
+.nbb-page,
+.whoop,
+.wl,
+.focus-overlay {
+  line-height: 1 !important;
 }

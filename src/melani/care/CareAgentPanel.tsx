@@ -1,19 +1,13 @@
 /**
- * Care agent panel — the surface for the due engine, the profile vault, and
- * the standing send authorisation.
+ * Care agent panel — due engine, profile vault, standing call-prep.
  *
- * Three sections, in the order the agent uses them:
- *   1. Due now      — what it found without being asked, and the one action
- *   2. Your details — the vault; every field here removes a callback
- *   3. Auto-send    — the standing grant, its limits, and the audit log
+ * Booking reality (US clinics):
+ *   1. Phone call to the front desk  ← default path
+ *   2. Patient portal / book-online  ← second
+ *   3. Email                         ← rare last resort (most offices ignore it)
  *
- * The vault is deliberately blunt about what is missing. A booking request
- * without a date of birth does not fail loudly, it just produces a phone call
- * three days later, so the panel names the gaps up front.
- *
- * Everything here stays in this browser's localStorage. Nothing is
- * transmitted by this page — it cannot be; a static page holds no mail
- * credential. Sends happen through an authorised handoff.
+ * This panel never pretends to "email the dentist." It builds a call script,
+ * one-tap dial, or portal paste — then you log the appointment after it lands.
  */
 import { useMemo, useState } from "react";
 import {
@@ -29,7 +23,11 @@ import {
   buildHandoff,
   emptyGrant,
   missingFields,
+  portalHref,
+  recordSend,
+  telHref,
   type AutoSendGrant,
+  type BookingChannel,
 } from "./composer";
 import { loadCareState, saveCareState } from "./store";
 import type { CareProfile, CareState } from "./types";
@@ -46,8 +44,8 @@ const PROFILE_FIELDS: {
   { key: "firstName", label: "First name", group: "Identity", required: true },
   { key: "lastName", label: "Last name", group: "Identity", required: true },
   { key: "dateOfBirth", label: "Date of birth", type: "date", group: "Identity", required: true },
-  { key: "phone", label: "Phone", type: "tel", placeholder: "555-0142", group: "Identity", required: true },
-  { key: "email", label: "Email", type: "email", group: "Identity" },
+  { key: "phone", label: "Your phone", type: "tel", placeholder: "callback number", group: "Identity", required: true },
+  { key: "email", label: "Your email", type: "email", placeholder: "for portals / confirmations only", group: "Identity" },
 
   { key: "insuranceCarrier", label: "Carrier", placeholder: "Aetna", group: "Insurance" },
   { key: "insurancePlanName", label: "Plan name", placeholder: "Open Choice PPO", group: "Insurance" },
@@ -72,6 +70,12 @@ const PROFILE_FIELDS: {
 const GROUPS = ["Identity", "Insurance", "Care team", "Clinical", "When you can go"];
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
+const CHANNEL_LABEL: Record<BookingChannel, string> = {
+  phone: "Phone call",
+  portal: "Portal / web",
+  email: "Email (last resort)",
+};
+
 function historyOf(state: CareState): CareHistory {
   return state.history
     ? {
@@ -83,13 +87,26 @@ function historyOf(state: CareState): CareHistory {
 }
 
 function grantOf(state: CareState): AutoSendGrant {
-  return state.grant ? { ...emptyGrant(), ...state.grant } : emptyGrant();
+  const base = emptyGrant();
+  if (!state.grant) return base;
+  // Migrate old email-only grants → phone + portal (how people actually book)
+  const channels = state.grant.channels?.length
+    ? (state.grant.channels as BookingChannel[])
+    : base.channels;
+  const migrated =
+    channels.length === 1 && channels[0] === "email" ? (["phone", "portal"] as BookingChannel[]) : channels;
+  return { ...base, ...state.grant, channels: migrated };
+}
+
+function channelClass(channel: BookingChannel): string {
+  return channel === "phone" ? "phone" : channel === "portal" ? "portal" : "email";
 }
 
 export function CareAgentPanel() {
   const [state, setState] = useState<CareState>(() => loadCareState());
-  const [tab, setTab] = useState<"due" | "details" | "auto">("due");
+  const [tab, setTab] = useState<"due" | "details" | "prep">("due");
   const [openItem, setOpenItem] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
 
   const profile = state.profile;
   const history = useMemo(() => historyOf(state), [state]);
@@ -116,10 +133,16 @@ export function CareAgentPanel() {
     commit({ ...state, grant: { ...grant, ...patch } });
   }
 
-  /** Preview exactly what would go out for a due item. */
+  function showFlash(msg: string) {
+    setFlash(msg);
+    window.setTimeout(() => setFlash(null), 2200);
+  }
+
   function previewFor(item: DueItem) {
     const provider =
-      state.providers.find((p) => p.specialty.toLowerCase().includes(item.rule.service.split("-")[0])) ||
+      state.providers.find((p) =>
+        p.specialty.toLowerCase().includes(item.rule.service.split("-")[0])
+      ) ||
       state.providers[0] ||
       null;
     const request = {
@@ -136,7 +159,7 @@ export function CareAgentPanel() {
       reason: item.rule.reason,
       notes: "",
       status: "ready-for-review" as const,
-      missing: [],
+      missing: [] as string[],
       sourceText: "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -148,93 +171,179 @@ export function CareAgentPanel() {
     return buildHandoff(request, provider, profile, grant);
   }
 
+  async function copyPack(body: string, subject: string) {
+    try {
+      await navigator.clipboard?.writeText(`${subject}\n\n${body}`);
+      showFlash("Copied prep pack");
+    } catch {
+      showFlash("Could not copy — select the text manually");
+    }
+  }
+
+  function logPrep(packet: ReturnType<typeof previewFor>) {
+    patchGrant(recordSend(grant, packet.message));
+  }
+
   return (
     <section className="ca">
       <div className="ca-tabs">
-        <button className={tab === "due" ? "on" : ""} onClick={() => setTab("due")}>
+        <button type="button" className={tab === "due" ? "on" : ""} onClick={() => setTab("due")}>
           Due now {now.length ? <i>{now.length}</i> : null}
         </button>
-        <button className={tab === "details" ? "on" : ""} onClick={() => setTab("details")}>
+        <button type="button" className={tab === "details" ? "on" : ""} onClick={() => setTab("details")}>
           Your details {gaps.required.length ? <i className="bad">{gaps.required.length}</i> : null}
         </button>
-        <button className={tab === "auto" ? "on" : ""} onClick={() => setTab("auto")}>
-          Auto-send {grant.enabled ? <i className="live">on</i> : null}
+        <button type="button" className={tab === "prep" ? "on" : ""} onClick={() => setTab("prep")}>
+          Call prep {grant.enabled ? <i className="live">on</i> : null}
         </button>
       </div>
+
+      {flash && <p className="ca-flash">{flash}</p>}
 
       {/* ── Due now ─────────────────────────────────────────────── */}
       {tab === "due" && (
         <div className="ca-body">
+          <p className="ca-note">
+            Care does not cold-email clinics. When something is due, it builds a{" "}
+            <b>phone script</b> (default), a <b>portal paste</b>, or — only if nothing else
+            exists — a weak email draft. You call, book online, then log the slot.
+          </p>
+
           {gaps.required.length > 0 && (
             <p className="ca-warn">
-              Missing {gaps.required.join(", ")} — nothing can be sent until those are filled in.
-              <button onClick={() => setTab("details")}>Fill them in</button>
+              Missing {gaps.required.join(", ")} — the front desk will hang up without these.
+              <button type="button" onClick={() => setTab("details")}>
+                Fill them in
+              </button>
             </p>
           )}
 
           {now.length === 0 ? (
             <p className="ca-empty">
-              Nothing is due. Add your last-visit dates under Your details and the agent will work out
-              what's overdue on its own.
+              Nothing is due. Add last-visit dates under the tracker below — Care will surface
+              what’s overdue on its own.
             </p>
           ) : (
             <ul className="ca-due">
               {now.map((item) => {
                 const packet = previewFor(item);
                 const open = openItem === item.rule.id;
+                const ch = packet.message.channel;
+                const phone = packet.message.channel === "phone" ? packet.message.to : packet.provider?.phone || "";
+                const web =
+                  packet.message.channel === "portal"
+                    ? packet.message.to
+                    : packet.provider?.website || "";
+
                 return (
                   <li key={item.rule.id} className={`is-${item.status}`}>
                     <div className="ca-due-head">
                       <div className="ca-due-what">
                         <b>{item.rule.label}</b>
                         <span>{item.because}</span>
+                        {packet.provider?.name ? (
+                          <span className="ca-office">
+                            {packet.provider.name}
+                            {phone ? ` · ${phone}` : ""}
+                          </span>
+                        ) : (
+                          <span className="ca-office ca-office-warn">
+                            No office on file — add a provider with a phone number
+                          </span>
+                        )}
                       </div>
                       <div className="ca-due-actions">
                         <span className={`ca-pill is-${item.status}`}>
                           {item.status === "overdue"
-                            ? item.overdueDays > 0 ? `${item.overdueDays}d overdue` : "never done"
+                            ? item.overdueDays > 0
+                              ? `${item.overdueDays}d overdue`
+                              : "never done"
                             : `in ${item.daysUntilDue}d`}
                         </span>
-                        <button onClick={() => setOpenItem(open ? null : item.rule.id)}>
-                          {open ? "Hide" : "See what it'd send"}
+                        <button type="button" onClick={() => setOpenItem(open ? null : item.rule.id)}>
+                          {open ? "Hide prep" : "Prep to book"}
                         </button>
                       </div>
                     </div>
 
                     {open && (
                       <div className="ca-preview">
+                        <p className="ca-howto">{packet.message.howToBook}</p>
                         <div className="ca-preview-meta">
-                          <span className={`ca-chan is-${packet.message.channel}`}>{packet.message.channel}</span>
+                          <span className={`ca-chan is-${channelClass(ch)}`}>{CHANNEL_LABEL[ch]}</span>
                           {packet.message.to && <span className="ca-to">{packet.message.to}</span>}
                           <span className={packet.authorised ? "ca-ok" : "ca-blocked"}>
-                            {packet.authorised ? "would send automatically" : packet.authorisationReason}
+                            {packet.authorised ? "standing prep covers this" : packet.authorisationReason}
                           </span>
                         </div>
                         <div className="ca-preview-subject">{packet.message.subject}</div>
                         <pre className="ca-preview-body">{packet.message.body}</pre>
                         {packet.message.missing.length > 0 && (
                           <p className="ca-preview-missing">
-                            Offices will also ask for: {packet.message.missing.join(", ")}
+                            Front desk will also ask for: {packet.message.missing.join(", ")}
                           </p>
                         )}
+
+                        <div className="ca-preview-foot ca-preview-foot-primary">
+                          {phone ? (
+                            <a
+                              className="ca-cta ca-cta-call"
+                              href={telHref(phone)}
+                              onClick={() => logPrep(packet)}
+                            >
+                              Call office
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              className="ca-cta ca-cta-muted"
+                              onClick={() => setTab("details")}
+                            >
+                              Add office phone
+                            </button>
+                          )}
+                          {web ? (
+                            <a
+                              className="ca-cta ca-cta-portal"
+                              href={portalHref(web)}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={() => logPrep(packet)}
+                            >
+                              Open portal / site
+                            </a>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="ca-cta"
+                            onClick={() => void copyPack(packet.message.body, packet.message.subject)}
+                          >
+                            Copy script
+                          </button>
+                        </div>
+
                         <div className="ca-preview-foot">
                           <button
+                            type="button"
                             onClick={() => {
-                              void navigator.clipboard?.writeText(
-                                `${packet.message.subject}\n\n${packet.message.body}`
-                              );
+                              const today = new Date().toISOString().slice(0, 10);
+                              patchHistory(markDone(history, item.rule.id, today));
+                              logPrep(packet);
+                              setOpenItem(null);
+                              showFlash("Logged as booked — clock reset");
                             }}
                           >
-                            Copy
+                            Booked — log it
                           </button>
                           <button
+                            type="button"
                             onClick={() => {
                               const today = new Date().toISOString().slice(0, 10);
                               patchHistory(markDone(history, item.rule.id, today));
                               setOpenItem(null);
                             }}
                           >
-                            Already done — reset the clock
+                            Already done — reset clock
                           </button>
                         </div>
                       </div>
@@ -246,7 +355,7 @@ export function CareAgentPanel() {
           )}
 
           <details className="ca-all">
-            <summary>All tracked care ({DUE_RULES.length})</summary>
+            <summary>Visit tracker ({DUE_RULES.length})</summary>
             <ul className="ca-rules">
               {DUE_RULES.map((rule) => {
                 const off = history.disabled.includes(rule.id);
@@ -266,7 +375,9 @@ export function CareAgentPanel() {
                         }
                       />
                       <b>{rule.label}</b>
-                      <span>every {history.intervalOverride[rule.id] ?? rule.intervalMonths} months</span>
+                      <span>
+                        every {history.intervalOverride[rule.id] ?? rule.intervalMonths} months
+                      </span>
                     </label>
                     <input
                       className="ca-lastdone"
@@ -278,6 +389,7 @@ export function CareAgentPanel() {
                           lastDone: { ...history.lastDone, [rule.id]: e.target.value },
                         })
                       }
+                      title="Last completed"
                     />
                     <em>{rule.basis}</em>
                   </li>
@@ -292,8 +404,9 @@ export function CareAgentPanel() {
       {tab === "details" && (
         <div className="ca-body">
           <p className="ca-note">
-            Stored in this browser only. This page has no mail credential, so nothing leaves it on its own —
-            sends go through an authorised handoff.
+            Stored in this browser only. These are the answers the front desk asks on the phone —
+            name, DOB, insurance ID — so you never scramble mid-call. Your email is for portal
+            logins and appointment confirmations, not for “booking by email.”
           </p>
           {GROUPS.map((group) => (
             <div key={group} className="ca-group">
@@ -327,6 +440,7 @@ export function CareAgentPanel() {
                         return (
                           <button
                             key={i}
+                            type="button"
                             className={on ? "on" : ""}
                             onClick={() => {
                               const cur = profile.preferredDays || [];
@@ -349,8 +463,8 @@ export function CareAgentPanel() {
         </div>
       )}
 
-      {/* ── Auto-send ───────────────────────────────────────────── */}
-      {tab === "auto" && (
+      {/* ── Call prep (was “Auto-send”) ─────────────────────────── */}
+      {tab === "prep" && (
         <div className="ca-body">
           <label className="ca-toggle">
             <input
@@ -364,18 +478,34 @@ export function CareAgentPanel() {
               }
             />
             <div>
-              <b>Send without asking me each time</b>
+              <b>Standing call prep</b>
               <span>
-                Standing authorisation. Granted once here rather than per message.
-                {grant.grantedAt ? ` Given ${grant.grantedAt.slice(0, 10)}.` : ""}
+                When something is due, Care treats the pack as ready to act on (call / portal) without
+                an extra “are you sure?” — it still never emails a clinic for you.
+                {grant.grantedAt ? ` On since ${grant.grantedAt.slice(0, 10)}.` : ""}
               </span>
             </div>
           </label>
 
           <div className="ca-limits">
-            <div className="ca-limit-title">Limits that always apply</div>
+            <div className="ca-limit-title">How booking actually works</div>
             <ul>
-              <li><b>Incomplete messages never send.</b> Missing a required detail stops it and says which.</li>
+              <li>
+                <b>Phone first.</b> Most dental, specialty, and small practices only book by phone.
+                Care writes the script and dials.
+              </li>
+              <li>
+                <b>Portal second.</b> If the office has a website / MyChart-style portal, open it and
+                paste the prep block into notes.
+              </li>
+              <li>
+                <b>Email last.</b> Cold email is ignored by most front desks. Only enable it if an
+                office has no phone and no portal.
+              </li>
+              <li>
+                <b>Incomplete packs stay blocked.</b> Missing name, DOB, or your phone stops the pack
+                and names what’s missing.
+              </li>
               <li>
                 <label className="ca-inline">
                   <input
@@ -383,30 +513,32 @@ export function CareAgentPanel() {
                     checked={grant.allowCancellations}
                     onChange={(e) => patchGrant({ allowCancellations: e.target.checked })}
                   />
-                  Allow cancellations to auto-send
+                  Allow cancellation packs without extra confirm
                 </label>
-                <em>Off by default — a cancellation is hard to undo.</em>
+                <em>Off by default — cancellations are hard to undo.</em>
               </li>
               <li>
                 <label className="ca-inline">
-                  Daily cap
+                  Daily prep cap
                   <input
                     className="ca-num"
                     type="number"
-                    min="1"
-                    max="50"
+                    min={1}
+                    max={50}
                     value={grant.dailyLimit}
-                    onChange={(e) => patchGrant({ dailyLimit: Math.max(1, Number(e.target.value) || 1) })}
+                    onChange={(e) =>
+                      patchGrant({ dailyLimit: Math.max(1, Number(e.target.value) || 1) })
+                    }
                   />
-                  messages
                 </label>
-                <em>Stops a bug from mailing one office repeatedly.</em>
+                <em>Limits how many packs can be actioned in a day.</em>
               </li>
               <li>
-                Channels:{" "}
-                {(["email", "phone", "portal"] as const).map((c) => (
+                Enabled paths:{" "}
+                {(["phone", "portal", "email"] as const).map((c) => (
                   <button
                     key={c}
+                    type="button"
                     className={`ca-chan-toggle${grant.channels.includes(c) ? " on" : ""}`}
                     onClick={() =>
                       patchGrant({
@@ -416,29 +548,39 @@ export function CareAgentPanel() {
                       })
                     }
                   >
-                    {c}
+                    {CHANNEL_LABEL[c]}
                   </button>
                 ))}
-                <em>Phone can't be automated — it produces a script for you to read.</em>
               </li>
             </ul>
           </div>
 
           <div className="ca-log">
-            <div className="ca-limit-title">Sent log ({grant.log.length})</div>
+            <div className="ca-limit-title">Prep / call log ({grant.log.length})</div>
             {grant.log.length === 0 ? (
-              <p className="ca-empty">Nothing has been sent yet.</p>
+              <p className="ca-empty">Nothing logged yet. Call an office or open a portal pack.</p>
             ) : (
               <table>
-                <thead><tr><th>When</th><th>To</th><th>Subject</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Path</th>
+                    <th>What</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {[...grant.log].reverse().slice(0, 20).map((entry, i) => (
-                    <tr key={i}>
-                      <td>{entry.at.slice(0, 16).replace("T", " ")}</td>
-                      <td>{entry.to}</td>
-                      <td>{entry.subject}</td>
-                    </tr>
-                  ))}
+                  {[...grant.log]
+                    .reverse()
+                    .slice(0, 20)
+                    .map((entry, i) => (
+                      <tr key={i}>
+                        <td>{entry.at.slice(0, 16).replace("T", " ")}</td>
+                        <td>
+                          {entry.channel} · {entry.to}
+                        </td>
+                        <td>{entry.subject}</td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             )}

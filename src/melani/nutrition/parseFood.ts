@@ -88,6 +88,7 @@ const PORTION_WORDS = new Set([
   "block", "blocks", "grande", "tall", "mug", "mugs", "shot", "shots",
   "pint", "pints", "brownie", "brownies", "cake", "cakes", "omelette",
   "omelet", "burrito", "burritos", "plate", "plates", "bag", "bags", "half",
+  "box", "boxes", "pack", "packs", "sleeve", "sleeves", "stick", "sticks",
 ]);
 
 /** Singular form for portion lookups: "slices" → "slice". */
@@ -108,7 +109,27 @@ const STOP_WORDS = new Set([
   "about", "approx", "approximately", "roughly", "around", "maybe", "like",
   "had", "have", "ate", "eating", "drank", "drink", "just", "then", "also",
   "today", "breakfast", "lunch", "dinner", "snack", "i", "it", "was",
+  "ive", "i've", "im", "i'm", "really", "bad", "good", "write", "down",
+  "logged", "log", "please", "which", "is", "small", "version", "normal",
+  "usual", "usually",
 ]);
+
+/**
+ * Strip chat fluff so Mel hears the meal, not the commentary.
+ * "which is really bad" / "write it down" / "just like the small version"
+ */
+function stripFoodCommentary(text: string): string {
+  return text
+    .replace(/\bwhich is (really |so |pretty )?(bad|good|gross|fine|ok|okay)\b.*$/gi, " ")
+    .replace(/\b(that('s| is) )?(really |so )?(bad|gross|unhealthy)\b/gi, " ")
+    .replace(/\bjust like the small version\b/gi, " ")
+    .replace(/\b(write|put|note) (it|that) down\b/gi, " ")
+    .replace(/\b(please\s+)?(log|track|save) (it|that|this)\b/gi, " ")
+    .replace(/\bi (also )?had\b/gi, " and ")
+    .replace(/\bi (also )?ate\b/gi, " and ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 /**
  * Preparation adjectives. Stripped only as a fallback — several real food
@@ -228,15 +249,28 @@ function takeQuantity(phrase: string): Quantified {
   let explicit = false;
   let i = 0;
 
+  // Skip leading chatter: "i had two eggs" → start at "two"
+  while (
+    i < words.length &&
+    (STOP_WORDS.has(words[i]!) ||
+      words[i] === "had" ||
+      words[i] === "ate" ||
+      words[i] === "eaten")
+  ) {
+    // Don't skip number-words that are also weak stop ("a"/"an") if next is food
+    if (words[i] === "a" || words[i] === "an") break;
+    i += 1;
+  }
+
   // Number (digit or word), possibly repeated: "1 1/2" already folded to 1.5
   if (i < words.length) {
-    const w = words[i];
+    const w = words[i]!;
     if (/^\d+(\.\d+)?$/.test(w)) {
       qty = Number(w);
       explicit = true;
       i += 1;
     } else if (w in NUMBER_WORDS) {
-      qty = NUMBER_WORDS[w];
+      qty = NUMBER_WORDS[w]!;
       // "a"/"an" is a weak signal — do not treat it as an explicit count
       explicit = w !== "a" && w !== "an";
       i += 1;
@@ -322,7 +356,8 @@ function resolveGrams(
  * Every item carries its own confidence so the UI can flag guesses.
  */
 export function parseFoodText(text: string): ParseResult {
-  const normalized = normalize(text);
+  const cleaned = stripFoodCommentary(text);
+  const normalized = normalize(cleaned);
   const phrases = splitPhrases(normalized);
   const items: ParsedItem[] = [];
   const unmatched: string[] = [];

@@ -1,23 +1,160 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, MagicWand, Plus, Trash, X } from "@phosphor-icons/react";
+import { Plus, X } from "@phosphor-icons/react";
 import { WardrobeImportFlow } from "./import-flow.jsx";
 import { OptimizedImage } from "./OptimizedImage.jsx";
+import { StyleShopper } from "./StyleShopper.jsx";
+import { DailyGenerator } from "./DailyGenerator.jsx";
 
 const STORAGE_KEY = "open-wardrobe-edits-v1";
 const DELETED_STORAGE_KEY = "open-wardrobe-deleted-v1";
 
-const TYPES = [
-  { id: "all", label: "All" },
-  { id: "upperbody", label: "Tops", singular: "Top" },
-  { id: "dresses", label: "Dresses", singular: "Dress" },
-  { id: "wholebody_up", label: "Jackets", singular: "Jacket" },
-  { id: "lowerbody", label: "Bottoms", singular: "Bottom" },
-  { id: "accessories_up", label: "Accessories", singular: "Accessory" },
+/**
+ * Closet nav — top-level sections Melani asked for.
+ * Tops → Hoodies / Tees · Bottoms → Jeans / Sweats · then Shoes, Dresses, Jackets, All.
+ */
+const NAV = [
+  {
+    id: "tops",
+    label: "Tops",
+    singular: "Top",
+    sub: [
+      { id: "hoodies", label: "Hoodies" },
+      { id: "tees", label: "Tees" },
+    ],
+  },
+  {
+    id: "bottoms",
+    label: "Bottoms",
+    singular: "Bottom",
+    sub: [
+      { id: "jeans", label: "Jeans" },
+      { id: "sweats", label: "Sweats" },
+    ],
+  },
   { id: "shoes", label: "Shoes", singular: "Shoes" },
+  { id: "dresses", label: "Dresses", singular: "Dress" },
+  { id: "jackets", label: "Jackets", singular: "Jacket" },
+  { id: "all", label: "All" },
 ];
 
-const TYPE_MAP = Object.fromEntries(TYPES.map((type) => [type.id, type]));
-const TYPE_ORDER = Object.fromEntries(TYPES.slice(1).map((type, index) => [type.id, index]));
+const NAV_MAP = Object.fromEntries(NAV.map((n) => [n.id, n]));
+
+/** Schema `part` values still used in the editor / API */
+const PART_OPTIONS = [
+  { id: "upperbody", label: "Top (hoodie / tee)" },
+  { id: "lowerbody", label: "Bottom (jeans / sweats)" },
+  { id: "shoes", label: "Shoes" },
+  { id: "dresses", label: "Dress" },
+  { id: "wholebody_up", label: "Jacket" },
+  { id: "accessories_up", label: "Accessory" },
+];
+
+const TYPE_MAP = {
+  upperbody: { id: "upperbody", label: "Tops", singular: "Top" },
+  lowerbody: { id: "lowerbody", label: "Bottoms", singular: "Bottom" },
+  shoes: { id: "shoes", label: "Shoes", singular: "Shoes" },
+  dresses: { id: "dresses", label: "Dresses", singular: "Dress" },
+  wholebody_up: { id: "wholebody_up", label: "Jackets", singular: "Jacket" },
+  accessories_up: { id: "accessories_up", label: "Accessories", singular: "Accessory" },
+  ...Object.fromEntries(NAV.map((n) => [n.id, n])),
+  hoodies: { id: "hoodies", label: "Hoodies", singular: "Hoodie" },
+  tees: { id: "tees", label: "Tees", singular: "Tee" },
+  jeans: { id: "jeans", label: "Jeans", singular: "Jeans" },
+  sweats: { id: "sweats", label: "Sweats", singular: "Sweats" },
+};
+
+/**
+ * Smart front/back hover: only tops that actually have a distinct back design
+ * (hoodie print, graphic tee logo, jersey back). Never bottoms / shoes / jackets.
+ */
+function itemHasBackDesign(item, front, back) {
+  if (!back || !front) return false;
+  if (pathKey(back) === pathKey(front)) return false;
+  const family = itemFamily(item);
+  // Never for shoes / plain bottoms / jackets / dresses — unless the piece
+  // carries a real back graphic (e.g. NYC NEW YORK print on jeans).
+  if (family === "shoes" || family === "jackets" || family === "dresses") {
+    return false;
+  }
+  if (family === "jeans" || family === "sweats") {
+    // Only when we explicitly stored a back design (graphic / print)
+    return Boolean(item.hasBackDesign) || (item.tags || []).includes("back-print");
+  }
+  // Hoodies always eligible when back asset exists
+  if (family === "hoodies") return true;
+  // Tees / other tops: eligible when we stored a real back (logo/print side)
+  if (family === "tees" || family === "other") return true;
+  return false;
+}
+
+/** Fine-grained family: hoodies | tees | jeans | sweats | shoes | dresses | jackets | other */
+function itemFamily(item) {
+  const tags = (item.tags || []).map((t) => String(t).toLowerCase());
+  const name = String(item.name || "").toLowerCase();
+  const part = String(item.part || "").toLowerCase();
+  const blob = `${name} ${tags.join(" ")} ${part}`;
+
+  if (part === "shoes" || /\b(sneaker|sneakers|boot|boots|shoe|shoes)\b/.test(blob)) {
+    return "shoes";
+  }
+  if (part === "dresses" || /\bdress(es)?\b/.test(blob)) {
+    return "dresses";
+  }
+  if (
+    part === "wholebody_up"
+    || /\b(jacket|puffer|coat|parka|blazer|windbreaker)\b/.test(blob)
+  ) {
+    return "jackets";
+  }
+
+  // Bottoms
+  const isBottom =
+    part === "lowerbody"
+    || /\b(jean|jeans|denim|sweatpant|sweatpants|joggers?|trouser|trousers|pant|pants|bottom)\b/.test(blob);
+  if (isBottom) {
+    if (/\b(sweatpant|sweatpants|sweats|jogger|joggers)\b/.test(blob)) return "sweats";
+    if (/\b(jean|jeans|denim)\b/.test(blob)) return "jeans";
+    // default bottoms → jeans bucket (denim-first closet)
+    return "jeans";
+  }
+
+  // Tops
+  const isTop =
+    part === "upperbody"
+    || /\b(hoodie|hooded|crewneck|sweatshirt|tee|t-shirt|tshirt|shirt|top|sweater|knit)\b/.test(blob);
+  if (isTop) {
+    if (/\b(hoodie|hooded|crewneck|sweatshirt|pullover)\b/.test(blob)) return "hoodies";
+    if (/\b(tee|t-shirt|tshirt)\b/.test(blob)) return "tees";
+    // untagged tops land in tees until classified
+    return "tees";
+  }
+
+  return "other";
+}
+
+/** Top-level section for nav: tops | bottoms | shoes | dresses | jackets | other */
+function itemSection(item) {
+  const family = itemFamily(item);
+  if (family === "hoodies" || family === "tees") return "tops";
+  if (family === "jeans" || family === "sweats") return "bottoms";
+  return family;
+}
+
+const SECTION_ORDER = ["tops", "bottoms", "shoes", "dresses", "jackets"];
+const FAMILY_ORDER = {
+  tops: ["hoodies", "tees"],
+  bottoms: ["jeans", "sweats"],
+};
+const FAMILY_LABEL = {
+  hoodies: "Hoodies",
+  tees: "Tees",
+  jeans: "Jeans",
+  sweats: "Sweats",
+  shoes: "Shoes",
+  dresses: "Dresses",
+  jackets: "Jackets",
+  other: "Other",
+};
 
 
 function readEdits() {
@@ -28,6 +165,36 @@ function readEdits() {
   }
 }
 
+/**
+ * Merge a localStorage edit onto a library item.
+ * Never let null/empty edit fields wipe library composition, size, or price.
+ */
+function mergeLibraryEdit(item, edit) {
+  if (!edit) return item;
+  const editIsCurrent = (edit.analysisVersion || 0) >= (item.analysisVersion || 0);
+  if (!editIsCurrent) return item;
+  const merged = { ...item, ...edit };
+  // Prefer real library/product data when edit left materials blank
+  if (!merged.composition) {
+    merged.composition = item.composition || item.fabric?.text || null;
+  }
+  if (!merged.fabric) {
+    merged.fabric = item.fabric || (item.composition ? { text: item.composition } : null);
+  }
+  if (merged.size == null || merged.size === "") {
+    merged.size = item.size ?? null;
+  }
+  if (!merged.sizeLabel) {
+    merged.sizeLabel = item.sizeLabel || null;
+  }
+  if (merged.retailPrice == null && item.retailPrice != null) {
+    merged.retailPrice = item.retailPrice;
+  }
+  if (!merged.brand) {
+    merged.brand = item.brand || null;
+  }
+  return merged;
+}
 
 function persistEdit(item) {
   const edits = readEdits();
@@ -41,6 +208,16 @@ function persistEdit(item) {
     askingPrice: item.askingPrice || "",
     condition: item.condition || "Excellent",
     analysisVersion: item.analysisVersion || 0,
+    composition: item.composition || item.fabric?.text || null,
+    fabric: item.fabric || (item.composition ? { text: item.composition } : null),
+    fit: item.fit || "unknown",
+    size: item.size || null,
+    sizeLabel: item.sizeLabel || null,
+    brand: item.brand || null,
+    qualityNotes: item.qualityNotes || null,
+    productRef: item.productRef || null,
+    retailPrice: item.retailPrice ?? null,
+    retailCurrency: item.retailCurrency || "USD",
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(edits));
 }
@@ -158,24 +335,159 @@ function sampleImageColor(image, canvas, event) {
   return null;
 }
 
-function GalleryItem({ item, selected, onOpen }) {
+function formatRetailPrice(amount, currency = "USD") {
+  if (amount == null || amount === "") return null;
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return null;
+  // Melani sign is always $ — never show € in the wardrobe
+  void currency;
+  return n % 1 ? `$${n.toFixed(2)}` : `$${n}`;
+}
+
+/** Parse "$48" / "48" / "48.00" → number or null */
+function parseMoneyInput(value) {
+  if (value == null || value === "") return null;
+  const n = Number(String(value).replace(/[^0-9.]/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function pathKey(url) {
+  if (!url || typeof url !== "string") return "";
+  return url.split(/[?#]/, 1)[0];
+}
+
+function GalleryItem({
+  item,
+  selected,
+  onOpen,
+  hideWantBadge = false,
+  sellMode = false,
+  onAskingPriceChange,
+}) {
   const type = TYPE_MAP[item.part]?.singular || "wardrobe item";
+  const front = item.frontImage || item.image || item.thumbnail;
+  const back = item.backImage || null;
+  // Back hover when a real back design exists (hoodies, graphic tees, NYC jeans, etc.)
+  const hasBack = itemHasBackDesign(item, front, back);
+  const retail = formatRetailPrice(item.retailPrice, item.retailCurrency || "USD");
+  const askFormatted = formatRetailPrice(item.askingPrice, item.retailCurrency || "USD");
+  const sizes = "(max-width: 520px) calc(50vw - 16px), (max-width: 860px) calc(33vw - 18px), 180px";
+  const breakpoints = [120, 180, 240, 320, 480];
+  // On the Want page, "Want" badges are redundant — you're already in Want
+  const showWantBadge =
+    !hideWantBadge
+    && (item.role === "wishlist" || (item.tags || []).includes("want"));
+  // Sell mode: retail X'd out in grey · editable ask next to it
+  const [askDraft, setAskDraft] = useState(
+    item.askingPrice != null && item.askingPrice !== ""
+      ? String(item.askingPrice)
+      : "",
+  );
+  useEffect(() => {
+    setAskDraft(
+      item.askingPrice != null && item.askingPrice !== ""
+        ? String(item.askingPrice)
+        : "",
+    );
+  }, [item.id, item.askingPrice]);
+
+  const commitAsk = () => {
+    if (!onAskingPriceChange) return;
+    const parsed = parseMoneyInput(askDraft);
+    // keep draft as typed number string or empty
+    const next = parsed == null ? "" : String(parsed);
+    setAskDraft(next);
+    if (String(item.askingPrice ?? "") !== next) {
+      onAskingPriceChange(item.id, next);
+    }
+  };
 
   return (
     <button
-      className={`gallery-item${selected ? " selected" : ""}`}
+      className={[
+        "gallery-item",
+        selected ? "selected" : "",
+        item.part === "shoes" ? "is-shoe" : "",
+        hasBack ? "has-back" : "",
+        sellMode ? "is-sell" : "",
+      ].filter(Boolean).join(" ")}
       type="button"
       onClick={() => onOpen(item.id)}
-      aria-label={`View ${item.name || type}`}
+      aria-label={`Open ${item.name || type}${retail ? ` · retail ${retail}` : ""}${askFormatted ? ` · ask ${askFormatted}` : ""}${hasBack ? " · hover for back" : ""}`}
       aria-pressed={selected}
+      data-part={item.part || ""}
       data-testid={`wardrobe-item-${item.id}`}
     >
-      <OptimizedImage
-        src={item.thumbnail || item.image}
-        alt=""
-        sizes="(max-width: 520px) calc(50vw - 16px), (max-width: 860px) calc(33vw - 18px), 180px"
-        breakpoints={[120, 180, 240, 320, 480]}
-      />
+      {/* Stacked front/back — hover or keyboard focus reveals the back (logo/print side) */}
+      <span className="gallery-item-media" aria-hidden="true">
+        <OptimizedImage
+          className="gallery-img gallery-img-front"
+          src={front}
+          alt=""
+          sizes={sizes}
+          breakpoints={breakpoints}
+        />
+        {hasBack ? (
+          <OptimizedImage
+            className="gallery-img gallery-img-back"
+            src={back}
+            alt=""
+            sizes={sizes}
+            breakpoints={breakpoints}
+            loading="lazy"
+          />
+        ) : null}
+
+      </span>
+      <span className="gallery-item-meta">
+        <span className="gallery-item-name" style={{ color: "#2c2a27", WebkitTextFillColor: "#2c2a27" }}>
+          {item.name || type}
+        </span>
+        {sellMode ? (
+          <span className="gallery-item-price-row sell-price-row">
+            {retail ? (
+              <span className="gallery-item-retail-was" title="Retail / original">
+                {retail}
+              </span>
+            ) : null}
+            <span
+              className="gallery-item-ask-wrap"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <span className="gallery-item-ask-prefix" aria-hidden="true">$</span>
+              <input
+                className="gallery-item-ask-input"
+                type="text"
+                inputMode="decimal"
+                value={askDraft}
+                placeholder={item.retailPrice != null ? String(item.retailPrice) : "0"}
+                aria-label={`Your sell price for ${item.name || type}`}
+                onChange={(event) => setAskDraft(event.target.value.replace(/[^0-9.]/g, ""))}
+                onBlur={commitAsk}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    event.currentTarget.blur();
+                  }
+                  // don't let parent button steal keys
+                  event.stopPropagation();
+                }}
+              />
+            </span>
+          </span>
+        ) : retail ? (
+          <span
+            className="gallery-item-retail"
+            style={{ color: "#141210", WebkitTextFillColor: "#141210", opacity: 1 }}
+          >
+            {retail}
+          </span>
+        ) : null}
+      </span>
+      {showWantBadge ? (
+        <span className="gallery-item-badge">Want</span>
+      ) : null}
     </button>
   );
 }
@@ -300,7 +612,9 @@ function ItemEditor({ draft, setDraft, palette, sampling, setSampling, sampleSta
       <label className="field">
         <span>Category</span>
         <select value={draft.part} onChange={(event) => setDraft((current) => ({ ...current, part: event.target.value }))}>
-          {TYPES.slice(1).map((type) => <option value={type.id} key={type.id}>{type.label}</option>)}
+          {PART_OPTIONS.map((type) => (
+            <option value={type.id} key={type.id}>{type.label}</option>
+          ))}
         </select>
       </label>
 
@@ -336,235 +650,287 @@ function ItemEditor({ draft, setDraft, palette, sampling, setSampling, sampleSta
         <span>Details</span>
         <TagEditor tags={draft.tags} onChange={(tags) => setDraft((current) => ({ ...current, tags }))} />
       </div>
+
+      <label className="field">
+        <span>Fabric / composition</span>
+        <input
+          value={draft.composition || ""}
+          onChange={(event) => setDraft((current) => ({ ...current, composition: event.target.value }))}
+          placeholder="98% cotton 2% elastane · or 55% cotton 45% polyester hoodie"
+        />
+      </label>
+      <div className="field-row quality-fields">
+        <label className="field">
+          <span>Fit</span>
+          <select value={draft.fit || "unknown"} onChange={(event) => setDraft((current) => ({ ...current, fit: event.target.value }))}>
+            <option value="unknown">Unknown</option>
+            <option value="baggy">Baggy / oversized</option>
+            <option value="relaxed">Relaxed</option>
+            <option value="regular">Regular</option>
+            <option value="slim">Slim</option>
+            <option value="tight">Tight</option>
+          </select>
+        </label>
+        <label className="field">
+          <span>Size</span>
+          <input value={draft.size || ""} onChange={(event) => setDraft((current) => ({ ...current, size: event.target.value }))} placeholder="M / 28 / etc" />
+        </label>
+        <label className="field">
+          <span>Brand</span>
+          <input value={draft.brand || ""} onChange={(event) => setDraft((current) => ({ ...current, brand: event.target.value }))} placeholder="Uniqlo" />
+        </label>
+      </div>
+      <label className="field">
+        <span>Quality notes</span>
+        <input
+          value={draft.qualityNotes || ""}
+          onChange={(event) => setDraft((current) => ({ ...current, qualityNotes: event.target.value }))}
+          placeholder="best sweatpants · tailor ripped last hem"
+        />
+      </label>
+      <label className="field">
+        <span>Product link</span>
+        <input
+          value={draft.productRef || ""}
+          onChange={(event) => setDraft((current) => ({ ...current, productRef: event.target.value }))}
+          placeholder="https://…"
+          inputMode="url"
+        />
+      </label>
+      {draft.productRef ? (
+        <a
+          className="product-ref-link"
+          href={draft.productRef}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open product page ↗
+        </a>
+      ) : null}
+
+      <div className="field-row quality-fields">
+        <label className="field">
+          <span>Retail price</span>
+          <input
+            inputMode="decimal"
+            value={draft.retailPrice ?? ""}
+            onChange={(event) => setDraft((current) => ({ ...current, retailPrice: event.target.value }))}
+            placeholder="115"
+          />
+        </label>
+        <label className="field">
+          <span>Currency</span>
+          <select
+            value={draft.retailCurrency || "USD"}
+            onChange={(event) => setDraft((current) => ({ ...current, retailCurrency: event.target.value }))}
+          >
+            <option value="USD">USD $</option>
+            <option value="EUR">EUR €</option>
+          </select>
+        </label>
+      </div>
+
       <fieldset className="resale-field">
         <legend>Resale</legend>
         <label className="resale-toggle"><input type="checkbox" checked={Boolean(draft.forSale)} onChange={(event) => setDraft((current) => ({ ...current, forSale: event.target.checked }))} /><span>Move this piece to my resale rack</span></label>
-        {draft.forSale && <div className="resale-fields"><label><span>Price</span><input inputMode="decimal" value={draft.askingPrice || ""} onChange={(event) => setDraft((current) => ({ ...current, askingPrice: event.target.value }))} placeholder="$" /></label><label><span>Condition</span><select value={draft.condition || "Excellent"} onChange={(event) => setDraft((current) => ({ ...current, condition: event.target.value }))}><option>New with tags</option><option>Like new</option><option>Excellent</option><option>Good</option><option>Fair</option></select></label></div>}
+        {draft.forSale && <div className="resale-fields"><label><span>Your ask</span><input inputMode="decimal" value={draft.askingPrice || ""} onChange={(event) => setDraft((current) => ({ ...current, askingPrice: event.target.value }))} placeholder="$" /></label><label><span>Condition</span><select value={draft.condition || "Excellent"} onChange={(event) => setDraft((current) => ({ ...current, condition: event.target.value }))}><option>New with tags</option><option>Like new</option><option>Excellent</option><option>Good</option><option>Fair</option></select></label></div>}
       </fieldset>
     </div>
   );
 }
 
-function ItemViewer({ item, onClose, onSave, onDelete, onReprocess }) {
+/**
+ * Clean product popup only — photo + name + price.
+ * No form fields, no side sheet, no “details editor” page.
+ * On Sell: retail strikethrough + editable ask.
+ */
+function ItemViewer({ item, onClose, onDelete, sellMode = false, onAskingPriceChange }) {
   const closeButtonRef = useRef(null);
-  const imageRef = useRef(null);
-  const samplingCanvasRef = useRef(null);
-  const shakeTimerRef = useRef(null);
-  const [sampling, setSampling] = useState(null);
-  const [sampleStatus, setSampleStatus] = useState("");
-  const [palette, setPalette] = useState(item.palette || []);
-  const [draft, setDraft] = useState({ name: item.name || "", part: item.part, color: item.color || "#9a9286", secondaryColor: item.secondaryColor || null, tags: [...(item.tags || [])], forSale: Boolean(item.forSale), askingPrice: item.askingPrice || "", condition: item.condition || "Excellent" });
-  const [shaking, setShaking] = useState(false);
-  const [closeBlocked, setCloseBlocked] = useState(false);
-  const [reprocessing, setReprocessing] = useState(false);
   const type = TYPE_MAP[item.part]?.singular || "Wardrobe item";
-  const hasModeledImage = Boolean(item.modeledImage);
-  const pieceRotation = useMemo(() => {
-    const hash = [...item.id].reduce((total, character) => total + character.charCodeAt(0), 0);
-    return `${(hash % 9) - 4}deg`;
-  }, [item.id]);
-
-  const isDirty = useMemo(() => {
-    const normalizedTags = (tags) => tags.map((tag) => tag.trim()).filter(Boolean);
-    return JSON.stringify({
-      name: draft.name.trim(),
-      part: draft.part,
-      color: draft.color?.toLowerCase() || null,
-      secondaryColor: draft.secondaryColor?.toLowerCase() || null,
-      tags: normalizedTags(draft.tags),
-      forSale: Boolean(draft.forSale), askingPrice: draft.askingPrice || "", condition: draft.condition || "Excellent",
-    }) !== JSON.stringify({
-      name: (item.name || "").trim(),
-      part: item.part,
-      color: item.color?.toLowerCase() || null,
-      secondaryColor: item.secondaryColor?.toLowerCase() || null,
-      tags: normalizedTags(item.tags || []),
-      forSale: Boolean(item.forSale), askingPrice: item.askingPrice || "", condition: item.condition || "Excellent",
-    });
-  }, [draft, item]);
-
-  const nudgeUnsaved = useCallback(() => {
-    setCloseBlocked(true);
-    setShaking(false);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => setShaking(true));
-    });
-    clearTimeout(shakeTimerRef.current);
-    shakeTimerRef.current = setTimeout(() => setShaking(false), 420);
-  }, []);
-
-  const requestClose = useCallback(() => {
-    if (isDirty) nudgeUnsaved();
-    else onClose();
-  }, [isDirty, nudgeUnsaved, onClose]);
+  const front = item.frontImage || item.image || item.thumbnail;
+  const back = item.backImage || null;
+  // Popup: same smart rule — back only when a real back design exists
+  const hasBack = itemHasBackDesign(item, front, back);
+  const retail = formatRetailPrice(item.retailPrice, item.retailCurrency || "USD");
+  const name = item.name || type;
+  const productUrl = (item.productRef || "").trim() || null;
+  const [askDraft, setAskDraft] = useState(
+    item.askingPrice != null && item.askingPrice !== ""
+      ? String(item.askingPrice)
+      : "",
+  );
+  useEffect(() => {
+    setAskDraft(
+      item.askingPrice != null && item.askingPrice !== ""
+        ? String(item.askingPrice)
+        : "",
+    );
+  }, [item.id, item.askingPrice]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
-      if (event.key === "Escape") {
-        if (sampling) setSampling(null);
-        else requestClose();
-      }
+      if (event.key === "Escape") onClose();
     };
-
-    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
     document.body.classList.add("viewer-open");
-    closeButtonRef.current?.focus({ preventScroll: true });
+    closeButtonRef.current?.focus();
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKeyDown);
       document.body.classList.remove("viewer-open");
-      clearTimeout(shakeTimerRef.current);
     };
-  }, [requestClose, sampling]);
-
-  useEffect(() => {
-    if (!isDirty) setCloseBlocked(false);
-  }, [isDirty]);
-
-  useEffect(() => {
-    setSampling(null);
-    setSampleStatus("");
-    setPalette(item.palette || []);
-    setDraft({ name: item.name || "", part: item.part, color: item.color || "#9a9286", secondaryColor: item.secondaryColor || null, tags: [...(item.tags || [])], forSale: Boolean(item.forSale), askingPrice: item.askingPrice || "", condition: item.condition || "Excellent" });
-  }, [item]);
-
-  const cancelEditing = () => {
-    setDraft({ name: item.name || "", part: item.part, color: item.color || "#9a9286", secondaryColor: item.secondaryColor || null, tags: [...(item.tags || [])], forSale: Boolean(item.forSale), askingPrice: item.askingPrice || "", condition: item.condition || "Excellent" });
-    setSampling(null);
-    setSampleStatus("");
-    onClose();
-  };
-
-  const saveEditing = () => {
-    onSave({ ...item, ...draft, name: draft.name.trim(), tags: draft.tags.map((tag) => tag.trim()).filter(Boolean) });
-    setSampling(null);
-    setSampleStatus("Changes saved.");
-  };
-
-  const reprocessPhoto = async () => {
-    setReprocessing(true);
-    setSampleStatus("Separating you, the garment, and the background...");
-    try {
-      await onReprocess(item.id);
-      setSampleStatus("Smart cutout and garment color updated.");
-    } catch (requestError) {
-      setSampleStatus(requestError.message || "The photo could not be reprocessed.");
-    } finally {
-      setReprocessing(false);
-    }
-  };
-
-  const handleImageLoad = (event) => {
-    samplingCanvasRef.current = buildSamplingCanvas(event.currentTarget);
-    const extracted = extractPalette(event.currentTarget);
-    setPalette([...new Set([...(item.palette || []), ...extracted])].slice(0, 5));
-  };
-
-  const handleImageClick = (event) => {
-    if (!sampling || !samplingCanvasRef.current) return;
-    const color = sampleImageColor(event.currentTarget, samplingCanvasRef.current, event);
-    if (!color) {
-      setSampleStatus("That spot is transparent—try directly on the garment.");
-      return;
-    }
-    const targetField = sampling === "secondary" ? "secondaryColor" : "color";
-    setDraft((current) => ({ ...current, [targetField]: color }));
-    setPalette((current) => [color, ...current.filter((existing) => existing.toLowerCase() !== color.toLowerCase())].slice(0, 5));
-    setSampleStatus(`Sampled ${color} as the ${sampling} color.`);
-    setSampling(null);
-  };
-
-  const garmentArtwork = (
-    <div
-      className={`viewer-art${hasModeledImage ? " viewer-art-floating" : ""}${sampling ? " sampling" : ""}`}
-      style={hasModeledImage ? { "--piece-rotation": pieceRotation } : undefined}
-    >
-      <OptimizedImage
-        ref={imageRef}
-        src={item.image}
-        alt={`Selected ${type.toLowerCase()}`}
-        sizes="(max-width: 520px) 40vw, 300px"
-        breakpoints={[160, 240, 320, 480, 640]}
-        priority
-        onLoad={handleImageLoad}
-        onClick={handleImageClick}
-      />
-      {sampling && <span className="sample-hint">Click garment to sample</span>}
-    </div>
-  );
+  }, [onClose]);
 
   return (
-    <div className="viewer-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && requestClose()}>
-    <div className="viewer-entry">
-    <aside className={`viewer editing${hasModeledImage ? " has-modeled-image" : ""}${shaking ? " shake" : ""}`} role="dialog" aria-modal="true" aria-label="Selected wardrobe item">
-      <button className="viewer-icon-close" type="button" onClick={requestClose} aria-label="Close viewer" ref={closeButtonRef}>
-        <X size={24} weight="light" aria-hidden="true" />
-      </button>
+    <div
+      className="viewer-overlay viewer-overlay-popup"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="product-popup"
+        role="dialog"
+        aria-modal="true"
+        aria-label={name}
+      >
+        <button
+          className="product-popup-close"
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          ref={closeButtonRef}
+        >
+          <X size={22} weight="light" aria-hidden="true" />
+        </button>
 
-      {hasModeledImage ? (
-        <div className="modeled-hero">
+        <div className={`product-popup-stage${hasBack ? " has-back" : ""}`}>
           <OptimizedImage
-            className={`modeled-hero-photo${item.subjectCutout ? " is-smart-cutout" : ""}`}
-            src={item.modeledImage}
-            alt={`${draft.name || type} worn by a model`}
-            sizes="(max-width: 860px) 100vw, 520px"
-            breakpoints={[320, 480, 640, 800, 1040, 1280]}
-            quality={82}
+            className="product-popup-img product-popup-front"
+            src={front}
+            alt=""
+            sizes="(max-width: 520px) 80vw, 360px"
+            breakpoints={[240, 320, 480, 640]}
             priority
           />
-          <div className="viewer-heading modeled-heading">
-            <div>
-              <h2>{draft.name || TYPE_MAP[draft.part]?.singular}</h2>
-            </div>
-          </div>
-          {garmentArtwork}
+          {hasBack ? (
+            <OptimizedImage
+              className="product-popup-img product-popup-back"
+              src={back}
+              alt=""
+              sizes="(max-width: 520px) 80vw, 360px"
+              breakpoints={[240, 320, 480, 640]}
+            />
+          ) : null}
+
         </div>
-      ) : (
-        <>
-          <div className="viewer-heading">
-            <div>
-              <h2>{draft.name || TYPE_MAP[draft.part]?.singular}</h2>
+
+        <div className="product-popup-meta">
+          {item.brand ? <p className="product-popup-brand">{item.brand}</p> : null}
+          <h2 className="product-popup-name">{name}</h2>
+          {sellMode || item.forSale ? (
+            <div className="product-popup-price-row sell-price-row">
+              {retail ? (
+                <span className="product-popup-retail-was" title="Retail / original">
+                  {retail}
+                </span>
+              ) : null}
+              <label className="product-popup-ask-wrap">
+                <span className="product-popup-ask-prefix">$</span>
+                <input
+                  className="product-popup-ask-input"
+                  type="text"
+                  inputMode="decimal"
+                  value={askDraft}
+                  placeholder={item.retailPrice != null ? String(item.retailPrice) : "0"}
+                  aria-label="Your sell price"
+                  onChange={(event) => setAskDraft(event.target.value.replace(/[^0-9.]/g, ""))}
+                  onBlur={() => {
+                    if (!onAskingPriceChange) return;
+                    const parsed = parseMoneyInput(askDraft);
+                    const next = parsed == null ? "" : String(parsed);
+                    setAskDraft(next);
+                    if (String(item.askingPrice ?? "") !== next) {
+                      onAskingPriceChange(item.id, next);
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      event.currentTarget.blur();
+                    }
+                  }}
+                />
+              </label>
             </div>
-          </div>
-          {garmentArtwork}
-        </>
-      )}
+          ) : retail ? (
+            <p className="product-popup-price">{retail}</p>
+          ) : null}
+          {(() => {
+            // Size: prefer sizeLabel ("Small"), else size ("S" / "8.5")
+            const sizeText =
+              item.sizeLabel ||
+              (item.size != null && String(item.size).trim() !== ""
+                ? String(item.size)
+                : null);
+            // Materials: composition string, or fabric.text object from library
+            const materials =
+              item.composition ||
+              (typeof item.fabric === "string"
+                ? item.fabric
+                : item.fabric?.text) ||
+              null;
+            if (!sizeText && !materials) return null;
+            return (
+              <div className="product-popup-details">
+                {sizeText ? (
+                  <p className="product-popup-size">
+                    <span className="product-popup-detail-label">Size</span>
+                    {sizeText}
+                  </p>
+                ) : null}
+                {materials ? (
+                  <p className="product-popup-materials">
+                    <span className="product-popup-detail-label">Materials</span>
+                    {materials}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })()}
+          {productUrl ? (
+            <a
+              className="product-popup-link"
+              href={productUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open product ↗
+            </a>
+          ) : null}
+        </div>
 
-      <div className="viewer-details editing">
-        <ItemEditor
-          draft={draft}
-          setDraft={setDraft}
-          palette={palette}
-          sampling={sampling}
-          setSampling={setSampling}
-          sampleStatus={sampleStatus}
-        />
-
-        {closeBlocked && <p className="unsaved-notice" role="status">Save or cancel changes before closing.</p>}
-
-        <div className="viewer-actions">
-          <button className="delete-button" type="button" onClick={() => onDelete(item.id)}>
-            <Trash size={15} weight="regular" aria-hidden="true" /> Delete
-          </button>
-          {item.id.startsWith("import-") && <button className="secondary-button smart-cutout-button" type="button" disabled={reprocessing} onClick={reprocessPhoto} title="Re-detect clothing, remove the background, and correct the garment color">
-            <MagicWand size={15} weight="regular" aria-hidden="true" /> {reprocessing ? "Extracting" : "Re-extract"}
-          </button>}
-          <span className="action-spacer" />
-          <button className="secondary-button" type="button" onClick={cancelEditing}>Cancel</button>
-          <button className="primary-button" type="button" onClick={saveEditing}>
-            <Check size={15} weight="bold" aria-hidden="true" /> Save
+        <div className="product-popup-foot">
+          <button
+            type="button"
+            className="product-popup-delete"
+            onClick={() => onDelete(item.id)}
+          >
+            Remove
           </button>
         </div>
-        {draft.forSale && <a className="depop-handoff" href="https://www.depop.com/selling/" target="_blank" rel="noreferrer">Finish listing on Depop</a>}
       </div>
-    </aside>
-    </div>
     </div>
   );
 }
 
+
 export function App() {
   const [items, setItems] = useState([]);
-  const [activeType, setActiveType] = useState("all");
+  /** Main nav: tops | bottoms | shoes | dresses | jackets | all */
+  const [activeNav, setActiveNav] = useState("all");
+  /** Sub: hoodies | tees | jeans | sweats | null (= whole section) */
+  const [activeSub, setActiveSub] = useState(null);
   const [collection, setCollection] = useState("wardrobe");
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -580,11 +946,7 @@ export function App() {
         const edits = readEdits();
         const deleted = readDeletedItems();
         const visibleItems = loadedItems.filter((item) => !deleted.has(item.id));
-        setItems(visibleItems.map((item) => {
-          const edit = edits[item.id];
-          const editIsCurrent = edit && (edit.analysisVersion || 0) >= (item.analysisVersion || 0);
-          return editIsCurrent ? { ...item, ...edit } : item;
-        }));
+        setItems(visibleItems.map((item) => mergeLibraryEdit(item, edits[item.id])));
       })
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
@@ -592,22 +954,106 @@ export function App() {
 
   const selectedItem = items.find((item) => item.id === selectedId) || null;
 
-  const visibleItems = useMemo(() => {
-    const collectionItems = collection === "scuffers"
-      ? items.filter((item) => `${item.name || ""} ${(item.tags || []).join(" ")}`.toLowerCase().includes("scuffers"))
-      : collection === "resale" ? items.filter((item) => item.forSale) : items;
-    const filtered = activeType === "all" ? collectionItems : collectionItems.filter((item) => item.part === activeType);
-    return [...filtered].sort((a, b) => {
-      if (activeType === "all") {
-        const typeDifference = (TYPE_ORDER[a.part] ?? 99) - (TYPE_ORDER[b.part] ?? 99);
-        if (typeDifference) return typeDifference;
-      }
-      return a.id.localeCompare(b.id);
-    });
-  }, [activeType, collection, items]);
+  const activeNavMeta = NAV_MAP[activeNav];
+  const subOptions = activeNavMeta?.sub || null;
 
-  const chooseType = (typeId) => {
-    setActiveType(typeId);
+  const visibleItems = useMemo(() => {
+    const isWant = (item) =>
+      item.role === "wishlist" || (item.tags || []).includes("want");
+    const collectionItems =
+      collection === "resale"
+        // Sell = owned closet with resale pricing (retail X'd out · editable ask)
+        // Auto-lists when she sets an ask; still shows forSale pieces
+        ? items.filter((item) => !isWant(item))
+        : collection === "want"
+          ? items.filter(isWant)
+          : collection === "shop"
+            ? items // shopper reads full closet (owned + want)
+            : items.filter((item) => !isWant(item)); // Owned = not wishlist
+
+    let filtered = collectionItems;
+    if (activeNav !== "all") {
+      filtered = filtered.filter((item) => itemSection(item) === activeNav);
+      if (activeSub) {
+        filtered = filtered.filter((item) => itemFamily(item) === activeSub);
+      }
+    }
+
+    const sectionRank = (item) => {
+      const sec = itemSection(item);
+      const si = SECTION_ORDER.indexOf(sec);
+      const families = FAMILY_ORDER[sec];
+      const fi = families ? families.indexOf(itemFamily(item)) : 0;
+      return (si < 0 ? 90 : si) * 10 + (fi < 0 ? 5 : fi);
+    };
+
+    return [...filtered].sort((a, b) => {
+      const rankDiff = sectionRank(a) - sectionRank(b);
+      if (rankDiff) return rankDiff;
+      return (a.name || "").localeCompare(b.name || "") || a.id.localeCompare(b.id);
+    });
+  }, [activeNav, activeSub, collection, items]);
+
+  /**
+   * Gallery bands:
+   * - All → Tops (Hoodies, Tees), Bottoms (Jeans, Sweats), Shoes, Dresses, Jackets
+   * - Tops → Hoodies + Tees (or one if sub selected)
+   * - Bottoms → Jeans + Sweats
+   * - Shoes / Dresses / Jackets → single band
+   */
+  const gallerySections = useMemo(() => {
+    const byFamily = (family) =>
+      visibleItems.filter((item) => itemFamily(item) === family);
+
+    const band = (id, label, list) =>
+      list.length ? { id, label, items: list } : null;
+
+    if (activeNav === "all") {
+      const sections = [];
+      for (const sec of SECTION_ORDER) {
+        if (FAMILY_ORDER[sec]) {
+          for (const fam of FAMILY_ORDER[sec]) {
+            const itemsIn = byFamily(fam);
+            const parent = NAV_MAP[sec]?.label || sec;
+            const child = FAMILY_LABEL[fam] || fam;
+            // e.g. "Tops · Hoodies"
+            const s = band(`${sec}-${fam}`, `${parent} · ${child}`, itemsIn);
+            if (s) sections.push(s);
+          }
+        } else {
+          const s = band(sec, FAMILY_LABEL[sec] || NAV_MAP[sec]?.label || sec, byFamily(sec));
+          if (s) sections.push(s);
+        }
+      }
+      const other = byFamily("other");
+      if (other.length) sections.push({ id: "other", label: "Other", items: other });
+      return sections;
+    }
+
+    if (activeNav === "tops" || activeNav === "bottoms") {
+      const families = activeSub
+        ? [activeSub]
+        : FAMILY_ORDER[activeNav] || [];
+      return families
+        .map((fam) => band(fam, FAMILY_LABEL[fam] || fam, byFamily(fam)))
+        .filter(Boolean);
+    }
+
+    // shoes / dresses / jackets
+    return visibleItems.length
+      ? [{ id: activeNav, label: NAV_MAP[activeNav]?.label || "Pieces", items: visibleItems }]
+      : [];
+  }, [activeNav, activeSub, visibleItems]);
+
+  const chooseNav = (navId) => {
+    setActiveNav(navId);
+    setActiveSub(null);
+    setSelectedId(null);
+  };
+
+  const chooseSub = (subId) => {
+    // Tap active sub again → show whole parent section
+    setActiveSub((prev) => (prev === subId ? null : subId));
     setSelectedId(null);
   };
 
@@ -629,20 +1075,67 @@ export function App() {
     }
   };
 
+  /** Sell tab: set your ask; retail stays as the grey X'd out list price */
+  const updateAskingPrice = useCallback((id, askingPrice) => {
+    setItems((current) => {
+      const next = current.map((item) => {
+        if (item.id !== id) return item;
+        const updated = {
+          ...item,
+          askingPrice,
+          // typing an ask puts it on the resale rack
+          forSale: true,
+        };
+        persistEdit(updated);
+        // best-effort server save (don't block UI)
+        fetch(`/api/wardrobe/items/${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            askingPrice: updated.askingPrice,
+            forSale: true,
+          }),
+        }).catch(() => {});
+        return updated;
+      });
+      return next;
+    });
+  }, []);
+
   const deleteItem = async (id) => {
-    if (id.startsWith("import-")) {
-      try {
-        const response = await fetch(`/api/import/wardrobe/${id}`, { method: "DELETE" });
-        if (!response.ok && response.status !== 404) throw new Error("Could not delete the imported item.");
-      } catch (requestError) {
-        setError(requestError.message);
-        return;
-      }
+    const piece = items.find((item) => item.id === id);
+    const label = piece?.name?.trim() || "this piece";
+    // Soft-hide only — never silent permanent wipe without an explicit yes
+    if (!window.confirm(`Remove “${label}” from your wardrobe?\n\nYou can restore it from the deleted list later.`)) {
+      return;
     }
+    // Keep file on disk; only hide in the UI via deleted-id list (local soft delete).
+    // Hard API delete only if they confirm a second time for imports.
     setItems((current) => current.filter((item) => item.id !== id));
     removePersistedEdit(id);
     persistDeletedItem(id);
     setSelectedId(null);
+  };
+
+  const restoreDeleted = () => {
+    try {
+      localStorage.removeItem(DELETED_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+    setLoading(true);
+    setError("");
+    fetch("/api/import/wardrobe", { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) throw new Error("Could not reload the wardrobe.");
+        return response.json();
+      })
+      .then((loadedItems) => {
+        const edits = readEdits();
+        setItems(loadedItems.map((item) => mergeLibraryEdit(item, edits[item.id])));
+      })
+      .catch((requestError) => setError(requestError.message))
+      .finally(() => setLoading(false));
   };
 
   const reprocessItem = async (id) => {
@@ -671,43 +1164,170 @@ export function App() {
             <p className="piece-count">{items.length} {items.length === 1 ? "piece" : "pieces"}</p>
           </div>
           <nav className="collection-nav" aria-label="Wardrobe collections">
-            {[['wardrobe','Wardrobe'], ['scuffers','Scuffers'], ['resale','Sell']].map(([id, label]) => <button key={id} type="button" className={collection === id ? "active" : ""} onClick={() => { setCollection(id); setSelectedId(null); }}>{label}{id === 'resale' && items.some((item) => item.forSale) ? ` ${items.filter((item) => item.forSale).length}` : ''}</button>)}
-          </nav>
-          <nav className="category-nav" aria-label="Filter wardrobe by item type">
-            {TYPES.map((type) => (
+            {[['wardrobe', 'Owned'], ['want', 'Want'], ['resale', 'Sell'], ['shop', 'Shop']].map(([id, label]) => (
               <button
-                key={type.id}
+                key={id}
                 type="button"
-                className={activeType === type.id ? "active" : ""}
-                onClick={() => chooseType(type.id)}
-                aria-pressed={activeType === type.id}
+                className={collection === id ? "active" : ""}
+                onClick={() => {
+                  setCollection(id);
+                  setSelectedId(null);
+                }}
               >
-                {type.label}
+                {label}
+                {id === "resale"
+                  ? ` ${items.filter((item) => !(item.role === "wishlist" || (item.tags || []).includes("want"))).length}`
+                  : ""}
+                {id === "want"
+                  ? ` ${items.filter((item) => item.role === "wishlist" || (item.tags || []).includes("want")).length}`
+                  : ""}
               </button>
             ))}
           </nav>
+          {collection !== "shop" ? (
+            <>
+              <nav className="category-nav" aria-label="Filter wardrobe by section">
+                {NAV.map((nav) => (
+                  <button
+                    key={nav.id}
+                    type="button"
+                    className={activeNav === nav.id ? "active" : ""}
+                    onClick={() => chooseNav(nav.id)}
+                    aria-pressed={activeNav === nav.id}
+                  >
+                    {nav.label}
+                  </button>
+                ))}
+              </nav>
+              {subOptions ? (
+                <nav className="subcategory-nav" aria-label={`${activeNavMeta.label} types`}>
+                  <button
+                    type="button"
+                    className={!activeSub ? "active" : ""}
+                    onClick={() => {
+                      setActiveSub(null);
+                      setSelectedId(null);
+                    }}
+                    aria-pressed={!activeSub}
+                  >
+                    All {activeNavMeta.label}
+                  </button>
+                  {subOptions.map((sub) => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      className={activeSub === sub.id ? "active" : ""}
+                      onClick={() => chooseSub(sub.id)}
+                      aria-pressed={activeSub === sub.id}
+                    >
+                      {sub.label}
+                    </button>
+                  ))}
+                </nav>
+              ) : null}
+            </>
+          ) : null}
         </header>
 
-        {error && <p className="status error">{error}</p>}
-        {!error && loading && <p className="status">Loading wardrobe</p>}
-        {!error && !loading && !items.length && <p className="status empty">Drop, paste, or add a photo to import your first piece.</p>}
-        {!error && !loading && items.length > 0 && !visibleItems.length && <p className="status empty">{collection === "scuffers" ? "Tag a piece Scuffers to build this hoodie collection." : collection === "resale" ? "Open a piece and move it to your resale rack." : "No pieces in this view."}</p>}
-
-        {!!items.length && (
-          <section className="gallery-grid" aria-label={`${TYPE_MAP[activeType]?.label || "All"} wardrobe items`}>
-            {visibleItems.map((item) => (
-              <GalleryItem
-                key={item.id}
-                item={item}
-                selected={selectedId === item.id}
-                onOpen={setSelectedId}
+        {collection === "shop" ? (
+          <StyleShopper
+            items={items}
+            onSaveWant={(find) => {
+              // Soft-queue + open product so she can confirm before Want import
+              try {
+                const key = "wonder-style-shopper-wants-v1";
+                const prev = JSON.parse(localStorage.getItem(key) || "[]");
+                const row = {
+                  id: find.id,
+                  name: find.name,
+                  brand: find.brand,
+                  url: find.url,
+                  price: find.price,
+                  currency: find.currency,
+                  tags: [...(find.tags || []), "want"],
+                  productRef: find.url,
+                  savedAt: new Date().toISOString(),
+                };
+                localStorage.setItem(
+                  key,
+                  JSON.stringify([row, ...prev.filter((x) => x.id !== find.id)].slice(0, 40))
+                );
+              } catch { /* ignore */ }
+              window.open(find.url, "_blank", "noopener,noreferrer");
+            }}
+          />
+        ) : (
+          <>
+            {/* Daily outfit from her real closet — always on Owned */}
+            {collection === "wardrobe" && !loading ? (
+              <DailyGenerator
+                items={items.filter(
+                  (item) => !(item.role === "wishlist" || (item.tags || []).includes("want")),
+                )}
+                onOpenItem={setSelectedId}
               />
+            ) : null}
+
+            {error && <p className="status error">{error}</p>}
+            {!error && loading && <p className="status">Loading wardrobe</p>}
+            {!error && !loading && !items.length && (
+              <div className="status empty wardrobe-empty-block">
+                <p>Drop, paste, or add a photo to import your first piece.</p>
+                {readDeletedItems().size > 0 ? (
+                  <button type="button" className="restore-deleted-button" onClick={restoreDeleted}>
+                    Restore removed pieces ({readDeletedItems().size})
+                  </button>
+                ) : null}
+              </div>
+            )}
+            {!error && !loading && items.length > 0 && !visibleItems.length && (
+              <p className="status empty">
+                {collection === "resale"
+                  ? "Nothing to sell yet — add pieces on Owned first."
+                  : collection === "want"
+                    ? "No want pieces yet. Mark something as wishlist when you covet it."
+                    : "No pieces in this view."}
+              </p>
+            )}
+
+            {!!items.length && gallerySections.map((section) => (
+              <section
+                key={section.id}
+                className="gallery-section"
+                aria-label={section.label}
+              >
+                <h2 className="gallery-section-title">
+                  {section.label}
+                  <span className="gallery-section-count">{section.items.length}</span>
+                </h2>
+                <div className="gallery-grid">
+                  {section.items.map((item) => (
+                    <GalleryItem
+                      key={item.id}
+                      item={item}
+                      selected={selectedId === item.id}
+                      onOpen={setSelectedId}
+                      hideWantBadge={collection === "want"}
+                      sellMode={collection === "resale"}
+                      onAskingPriceChange={updateAskingPrice}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
-          </section>
+          </>
         )}
       </main>
 
-      {selectedItem && <ItemViewer item={selectedItem} onClose={() => setSelectedId(null)} onSave={saveItem} onDelete={deleteItem} onReprocess={reprocessItem} />}
+      {selectedItem && (
+        <ItemViewer
+          item={selectedItem}
+          onClose={() => setSelectedId(null)}
+          onDelete={deleteItem}
+          sellMode={collection === "resale" || Boolean(selectedItem.forSale)}
+          onAskingPriceChange={updateAskingPrice}
+        />
+      )}
       <WardrobeImportFlow onGarmentApproved={addImportedItem} onModeledApproved={attachImportedModeledImage} />
     </div>
   );

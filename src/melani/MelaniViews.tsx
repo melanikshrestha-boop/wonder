@@ -18,31 +18,85 @@ import {
   loadLabs,
   type BuiltSection,
 } from "./labEngine";
-import { FitnessExact, isFitnessPage } from "./FitnessExact";
-import { HygieneExact, isHygienePage } from "./HygieneExact";
-import { BooksLibrary, isBooksPage } from "./BooksLibrary";
 import { isGmailAgentPage } from "./gmailRoute";
-import { CycleTracker } from "./CycleTracker";
 import { ExpandableText } from "./ExpandableText";
 import { isWardrobePage } from "./wardrobe/route";
-import { isShoppingAgentPage, ShoppingAgent } from "./ShoppingAgent";
-import { isWorldMonitorPage, WorldMonitor } from "./WorldMonitor";
-import { CareConcierge, isCareConciergePage } from "./CareConcierge";
-import { Finances, isFinancesPage } from "./Finances";
-import { HabitTracker, isHabitsPage } from "./HabitTracker";
-import { NutritionTracker, isNutritionPage } from "./nutrition/NutritionTracker";
-import { TradingDesk, isTradingPage } from "./trading/TradingDesk";
+import {
+  isBooksPage,
+  isCareConciergePage,
+  isFinancesPage,
+  isFitnessPage,
+  isHabitsPage,
+  isHygienePage,
+  isFailuresPage,
+  isContentEmpirePage,
+  isShoppingAgentPage,
+} from "./pageRoutes";
+// isContentEmpirePage covers former Math Lab routes
+// Nutrition tab is retired from the product surface (design rejected).
+// Operator + paper trading + World Monitor permanently deleted (not routed).
 import "./melani.css";
 
-const WardrobeNative = lazy(async () => {
-  const module = await import("./wardrobe/WardrobeNative");
-  return { default: module.WardrobeNative };
+/**
+ * Lazy-load heavy desks so opening Bookshelf doesn't parse Fitness/Whoop/Finance
+ * (was a major "slug" on first paint).
+ */
+const FitnessExact = lazy(async () => {
+  const m = await import("./FitnessExact");
+  return { default: m.FitnessExact };
+});
+const HygieneExact = lazy(async () => {
+  const m = await import("./HygieneExact");
+  return { default: m.HygieneExact };
+});
+const BooksLibrary = lazy(async () => {
+  const m = await import("./BooksLibrary");
+  return { default: m.BooksLibrary };
+});
+const ShoppingAgent = lazy(async () => {
+  const m = await import("./ShoppingAgent");
+  return { default: m.ShoppingAgent };
+});
+const CareConcierge = lazy(async () => {
+  const m = await import("./CareConcierge");
+  return { default: m.CareConcierge };
+});
+const Finances = lazy(async () => {
+  const m = await import("./Finances");
+  return { default: m.Finances };
+});
+const HabitTracker = lazy(async () => {
+  const m = await import("./HabitTracker");
+  return { default: m.HabitTracker };
+});
+const ContentEmpire = lazy(async () => {
+  const m = await import("./ContentEmpire");
+  return { default: m.ContentEmpire };
+});
+const FailuresLab = lazy(async () => {
+  const m = await import("./FailuresLab");
+  return { default: m.FailuresLab };
+});
+// Focus desk loads inside FitnessExact (Sleep · Meals · Gym · Focus)
+const CycleTracker = lazy(async () => {
+  const m = await import("./CycleTracker");
+  return { default: m.CycleTracker };
+});
+
+/** Full upstream wardrobe (import flow, gallery, intelligence) — not the thin native stub. */
+const WardrobeFrame = lazy(async () => {
+  const module = await import("./wardrobe/WardrobeFrame");
+  return { default: module.WardrobeFrame };
 });
 
 const GmailConnector = lazy(async () => {
   const module = await import("./GmailConnector");
   return { default: module.GmailConnector };
 });
+
+function DeskFallback({ label }: { label: string }) {
+  return <div className="melani-page-loading">{label}</div>;
+}
 
 /** One page: Profile → Period → Labs (status cards + tables + smart import) */
 export function MelaniData() {
@@ -103,7 +157,9 @@ export function MelaniData() {
     <div className="melani-shell">
       {/* No age/sex/height banner — profile lives in context for Mel, not this page chrome */}
       <div className="melani-inner">
-        <CycleTracker />
+        <Suspense fallback={null}>
+          <CycleTracker />
+        </Suspense>
 
         {/* ── CURRENT STATUS cards ── */}
         <section className="lab-status-block">
@@ -349,11 +405,10 @@ export function isMelaniRichPage(pageId: string): boolean {
     isWardrobePage(pageId) ||
     isShoppingAgentPage(pageId) ||
     isCareConciergePage(pageId) ||
-    isWorldMonitorPage(pageId) ||
     isFinancesPage(pageId) ||
     isHabitsPage(pageId) ||
-    isNutritionPage(pageId) ||
-    isTradingPage(pageId) ||
+    isContentEmpirePage(pageId) ||
+    isFailuresPage(pageId) ||
     pageId === "pg-data" ||
     pageId === "pg-my-data"
   );
@@ -369,16 +424,24 @@ export function MelaniRichPage({
   pages?: Page[];
 }) {
   if (isFitnessPage(pageId)) {
-    return <FitnessExact pageId={pageId} onGo={onGo} />;
+    return (
+      <Suspense fallback={<DeskFallback label="Loading Fitness" />}>
+        <FitnessExact pageId={pageId} onGo={onGo} />
+      </Suspense>
+    );
   }
 
   if (isHygienePage(pageId)) {
-    return <HygieneExact pageId={pageId} onGo={onGo} />;
+    return (
+      <Suspense fallback={<DeskFallback label="Loading Hygiene" />}>
+        <HygieneExact pageId={pageId} onGo={onGo} />
+      </Suspense>
+    );
   }
 
   if (isGmailAgentPage(pageId)) {
     return (
-      <Suspense fallback={<div className="melani-page-loading is-dark">Loading Gmail</div>}>
+      <Suspense fallback={<DeskFallback label="Loading Gmail" />}>
         <GmailConnector onGo={onGo} />
       </Suspense>
     );
@@ -386,47 +449,66 @@ export function MelaniRichPage({
 
   if (isWardrobePage(pageId)) {
     return (
-      <Suspense fallback={<div className="melani-page-loading">Loading Wardrobe</div>}>
-        <WardrobeNative />
+      <Suspense fallback={<DeskFallback label="Loading Wardrobe" />}>
+        <WardrobeFrame />
       </Suspense>
     );
   }
 
   if (isShoppingAgentPage(pageId)) {
-    return <ShoppingAgent />;
+    return (
+      <Suspense fallback={<DeskFallback label="Loading Shopping" />}>
+        <ShoppingAgent />
+      </Suspense>
+    );
   }
 
   if (isCareConciergePage(pageId)) {
-    return <CareConcierge />;
+    return (
+      <Suspense fallback={<DeskFallback label="Loading Care" />}>
+        <CareConcierge />
+      </Suspense>
+    );
   }
 
-  if (isWorldMonitorPage(pageId)) {
-    return <WorldMonitor />;
-  }
-
-  // Learn → Finances (accounts, budget, spending, light quotes)
   if (isFinancesPage(pageId)) {
-    return <Finances onGo={onGo} />;
+    return (
+      <Suspense fallback={<DeskFallback label="Loading Finances" />}>
+        <Finances onGo={onGo} />
+      </Suspense>
+    );
   }
 
-  // Health → Habit Tracker
   if (isHabitsPage(pageId)) {
-    return <HabitTracker />;
+    return (
+      <Suspense fallback={<DeskFallback label="Loading Habits" />}>
+        <HabitTracker />
+      </Suspense>
+    );
   }
 
-  // Health → Nutrition (calories + macros)
-  if (isNutritionPage(pageId)) {
-    return <NutritionTracker />;
-  }
-
-  // Learn → Paper trading desk
-  if (isTradingPage(pageId)) {
-    return <TradingDesk />;
-  }
-
-  // Learn → Bookshelf
   if (isBooksPage(pageId)) {
-    return <BooksLibrary onGo={onGo} workspacePages={pages} />;
+    return (
+      <Suspense fallback={<DeskFallback label="Loading Bookshelf" />}>
+        <BooksLibrary onGo={onGo} workspacePages={pages} />
+      </Suspense>
+    );
+  }
+
+  if (isContentEmpirePage(pageId)) {
+    return (
+      <Suspense fallback={<DeskFallback label="Loading Content" />}>
+        <ContentEmpire />
+      </Suspense>
+    );
+  }
+
+  if (isFailuresPage(pageId)) {
+    return (
+      <Suspense fallback={<DeskFallback label="Loading Failures" />}>
+        <FailuresLab />
+      </Suspense>
+    );
   }
 
   if (pageId === "pg-data" || pageId === "pg-my-data") {

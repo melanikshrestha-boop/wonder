@@ -3,41 +3,72 @@
   Jet black · Source Serif · every cent · quiet ledger · no flashy chrome
 */
 
+/*
+  Aligned with Habits: light desk, Source Serif, soft panels.
+*/
 .wd {
-  --wd-bg: #000000;
-  --wd-elevated: transparent;
-  /* No dividing lines — hairlines fully transparent */
+  --wd-bg: #f7f7fa;
+  --wd-elevated: #ffffff;
+  --wd-panel: #ffffff;
+  --wd-panel-2: #f0f2f6;
   --wd-hairline: transparent;
   --wd-hairline-strong: transparent;
-  --wd-text: rgba(255, 255, 255, 0.92);
-  --wd-secondary: rgba(255, 255, 255, 0.48);
-  --wd-tertiary: rgba(255, 255, 255, 0.32);
-  --wd-green: #30d158;
-  --wd-green-soft: rgba(48, 209, 88, 0.14);
-  --wd-red: #ff453a;
-  --wd-radius: 0;
-  --wd-radius-sm: 0;
+  --wd-text: #1a1c22;
+  --wd-secondary: rgba(26, 28, 34, 0.55);
+  --wd-tertiary: rgba(26, 28, 34, 0.38);
+  --wd-green: #0f766e;
+  --wd-green-soft: rgba(15, 118, 110, 0.12);
+  --wd-red: #b91c1c;
+  --wd-accent: #22d3ee;
+  --wd-radius: 14px;
+  --wd-radius-sm: 10px;
   --wd-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --wd-font: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Palatino,
-    Georgia, "Times New Roman", Times, serif;
+  --wd-font: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif;
   --wd-mono: "Source Serif 4", Georgia, "Times New Roman", serif;
 
   display: block;
-  min-height: 0;
+  min-height: 100%;
   margin: 0;
-  background: transparent;
+  background: var(--wd-bg);
   color: var(--wd-text);
-  font-family: var(--wd-font);
+  font-family: var(--wd-font) !important;
   font-size: 14px;
   font-weight: 400;
   letter-spacing: 0;
-  line-height: 1.4;
+  line-height: 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   border-radius: 0;
   overflow: visible;
   border: 0;
   box-shadow: none;
+  isolation: isolate;
+}
+
+/* Source Serif everywhere — same force as Habits */
+html body .wd,
+html body .wd button,
+html body .wd input,
+html body .wd select,
+html body .wd textarea,
+html body .wd span,
+html body .wd b,
+html body .wd th,
+html body .wd td,
+html body .wd li,
+html body .wd p,
+html body .wd div,
+html body .wd h1,
+html body .wd h2,
+html body .wd h3,
+html body .wd label,
+html body .wd strong {
+  font-family: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif !important;
+}
+
+.notion-melani-body:has(.wd),
+.notion-melani-body:has(.wd) .wd-main {
+  background: var(--wd-bg, #f7f7fa) !important;
 }
 
 /* Legacy nested sidebar — killed (tabs are in-page now) */
@@ -54,10 +85,10 @@
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 10px clamp(18px, 3.2vw, 48px) 56px;
+  padding: 22px 26px 60px;
   /* allow ledger to scroll inside wrap — don’t clip the Amount column */
   overflow-x: visible;
-  background: transparent;
+  background: var(--wd-bg);
   box-sizing: border-box;
 }
 
@@ -77,7 +108,7 @@
   padding: 0 0 14px;
   font-family: var(--wd-font);
   font-size: 14px;
-  line-height: 1.3;
+  line-height: 1;
   border-bottom: 1px solid var(--wd-hairline);
 }
 
@@ -87,9 +118,7 @@
 }
 
 .wd-subnav-dot {
-  margin: 0 8px;
-  color: rgba(255, 255, 255, 0.35);
-  user-select: none;
+  display: none !important;
 }
 
 .wd-subnav-link {
@@ -100,17 +129,17 @@
   font-family: inherit;
   font-size: 14px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--wd-secondary);
   cursor: pointer;
-  line-height: 1.3;
+  line-height: 1;
 }
 
 .wd-subnav-link:hover {
-  color: #fff;
+  color: var(--wd-text);
 }
 
 .wd-subnav-link.is-active {
-  color: #fff;
+  color: var(--wd-text);
   font-weight: 650;
 }
 
@@ -149,18 +178,18 @@
 
 .wd-top h1 {
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1.25;
-  color: #fff;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--wd-text);
   font-family: var(--wd-font);
 }
 
 .wd-top-principle {
   margin: 4px 0 0;
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1;
   color: var(--wd-secondary);
   max-width: 36rem;
 }
@@ -194,7 +223,7 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  color: #fff;
+  color: var(--wd-text);
 }
 
 .wd-discipline-score strong.is-good {
@@ -216,12 +245,12 @@
   display: grid;
   gap: 3px;
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1;
   color: var(--wd-secondary);
 }
 
 .wd-discipline-list li.is-done {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--wd-secondary);
 }
 
 .wd-discipline-list li.is-open {
@@ -244,7 +273,7 @@
   font-size: 12px;
   font-style: italic;
   color: var(--wd-tertiary);
-  line-height: 1.4;
+  line-height: 1;
 }
 
 .wd-discipline-rule.is-soft {
@@ -264,7 +293,7 @@
 .wd-reinvest-strip strong {
   margin-left: 4px;
   font-variant-numeric: tabular-nums;
-  color: #fff;
+  color: var(--wd-text);
 }
 
 .wd-reinvest-strip .is-pos {
@@ -285,7 +314,7 @@
   margin: 0;
   font-size: 12px;
   color: var(--wd-secondary);
-  line-height: 1.4;
+  line-height: 1;
 }
 
 .wd-book-rules p::before {
@@ -360,14 +389,14 @@
   margin: 0 0 10px;
   font-size: 1.35rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--wd-text);
   letter-spacing: -0.02em;
 }
 
 .wd-vault-copy {
   margin: 0 0 18px;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1;
   color: var(--wd-secondary);
 }
 
@@ -388,7 +417,7 @@
   border-bottom: 1px solid var(--wd-hairline-strong);
   border-radius: 0;
   background: transparent;
-  color: #fff;
+  color: var(--wd-text);
   font: inherit;
   font-size: 15px;
   letter-spacing: 0.08em;
@@ -397,20 +426,20 @@
 }
 
 .wd-vault-label input:focus {
-  border-bottom-color: rgba(255, 255, 255, 0.45);
+  border-bottom-color: var(--wd-secondary);
 }
 
 .wd-vault-err {
   margin: 0 0 12px;
   font-size: 13px;
   color: var(--wd-red);
-  line-height: 1.35;
+  line-height: 1;
 }
 
 .wd-vault-note {
   margin: 16px 0 0;
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1;
   color: var(--wd-tertiary);
   max-width: 26rem;
 }
@@ -437,13 +466,13 @@
   padding: 0 12px;
   border: 1px solid var(--wd-hairline-strong);
   border-radius: 980px;
-  background: #000;
+  background: var(--wd-panel);
   color: var(--wd-text);
   font: inherit;
   font-size: 12px;
   font-weight: 550;
   letter-spacing: -0.01em;
-  line-height: 1.2;
+  line-height: 1;
   cursor: pointer;
   transition:
     background 0.15s var(--wd-ease),
@@ -452,21 +481,20 @@
 
 .wd-select:hover,
 .wd-btn:hover {
-  border-color: rgba(255, 255, 255, 0.28);
-  background: #0a0a0a;
+  border-color: var(--wd-hairline-strong);
+  background: var(--wd-panel-2);
 }
 
 .wd-btn-primary {
-  background: var(--wd-green);
-  border-color: transparent;
-  color: #002810;
-  font-weight: 650;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15) inset;
+  background: #1a1c22 !important;
+  border-color: #1a1c22 !important;
+  color: #fff !important;
+  border-radius: var(--wd-radius-sm);
 }
 
 .wd-btn-primary:hover {
-  background: #3dff7a;
-  color: #002810;
+  background: #0d9488;
+  color: #fff;
   border-color: transparent;
 }
 
@@ -500,7 +528,7 @@
   font-weight: 400;
   color: var(--wd-secondary);
   letter-spacing: -0.01em;
-  line-height: 1.25;
+  line-height: 1;
 }
 
 .wd-muted {
@@ -508,7 +536,7 @@
   font-size: 12px;
   font-weight: 400;
   letter-spacing: -0.01em;
-  line-height: 1.25;
+  line-height: 1;
 }
 
 .wd-pad {
@@ -518,7 +546,7 @@
 /* ═══════════════ PANELS — tight single spacing ═══════════════ */
 .wd-panel {
   position: relative;
-  background: #000;
+  background: var(--wd-panel);
   border: 0;
   border-radius: 0;
   padding: 10px 0 14px;
@@ -540,8 +568,8 @@
   font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.2;
-  color: #fff;
+  line-height: 1;
+  color: var(--wd-text);
 }
 
 .wd-chip {
@@ -555,11 +583,11 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .wd-chip-muted {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--wd-hairline) !important;
   color: var(--wd-secondary) !important;
 }
 
@@ -596,7 +624,7 @@
   color: var(--wd-secondary);
   margin-bottom: 4px;
   letter-spacing: 0;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .wd-metric strong {
@@ -604,10 +632,10 @@
   font-size: 1.4rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: #fff;
+  color: var(--wd-text);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-  line-height: 1.2;
+  line-height: 1;
   font-family: var(--wd-font);
 }
 
@@ -625,7 +653,7 @@
   font-size: 11px;
   font-weight: 400;
   color: var(--wd-tertiary);
-  line-height: 1.25;
+  line-height: 1;
   letter-spacing: 0;
 }
 
@@ -714,7 +742,7 @@
   width: 72%;
   max-width: 14px;
   height: 2px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--wd-hairline);
   border-radius: 1px;
 }
 
@@ -724,7 +752,7 @@
   color: var(--wd-tertiary);
   height: 11px;
   letter-spacing: 0;
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .wd-legend {
@@ -735,7 +763,7 @@
   font-weight: 500;
   color: var(--wd-secondary);
   letter-spacing: 0;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 /* Alerts */
@@ -770,9 +798,9 @@
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: #fff;
+  color: var(--wd-text);
   margin-bottom: 1px;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .wd-alerts p {
@@ -780,7 +808,7 @@
   font-size: 12px;
   font-weight: 400;
   color: var(--wd-secondary);
-  line-height: 1.25;
+  line-height: 1;
   letter-spacing: 0;
 }
 
@@ -830,7 +858,7 @@
   font-weight: 500;
   min-height: 0;
   letter-spacing: 0;
-  line-height: 1.3;
+  line-height: 1;
   font-family: var(--wd-font);
 }
 
@@ -845,15 +873,15 @@
   font-weight: 600;
   letter-spacing: 0;
   margin-bottom: 4px;
-  line-height: 1.25;
-  color: #fff;
+  line-height: 1;
+  color: var(--wd-text);
   font-family: var(--wd-font);
 }
 
 .wd-progress {
   height: 5px;
   border-radius: 980px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--wd-hairline);
   overflow: hidden;
 }
 
@@ -886,9 +914,9 @@
   font-size: 2.1rem;
   font-weight: 600;
   letter-spacing: -0.015em;
-  color: #fff;
+  color: var(--wd-text);
   font-variant-numeric: tabular-nums;
-  line-height: 1.15;
+  line-height: 1;
   font-family: var(--wd-font);
 }
 
@@ -901,12 +929,12 @@
   gap: 4px;
   color: var(--wd-secondary);
   font-size: 12px;
-  line-height: 1.3;
+  line-height: 1;
   letter-spacing: 0;
 }
 
 .wd-learn strong {
-  color: #fff;
+  color: var(--wd-text);
   font-weight: 600;
 }
 
@@ -942,7 +970,7 @@
 
 .wd-ring-bg {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.06);
+  stroke: rgba(0, 0, 0, 0.08);
   stroke-width: 7;
 }
 
@@ -958,7 +986,7 @@
 .wd-ring text {
   transform: rotate(90deg);
   transform-origin: 44px 44px;
-  fill: #fff;
+  fill: var(--wd-text);
   font-size: 13px;
   font-weight: 600;
   font-family: var(--wd-font);
@@ -970,9 +998,9 @@
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: #fff;
+  color: var(--wd-text);
   margin-bottom: 1px;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .wd-goal p {
@@ -981,7 +1009,7 @@
   font-weight: 400;
   color: var(--wd-secondary);
   letter-spacing: 0;
-  line-height: 1.25;
+  line-height: 1;
 }
 
 .wd-goals-edit {
@@ -999,7 +1027,7 @@
   width: 100%;
   border: 0;
   background: transparent;
-  color: #fff;
+  color: var(--wd-text);
   font: inherit;
   font-size: 17px;
   font-weight: 600;
@@ -1031,8 +1059,8 @@
   min-height: 40px;
   border: 1px solid var(--wd-hairline-strong);
   border-radius: 10px;
-  background: #000;
-  color: #fff;
+  background: var(--wd-panel);
+  color: var(--wd-text);
   font: inherit;
   font-size: 14px;
   padding: 0 12px;
@@ -1056,7 +1084,7 @@
   -webkit-overflow-scrolling: touch;
   border-radius: 0;
   border: 0;
-  background: #000;
+  background: var(--wd-panel);
   max-width: 100%;
   width: 100%;
 }
@@ -1068,7 +1096,7 @@
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 14px;
-  background: #000;
+  background: var(--wd-panel);
   letter-spacing: -0.01em;
 }
 
@@ -1082,7 +1110,7 @@
   padding: 4px 10px 6px 0;
   background: transparent;
   border-bottom: 0;
-  line-height: 1.25;
+  line-height: 1;
   font-family: var(--wd-font);
 }
 
@@ -1106,7 +1134,7 @@
   vertical-align: middle;
   font-size: 13px;
   font-weight: 400;
-  line-height: 1.3;
+  line-height: 1;
   background: transparent;
   font-family: var(--wd-font);
   overflow: hidden;
@@ -1144,7 +1172,7 @@
 }
 
 .wd-table tr:hover td {
-  background: #050505;
+  background: var(--wd-panel-2);
 }
 
 .wd-table .num {
@@ -1165,11 +1193,17 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: #fff;
+  color: var(--wd-text);
   font: inherit;
   font-size: 13px;
   padding: 0 4px;
   outline: none;
+  /* Keep dark native controls — light page was breaking Safari selects */
+  color-scheme: light;
+  -webkit-text-fill-color: var(--wd-text);
+}
+
+.wd-table.wd-edit input {
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
@@ -1181,9 +1215,41 @@
   padding: 0 2px;
 }
 
-.wd-table.wd-edit select {
+/* Category select: plain, no hatch, no white pill chrome */
+.wd-table.wd-edit select,
+.wd-table.wd-edit select.wd-cat-select {
   min-width: 0;
-  padding-right: 2px;
+  padding: 0 4px;
+  padding-right: 1rem;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: transparent !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'><path d='M1 1l3.5 3.5L8 1' fill='none' stroke='%23666' stroke-width='1.4' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.2rem center;
+  background-size: 9px 6px;
+  box-shadow: none !important;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  cursor: pointer;
+}
+
+/* Kill Safari autofill / focus zebra on ledger fields */
+.wd-table.wd-edit select:-webkit-autofill,
+.wd-table.wd-edit input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+  -webkit-text-fill-color: var(--wd-text) !important;
+  caret-color: var(--wd-text);
+  transition: background-color 99999s ease-out;
+}
+
+.wd-table.wd-edit input:focus,
+.wd-table.wd-edit select:focus {
+  border-color: var(--wd-hairline) !important;
+  background-color: var(--wd-panel-2) !important;
+  box-shadow: none !important;
 }
 
 .wd-table.wd-edit .num input {
@@ -1199,11 +1265,7 @@
   text-overflow: ellipsis;
 }
 
-.wd-table.wd-edit input:focus,
-.wd-table.wd-edit select:focus {
-  border-color: rgba(48, 209, 88, 0.45);
-  background: #050505;
-}
+/* focus rules for ledger fields live with select styles above */
 
 .wd-table.wd-edit .num input {
   text-align: right;
@@ -1252,13 +1314,13 @@
   min-height: 32px;
   border: 1px solid var(--wd-hairline-strong);
   border-radius: 8px;
-  background: #000;
-  color: #fff;
+  background: var(--wd-panel);
+  color: var(--wd-text);
   font: inherit;
   font-size: 12px;
   padding: 0 8px;
   outline: none;
-  line-height: 1.2;
+  line-height: 1;
   transition: border-color 0.15s var(--wd-ease);
 }
 
@@ -1288,11 +1350,11 @@
   padding: 0 10px;
   border: 1px solid var(--wd-hairline-strong);
   border-radius: 980px;
-  background: #000;
+  background: var(--wd-panel);
   color: var(--wd-text);
   font: inherit;
   font-size: 12px;
-  line-height: 1.2;
+  line-height: 1;
   outline: none;
 }
 
@@ -1318,7 +1380,7 @@
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0;
-  line-height: 1.2;
+  line-height: 1;
   cursor: pointer;
   transition:
     border-color 0.15s var(--wd-ease),
@@ -1328,7 +1390,7 @@
 
 .wd-chip-btn:hover {
   border-color: rgba(48, 209, 88, 0.4);
-  color: #fff;
+  color: var(--wd-text);
   background: var(--wd-green-soft);
 }
 
@@ -1345,12 +1407,12 @@
   padding: 0 14px;
   border: 1px solid var(--wd-hairline-strong);
   border-radius: 980px;
-  background: #000;
-  color: #fff;
+  background: var(--wd-panel);
+  color: var(--wd-text);
   font: inherit;
   font-size: 13px;
   letter-spacing: -0.01em;
-  line-height: 1.2;
+  line-height: 1;
   outline: none;
   transition: border-color 0.15s var(--wd-ease);
 }
@@ -1372,7 +1434,7 @@
   border: 0;
   color: var(--wd-text);
   font-size: 13px;
-  line-height: 1.35;
+  line-height: 1;
   letter-spacing: 0;
   font-family: var(--wd-font);
 }
@@ -1390,7 +1452,7 @@
   gap: 10px;
   align-items: center;
   padding: 8px 2px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--wd-hairline);
 }
 
 .wd-budget-row:last-child {
@@ -1403,8 +1465,8 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   margin-bottom: 3px;
-  line-height: 1.2;
-  color: #fff;
+  line-height: 1;
+  color: var(--wd-text);
 }
 
 .wd-budget-main em {
@@ -1415,7 +1477,7 @@
   color: var(--wd-secondary);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
-  line-height: 1.25;
+  line-height: 1;
 }
 
 .wd-budget-row label {
@@ -1431,8 +1493,8 @@
   min-height: 40px;
   border: 1px solid var(--wd-hairline-strong);
   border-radius: 10px;
-  background: #000;
-  color: #fff;
+  background: var(--wd-panel);
+  color: var(--wd-text);
   font: inherit;
   padding: 0 12px;
 }
@@ -1515,7 +1577,7 @@
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.025em;
-  color: #fff;
+  color: var(--wd-text);
   margin: 4px 0;
   font-variant-numeric: tabular-nums;
 }
@@ -1555,8 +1617,8 @@
   font-size: 1.35rem;
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.2;
-  color: #fff;
+  line-height: 1;
+  color: var(--wd-text);
   font-family: var(--wd-font);
 }
 
@@ -1578,7 +1640,7 @@
   letter-spacing: -0.02em;
   color: var(--wd-green);
   font-family: var(--wd-font);
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .wd-brain-cta {
@@ -1590,7 +1652,7 @@
 
 .wd-brain-proj {
   margin: 8px 0 0;
-  line-height: 1.3;
+  line-height: 1;
 }
 
 .wd-brain-proj strong {
@@ -1633,10 +1695,10 @@
   text-align: center;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: #fff;
+  color: var(--wd-text);
   font-size: 13px;
   letter-spacing: -0.02em;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 /* Bank */
@@ -1671,15 +1733,15 @@
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: #fff;
+  color: var(--wd-text);
   margin-bottom: 4px;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .wd-bank-card p {
   margin: 0 0 8px;
   font-size: 12px;
-  line-height: 1.3;
+  line-height: 1;
   color: var(--wd-secondary);
   letter-spacing: 0;
 }
@@ -1697,8 +1759,8 @@
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  line-height: 1.2;
-  color: #fff;
+  line-height: 1;
+  color: var(--wd-text);
 }
 
 .wd-risk ul {
@@ -1709,12 +1771,12 @@
   gap: 4px;
   color: var(--wd-secondary);
   font-size: 12px;
-  line-height: 1.3;
+  line-height: 1;
   letter-spacing: 0;
 }
 
 .wd-risk strong {
-  color: #fff;
+  color: var(--wd-text);
   font-weight: 600;
 }
 
@@ -1745,7 +1807,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1;
 }
 .wd-acct-table th,
 .wd-acct-table td {
@@ -1758,7 +1820,7 @@
   color: var(--wd-secondary);
   font-weight: 600;
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--wd-panel-2);
 }
 .wd-acct-table tr.is-flag td {
   background: rgba(255, 69, 58, 0.06);
@@ -1832,7 +1894,7 @@
   display: flex;
   flex-direction: column;
   gap: 2.75rem;
-  margin-top: 1.25rem;
+  margin-top: 0.5rem;
   outline: none;
   border: 0;
   background: transparent;
@@ -1861,9 +1923,9 @@
   padding: 0;
   font-size: 1.35rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--wd-text);
   letter-spacing: -0.02em;
-  line-height: 1.15;
+  line-height: 1;
 }
 .wd-month-book-head .wd-muted {
   margin: 0.15rem 0 0;
@@ -1921,7 +1983,7 @@
   justify-content: space-between;
   gap: 12px;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1;
   color: var(--wd-text);
   padding: 0;
   border: 0;
@@ -1954,7 +2016,7 @@
   cursor: pointer;
 }
 .wd-ellipsis-btn:hover {
-  color: #fff;
+  color: var(--wd-text);
   background: transparent !important;
   border: 0 !important;
 }
@@ -1976,32 +2038,38 @@
   text-align: left;
 }
 .wd-ellipsis-row:hover {
-  color: #fff;
+  color: var(--wd-text);
   border: 0 !important;
   background: transparent !important;
 }
-/* Full month detail — NEVER truncate; no frame around the table */
+/* Full month detail — fills the content column at any window width */
 .wd-table.wd-ledger-full {
   table-layout: fixed;
-  min-width: 34rem; /* narrower than this, the wrap scrolls instead of colliding */
+  min-width: 0;
   width: 100%;
-  max-width: 780px;
+  max-width: none;
   border: 0;
   background: transparent;
 }
-/* Column widths — keep them together, no full-bleed stretch */
+.wd-month-full,
+.wd-table-wrap.wd-month-full {
+  width: 100%;
+  max-width: none;
+  overflow-x: auto;
+}
+/* Date · Payee · Category · Amount · Balance · × */
 .wd-table.wd-ledger-full th:nth-child(1),
-.wd-table.wd-ledger-full td:nth-child(1) { width: 6.5rem; }
+.wd-table.wd-ledger-full td:nth-child(1) { width: 7rem; }
 .wd-table.wd-ledger-full th:nth-child(2),
 .wd-table.wd-ledger-full td:nth-child(2) { width: auto; }
 .wd-table.wd-ledger-full th:nth-child(3),
-.wd-table.wd-ledger-full td:nth-child(3) { width: 10rem; }
+.wd-table.wd-ledger-full td:nth-child(3) { width: 10.5rem; }
 .wd-table.wd-ledger-full th:nth-child(4),
-.wd-table.wd-ledger-full td:nth-child(4) { width: 5.5rem; }
+.wd-table.wd-ledger-full td:nth-child(4) { width: 6.75rem; }
 .wd-table.wd-ledger-full th:nth-child(5),
-.wd-table.wd-ledger-full td:nth-child(5) { width: 6.5rem; }
+.wd-table.wd-ledger-full td:nth-child(5) { width: 7.25rem; }
 .wd-table.wd-ledger-full th:nth-child(6),
-.wd-table.wd-ledger-full td:nth-child(6) { width: 2rem; }
+.wd-table.wd-ledger-full td:nth-child(6) { width: 1.75rem; }
 .wd-table.wd-ledger-full th,
 .wd-table.wd-ledger-full td {
   overflow: hidden;
@@ -2019,7 +2087,7 @@
 .wd-table.wd-ledger-full .wd-payee-cell .wd-muted {
   margin-top: 0 !important;
   font-size: 11px !important;
-  line-height: 1.2 !important;
+  line-height: 1 !important;
 }
 
 /* Payee as tight text: "Zutobi.com (purchase)" — type sits right after */
@@ -2055,10 +2123,52 @@
 }
 .wd-table.wd-ledger-full td.num input {
   white-space: nowrap !important;
-  min-width: 5.5rem;
+  min-width: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* Amount: $ prefix + clean text field (no spinner junk) */
+.wd-table.wd-ledger-full td.wd-amt-cell {
+  overflow: visible;
+}
+.wd-table.wd-ledger-full .wd-amt-inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1px;
+  width: 100%;
+}
+.wd-table.wd-ledger-full .wd-amt-prefix {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--wd-tertiary);
+  line-height: 1;
+  user-select: none;
+}
+.wd-table.wd-ledger-full .wd-amt-input {
+  flex: 0 1 auto;
+  width: 4.5rem !important;
+  min-width: 3.25rem !important;
+  max-width: 5.25rem;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  padding: 0 2px !important;
+}
+/* Kill native number spinners anywhere they leak in */
+.wd-table.wd-edit input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.wd-table.wd-edit input[type="number"]::-webkit-inner-spin-button,
+.wd-table.wd-edit input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .wd-table.wd-ledger-full select {
-  min-width: 7rem;
+  min-width: 0;
 }
 .wd-month-full {
   margin-top: 0.75rem;
@@ -2109,13 +2219,13 @@
   letter-spacing: 0.04em;
   color: var(--wd-tertiary);
   cursor: pointer;
-  line-height: 1.2;
+  line-height: 1;
 }
 .wd-year-nav-link:hover {
   color: rgba(255, 255, 255, 0.7);
 }
 .wd-year-nav-link.is-active {
-  color: #fff;
+  color: var(--wd-text);
   font-weight: 600;
 }
 
@@ -2144,44 +2254,71 @@
   letter-spacing: 0;
   color: var(--wd-tertiary);
   cursor: pointer;
-  line-height: 1.2;
+  line-height: 1;
 }
 .wd-month-nav-link:hover {
   color: rgba(255, 255, 255, 0.75);
   background: transparent !important;
 }
 .wd-month-nav-link.is-active {
-  color: #fff;
+  color: var(--wd-text);
   font-weight: 600;
 }
 
-/* Ledger filters: categories + year + months sit together, no floating strips */
+/* Ledger filters: one tight toolbar — Search + selects pack left */
 .wd-filters-ledger {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem 0.75rem;
-  margin-bottom: 0.35rem;
+  justify-content: flex-start;
+  /* Squeeze controls together (was ~1.1rem — looked sparse) */
+  gap: 0.15rem 0.55rem;
+  margin: 0 0 1.1rem;
+  width: 100%;
+  max-width: none;
 }
-/* Compact dropdowns: thin, centered, chevron tight against the text */
+/* Compact dropdowns: width = selected label, not longest option */
 .wd-filters-ledger select {
   appearance: none;
   -webkit-appearance: none;
+  flex: 0 0 auto;
   width: auto;
-  min-height: 24px;
-  padding: 0 1.1rem 0 0.2rem;
-  text-align: center;
+  max-width: max-content;
+  field-sizing: content; /* size to current value, not widest option */
+  min-height: 28px;
+  padding: 0 0.95rem 0 0 !important;
+  text-align: left;
   font-size: 13px;
+  font-weight: 500;
+  color: var(--wd-text) !important;
+  background-color: transparent !important;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'><path d='M1 1l3.5 3.5L8 1' fill='none' stroke='%23999' stroke-width='1.4'/></svg>");
   background-repeat: no-repeat;
-  background-position: right 0.25rem center;
+  background-position: right 0.05rem center;
   cursor: pointer;
+  border: 0 !important;
+  border-bottom: 1px solid transparent !important;
+}
+.wd-filters-ledger select:hover {
+  border-bottom-color: var(--wd-hairline-strong, rgba(0, 0, 0, 0.12)) !important;
 }
 .wd-filters-ledger input[type="search"] {
-  min-height: 24px;
+  flex: 0 0 11rem !important;
+  width: 11rem !important;
+  max-width: 11rem !important;
+  min-height: 28px;
   font-size: 13px;
-  flex: 1 1 10rem;
-  max-width: 16rem;
+  padding: 0.15rem 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--wd-hairline-strong, rgba(0, 0, 0, 0.14)) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--wd-text) !important;
+  -webkit-text-fill-color: var(--wd-text);
+}
+.wd-filters-ledger input[type="search"]::placeholder {
+  color: var(--wd-tertiary);
+  opacity: 1;
 }
 .wd-filters-ledger .wd-year-nav-inline {
   display: inline-flex;
@@ -2219,7 +2356,7 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--wd-text);
 }
 .wd-today-order {
   margin: 0 0 0.65rem;
@@ -2264,7 +2401,7 @@
   flex-direction: column;
   gap: 0.1rem;
   font-size: 13px;
-  line-height: 1.35;
+  line-height: 1;
 }
 .wd-today-body strong {
   font-weight: 600;
@@ -2277,10 +2414,10 @@
 
 /* ── User: no dividing lines · single-spaced (tight) everywhere ── */
 .wd {
-  line-height: 1.25 !important;
+  line-height: 1 !important;
 }
 .wd * {
-  line-height: 1.25;
+  line-height: 1;
 }
 .wd p {
   margin: 0.25rem 0;
@@ -2294,10 +2431,10 @@
   border-bottom: 0 !important;
   padding-bottom: 0 !important;
   margin-bottom: 0.9rem;
-  line-height: 1.25;
+  line-height: 1;
 }
 .wd-subnav-link {
-  line-height: 1.25 !important;
+  line-height: 1 !important;
 }
 .wd-top,
 .wd-discipline,
@@ -2331,7 +2468,7 @@
   border-radius: 0 !important;
   box-shadow: none !important;
   background: transparent !important;
-  line-height: 1.5 !important;
+  line-height: 1 !important;
   min-height: auto;
   padding: 0.25rem 0.5rem 0.25rem 0;
 }
@@ -2345,7 +2482,7 @@
 .wd-acct-table td {
   border: 0 !important;
   border-bottom: 0 !important;
-  line-height: 1.5 !important;
+  line-height: 1 !important;
 }
 .wd-table th {
   padding-top: 0.3rem;
@@ -2357,14 +2494,14 @@
 }
 .wd-table.wd-ledger-full td,
 .wd-table.wd-ledger-full th {
-  line-height: 1.3 !important;
+  line-height: 1 !important;
 }
 .wd-month-nav,
 .wd-year-nav,
 .wd-month-nav-link,
 .wd-year-nav-link {
   border: 0 !important;
-  line-height: 1.5 !important;
+  line-height: 1 !important;
 }
 .wd-month-nav-inline {
   margin-top: 0.35rem !important;
@@ -2377,7 +2514,7 @@
   border: 0 !important;
   border-bottom: 0 !important;
   box-shadow: none !important;
-  line-height: 1.5 !important;
+  line-height: 1 !important;
 }
 .wd-btn,
 .wd-chip,
@@ -2385,7 +2522,7 @@
 .wd-select {
   border: 0 !important;
   box-shadow: none !important;
-  line-height: 1.5 !important;
+  line-height: 1 !important;
 }
 .wd-muted,
 .wd-ledger-sub,
@@ -2394,7 +2531,7 @@ li,
 span,
 label,
 strong {
-  line-height: 1.5;
+  line-height: 1;
 }
 .wd-discipline {
   border: 0 !important;
@@ -2418,7 +2555,7 @@ strong {
 }
 .wd-stat-tile {
   padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--wd-hairline);
   border-radius: 6px;
 }
 .wd-stat-tile .wd-stat-label {
@@ -2439,7 +2576,7 @@ strong {
   padding: 10px 12px;
   border-radius: 6px;
   border-left: 4px solid var(--wd-tertiary);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--wd-panel-2);
   margin-bottom: 8px;
   list-style: none;
 }
@@ -2453,7 +2590,7 @@ strong {
 }
 .wd-chart-frame {
   width: 100%;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--wd-panel-2);
   border-radius: 6px;
 }
 .wd-chart-frame text {
@@ -2461,7 +2598,7 @@ strong {
 }
 .wd-annual-legend div {
   color: var(--wd-text);
-  line-height: 1.7;
+  line-height: 1;
 }
 
 /* ── Subscriptions tab ── */
@@ -2523,7 +2660,7 @@ strong {
 .wd-sub-table td {
   text-align: left;
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--wd-hairline);
   color: var(--wd-text);
 }
 .wd-sub-table th {
@@ -2537,19 +2674,110 @@ strong {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.wd-cad {
+/* Cadence: plain text, hover shows Monthly | Yearly (no pill spam) */
+.wd-cad-toggle {
+  position: relative;
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
+  outline: none;
+  cursor: default;
+  min-width: 4.5em;
+}
+.wd-cad-current {
+  font-size: 13px;
+  color: var(--wd-secondary);
+  border-bottom: 1px dashed color-mix(in srgb, var(--wd-secondary) 45%, transparent);
+  padding-bottom: 1px;
+}
+.wd-cad-menu {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 20;
+  margin-top: 4px;
+  padding: 4px;
+  background: var(--wd-surface, #fff);
+  border: 1px solid var(--wd-hairline);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  gap: 2px;
+  flex-direction: column;
+  min-width: 7em;
+}
+.wd-cad-toggle:hover .wd-cad-menu,
+.wd-cad-toggle:focus-within .wd-cad-menu {
+  display: flex;
+}
+.wd-cad-opt {
+  appearance: none;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--wd-text);
+  cursor: pointer;
+}
+.wd-cad-opt:hover {
+  background: color-mix(in srgb, var(--wd-text) 6%, transparent);
+}
+.wd-cad-opt.on {
+  color: #1f6f8b;
+  font-weight: 650;
+}
+html.theme-light .wd-cad-opt.on {
+  color: #0e7490;
+}
+
+.wd-sub-row:hover .wd-sub-x {
+  opacity: 1;
+}
+.wd-sub-x-col {
+  width: 2rem;
+  text-align: right;
+  padding-right: 4px !important;
+}
+.wd-sub-x {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--wd-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  opacity: 0.35;
+  transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.wd-sub-x:hover {
+  opacity: 1 !important;
+  color: #c94f7c;
+  background: color-mix(in srgb, #c94f7c 12%, transparent);
+}
+.wd-sub-hint {
+  margin: 10px 2px 0;
   font-size: 11px;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--wd-secondary);
+  line-height: 1.35;
+}
+
+/* Legacy pill classes unused — keep neutral if anything still references */
+.wd-cad {
+  font-size: 13px;
   color: var(--wd-secondary);
 }
-.wd-cad-monthly { background: rgba(31, 111, 139, 0.22); color: #7fc7dd; }
-.wd-cad-yearly { background: rgba(181, 101, 29, 0.22); color: #e0a566; }
-.wd-cad-weekly { background: rgba(201, 79, 124, 0.22); color: #e59ab8; }
-.wd-cad-quarterly { background: rgba(125, 91, 166, 0.22); color: #bda6dd; }
-.wd-cad-irregular { background: rgba(255, 255, 255, 0.08); color: var(--wd-secondary); }
+.wd-cad-monthly,
+.wd-cad-yearly,
+.wd-cad-weekly,
+.wd-cad-quarterly,
+.wd-cad-irregular {
+  background: transparent;
+  color: var(--wd-secondary);
+  padding: 0;
+}
 .wd-empty {
   text-align: center;
   padding: 40px 20px;
@@ -2561,22 +2789,96 @@ strong {
   margin-bottom: 8px;
 }
 
-/* ── Labeled charts (title + axes + hover) ── */
+/* ── Month charts: line + pie side-by-side (sleep / Focus language) ── */
 .wd-month-charts {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  margin: 14px 0 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(220px, 0.85fr);
+  gap: 1rem 1.5rem;
+  align-items: start;
+  width: 100%;
+  max-width: none;
+  margin: 1.25rem 0 0.5rem;
 }
 .wd-month-charts-line {
-  flex: 1 1 380px;
-  min-width: 300px;
+  min-width: 0;
+  width: 100%;
+}
+.wd-month-charts-pie {
+  min-width: 0;
+  width: 100%;
+}
+.wd-month-charts .wd-pie-block {
+  min-width: 0;
+  width: 100%;
+}
+/* Big out/in/net like Fitness sleep metric head */
+.wd-month-chart-hero {
+  margin: 0 0 6px;
+}
+.wd-month-chart-kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wd-secondary, rgba(26, 28, 34, 0.45));
+  line-height: 1;
+}
+.wd-month-chart-nums {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 16px;
+  margin: 0 0 4px;
+}
+.wd-month-chart-big {
+  font-size: 28px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--wd-text, #1a1c22);
+}
+.wd-month-chart-big small {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-left: 5px;
+  color: var(--wd-secondary, rgba(26, 28, 34, 0.45));
+}
+.wd-month-chart-big.is-out {
+  color: #b91c1c;
+}
+.wd-month-chart-big.is-in {
+  color: #15803d;
+}
+.wd-month-charts .wd-hab-chart-wrap {
+  margin-top: 2px;
+}
+.wd-month-charts .wd-hab-chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wd-secondary, rgba(26, 28, 34, 0.55));
+  letter-spacing: 0;
+}
+/* Half-split / tablet: stay side-by-side if room */
+@media (max-width: 900px) {
+  .wd-month-charts {
+    grid-template-columns: minmax(0, 1.2fr) minmax(200px, 0.9fr);
+    gap: 0.85rem 1rem;
+  }
+}
+/* Phone / ultra-narrow split: stack */
+@media (max-width: 560px) {
+  .wd-month-charts {
+    grid-template-columns: 1fr;
+  }
 }
 .wd-linechart {
   width: 100%;
   height: auto;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--wd-panel-2);
   border-radius: 8px;
 }
 .wd-chart-title {
@@ -2595,15 +2897,15 @@ strong {
   letter-spacing: 0.03em;
 }
 .wd-chart-grid {
-  stroke: rgba(255, 255, 255, 0.07);
+  stroke: rgba(0, 0, 0, 0.08);
   stroke-width: 1;
 }
 .wd-chart-axis {
-  stroke: rgba(255, 255, 255, 0.25);
+  stroke: var(--wd-hairline-strong);
   stroke-width: 1;
 }
 .wd-chart-zero {
-  stroke: rgba(255, 255, 255, 0.35);
+  stroke: var(--wd-tertiary);
   stroke-dasharray: 4 3;
   stroke-width: 1;
 }
@@ -2619,12 +2921,84 @@ strong {
   font-weight: 600;
   pointer-events: none;
 }
+/* Title above pie + legend (never side-by-side with the circle) */
+.wd-pie-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+.wd-pie-block .wd-hab-chart-title {
+  margin: 0;
+  max-width: none;
+}
 .wd-pie-wrap {
   display: flex;
-  gap: 16px;
+  gap: 14px 18px;
   align-items: center;
   flex-wrap: wrap;
-  flex: 0 1 auto;
+  width: 100%;
+  position: relative;
+}
+
+/* Pie disk only — keeps hover label centered on the circle, not the legend */
+.wd-pie-disk {
+  position: relative;
+  flex: 0 0 auto;
+  width: min(220px, 42vw);
+  max-width: 100%;
+}
+
+.wd-pie-disk .wd-pie-svg {
+  width: 100%;
+  display: block;
+}
+
+/* Pie hover callout — single label over the disk (never stacked with SVG center text) */
+.wd-pie-hover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  z-index: 2;
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+
+.wd-pie-hover-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--wd-text, #1a1c22);
+  text-shadow: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wd-pie-hover-val {
+  margin: 3px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--wd-secondary, rgba(26, 28, 34, 0.55));
+  font-variant-numeric: tabular-nums;
+  text-shadow: none;
+}
+
+/* Dark finances canvas */
+html:not(.theme-light) .wd-pie-hover-name {
+  color: rgba(255, 255, 255, 0.94);
+}
+
+html:not(.theme-light) .wd-pie-hover-val {
+  color: rgba(255, 255, 255, 0.55);
 }
 .wd-pie-legend {
   list-style: none;
@@ -2632,8 +3006,9 @@ strong {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  min-width: 180px;
+  gap: 6px;
+  min-width: 9rem;
+  flex: 1 1 8rem;
 }
 .wd-pie-legend li {
   display: flex;
@@ -2641,10 +3016,781 @@ strong {
   gap: 8px;
   font-size: 12px;
   color: var(--wd-text);
-  cursor: default;
-  border-radius: 4px;
-  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px 6px;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.wd-pie-legend li:hover,
+.wd-pie-legend li.is-hot {
+  background: rgba(0, 0, 0, 0.05);
 }
 .wd-pie-legend li.is-hot {
-  background: rgba(255, 255, 255, 0.07);
+  transform: translateX(2px);
 }
+.wd-pie-svg {
+  cursor: crosshair;
+  flex: 0 0 auto;
+  width: min(220px, 42vw);
+  height: auto;
+  max-width: 100%;
+  overflow: visible;
+  /* Pop slices outside viewBox a bit */
+  overflow: visible;
+}
+.wd-pie-slice {
+  transition: opacity 0.16s ease, filter 0.16s ease, stroke-width 0.12s ease;
+}
+.wd-pie-slice.is-hot {
+  /* Pop + black border so you always know which slice */
+  filter: brightness(1.06);
+  stroke: #0a0a0a !important;
+  stroke-width: 2.75px;
+}
+.wd-pie-slice.is-dim {
+  opacity: 0.28;
+}
+.wd-pie-center-main {
+  font-size: 15px;
+  font-weight: 700;
+  fill: var(--wd-text, #1a1c22);
+  font-family: "Source Serif 4", Georgia, serif;
+}
+.wd-pie-center-hot {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--wd-text, #1a1c22);
+  font-family: "Source Serif 4", Georgia, serif;
+}
+.wd-pie-center-sub {
+  font-size: 11px;
+  font-weight: 500;
+  fill: var(--wd-secondary, rgba(26, 28, 34, 0.55));
+  font-family: "Source Serif 4", Georgia, serif;
+}
+html:not(.theme-light) .wd-pie-center-main,
+html:not(.theme-light) .wd-pie-center-hot {
+  fill: rgba(255, 255, 255, 0.95);
+}
+html:not(.theme-light) .wd-pie-center-sub {
+  fill: rgba(255, 255, 255, 0.5);
+}
+/* Sub chart layout when using InteractivePieChart */
+.wd-sub-chart .wd-pie-block {
+  width: 100%;
+}
+.wd-sub-chart .wd-pie-wrap {
+  flex-direction: column;
+  align-items: center;
+}
+.wd-sub-chart .wd-pie-svg {
+  width: min(200px, 55vw);
+}
+
+
+/* ── Habits light safety net (ledger must stay readable) ── */
+.wd-panel,
+.wd-month-book,
+.wd-table-wrap,
+.wd-stat-tile,
+.wd-vault {
+  background: var(--wd-panel) !important;
+  border: 1px solid var(--wd-hairline) !important;
+  border-radius: var(--wd-radius) !important;
+  color: var(--wd-text) !important;
+}
+
+.wd-month-book {
+  padding: 16px 18px !important;
+  margin-bottom: 18px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.wd-table,
+.wd-table th,
+.wd-table td {
+  background: transparent !important;
+  color: var(--wd-text) !important;
+  border-color: var(--wd-hairline) !important;
+}
+
+.wd-table th {
+  color: var(--wd-secondary) !important;
+  font-weight: 600 !important;
+}
+
+.wd-table tr:hover td {
+  background: var(--wd-panel-2) !important;
+}
+
+.wd-table.wd-edit input,
+.wd-table.wd-edit select {
+  background: transparent !important;
+  color: var(--wd-text) !important;
+  -webkit-text-fill-color: var(--wd-text) !important;
+  color-scheme: light !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+}
+
+.wd-table.wd-edit input:focus,
+.wd-table.wd-edit select:focus {
+  background: #fff !important;
+  border-color: rgba(34, 211, 238, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12) !important;
+}
+
+.wd-table.wd-edit select.wd-cat-select {
+  background-color: transparent !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'><path d='M1 1l3.5 3.5L8 1' fill='none' stroke='%23666' stroke-width='1.4' stroke-linecap='round'/></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.25rem center !important;
+  background-size: 9px 6px !important;
+  padding-right: 1.1rem !important;
+}
+
+.wd-filters input,
+.wd-filters select,
+.wd-form input,
+.wd-form select {
+  background: var(--wd-panel) !important;
+  color: var(--wd-text) !important;
+  border: 1px solid var(--wd-hairline) !important;
+  border-radius: var(--wd-radius-sm) !important;
+  color-scheme: light !important;
+}
+
+.wd-subnav {
+  border-bottom: 1px solid var(--wd-hairline) !important;
+  gap: 1.15rem !important;
+}
+
+.wd-subnav-link {
+  color: var(--wd-secondary) !important;
+}
+
+.wd-subnav-link:hover,
+.wd-subnav-link.is-active {
+  color: var(--wd-text) !important;
+}
+
+.wd-muted {
+  color: var(--wd-secondary) !important;
+}
+
+.is-pos { color: var(--wd-green) !important; }
+.is-neg { color: var(--wd-red) !important; }
+
+.wd-copilot-btn,
+.wd-btn-primary {
+  background: #1a1c22 !important;
+  color: #fff !important;
+  border-color: #1a1c22 !important;
+  border-radius: 999px !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+.wd-btn:not(.wd-btn-primary):not(.wd-copilot-btn) {
+  background: var(--wd-panel) !important;
+  color: var(--wd-text) !important;
+  border: 1px solid var(--wd-hairline) !important;
+  border-radius: var(--wd-radius-sm) !important;
+}
+
+.wd-chart-grid { stroke: rgba(0, 0, 0, 0.06) !important; }
+.wd-chart-axis { stroke: rgba(0, 0, 0, 0.14) !important; }
+.wd-chart-zero { stroke: rgba(0, 0, 0, 0.18) !important; }
+.wd-chart-cursor { stroke: rgba(0, 0, 0, 0.2) !important; }
+.wd-chart-title, .wd-chart-hover { fill: var(--wd-text) !important; }
+.wd-chart-tick, .wd-chart-axis-label { fill: var(--wd-secondary) !important; }
+
+.wd-x {
+  color: var(--wd-secondary) !important;
+}
+.wd-x:hover {
+  color: var(--wd-red) !important;
+  background: rgba(185, 28, 28, 0.08) !important;
+}
+
+
+/* ── NO BOX / NO BORDERS — open desk like Habits, no card chrome ── */
+.wd-panel,
+.wd-month-book,
+.wd-table-wrap,
+.wd-stat-tile,
+.wd-vault,
+.wd-month-charts,
+.wd-month-charts-line,
+.wd-pie-wrap,
+.wd-filters,
+.wd-form,
+.wd-discipline,
+.wd-subnav,
+.wd-top,
+.wd-book,
+.wd-overview .wd-panel,
+.wd-stack .wd-panel {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  border-top: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.wd-panel,
+.wd-month-book,
+.wd-table-wrap,
+.wd-stat-tile,
+.wd-vault {
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Filters / inputs: no framed boxes */
+.wd-filters input,
+.wd-filters select,
+.wd-form input,
+.wd-form select,
+.wd-table.wd-edit input,
+.wd-table.wd-edit select,
+.wd-table.wd-edit select.wd-cat-select {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+.wd-table.wd-edit input:focus,
+.wd-table.wd-edit select:focus,
+.wd-filters input:focus,
+.wd-filters select:focus {
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+}
+
+/* Table: no cell frames, faint hairline only if needed — kill both */
+.wd-table,
+.wd-table th,
+.wd-table td {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+.wd-table th {
+  border-bottom: 0 !important;
+}
+
+/* Buttons: text-first, no pill boxes (keep primary solid without border ring) */
+.wd-btn:not(.wd-btn-primary):not(.wd-copilot-btn) {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding-left: 0.35rem !important;
+  padding-right: 0.35rem !important;
+}
+
+.wd-btn-primary,
+.wd-copilot-btn {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Charts: no framed container */
+.wd-month-charts,
+.wd-month-charts > *,
+.wd-linechart,
+.wd-pie-wrap,
+svg.wd-linechart {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.wd-subnav {
+  border-bottom: 0 !important;
+}
+
+.wd-discipline {
+  border-bottom: 0 !important;
+}
+
+/* Month IN / OUT line — clean, no “6 lines · net” clutter */
+.wd-month-io {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--wd-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+}
+.wd-io-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--wd-tertiary);
+}
+.wd-month-io .is-pos,
+.wd-month-io .is-neg {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.wd-io-gap {
+  width: 1.25rem;
+  flex: 0 0 1.25rem;
+}
+
+/* ── Subnav bar: tabs left · actions right (same type size) ── */
+.wd-subnav-bar {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin: 0 0 28px !important;
+  padding: 0 0 4px !important;
+  border: 0 !important;
+}
+.wd-subnav-left,
+.wd-subnav-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 1.15rem;
+}
+.wd-subnav-bar .wd-subnav-link {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  color: var(--wd-secondary) !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  cursor: pointer;
+  line-height: 1;
+}
+.wd-subnav-bar .wd-subnav-link:hover {
+  color: var(--wd-text) !important;
+}
+.wd-subnav-bar .wd-subnav-link.is-active {
+  color: var(--wd-text) !important;
+  font-weight: 650 !important;
+}
+.wd-subnav-right .wd-subnav-link {
+  color: var(--wd-secondary) !important;
+}
+
+/* Quant desk entry — text only, no pill box */
+.wd-subnav-bar .wd-quant-open {
+  font-weight: 650 !important;
+  letter-spacing: 0.02em !important;
+  color: #0f766e !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.wd-subnav-bar .wd-quant-open:hover,
+.wd-subnav-bar .wd-quant-open.is-active {
+  color: #0a5c54 !important;
+  background: transparent !important;
+}
+
+/* Finances: kill hairline dividers under subnav / month heads when present */
+.main.is-finances .wd-subnav,
+.main.is-finances .wd-subnav-bar {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+.main.is-finances .wd-month-book-head,
+.main.is-finances .wd-month-book,
+.main.is-finances .wd-panel,
+.main.is-finances .wd-table-wrap {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.main.is-finances .wd-table.wd-ledger-full thead th {
+  border-bottom: 0 !important;
+}
+.main.is-finances .wd-table.wd-ledger-full tbody td,
+.main.is-finances .wd-table.wd-ledger-full tbody tr {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ── Ledger filters: no boxes, no divider chrome ── */
+.main.is-finances .wd-filters.wd-filters-ledger {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  /* Tight pack — Search · in/out · types · categories · year · month */
+  gap: 0.15rem 0.55rem !important;
+  margin: 0 0 1.35rem !important;
+  padding: 0 !important;
+  width: 100%;
+  max-width: none !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+}
+.main.is-finances .wd-filters-ledger input[type="search"] {
+  flex: 0 0 auto !important;
+  width: 7.5rem !important;
+  max-width: 8.5rem !important;
+  min-width: 5.5rem !important;
+  min-height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0.2rem 0 !important;
+  font-size: 13px !important;
+  color: var(--wd-text) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.main.is-finances .wd-filters-ledger input[type="search"]:focus {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.main.is-finances .wd-filters-ledger select {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: max-content !important;
+  field-sizing: content;
+  min-height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  /* Keep chevron room — don’t zero out right padding */
+  padding: 0.2rem 0.95rem 0.2rem 0 !important;
+  font-size: 13px !important;
+  color: var(--wd-text) !important;
+  color-scheme: light !important;
+  box-shadow: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+.main.is-finances .wd-table.wd-ledger-full thead th {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  padding-bottom: 0.45rem !important;
+  color: var(--wd-tertiary) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.03em !important;
+}
+.main.is-finances .wd-table.wd-ledger-full tbody td {
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+}
+.main.is-finances .wd-table.wd-ledger-full .wd-balance {
+  font-variant-numeric: tabular-nums;
+  font-weight: 550;
+  font-size: 13px;
+}
+.main.is-finances .wd-table.wd-ledger-full .wd-x {
+  opacity: 0.35;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--wd-tertiary);
+  cursor: pointer;
+}
+.main.is-finances .wd-table.wd-ledger-full tr:hover .wd-x {
+  opacity: 0.85;
+}
+/* Force full-bleed ledger + fluid charts (overrides older max-width caps) */
+.main.is-finances .wd-table.wd-ledger-full {
+  width: 100% !important;
+  max-width: none !important;
+}
+.main.is-finances .wd-month-charts {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.45fr) minmax(200px, 0.85fr) !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+@media (max-width: 560px) {
+  .main.is-finances .wd-month-charts {
+    grid-template-columns: 1fr !important;
+  }
+}
+.main.is-finances .wd-hab-chart-wrap {
+  width: 100%;
+  max-width: none;
+}
+.main.is-finances .wd-hab-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.main.is-finances .wd-table.wd-ledger-full .wd-x:hover {
+  color: var(--wd-red, #c44);
+  opacity: 1;
+}
+
+/* ── Cash flow chart: axes + soft title + Habits fill ── */
+.wd-hab-chart-wrap {
+  width: 100%;
+  margin: 12px 0 8px;
+}
+.wd-hab-chart-head {
+  margin: 0 0 10px;
+}
+.wd-hab-chart-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--wd-text);
+  line-height: 1;
+  font-family: "Source Serif 4", Georgia, "Times New Roman", serif !important;
+}
+.wd-hab-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+.wd-hab-chart-tick {
+  fill: var(--wd-secondary);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  font-family: "Source Serif 4", Georgia, serif;
+}
+.wd-hab-axis-label {
+  fill: var(--wd-secondary);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  font-family: "Source Serif 4", Georgia, serif;
+}
+.wd-hab-chart-hover {
+  fill: var(--wd-text);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: "Source Serif 4", Georgia, serif;
+}
+.wd-hab-grid {
+  stroke: rgba(0, 0, 0, 0.06);
+  stroke-width: 1;
+}
+.wd-hab-axis {
+  stroke: rgba(0, 0, 0, 0.22);
+  stroke-width: 1.25;
+}
+.wd-hab-zero {
+  stroke: rgba(0, 0, 0, 0.28);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.wd-hab-cursor {
+  stroke: rgba(0, 0, 0, 0.18);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+/* Capital command — Books tab leads with reinvest doctrine */
+.wd-smart-core {
+  border: 1px solid rgba(26, 28, 34, 0.08);
+  background: linear-gradient(180deg, #ffffff 0%, #f4f6fa 100%);
+}
+.wd-capital-cmd .wd-panel-head h2 {
+  letter-spacing: 0.02em;
+}
+.wd-capital-order {
+  margin: 0 0 4px;
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--wd-text);
+}
+.wd-capital-sub {
+  margin: 0 0 14px;
+  max-width: 42rem;
+}
+.wd-capital-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px 24px;
+  margin: 0 0 8px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(26, 28, 34, 0.06);
+  border-bottom: 1px solid rgba(26, 28, 34, 0.06);
+}
+@media (max-width: 720px) {
+  .wd-capital-hero {
+    grid-template-columns: 1fr;
+  }
+}
+.wd-capital-hero-main span,
+.wd-capital-hero-side span {
+  display: block;
+  font-size: 11px;
+  color: var(--wd-secondary);
+  margin-bottom: 4px;
+}
+.wd-capital-hero-main strong {
+  display: block;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.wd-capital-hero-main em {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-style: normal;
+  color: var(--wd-secondary);
+}
+.wd-capital-hero-side {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-content: center;
+}
+@media (max-width: 520px) {
+  .wd-capital-hero-side {
+    grid-template-columns: 1fr;
+  }
+}
+.wd-capital-hero-side strong {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.wd-smart-order {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--wd-text);
+}
+.wd-smart-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin: 14px 0 16px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(26, 28, 34, 0.06);
+  border-bottom: 1px solid rgba(26, 28, 34, 0.06);
+}
+.wd-capital-metrics {
+  border-top: 0;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+@media (max-width: 900px) {
+  .wd-smart-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.wd-smart-metric span {
+  display: block;
+  font-size: 11px;
+  color: var(--wd-secondary);
+  margin-bottom: 3px;
+}
+.wd-smart-metric strong {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.wd-smart-metric strong small {
+  font-size: 0.7em;
+  font-weight: 500;
+  color: var(--wd-secondary);
+  margin-left: 2px;
+}
+.wd-capital-moves,
+.wd-capital-signals {
+  margin-top: 12px;
+}
+.wd-capital-moves h3,
+.wd-capital-signals h3,
+.wd-smart-anomalies h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wd-secondary);
+}
+.wd-smart-signals {
+  margin-top: 4px;
+}
+.wd-smart-anomalies {
+  margin-top: 14px;
+}
+.wd-capital-transfers {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(26, 28, 34, 0.06);
+}
+.wd-capital-transfers h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wd-secondary);
+}
+/* M/D/YY dates — never wrap ISO-style */
+.wd-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Finance month charts — Whoop Recovery panel language */
+.wd-fin-metric.wx-panel {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+.main.is-finances .wd-fin-metric .wx-panel-title {
+  color: rgba(26, 28, 34, 0.45);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 650;
+}
+.main.is-finances .wd-fin-metric .wx-panel-v {
+  color: #0284c7;
+  font-size: 32px;
+}
+.main.is-finances .wd-fin-metric .wx-panel-meta {
+  color: rgba(26, 28, 34, 0.55);
+}
+.main.is-finances .wd-fin-metric .wx-metric-delta.is-up { color: #15803d; }
+.main.is-finances .wd-fin-metric .wx-metric-delta.is-down { color: #b91c1c; }
+.main.is-finances .wd-fin-metric .wx-panel-foot {
+  color: rgba(26, 28, 34, 0.42);
+  font-size: 11px;
+  margin-top: 6px;
+}
+.main.is-finances .wd-fin-metric .wd-hab-chart-wrap { margin: 4px 0 0; }

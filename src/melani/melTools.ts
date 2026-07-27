@@ -1,8 +1,61 @@
 import { writeTonightBrief } from "./bodyBrief";
+import {
+  bookshelfBriefReply,
+  bookshelfStats,
+  buildBookshelfKnowledgePack,
+  searchBookshelfKnowledge,
+} from "./bookKnowledge";
 import { loadBooks, requestBookOpen, type Book } from "./booksStore";
 import { requestBookDiscovery } from "./bookDiscovery";
 import { deriveCycle, loadCycle } from "./cycleEngine";
 import { DAILY_SUPPLEMENTS, MEAL_PRESETS, todayKey } from "./data";
+import {
+  buildEconCanonPack,
+  explainEconFramework,
+  findEconFramework,
+} from "./econCanon";
+import {
+  dueDecisions,
+  formatDecisions,
+  listDecisions,
+  logDecision,
+  type Decision,
+} from "./decisionsStore";
+import { buildEvidencePack } from "./evidencePack";
+import {
+  formatHighlightHits,
+  highlightStats,
+  searchHighlights,
+} from "./highlightIndex";
+import {
+  buildIntelligenceDigest,
+  loadLastDigestText,
+} from "./intelligenceL3";
+import { buildOperatingBrain } from "./operatingBrain";
+import { melStatsTool, runMelStatsQuery } from "./melStats";
+import { formatCatalog } from "./statsCatalog";
+import {
+  approveMelGraph,
+  listMelGraphs,
+  melGraphStatus,
+  rejectMelGraph,
+  resumeMelGraph,
+  startMelGraph,
+} from "./melGraphs";
+import { runMathLesson, tryMathCommand } from "./melMath";
+import { tryMetricsCommand } from "./melMetrics";
+import { tryExperimentCommand } from "./melExperiments";
+import {
+  runSuccessEngine,
+  trySuccessMathCommand,
+} from "./melSuccessMath";
+import { tryContentCommand } from "./melContent";
+import { tryFinanceModelCommand } from "./melFinanceModel";
+import {
+  addFailure,
+  formatFailuresBrief,
+  type FailureDomain,
+} from "./failuresStore";
 import {
   appendLifeLog,
   applyGoalCommand,
@@ -30,7 +83,21 @@ import {
   type MelWorkspaceAction,
 } from "./melActions";
 import { applyShoppingCommand } from "./shoppingStore";
-import { loadFogMap, loadSleepDay, saveFogMap, saveSleepDay } from "./sleepStore";
+import {
+  bowelQuality,
+  bowelQualityLabel,
+  bowelStats,
+  isFogDayWritable,
+  loadBowelDetailMap,
+  loadFogMap,
+  loadSleepDay,
+  saveSleepDay,
+  setFogDay,
+  upsertBowelDay,
+  type BowelColor,
+  type BowelFeel,
+  type BowelLook,
+} from "./sleepStore";
 import { applyTaskCommand } from "./taskStore";
 import { runCareCommandLocal } from "./care/agent";
 import { careSnapshot } from "./care/store";
@@ -39,6 +106,25 @@ import {
   MEL_TRADING_KNOWLEDGE,
   offlineTradingBrief,
 } from "./melTrading";
+import {
+  loadChecks,
+  loadHabits,
+  saveChecks,
+  setAllChecks,
+  setCheck,
+  isChecked,
+} from "./habitStore";
+import { notifyHabitAutoSync } from "./habitAutoSync";
+import { parseFoodText } from "./nutrition/parseFood";
+import {
+  addEntries,
+  addEntry,
+  loadDay as loadNutriDay,
+  removeEntry,
+  totalsFor as nutriTotalsFor,
+  type MealSlot,
+} from "./nutrition/nutritionStore";
+import { expandFoodHabits } from "./melFoodHabits";
 
 export const MEL_DATA_EVENT = "dr-melani-data-update";
 
@@ -72,31 +158,72 @@ const EMPTY_MACROS: MacroBag = {
 
 const PAGE_ALIASES: Array<{ pattern: RegExp; pageId: string; title: string }> = [
   { pattern: /^(?:my\s+)?(?:bookshelf|library|books?)$/i, pageId: "pg-library", title: "Bookshelf" },
+  {
+    pattern: /^(?:my\s+)?(?:math(?:\s+lab)?|crude\s+math|math\s+empire)$/i,
+    pageId: "pg-math",
+    title: "Math Lab",
+  },
+  {
+    pattern: /^(?:my\s+)?failures?$/i,
+    pageId: "pg-failures",
+    title: "Failures",
+  },
   // Weather is Mel-only (no page) — do not navigate to a Weather page
   { pattern: /^(?:my\s+)?(?:wardrobe|closet|clothes)$/i, pageId: "pg-fashion-os", title: "Wardrobe" },
+  { pattern: /^(?:style\s+shopper|shop\s+clothes|fashion\s+shop)$/i, pageId: "pg-fashion-os", title: "Style Shopper" },
   { pattern: /^(?:my\s+)?(?:shopping|grocer(?:y|ies)|inventory|restock)$/i, pageId: "pg-agent-shopping", title: "Shopping" },
   { pattern: /^(?:my\s+)?(?:gmail|email|inbox)$/i, pageId: "pg-agent-gmail", title: "Gmail" },
   { pattern: /^(?:my\s+)?(?:care|care concierge|appointments?|dentist|doctor appointments?)$/i, pageId: "pg-agent-care", title: "Care Concierge" },
-  { pattern: /^(?:my\s+)?(?:paper (?:desk|trading)|day trading|trading desk|simulator|trade sim)$/i, pageId: "pg-paper-trading", title: "Paper Desk" },
-  // Nutrition owns calories/macros; "meals" still opens the Fitness meal plan.
-  { pattern: /^(?:my\s+)?(?:nutrition|macros?|calories|cals|food log|what i ate)$/i, pageId: "pg-nutrition", title: "Nutrition" },
-  { pattern: /^(?:my\s+)?(?:meals?|food)$/i, pageId: "pg-meals", title: "Meals" },
+  // Nutrition tab retired — route macros/food log to Fitness → Meals
+  // Paper trading desk permanently removed — no Mel alias to it
+  { pattern: /^(?:my\s+)?(?:meals?|food|nutrition|macros?|calories|cals|food log|what i ate)$/i, pageId: "pg-meals", title: "Meals" },
   { pattern: /^(?:my\s+)?(?:sleep|brain fog)$/i, pageId: "pg-sleep", title: "Sleep" },
-  { pattern: /^(?:my\s+)?(?:gym|workout|training|fitness)$/i, pageId: "pg-gym", title: "Gym" },
+  { pattern: /^(?:my\s+)?(?:gym|workout|training)$/i, pageId: "pg-gym", title: "Gym" },
+  {
+    pattern: /^(?:my\s+)?(?:focus|screen\s*time|screentime)$/i,
+    pageId: "pg-focus",
+    title: "Focus",
+  },
+  {
+    pattern: /^(?:my\s+)?(?:fitness|bowel|bowel movement|bm tracker|poop tracker)$/i,
+    pageId: "pg-fitness",
+    title: "Fitness",
+  },
   { pattern: /^(?:my\s+)?(?:habits?|habit tracker|streaks?|routines?)$/i, pageId: "pg-habits", title: "Habits" },
   { pattern: /^(?:my\s+)?(?:data|labs?|period|cycle|health data)$/i, pageId: "pg-data", title: "My Data" },
   { pattern: /^(?:my\s+)?daily shower$/i, pageId: "pg-shower-daily", title: "Daily shower" },
   { pattern: /^(?:my\s+)?everything shower$/i, pageId: "pg-shower-everything", title: "Everything shower" },
   { pattern: /^(?:my\s+)?hair(?: care)?$/i, pageId: "pg-hair", title: "Hair care" },
-  { pattern: /^(?:my\s+)?(?:am skincare|morning skincare)$/i, pageId: "pg-am-skin", title: "AM skincare" },
-  { pattern: /^(?:my\s+)?(?:pm skincare|night skincare)$/i, pageId: "pg-pm-skin", title: "PM skincare" },
-  { pattern: /^(?:my\s+)?(?:hygiene|shower|skincare)$/i, pageId: "pg-hygiene", title: "Hygiene" },
-  // Work section is gone — "work" / stocks / markets open World Monitor under Learn
+  // AM / PM skincare — broad so Mel can transport you for real
+  {
+    pattern:
+      /^(?:my\s+)?(?:am|a\.?m\.?|morning)(?:\s+|-)?(?:skin(?:care)?|skincare|skin care)$/i,
+    pageId: "pg-am-skin",
+    title: "AM skincare",
+  },
+  {
+    pattern:
+      /^(?:my\s+)?(?:pm|p\.?m\.?|night|evening|retinol)(?:\s+|-)?(?:skin(?:care)?|skincare|skin care|night)?$/i,
+    pageId: "pg-pm-skin",
+    title: "PM skincare",
+  },
+  {
+    pattern: /^(?:my\s+)?(?:skin care|skincare)(?:\s+(?:am|a\.?m\.?|morning))$/i,
+    pageId: "pg-am-skin",
+    title: "AM skincare",
+  },
+  {
+    pattern: /^(?:my\s+)?(?:skin care|skincare)(?:\s+(?:pm|p\.?m\.?|night|evening))$/i,
+    pageId: "pg-pm-skin",
+    title: "PM skincare",
+  },
+  { pattern: /^(?:my\s+)?(?:hygiene|shower|skincare|skin care)$/i, pageId: "pg-hygiene", title: "Hygiene" },
+  // World Monitor deleted — markets/stocks language routes to Finances
   {
     pattern:
       /^(?:my\s+)?(?:world\s*monitor|tech\s*news|markets?|stocks?|options?|trades?|trading|startups?|silicon\s*valley|finance\s*radar|work)$/i,
-    pageId: "pg-world-monitor",
-    title: "World Monitor",
+    pageId: "pg-finance",
+    title: "Finances",
   },
   { pattern: /^(?:my\s+)?learn$/i, pageId: "pg-library", title: "Bookshelf" },
   { pattern: /^(?:my\s+)?health$/i, pageId: "pg-fitness", title: "Fitness" },
@@ -211,9 +338,10 @@ export function get_live_snapshot(pageId?: string, pageTitle?: string): string {
   const loggedMeals = meals.loggedIds.map((id) => MEAL_PRESETS.find((meal) => meal.id === id)?.title || id);
   // Always inject advanced stock/trading knowledge so Mel acts like a serious desk
   const marketsBoost =
-    pageId === "pg-world-monitor" || /world monitor|stock|market/i.test(pageTitle || "")
+    pageId === "pg-finance" || /financ|stock|market/i.test(pageTitle || "")
       ? `\n\n${MEL_TRADING_KNOWLEDGE}`
       : `\n\n${MEL_TRADING_KNOWLEDGE.slice(0, 2400)}`;
+  // Whoop pack is already inside buildLiveContext (literacy + day table + full CSVs)
   const data = {
     day,
     page: { id: pageId || "", title: pageTitle || "" },
@@ -234,7 +362,7 @@ export function get_live_snapshot(pageId?: string, pageTitle?: string): string {
 
 const DEFAULT_WATCH = "AAPL,MSFT,NVDA,GOOGL,META,AMZN,TSLA,AMD";
 
-/** Live quarterly packs for Mel (same free Yahoo data as World Monitor → Reports) */
+/** Live quarterly packs for Mel (free Yahoo data) */
 export async function fetch_stock_quarterly(symbolsCsv?: string): Promise<string> {
   const symbols = (symbolsCsv || DEFAULT_WATCH).trim() || DEFAULT_WATCH;
   try {
@@ -269,6 +397,419 @@ export function trading_knowledge_brief(topic?: string): string {
   });
 }
 
+/**
+ * Bookshelf intelligence — what she owns, is reading, and highlighted.
+ * Mel: "what am I reading", "my economics books", "search shelf for inflation".
+ */
+export function bookshelf_knowledge(query?: string): string {
+  const q = (query || "").trim();
+  const stats = bookshelfStats();
+  if (q && !/^(what|show|list|my|books?|bookshelf|shelf|reading|all|econ.*books?)$/i.test(q)) {
+    const hits = searchBookshelfKnowledge(q, 8);
+    if (!hits.length) {
+      return result(
+        "bookshelf_knowledge",
+        `No shelf match for “${q}”. Shelf has ${stats.total} books (${stats.econ} econ/money). Try a title fragment or author.`,
+        { stats, hits: [] }
+      );
+    }
+    const lines = hits.map((h) => {
+      const bits = [
+        `${h.title} — ${h.author}`,
+        h.status,
+        h.isEcon ? "econ" : null,
+        h.progress > 0 ? `${Math.round(h.progress * 100)}%` : null,
+      ].filter(Boolean);
+      let block = `• ${bits.join(" · ")}`;
+      if (h.noteSnippet) block += `\n  note: ${h.noteSnippet}`;
+      for (const quote of h.quotes.slice(0, 2)) {
+        block += `\n  highlight: “${quote.text.slice(0, 180)}”`;
+        if (quote.interpretation) block += ` → ${quote.interpretation.slice(0, 120)}`;
+      }
+      return block;
+    });
+    return result(
+      "bookshelf_knowledge",
+      [`Bookshelf hits for “${q}” (${hits.length}):`, "", ...lines].join("\n"),
+      { stats, hits }
+    );
+  }
+  const pack = buildBookshelfKnowledgePack({ maxChars: 3500, deep: true });
+  return result("bookshelf_knowledge", bookshelfBriefReply(q) + "\n\n" + pack, {
+    stats,
+  });
+}
+
+/**
+ * Economics canon — original frameworks Mel can teach offline.
+ * Mel: "explain opportunity cost", "what are incentives", "economics 101".
+ */
+export function econ_knowledge(topic?: string): string {
+  const q = (topic || "").trim();
+  if (q && !/^(econ|economics|macro|micro)\s*(101|basics|help|desk)?$/i.test(q)) {
+    const fw = findEconFramework(q);
+    if (fw) {
+      // Attach matching highlights as proof (V2)
+      const hits = searchHighlights(q || fw.name, 3);
+      let summary = explainEconFramework(fw);
+      if (hits.length) {
+        summary +=
+          "\n\nFrom your highlights:\n" + formatHighlightHits(hits, { maxEach: 160 });
+      }
+      return result("econ_knowledge", summary, {
+        id: fw.id,
+        name: fw.name,
+        reading: fw.reading,
+        highlightIds: hits.map((h) => h.quoteId),
+      });
+    }
+  }
+  return result(
+    "econ_knowledge",
+    buildEconCanonPack(3200) +
+      "\n\nAsk “explain opportunity cost” or any framework name for the full teaching card.",
+    { frameworks: "canon" }
+  );
+}
+
+/**
+ * Search user-saved highlights across the whole shelf (V2).
+ * Mel: "my highlights", "what did I highlight about risk".
+ */
+export function search_highlights(query?: string): string {
+  const q = (query || "").trim();
+  const stats = highlightStats();
+  const hits = searchHighlights(q, 10);
+  if (!stats.total) {
+    return result(
+      "search_highlights",
+      "You have no saved highlights yet. Open a book in Wonder, select a sentence, and save it. I index every quote you mark.",
+      { stats, hits: [] }
+    );
+  }
+  if (!hits.length) {
+    return result(
+      "search_highlights",
+      `No highlight matched “${q}”. You have ${stats.total} highlights across ${stats.booksWithHighlights} books. Try another word.`,
+      { stats, hits: [] }
+    );
+  }
+  const head = q
+    ? `Highlights for “${q}” (${hits.length} hits · ${stats.total} total on shelf):`
+    : `Recent highlights (${hits.length} of ${stats.total}):`;
+  return result(
+    "search_highlights",
+    head + "\n\n" + formatHighlightHits(hits),
+    {
+      stats,
+      hits: hits.map((h) => ({
+        quoteId: h.quoteId,
+        bookId: h.bookId,
+        title: h.title,
+        author: h.author,
+        text: h.text.slice(0, 280),
+        score: h.score,
+        concepts: h.concepts,
+      })),
+    }
+  );
+}
+
+/** Ranked evidence pack for a free-text question (V2 retrieve path). */
+export function evidence_pack(query?: string, pageId?: string, pageTitle?: string): string {
+  const pack = buildEvidencePack(query || "", { pageId, pageTitle, maxChars: 4500 });
+  return result("evidence_pack", pack.text, {
+    sources: pack.sources,
+    stats: pack.stats,
+    highlightIds: pack.highlights.map((h) => h.quoteId),
+  });
+}
+
+/** Log a decision Melani can reopen later (Phase B compound memory). */
+export function log_decision(
+  question: string,
+  choice: string,
+  domain: Decision["domain"] = "money",
+  revisitDays?: number,
+  assumptions?: string
+): string {
+  if (!question.trim() || !choice.trim()) {
+    return failure(
+      "log_decision",
+      "Need both a question and a choice. Example: decide money: keep Grok $30 for 90 days | revisit 90"
+    );
+  }
+  const row = logDecision({
+    domain,
+    question,
+    choice,
+    revisitDays,
+    assumptions,
+  });
+  return result(
+    "log_decision",
+    `Logged [${row.domain}] decision on ${row.at.slice(0, 10)}: ${row.choice}` +
+      (row.revisitAt ? ` · revisit ${row.revisitAt}` : ""),
+    row
+  );
+}
+
+export function list_decisions(domain?: Decision["domain"]): string {
+  const list = listDecisions(15, domain);
+  return result("list_decisions", formatDecisions(list), { count: list.length, list });
+}
+
+/** Level 3: decisions past revisit date. */
+export function list_due_decisions(): string {
+  const list = dueDecisions();
+  if (!list.length) {
+    return result(
+      "list_due_decisions",
+      "No decision revisits due. Log one with: decide money: … | revisit 30",
+      { count: 0, list: [] }
+    );
+  }
+  return result(
+    "list_due_decisions",
+    `Due revisits (${list.length}):\n\n${formatDecisions(list)}`,
+    { count: list.length, list }
+  );
+}
+
+/**
+ * Level 3 compound weekly intelligence digest.
+ * Body × money × decisions × shelf → one priority.
+ */
+/**
+ * Operating Brain — multi-day correlations + ranked moves (L4).
+ * Mel: "what matters", "operating brain", "be smart", "top move".
+ */
+export function operating_brain_brief(): string {
+  const brain = buildOperatingBrain();
+  return result("operating_brain_brief", brain.packText, {
+    topMove: brain.topMove,
+    readiness: brain.buildReadiness,
+    insightCount: brain.insights.length,
+  });
+}
+
+/**
+ * Mel Stats Lab — classical models on her WHOOP / sleep / money series.
+ * Mel: "stats models", "forecast recovery", "correlate sleep and recovery".
+ */
+export function run_stats_lab(query = ""): string {
+  const q = (query || "").trim();
+  if (!q || /^(help|models?|catalog)$/i.test(q)) {
+    const text = formatCatalog();
+    return result("run_stats_lab", text, { mode: "catalog" });
+  }
+  const text = melStatsTool(q);
+  return result("run_stats_lab", text, { query: q });
+}
+
+/** Returns stats reply text if the utterance is a stats lab command; else null. */
+export function tryStatsLabCommand(raw: string): string | null {
+  return runMelStatsQuery(raw.trim());
+}
+
+/**
+ * Agent loop / graph commands — carry work between steps; you keep last yes.
+ */
+export async function run_agent_loop(query = ""): Promise<string> {
+  const q = query.trim();
+  if (!q || /^(help|list|loops?|graphs?)$/i.test(q)) {
+    return result("run_agent_loop", listMelGraphs(), { mode: "list" });
+  }
+  if (/^(status|state)$/i.test(q)) {
+    return result("run_agent_loop", melGraphStatus(), { mode: "status" });
+  }
+  if (/^(approve|yes|continue|go)$/i.test(q)) {
+    const text = await approveMelGraph();
+    return result("run_agent_loop", text, { mode: "approve" });
+  }
+  if (/^(reject|no|stop|cancel)$/i.test(q)) {
+    const text = await rejectMelGraph();
+    return result("run_agent_loop", text, { mode: "reject" });
+  }
+  if (/^(resume)$/i.test(q)) {
+    const text = await resumeMelGraph();
+    return result("run_agent_loop", text, { mode: "resume" });
+  }
+  // start: body_night | focus_sync | weekly_os
+  const id = q
+    .replace(/^(?:run\s+)?(?:loop|graph)\s+/i, "")
+    .replace(/\s+/g, "_")
+    .toLowerCase();
+  const text = await startMelGraph(id);
+  return result("run_agent_loop", text, { mode: "start", graphId: id });
+}
+
+export function tryAgentLoopCommand(raw: string): string | null {
+  const t = raw.trim();
+  if (
+    /^(?:loops?|graphs?|agent\s+loops?|list\s+loops?)$/i.test(t) ||
+    /^(?:run\s+)?(?:loop|graph)\b/i.test(t) ||
+    /^(?:approve|reject)\s+loop\b/i.test(t) ||
+    /^loop\s+(?:status|approve|reject|resume)\b/i.test(t) ||
+    /^(?:approve|reject)\s+loop$/i.test(t)
+  ) {
+    return t; // signal caller to await run_agent_loop
+  }
+  return null;
+}
+
+/** Crude math curriculum — backend only; prefer success engines for humans. */
+export function run_math_lab(query = ""): string {
+  const q = (query || "list").trim() || "list";
+  const text = runMathLesson(q);
+  return result("run_math_lab", text, { query: q });
+}
+
+export function tryMathLabCommand(raw: string): string | null {
+  // Success / apply engines beat pure curriculum when both could match
+  const success = trySuccessMathCommand(raw.trim());
+  if (success) return success;
+  return tryMathCommand(raw.trim());
+}
+
+/** Applied success math — engines on live metrics (brief output, no UI). */
+export function run_success_math(query = ""): string {
+  const q = (query || "list").trim() || "list";
+  const text = runSuccessEngine(q, { verbose: false });
+  return result("run_success_math", text, { query: q });
+}
+
+export function trySuccessMathLabCommand(raw: string): string | null {
+  return trySuccessMathCommand(raw.trim());
+}
+
+/** YouTube / content performance backbone */
+export function run_content(query = ""): string {
+  const text = tryContentCommand(query.trim() || "videos");
+  return result("run_content", text || formatContentFallback(), { query });
+}
+
+function formatContentFallback(): string {
+  return tryContentCommand("videos") || "videos";
+}
+
+export function tryContentLabCommand(raw: string): string | null {
+  return tryContentCommand(raw.trim());
+}
+
+/** Quiet finance runway model */
+export function run_finance_model(query = ""): string {
+  const text = tryFinanceModelCommand(query.trim() || "runway");
+  return result("run_finance_model", text || "runway", { query });
+}
+
+export function tryFinanceModelLabCommand(raw: string): string | null {
+  return tryFinanceModelCommand(raw.trim());
+}
+
+/** Metric registry — list / add / log */
+export function run_metrics(query = ""): string {
+  const text = tryMetricsCommand(query.trim() || "list metrics");
+  return result("run_metrics", text || formatMetricsFallback(), { query });
+}
+
+function formatMetricsFallback(): string {
+  return tryMetricsCommand("list metrics") || "list metrics";
+}
+
+export function tryMetricsLabCommand(raw: string): string | null {
+  return tryMetricsCommand(raw.trim());
+}
+
+/** Experiment notebook */
+export function run_experiments(query = ""): string {
+  const text = tryExperimentCommand(query.trim() || "notebook");
+  return result("run_experiments", text || "notebook", { query });
+}
+
+export function tryExperimentsLabCommand(raw: string): string | null {
+  return tryExperimentCommand(raw.trim());
+}
+
+/**
+ * Failures desk — log miss / show success metrics.
+ * Mel: "log failure shipped broken UI" · "failures" · "success score"
+ */
+export function run_failures(query = ""): string {
+  const q = query.trim();
+  if (!q || /^(status|score|brief|list)?$/i.test(q)) {
+    return result("run_failures", formatFailuresBrief(), { mode: "brief" });
+  }
+  // log failure: title | lesson optional after " — " or " | "
+  const m = q.match(
+    /^(?:log\s+)?(?:failure|fail|miss)\s*:?\s*(.+)$/i
+  );
+  if (m?.[1]) {
+    let rest = m[1].trim();
+    let domain: FailureDomain = "other";
+    const dom = rest.match(
+      /^(product|engineering|health|money|people|focus|other)\s*[:\-–]\s*(.+)$/i
+    );
+    if (dom) {
+      domain = dom[1]!.toLowerCase() as FailureDomain;
+      rest = dom[2]!.trim();
+    }
+    let title = rest;
+    let lesson = "";
+    const split = rest.split(/\s+[—|]\s+|;\s*lesson:\s*/i);
+    if (split.length >= 2) {
+      title = split[0]!.trim();
+      lesson = split.slice(1).join(" ").trim();
+    }
+    const entry = addFailure({ title, lesson, domain });
+    return result(
+      "run_failures",
+      `Logged failure [${entry.domain} s${entry.severity}]: ${entry.title}${
+        entry.lesson ? `\nLesson: ${entry.lesson}` : ""
+      }\n\n${formatFailuresBrief()}`,
+      { entry }
+    );
+  }
+  return result("run_failures", formatFailuresBrief(), { mode: "brief" });
+}
+
+export function tryFailuresCommand(raw: string): string | null {
+  const t = raw.trim();
+  if (
+    /^(?:failures?|success\s+score|failure\s+(?:log|status|brief))$/i.test(t) ||
+    /^(?:log\s+)?(?:failure|fail|miss)\b/i.test(t)
+  ) {
+    return t;
+  }
+  return null;
+}
+
+export function weekly_intelligence_digest(): string {
+  const digest = buildIntelligenceDigest();
+  return result("weekly_intelligence_digest", digest.fullText, {
+    weekStart: digest.weekStart,
+    weekEnd: digest.weekEnd,
+    priority: digest.priority,
+    due: digest.decisionsDue.length,
+    crossLinks: digest.crossLinks.length,
+    body: digest.body,
+    money: digest.money,
+  });
+}
+
+/** Last saved L3 digest text (if any). */
+export function last_intelligence_digest(): string {
+  const text = loadLastDigestText();
+  if (!text) {
+    return result(
+      "last_intelligence_digest",
+      "No Level 3 digest stored yet. Say “weekly digest” to build one.",
+      { empty: true }
+    );
+  }
+  return result("last_intelligence_digest", text, { empty: false });
+}
+
 export function write_body_brief(): string {
   const brief = writeTonightBrief();
   notify({ domain: "brief", day: brief.day });
@@ -277,7 +818,11 @@ export function write_body_brief(): string {
 
 export function get_food_plan(): string {
   const plan = buildFoodOsPlan();
-  return result("get_food_plan", `${plan.meat === "beef" ? "Beef" : "Salmon"} is today's plate.`, plan);
+  return result(
+    "get_food_plan",
+    `Fixed menu every day (no choices). ${plan.loggedCount}/${plan.totalMeals} logged. Dinner is always salmon.`,
+    plan
+  );
 }
 
 export function lock_meat(meat: FoodOsMeat): string {
@@ -299,29 +844,102 @@ export function undo_meat_eaten(): string {
   return result("undo_meat_eaten", `Removed today's eaten mark for ${value.meat}.`, value);
 }
 
+/** Guess meal slot from time of day (local) */
+function defaultMealSlot(): MealSlot {
+  const h = new Date().getHours();
+  if (h < 11) return "breakfast";
+  if (h < 15) return "lunch";
+  if (h < 21) return "dinner";
+  return "snack";
+}
+
+function slotFromText(text: string): MealSlot {
+  const t = text.toLowerCase();
+  if (/\bbreakfast\b/.test(t)) return "breakfast";
+  if (/\blunch\b/.test(t)) return "lunch";
+  if (/\bdinner\b/.test(t)) return "dinner";
+  if (/\bsnack\b/.test(t)) return "snack";
+  return defaultMealSlot();
+}
+
+/** Day totals from the single nutrition ledger (item rows → legacy mirror). */
+function dayFromNutri(day: string): MealDay {
+  const entries = loadNutriDay(day);
+  const t = nutriTotalsFor(day);
+  const loggedIds = [
+    ...new Set(
+      entries
+        .map((e) => e.presetId || e.id)
+        .filter(Boolean)
+    ),
+  ];
+  return {
+    loggedIds,
+    totals: {
+      calories: Math.round(t.calories),
+      protein_g: Math.round(t.protein_g * 10) / 10,
+      carbs_g: Math.round(t.carbs_g * 10) / 10,
+      fat_g: Math.round(t.fat_g * 10) / 10,
+      fiber_g: Math.round(t.fiber_g * 10) / 10,
+    },
+  };
+}
+
 export function log_usual_meal(presetId: string): string {
   const preset = MEAL_PRESETS.find((meal) => meal.id === presetId);
   if (!preset) return failure("log_usual_meal", `No usual meal matches ${presetId}.`);
   const day = todayKey();
-  const current = loadMealDay(day);
-  if (current.loggedIds.includes(preset.id)) {
-    return result("log_usual_meal", `${preset.title} is already logged today.`, current);
+  // Already logged this preset today (single truth = nutrition entries)
+  if (loadNutriDay(day).some((e) => e.presetId === preset.id)) {
+    return result(
+      "log_usual_meal",
+      `${preset.title} is already logged today.`,
+      dayFromNutri(day)
+    );
   }
-  const totals = { ...current.totals };
-  (Object.keys(EMPTY_MACROS) as Array<keyof MacroBag>).forEach((key) => {
-    totals[key] = (Number(totals[key]) || 0) + preset[key];
-  });
-  const next = { loggedIds: [...current.loggedIds, preset.id], totals };
-  saveMealDay(day, next);
+
+  const slot: MealSlot =
+    /breakfast/i.test(preset.id) || /breakfast/i.test(preset.title)
+      ? "breakfast"
+      : /lunch/i.test(preset.id) || /lunch/i.test(preset.title)
+        ? "lunch"
+        : /dinner/i.test(preset.id) || /dinner/i.test(preset.title)
+          ? "dinner"
+          : "snack";
+
+  addEntry(
+    {
+      slot,
+      name: preset.title,
+      grams: 0,
+      qtyLabel: "Usual meal",
+      macros: {
+        calories: preset.calories,
+        protein_g: preset.protein_g,
+        carbs_g: preset.carbs_g,
+        fat_g: preset.fat_g,
+        fiber_g: preset.fiber_g,
+      },
+      presetId: preset.id,
+      source: "preset",
+    },
+    day
+  );
 
   const consumeKey = `dr-melani-meals-consume:${day}`;
   try {
-    const consume = JSON.parse(localStorage.getItem(consumeKey) || "{}") as Record<string, { done: boolean; time: string }>;
+    const consume = JSON.parse(localStorage.getItem(consumeKey) || "{}") as Record<
+      string,
+      { done: boolean; time: string }
+    >;
     consume[`meal-${preset.id}`] = { done: true, time: formatClock(new Date()) };
     localStorage.setItem(consumeKey, JSON.stringify(consume));
   } catch {
-    /* macro record is already saved */
+    /* nutrition row is already saved */
   }
+  notifyHabitAutoSync(day);
+  notify({ domain: "meals", day });
+  const next = dayFromNutri(day);
   return result(
     "log_usual_meal",
     `Logged ${preset.title.toLowerCase()}: ${preset.calories} calories and ${preset.protein_g}g protein.`,
@@ -329,19 +947,152 @@ export function log_usual_meal(presetId: string): string {
   );
 }
 
+/**
+ * Natural-language food log — single ledger: nutritionStore item rows
+ * (+ legacy mirror for Fitness rings / twin / brief).
+ *
+ * Melani habits first (2 boiled eggs, pocky boxes, chicken), then free parse.
+ */
+export function log_food_nl(raw: string): string {
+  let cleaned = (raw || "")
+    .trim()
+    .replace(/^(?:please\s+)?(?:i\s+)?(?:just\s+)?(?:also\s+)?/i, "")
+    .replace(
+      /^(?:ate|had|eaten|eating|logged?|log|for\s+(?:breakfast|lunch|dinner|snack))\s+/i,
+      ""
+    )
+    .replace(/^(?:i\s+)?(?:ate|had)\s+/i, "")
+    .trim();
+  if (!cleaned) {
+    return failure(
+      "log_food_nl",
+      "Tell me what you ate (e.g. 2 boiled eggs, rice and chicken)."
+    );
+  }
+
+  // Personal usuals → exact log phrases Melani already uses
+  const habits = expandFoodHabits(cleaned);
+  const habitNotes = habits.notes;
+  let usualBreakfast = false;
+  const habitPhrases = habits.phrases.filter((p) => {
+    if (p === "__usual_breakfast__") {
+      usualBreakfast = true;
+      return false;
+    }
+    return true;
+  });
+
+  // Parse habit phrases + any leftover free text as one meal string
+  const parseBlob = [...habitPhrases, habits.remainder]
+    .filter(Boolean)
+    .join(", ");
+  const parsed = parseFoodText(parseBlob || cleaned);
+
+  if (usualBreakfast) {
+    // Side-effect: log breakfast usual in addition to free-form items
+    try {
+      log_usual_meal("breakfast_usual");
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (!parsed.items.length || !parsed.items.some((i) => i.food)) {
+    if (usualBreakfast) {
+      return result(
+        "log_food_nl",
+        "Logged your usual breakfast.",
+        dayFromNutri(todayKey())
+      );
+    }
+    return failure(
+      "log_food_nl",
+      `I couldn't map “${cleaned}” to a food yet. Try: 2 boiled eggs, chicken, 1 box pocky.`
+    );
+  }
+
+  const day = todayKey();
+  const slot = slotFromText(raw);
+  const inputs = parsed.items
+    .filter((i) => i.food)
+    .map((i) => ({
+      slot,
+      name: i.name,
+      grams: i.grams || 0,
+      qtyLabel: i.qtyLabel || "",
+      macros: {
+        calories: Math.round(i.macros.calories),
+        protein_g: Math.round(i.macros.protein_g * 10) / 10,
+        carbs_g: Math.round(i.macros.carbs_g * 10) / 10,
+        fat_g: Math.round(i.macros.fat_g * 10) / 10,
+        fiber_g: Math.round(i.macros.fiber_g * 10) / 10,
+      },
+      foodId: i.food?.id,
+      source: "text" as const,
+    }));
+
+  addEntries(inputs, day);
+  notifyHabitAutoSync(day);
+  notify({ domain: "meals", day });
+
+  const dayTotals = dayFromNutri(day).totals;
+  const lines = parsed.items
+    .filter((i) => i.food)
+    .map(
+      (i) =>
+        `${i.qtyLabel} ${i.name}`.trim() +
+        ` · ${Math.round(i.macros.calories)} cal · ${Math.round(i.macros.protein_g * 10) / 10}g protein`
+    );
+  const unmatched =
+    parsed.unmatched.length > 0
+      ? ` Unmatched: ${parsed.unmatched.join(", ")}.`
+      : "";
+  const habitLine =
+    habitNotes.length > 0 ? ` (${habitNotes.join("; ")})` : "";
+
+  return result(
+    "log_food_nl",
+    `Logged: ${lines.join("; ")}.${habitLine} Today ${Math.round(dayTotals.calories)} cal · ${Math.round(dayTotals.protein_g * 10) / 10}g protein.${unmatched}`,
+    {
+      items: parsed.items,
+      totals: parsed.totals,
+      dayTotals,
+      unmatched: parsed.unmatched,
+      slot,
+      habits: habitPhrases,
+    }
+  );
+}
+
 export function undo_usual_meal(presetId: string): string {
   const preset = MEAL_PRESETS.find((meal) => meal.id === presetId);
   if (!preset) return failure("undo_usual_meal", `No usual meal matches ${presetId}.`);
   const day = todayKey();
-  const current = loadMealDay(day);
-  if (!current.loggedIds.includes(preset.id)) return result("undo_usual_meal", `${preset.title} was not logged today.`, current);
-  const totals = { ...current.totals };
-  (Object.keys(EMPTY_MACROS) as Array<keyof MacroBag>).forEach((key) => {
-    totals[key] = Math.max(0, (Number(totals[key]) || 0) - preset[key]);
-  });
-  const next = { loggedIds: current.loggedIds.filter((id) => id !== preset.id), totals };
-  saveMealDay(day, next);
-  return result("undo_usual_meal", `Undid ${preset.title.toLowerCase()}.`, next);
+  const hit = loadNutriDay(day).find((e) => e.presetId === preset.id);
+  if (!hit) {
+    return result(
+      "undo_usual_meal",
+      `${preset.title} was not logged today.`,
+      dayFromNutri(day)
+    );
+  }
+  removeEntry(hit.id, day);
+  try {
+    const consumeKey = `dr-melani-meals-consume:${day}`;
+    const consume = JSON.parse(localStorage.getItem(consumeKey) || "{}") as Record<
+      string,
+      { done: boolean; time: string }
+    >;
+    if (consume[`meal-${preset.id}`]) {
+      consume[`meal-${preset.id}`] = { done: false, time: "" };
+      localStorage.setItem(consumeKey, JSON.stringify(consume));
+    }
+  } catch {
+    /* ignore */
+  }
+  notifyHabitAutoSync(day);
+  notify({ domain: "meals", day });
+  return result("undo_usual_meal", `Undid ${preset.title.toLowerCase()}.`, dayFromNutri(day));
 }
 
 export function log_water(amountMl: number): string {
@@ -361,7 +1112,77 @@ export function log_water(amountMl: number): string {
   }
   localStorage.setItem(historyKey, JSON.stringify([...history, Math.round(amountMl)]));
   notify({ domain: "water", day });
-  return result("log_water", `Logged ${(amountMl / 1000).toFixed(amountMl % 1000 ? 2 : 1)} L. Water is now ${(next / 1000).toFixed(1)} L today.`, { amountMl, totalMl: next });
+  const habitSync = notifyHabitAutoSync(day);
+  const lit = (next / 1000).toFixed(next % 1000 ? 1 : 0);
+  const goalHit = next >= 3500;
+  const habitNote =
+    habitSync.changed && habitSync.details.length
+      ? ` Habit: ${habitSync.details.join(", ")}.`
+      : goalHit
+        ? " 3.5 L goal hit — water habit should show complete."
+        : "";
+  return result(
+    "log_water",
+    `Logged ${(amountMl / 1000).toFixed(amountMl % 1000 ? 2 : 1)} L. Water is now ${lit} L today.${habitNote}`,
+    {
+      amountMl,
+      totalMl: next,
+      goalHit,
+      habitUpdates: habitSync.details,
+    }
+  );
+}
+
+/**
+ * Set today's water total absolutely (liters). Used by Mel JSON protocol
+ * field water_liters_today so LIFE LOG can pin the day total, not only add.
+ */
+export function set_water_liters(liters: number): string {
+  if (!Number.isFinite(liters) || liters < 0) {
+    return failure("set_water_liters", "Water liters must be zero or higher.");
+  }
+  if (liters > 20) {
+    return failure("set_water_liters", "Water over 20 L looks like a bad number. Re-say the total.");
+  }
+  const day = todayKey();
+  const key = `dr-melani-water-ml:${day}`;
+  const historyKey = `dr-melani-water-hist:${day}`;
+  const before = Math.max(0, Number(localStorage.getItem(key)) || 0);
+  const next = Math.round(liters * 1000);
+  const delta = next - before;
+  localStorage.setItem(key, String(next));
+  if (delta !== 0) {
+    let history: number[] = [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(historyKey) || "[]") as number[];
+      if (Array.isArray(parsed)) history = parsed;
+    } catch {
+      /* empty */
+    }
+    // Record absolute set as a single history step so undo still works
+    localStorage.setItem(historyKey, JSON.stringify([...history, delta]));
+  }
+  notify({ domain: "water", day });
+  const habitSync = notifyHabitAutoSync(day);
+  const lit = (next / 1000).toFixed(next % 1000 ? 1 : 0);
+  const goalHit = next >= 3500;
+  const habitNote =
+    habitSync.changed && habitSync.details.length
+      ? ` Habit: ${habitSync.details.join(", ")}.`
+      : goalHit
+        ? " 3.5 L goal hit — water habit should show complete."
+        : "";
+  return result(
+    "set_water_liters",
+    `Water set to ${lit} L today.${habitNote}`,
+    {
+      liters,
+      totalMl: next,
+      beforeMl: before,
+      goalHit,
+      habitUpdates: habitSync.details,
+    }
+  );
 }
 
 export function undo_water(): string {
@@ -381,6 +1202,7 @@ export function undo_water(): string {
   localStorage.setItem(key, String(next));
   localStorage.setItem(historyKey, JSON.stringify(history));
   notify({ domain: "water", day });
+  notifyHabitAutoSync(day);
   return result("undo_water", `Undid ${(amount / 1000).toFixed(amount % 1000 ? 2 : 1)} L. Water is now ${(next / 1000).toFixed(1)} L today.`, { amountMl: amount, totalMl: next });
 }
 
@@ -390,6 +1212,7 @@ export function log_sleep_hours(hours: number): string {
   const bed = new Date(wake.getTime() - hours * 60 * 60 * 1000);
   const value = saveSleepDay(todayKey(), formatClock(bed), formatClock(wake));
   notify({ domain: "sleep", day: todayKey() });
+  notifyHabitAutoSync(todayKey());
   return result("log_sleep_hours", `Logged ${value.hours} hours of sleep ending at ${value.wake}.`, value);
 }
 
@@ -400,9 +1223,115 @@ export function get_sleep_today(): string {
 }
 
 export function log_brain_fog(value: boolean): string {
-  saveFogMap({ ...loadFogMap(), [todayKey()]: value });
-  notify({ domain: "brainFog", day: todayKey() });
-  return result("log_brain_fog", `Brain fog is logged as ${value ? "yes" : "no"} for today.`, { value });
+  const day = todayKey();
+  if (!isFogDayWritable(day)) {
+    const current = loadFogMap()[day];
+    const label =
+      current === true ? "yes" : current === false ? "no" : "not logged";
+    return failure(
+      "log_brain_fog",
+      `Brain fog is locked for today (after 11:59 PM). Final answer: ${label}.`
+    );
+  }
+  setFogDay(day, value);
+  notify({ domain: "brainFog", day });
+  return result(
+    "log_brain_fog",
+    `Brain fog is logged as ${value ? "yes" : "no"} for today. You can change it until 11:59 PM.`,
+    { value, locked: false }
+  );
+}
+
+/**
+ * Full bowel write — day snapshot + event history.
+ * Mel: "I pooped type 7 liquid", "shat today type 4 easy".
+ */
+export function log_bowel_movement(
+  had: boolean,
+  day?: string,
+  look?: BowelLook,
+  feel?: BowelFeel,
+  color?: BowelColor
+): string {
+  // Strict: only calendar today — past is immutable history, future invalid
+  const today = todayKey();
+  const requested =
+    day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : today;
+  if (requested !== today) {
+    return result(
+      "log_bowel_movement",
+      requested < today
+        ? `Can't change bowel for ${requested} — past days are locked data. Only today (${today}) can be logged.`
+        : `Can't log bowel for ${requested} — only today (${today}) is writable.`,
+      { day: requested, blocked: true, today }
+    );
+  }
+  const iso = today;
+  const log = upsertBowelDay(
+    iso,
+    {
+      had,
+      ...(had && look != null ? { look } : {}),
+      ...(had && feel ? { feel } : {}),
+      ...(had && color ? { color } : {}),
+    },
+    "mel"
+  );
+  notify({ domain: "bowel", day: iso });
+  if (!had) {
+    return result("log_bowel_movement", `Logged bowel No for today.`, {
+      day: iso,
+      had: false,
+      stats: bowelStats(30),
+    });
+  }
+  const q = bowelQualityLabel(bowelQuality(log));
+  const bits = [
+    log.look != null ? `Type ${log.look}` : null,
+    log.feel || null,
+    log.color && log.color !== "brown" ? log.color : null,
+  ].filter(Boolean);
+  return result(
+    "log_bowel_movement",
+    `Logged bowel Yes for today${bits.length ? ` · ${bits.join(" · ")}` : ""} · ${q}. Saved to your bowel history.`,
+    { day: iso, ...log, quality: bowelQuality(log), stats: bowelStats(30) }
+  );
+}
+
+export function get_bowel_today(day?: string): string {
+  const iso = day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : todayKey();
+  const log = loadBowelDetailMap()[iso];
+  const stats = bowelStats(30);
+  const when = iso === todayKey() ? "today" : iso;
+  if (!log || (log.had !== true && log.had !== false)) {
+    return result(
+      "get_bowel_today",
+      `Bowel not logged for ${when}. Last 30d: went ${stats.went} days` +
+        (stats.avgType != null ? `, avg Type ${stats.avgType}` : "") +
+        `. Say “I pooped type 4” or “no BM today”.`,
+      { day: iso, had: null, stats }
+    );
+  }
+  if (log.had === false) {
+    return result("get_bowel_today", `Bowel is No for ${when}.`, {
+      day: iso,
+      had: false,
+      stats,
+    });
+  }
+  const q = bowelQualityLabel(bowelQuality(log));
+  const bits = [
+    log.look != null ? `Type ${log.look}` : null,
+    log.feel || null,
+    log.color && log.color !== "brown" ? log.color : null,
+  ].filter(Boolean);
+  return result(
+    "get_bowel_today",
+    `Bowel Yes for ${when}${bits.length ? ` · ${bits.join(" · ")}` : ""} · ${q}. 30d: ${stats.went} days` +
+      (stats.avgType != null ? `, avg Type ${stats.avgType}` : "") +
+      ".",
+    { day: iso, ...log, quality: bowelQuality(log), stats }
+  );
 }
 
 export function log_all_supplements(): string {
@@ -649,14 +1578,105 @@ export function find_book_source(query: string): string {
   );
 }
 
+/** Compact letters only — for typo-tolerant page match (skncare ≈ skincare). */
+function compactAlpha(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function editDistanceShort(a: string, b: string): number {
+  if (Math.abs(a.length - b.length) > 4) return 99;
+  const prev = new Array(b.length + 1).fill(0).map((_, i) => i);
+  const cur = new Array(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    cur[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+    for (let j = 0; j <= b.length; j++) prev[j] = cur[j];
+  }
+  return prev[b.length];
+}
+
+/**
+ * Always transport Melani to a real Wonder page.
+ * Uses aliases first (AM skincare → pg-am-skin), then fuzzy title match for typos,
+ * then workspace open. App seeds missing system pages so setActivePage never no-ops.
+ */
 export function navigate_page(page: string): string {
-  const workspace = parseToolResult(open_workspace_page(page));
+  const cleaned = (page || "")
+    .trim()
+    .replace(/^(?:the\s+)?page\s+/i, "")
+    .replace(/\s+page$/i, "")
+    .replace(/^["'`]+|["'`.,!?]+$/g, "")
+    .trim();
+
+  // 1) Known product surfaces (hygiene, fitness, etc.) — do not depend on fuzzy workspace titles
+  const alias =
+    PAGE_ALIASES.find((entry) => entry.pattern.test(cleaned)) ||
+    PAGE_ALIASES.find((entry) => entry.pageId === cleaned);
+  if (alias) {
+    window.dispatchEvent(
+      new CustomEvent(MEL_NAVIGATE_EVENT, { detail: { pageId: alias.pageId } })
+    );
+    return result("navigate_page", `Opened ${alias.title}.`, {
+      pageId: alias.pageId,
+      title: alias.title,
+      href: `?page=${alias.pageId}`,
+    });
+  }
+
+  // 1b) Typo rescue: "opn am skncare" / "meels" / "gymn" → closest alias title
+  const needle = compactAlpha(cleaned);
+  if (needle.length >= 3) {
+    let best: { pageId: string; title: string; score: number } | null = null;
+    for (const entry of PAGE_ALIASES) {
+      const titleC = compactAlpha(entry.title);
+      const idC = compactAlpha(entry.pageId);
+      let score = 99;
+      if (titleC.includes(needle) || needle.includes(titleC)) score = 0;
+      else if (idC.includes(needle) || needle.includes(idC)) score = 1;
+      else score = Math.min(editDistanceShort(needle, titleC), editDistanceShort(needle, idC));
+      // "amskncare" vs "amskincare" distance ~2
+      if (score <= 3 && (!best || score < best.score)) {
+        best = { pageId: entry.pageId, title: entry.title, score };
+      }
+    }
+    // Prefer AM/PM skin when "skin" mess is present without am/pm
+    if (best && /skin|skn|care/i.test(cleaned) && !/pm|night|even/i.test(cleaned)) {
+      const am = PAGE_ALIASES.find((e) => e.pageId === "pg-am-skin");
+      if (am && (best.pageId === "pg-hygiene" || best.pageId === "pg-pm-skin" || /skin/i.test(best.title))) {
+        // if they said am/morning-ish or bare skin typo, prefer AM
+        if (/am|a\.?m|morn|skn|skin/i.test(cleaned) && !/pm|p\.?m|night/i.test(cleaned)) {
+          best = { pageId: "pg-am-skin", title: "AM skincare", score: 0 };
+        }
+      }
+    }
+    if (best) {
+      window.dispatchEvent(
+        new CustomEvent(MEL_NAVIGATE_EVENT, { detail: { pageId: best.pageId } })
+      );
+      return result("navigate_page", `Opened ${best.title}.`, {
+        pageId: best.pageId,
+        title: best.title,
+        href: `?page=${best.pageId}`,
+        fuzzy: true,
+      });
+    }
+  }
+
+  // 2) Workspace page by title
+  const workspace = parseToolResult(open_workspace_page(cleaned));
   if (workspace.ok) return JSON.stringify(workspace);
-  const hint = parseToolResult(open_page_hint(page));
-  const data = hint.data as { pageId?: string; title?: string; href?: string } | undefined;
-  if (!hint.ok || !data?.pageId) return JSON.stringify(hint);
-  window.dispatchEvent(new CustomEvent(MEL_NAVIGATE_EVENT, { detail: { pageId: data.pageId } }));
-  return result("navigate_page", `Opened ${data.title || page}.`, data);
+
+  // 3) Fail clearly — never claim "Opened" without navigating
+  return failure(
+    "navigate_page",
+    `I could not open “${cleaned}”. Try: AM skincare, PM skincare, Hygiene, Meals, Sleep, Gym, Habits, Bookshelf.`
+  );
 }
 
 export function run_task_command(text: string): string {
@@ -674,6 +1694,95 @@ export function run_care_command(text: string): string {
   return outcome
     ? JSON.stringify(outcome)
     : failure("care_no_match", "That was not an appointment administration request.");
+}
+
+/** Match habit by name (fuzzy) for Mel check commands. */
+function findHabitsByQuery(query: string) {
+  const q = (query || "").trim().toLowerCase();
+  const habits = loadHabits().filter((h) => !h.archivedAt);
+  if (!q || /^(all|every|everything|boxes?)$/i.test(q)) return habits;
+  return habits.filter((h) => {
+    const n = h.name.toLowerCase();
+    return n.includes(q) || q.includes(n) || n.split(/\s+/).some((w) => w.length > 2 && q.includes(w));
+  });
+}
+
+/** Check every habit box today (or a named habit). Mel: "check every box". */
+export function check_habits(query = "all", day?: string): string {
+  const iso = day || todayKey();
+  const targets = findHabitsByQuery(query);
+  if (!targets.length) {
+    return failure("check_habits", `No habit matches "${query}".`);
+  }
+  let map = loadChecks();
+  const ids = targets.map((h) => h.id);
+  map = setAllChecks(map, iso, ids, true);
+  saveChecks(map);
+  notify({ domain: "habits", day: iso });
+  const names = targets.map((h) => h.name).join(", ");
+  return result(
+    "check_habits",
+    targets.length === 1
+      ? `Checked ${names} for ${iso}.`
+      : `Checked all ${targets.length} habit boxes for ${iso}: ${names}.`,
+    { day: iso, count: targets.length, names: targets.map((h) => h.name) }
+  );
+}
+
+/** Uncheck habit boxes (all or by name). */
+export function uncheck_habits(query = "all", day?: string): string {
+  const iso = day || todayKey();
+  const targets = findHabitsByQuery(query);
+  if (!targets.length) {
+    return failure("uncheck_habits", `No habit matches "${query}".`);
+  }
+  let map = loadChecks();
+  const ids = targets.map((h) => h.id);
+  map = setAllChecks(map, iso, ids, false);
+  saveChecks(map);
+  notify({ domain: "habits", day: iso });
+  return result(
+    "uncheck_habits",
+    targets.length === 1
+      ? `Unchecked ${targets[0].name} for ${iso}.`
+      : `Unchecked ${targets.length} habit boxes for ${iso}.`,
+    { day: iso, count: targets.length }
+  );
+}
+
+/** Toggle one habit on/off for today. */
+export function set_habit_check(name: string, checked: boolean, day?: string): string {
+  const iso = day || todayKey();
+  const hits = findHabitsByQuery(name);
+  if (!hits.length) return failure("set_habit_check", `No habit matches "${name}".`);
+  let map = loadChecks();
+  for (const h of hits) {
+    map = setCheck(map, iso, h.id, checked);
+  }
+  saveChecks(map);
+  notify({ domain: "habits", day: iso });
+  return result(
+    "set_habit_check",
+    `${checked ? "Checked" : "Unchecked"} ${hits.map((h) => h.name).join(", ")} for ${iso}.`,
+    { day: iso, checked, names: hits.map((h) => h.name) }
+  );
+}
+
+export function list_habits_status(day?: string): string {
+  const iso = day || todayKey();
+  const habits = loadHabits().filter((h) => !h.archivedAt);
+  const map = loadChecks();
+  const rows = habits.map((h) => ({
+    name: h.name,
+    checked: isChecked(map, iso, h.id),
+  }));
+  const done = rows.filter((r) => r.checked).length;
+  const lines = rows.map((r) => `${r.checked ? "✓" : "○"} ${r.name}`).join("\n");
+  return result(
+    "list_habits_status",
+    `Habits ${iso}: ${done}/${rows.length} done.\n${lines}`,
+    { day: iso, done, total: rows.length, rows }
+  );
 }
 
 export function current_meat(): FoodOsMeat {

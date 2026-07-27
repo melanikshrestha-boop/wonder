@@ -4,7 +4,15 @@
  * You can still add normal Notion pages in the sidebar — this is only the Gym page.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  buildWhoopAnalytics,
+  loadWhoopStore,
+  WHOOP_EVENT,
+} from "./whoopStore";
+import { groupMetricsBySection, metricDef } from "./whoopMetrics";
+import { MetricExplainModal, MetricGraphPanel } from "./whoopMetricUi";
 import "./gym-exact.css";
+import "./whoop-lab.css";
 
 // ── Types (same shape as Melani gym plan JSON files) ──
 type SetRow = { done?: boolean; failure?: boolean; label?: string };
@@ -212,6 +220,11 @@ const WARMUP = [
 ];
 
 const WEEK_PLAN_KEY = "dr-melani-gym-week-plan";
+/** Daily weigh-ins in pounds (morning check — top of Gym) */
+const WEIGHT_LBS_KEY = "dr-melani-weight-log-lbs";
+const WEIGHT_GOAL_LBS = 110;
+
+type WeightLbsEntry = { day: string; lbs: number };
 
 function todayKey(): string {
   // YYYY-MM-DD local (not UTC) so “today” matches the week strip
@@ -220,6 +233,144 @@ function todayKey(): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function loadWeightLbsLog(): WeightLbsEntry[] {
+  try {
+    const raw = JSON.parse(
+      localStorage.getItem(WEIGHT_LBS_KEY) || "[]"
+    ) as WeightLbsEntry[];
+    if (Array.isArray(raw) && raw.length) {
+      return raw
+        .filter((e) => e && typeof e.day === "string" && Number.isFinite(e.lbs))
+        .sort((a, b) => a.day.localeCompare(b.day));
+    }
+  } catch {
+    /* ignore */
+  }
+  // Migrate single weight into *history* only — never stamp as today
+  // (today's field must start empty until morning weigh-in)
+  try {
+    const single = localStorage.getItem("dr-melani-body-weight");
+    const n = single ? Number(single) : NaN;
+    if (Number.isFinite(n) && n > 50 && n < 400) {
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      const yday = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, "0")}-${String(y.getDate()).padStart(2, "0")}`;
+      const migrated: WeightLbsEntry[] = [
+        { day: yday, lbs: Math.round(n * 10) / 10 },
+      ];
+      try {
+        localStorage.setItem(WEIGHT_LBS_KEY, JSON.stringify(migrated));
+      } catch {
+        /* ignore */
+      }
+      return migrated;
+    }
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
+
+/** Today's lbs if already logged this morning — else null (field stays empty). */
+function todaysWeightLbs(log: WeightLbsEntry[] = loadWeightLbsLog()): number | null {
+  const today = log.find((e) => e.day === todayKey());
+  return today && Number.isFinite(today.lbs) ? today.lbs : null;
+}
+
+function saveWeightLbs(day: string, lbs: number): WeightLbsEntry[] {
+  const entry: WeightLbsEntry = {
+    day,
+    lbs: Math.round(lbs * 10) / 10,
+  };
+  const next = loadWeightLbsLog()
+    .filter((e) => e.day !== day)
+    .concat(entry)
+    .sort((a, b) => a.day.localeCompare(b.day));
+  try {
+    localStorage.setItem(WEIGHT_LBS_KEY, JSON.stringify(next.slice(-400)));
+    // Last known for other surfaces — NOT used to prefill the Gym input
+    localStorage.setItem("dr-melani-body-weight", String(entry.lbs));
+  } catch {
+    /* ignore */
+  }
+  return next;
+}
+
+/** Clear today's weigh-in if the field was wiped. */
+function clearWeightLbsDay(day: string): WeightLbsEntry[] {
+  const next = loadWeightLbsLog().filter((e) => e.day !== day);
+  try {
+    localStorage.setItem(WEIGHT_LBS_KEY, JSON.stringify(next.slice(-400)));
+  } catch {
+    /* ignore */
+  }
+  return next;
+}
+
+/**
+ * Weight trend — same format as Whoop Recovery:
+ * TITLE · big avg · latest / Δ vs avg / range · soft area graph · n = footer
+ */
+function WeightTrendChart({
+  log,
+  goalLbs,
+}: {
+  log: WeightLbsEntry[];
+  goalLbs: number;
+}) {
+  const series = useMemo(() => {
+    const points = log.map((e) => ({ day: e.day, value: e.lbs }));
+    if (!points.length) {
+      return null;
+    }
+    const vals = points.map((p) => p.value);
+    const avg =
+      Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 10) / 10;
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const latest = vals[vals.length - 1];
+    const latestDay = points[points.length - 1].day;
+    // Trend: lower is better toward goal
+    let trend: "up" | "down" | "flat" | "na" = "na";
+    if (vals.length >= 2) {
+      const delta = latest - vals[0];
+      if (Math.abs(delta) < 0.3) trend = "flat";
+      else trend = delta < 0 ? "down" : "up";
+    }
+    return {
+      key: "weight",
+      label: "WEIGHT",
+      unit: "lb",
+      points,
+      avg,
+      min,
+      max,
+      latest,
+      latestDay,
+      trend,
+    };
+  }, [log]);
+
+  if (!series) {
+    return (
+      <p className="gx-weight-empty">
+        Log a few mornings to see your trend. Goal {goalLbs} lb.
+      </p>
+    );
+  }
+
+  return (
+    <div className="gx-weight-metric wx">
+      <MetricGraphPanel
+        series={series}
+        staticTitle
+        goal={goalLbs}
+        goalLabel={`${goalLbs} lb goal`}
+      />
+    </div>
+  );
 }
 
 function weekdayKey(d: Date = new Date()): string {
@@ -354,14 +505,17 @@ export function GymExact() {
       return {};
     }
   });
-  // Body weight (lbs) under warm-up. Editable. Saved locally.
+  // Morning weigh-in (lbs) — empty every new day until she logs today
+  const [weightLog, setWeightLog] = useState<WeightLbsEntry[]>(() =>
+    loadWeightLbsLog()
+  );
   const [bodyWeight, setBodyWeight] = useState(() => {
-    try {
-      return localStorage.getItem("dr-melani-body-weight") || "";
-    } catch {
-      return "";
-    }
+    const today = todaysWeightLbs();
+    return today != null ? String(today) : "";
   });
+  /** Track calendar day so midnight / overnight sessions clear the field */
+  const [weightDay, setWeightDay] = useState(() => todayKey());
+  const [weightChartOpen, setWeightChartOpen] = useState(false);
   const [weekPlan, setWeekPlan] = useState<Record<string, WorkoutType>>(
     loadWeekPlan
   );
@@ -371,6 +525,31 @@ export function GymExact() {
   );
   const [saveFlash, setSaveFlash] = useState("");
   const [err, setErr] = useState("");
+  /** Collapsed by default — type×day picker lives under “Choose your workout” */
+  const [chooseOpen, setChooseOpen] = useState(false);
+  /** Whoop training graphs (energy / minutes / strain) — live on Gym home */
+  const [whoopTick, setWhoopTick] = useState(0);
+  const [trainExplainKey, setTrainExplainKey] = useState<string | null>(null);
+
+  const trainSections = useMemo(() => {
+    const analytics = buildWhoopAnalytics(loadWhoopStore());
+    const train = analytics.series.filter(
+      (m) => metricDef(m.key)?.group === "train"
+    );
+    return groupMetricsBySection(train);
+  }, [whoopTick]);
+  const trainExplainSeries =
+    trainExplainKey != null
+      ? trainSections
+          .flatMap((s) => s.metrics)
+          .find((m) => m.key === trainExplainKey) ?? null
+      : null;
+
+  useEffect(() => {
+    const on = () => setWhoopTick((t) => t + 1);
+    window.addEventListener(WHOOP_EVENT, on);
+    return () => window.removeEventListener(WHOOP_EVENT, on);
+  }, []);
 
   // Rest timer overlay
   const [timerOpen, setTimerOpen] = useState(false);
@@ -732,13 +911,14 @@ export function GymExact() {
                             }`}
                             onClick={() => toggleSet(item.id, i)}
                           >
-                            <span className="gx-set-box">
-                              {s.done ? "✓" : ""}
+                            <span className="gx-set-box" aria-hidden>
+                              {s.done ? "✓" : null}
                             </span>
                             <span>
                               Set {i + 1}
                               {s.label ? ` · ${s.label}` : ""}
-                              {s.failure && !s.label?.toLowerCase().includes("failure")
+                              {s.failure &&
+                              !s.label?.toLowerCase().includes("failure")
                                 ? " · failure"
                                 : ""}
                             </span>
@@ -752,8 +932,8 @@ export function GymExact() {
                       className={`gx-set${sets[0]?.done ? " is-done" : ""}`}
                       onClick={() => toggleSimple(item.id)}
                     >
-                      <span className="gx-set-box">
-                        {sets[0]?.done ? "✓" : ""}
+                      <span className="gx-set-box" aria-hidden>
+                        {sets[0]?.done ? "✓" : null}
                       </span>
                       <span>{item.text || "Done"}</span>
                     </button>
@@ -839,12 +1019,92 @@ export function GymExact() {
     );
   }
 
-  // ── Home: Today → week chooser → workouts → warm-up LAST ──
+  // New calendar day → empty field (history stays in the trend log)
+  useEffect(() => {
+    const tick = () => {
+      const day = todayKey();
+      if (day === weightDay) return;
+      setWeightDay(day);
+      const log = loadWeightLbsLog();
+      setWeightLog(log);
+      const today = todaysWeightLbs(log);
+      setBodyWeight(today != null ? String(today) : "");
+    };
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    window.addEventListener("focus", tick);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("focus", tick);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [weightDay]);
+
+  function commitTodayWeight() {
+    const raw = String(bodyWeight).replace(/,/g, "").trim();
+    const day = todayKey();
+    // Empty field = no weigh-in today (don't re-fill from yesterday)
+    if (!raw) {
+      setWeightLog(clearWeightLbsDay(day));
+      setBodyWeight("");
+      return;
+    }
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 50 || n > 400) {
+      // Bad input → revert to today's saved value or empty
+      const today = todaysWeightLbs();
+      setBodyWeight(today != null ? String(today) : "");
+      return;
+    }
+    setWeightLog(saveWeightLbs(day, n));
+    setBodyWeight(String(Math.round(n * 10) / 10));
+  }
+
+  // ── Home: Weight (morning) → Today → week → workouts → warm-up ──
   return (
     <div className="gx">
-      {/* 1. Today's workout */}
-      <section className="gx-section">
-        <h2 className="gx-h2">Today&apos;s workout</h2>
+      {/* 0. Weight — simple line: Weight: 129 lb · trend (no chrome box on the number) */}
+      <section className="gx-section gx-weight-top" aria-label="Body weight">
+        <div className="gx-body-line">
+          <label className="gx-body-key" htmlFor="gx-body-weight">
+            Weight:
+          </label>
+          <input
+            id="gx-body-weight"
+            className="gx-body-input"
+            type="text"
+            inputMode="decimal"
+            placeholder="—"
+            value={bodyWeight}
+            size={Math.max(3, String(bodyWeight || "000").length)}
+            onChange={(e) => setBodyWeight(e.target.value)}
+            onBlur={commitTodayWeight}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.currentTarget.blur();
+              }
+            }}
+            aria-label="Body weight in pounds — empty until morning weigh-in"
+          />
+          <span className="gx-body-unit">lb</span>
+          <button
+            type="button"
+            className="gx-weight-chart-toggle"
+            aria-expanded={weightChartOpen}
+            onClick={() => setWeightChartOpen((o) => !o)}
+          >
+            {weightChartOpen ? "Hide trend" : "Show trend"}
+          </button>
+        </div>
+        {weightChartOpen ? (
+          <WeightTrendChart log={weightLog} goalLbs={WEIGHT_GOAL_LBS} />
+        ) : null}
+      </section>
+
+      {/* 1. Today's workout — one line: label: link */}
+      <section className="gx-section gx-today-line">
+        <h2 className="gx-h2 gx-today-kicker">Today&apos;s workout:</h2>
         {todayLabel ? (
           <button
             type="button"
@@ -871,19 +1131,18 @@ export function GymExact() {
             {todayLabel} →
           </button>
         ) : (
-          <p className="gx-sub">No workout set for today — pick days below</p>
+          <p className="gx-sub gx-today-empty">
+            No workout set — pick days below
+          </p>
         )}
       </section>
 
-      {/* 2. This week — day chooser (cardio / lower / upper / rest) */}
+      {/* 2. This week — date strip always on; type×day picks behind toggle */}
       <section className="gx-section gx-week">
         <h2 className="gx-h2">This week</h2>
-        <p className="gx-sub gx-week-range">
-          {rangeLabel} · Sat – Fri
-        </p>
-        <p className="gx-plan-heading">This week</p>
+        <p className="gx-sub gx-week-range">{rangeLabel} · Sat – Fri</p>
 
-        {/* Date strip — same workout icons under each day when assigned */}
+        {/* Always-visible strip: day · date · icon when planned */}
         <div className="gx-week-strip" aria-label="Week dates">
           {strip.map((c) => {
             const assigned = draftPlan[c.day_key];
@@ -894,58 +1153,75 @@ export function GymExact() {
               >
                 <span className="gx-week-day">{c.short}</span>
                 <span className="gx-week-date">{c.dateLabel}</span>
-                <span className="gx-week-icon-slot" aria-hidden>
-                  {assigned ? (
-                    <GymTypeIcon type={assigned} size={14} />
-                  ) : (
-                    "\u00a0"
-                  )}
-                </span>
+                {assigned ? (
+                  <span className="gx-week-icon-slot" aria-hidden>
+                    <GymTypeIcon type={assigned} size={12} />
+                  </span>
+                ) : null}
               </div>
             );
           })}
         </div>
 
-        {/* Type rows with day pick buttons */}
-        {(Object.keys(TYPE_META) as WorkoutType[]).map((type) => {
-          const meta = TYPE_META[type];
-          return (
-            <div key={type} className="gx-plan-type">
-              <p className="gx-plan-type-label">
-                <GymTypeIcon type={type} size={16} />
-                {meta.label}
-              </p>
-              <div className="gx-plan-day-picks">
-                {strip.map((c) => {
-                  const on = draftPlan[c.day_key] === type;
-                  const blockReason = on
-                    ? null
-                    : pickBlockReason(type, c.day_key, draftPlan);
-                  const blocked = Boolean(blockReason);
-                  return (
-                    <button
-                      key={c.day_key}
-                      type="button"
-                      disabled={blocked}
-                      title={blockReason || undefined}
-                      className={`gx-day-pick${on ? " is-on" : ""}${
-                        c.isToday ? " is-today" : ""
-                      }${blocked ? " is-blocked" : ""}`}
-                      onClick={() => pickDay(type, c.day_key)}
-                    >
-                      {c.short}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-
-        <button type="button" className="gx-save-week" onClick={commitWeek}>
-          Save week
+        <button
+          type="button"
+          className="gx-choose-toggle"
+          aria-expanded={chooseOpen}
+          onClick={() => setChooseOpen((v) => !v)}
+        >
+          Choose your workout
         </button>
-        {saveFlash ? <span className="gx-save-flash">{saveFlash}</span> : null}
+
+        {chooseOpen ? (
+          <div className="gx-choose">
+            <div className="gx-week-matrix" role="grid" aria-label="Pick workout days">
+              {(Object.keys(TYPE_META) as WorkoutType[]).map((type) => {
+                const meta = TYPE_META[type];
+                return (
+                  <div
+                    key={type}
+                    className="gx-week-matrix-row gx-plan-type"
+                    role="row"
+                  >
+                    <p className="gx-plan-type-label">
+                      <GymTypeIcon type={type} size={14} />
+                      {meta.label}
+                    </p>
+                    {strip.map((c) => {
+                      const on = draftPlan[c.day_key] === type;
+                      const blockReason = on
+                        ? null
+                        : pickBlockReason(type, c.day_key, draftPlan);
+                      const blocked = Boolean(blockReason);
+                      return (
+                        <button
+                          key={c.day_key}
+                          type="button"
+                          role="gridcell"
+                          disabled={blocked}
+                          title={blockReason || undefined}
+                          className={`gx-day-pick${on ? " is-on" : ""}${
+                            c.isToday ? " is-today" : ""
+                          }${blocked ? " is-blocked" : ""}`}
+                          onClick={() => pickDay(type, c.day_key)}
+                        >
+                          {c.short}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+
+            <button type="button" className="gx-save-week" onClick={commitWeek}>
+              Save week
+            </button>
+            {saveFlash ? (
+              <span className="gx-save-flash">{saveFlash}</span>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       {/* 3. Workouts — track hubs */}
@@ -1003,34 +1279,36 @@ export function GymExact() {
         </ol>
       </section>
 
-      {/* 5. Body — weight under warm-up (typeable) */}
-      <section className="gx-section gx-body">
-        <h2 className="gx-h2">Body</h2>
-        <p className="gx-body-line">
-          <label className="gx-body-key" htmlFor="gx-body-weight">
-            Weight:
-          </label>
-          <input
-            id="gx-body-weight"
-            className="gx-body-input"
-            type="text"
-            inputMode="decimal"
-            placeholder=""
-            value={bodyWeight}
-            onChange={(e) => {
-              const v = e.target.value;
-              setBodyWeight(v);
-              try {
-                localStorage.setItem("dr-melani-body-weight", v);
-              } catch {
-                /* ignore */
-              }
-            }}
-            aria-label="Body weight in pounds"
-          />
-          <span className="gx-body-unit">LB</span>
-        </p>
-      </section>
+      {/* Whoop on Gym — Ready · load, then Training (titled sections) */}
+      {trainSections.length > 0 ? (
+        <section className="gx-section gx-whoop-train" aria-label="Training load">
+          <div className="wx wx-on-gym">
+            {trainSections.map((sec, i) => (
+              <div
+                key={sec.title}
+                className={`wx-metric-section${i === 0 ? " is-first" : ""}`}
+              >
+                <h3 className="wx-h">{sec.title}</h3>
+                <div className="wx-panel-stack">
+                  {sec.metrics.map((m) => (
+                    <MetricGraphPanel
+                      key={m.key}
+                      series={m}
+                      onOpenExplain={() => setTrainExplainKey(m.key)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          {trainExplainSeries ? (
+            <MetricExplainModal
+              series={trainExplainSeries}
+              onClose={() => setTrainExplainKey(null)}
+            />
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }

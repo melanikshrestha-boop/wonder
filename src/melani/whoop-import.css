@@ -1,0 +1,50 @@
+/* Tiny — sits above Fitness subnav, almost invisible until you need it */
+.whoop-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  margin: 0 0 4px;
+  padding: 0;
+  min-height: 0;
+  line-height: 1;
+}
+
+.whoop-bar-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font-family: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.38);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.whoop-bar-link:hover:not(:disabled) {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.whoop-bar-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.whoop-bar-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.whoop-bar-status {
+  font-family: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.32);
+  line-height: 1;
+  max-width: 42rem;
+}

@@ -259,14 +259,41 @@ export function localBooksApi() {
             }
             const st = await stat(filePath);
             if (!st.isFile()) return sendJson(res, 404, { error: "Not a file" });
+            const size = st.size;
+            const type = "application/epub+zip";
+            const disposition = `inline; filename="${path.basename(filePath).replace(/"/g, "")}"`;
+            // Range support → epub.js can open large books without waiting on full file
+            res.setHeader("Accept-Ranges", "bytes");
+            res.setHeader("Content-Type", type);
+            res.setHeader("Cache-Control", "private, max-age=300");
+            res.setHeader("Content-Disposition", disposition);
+
+            const range = req.headers.range;
+            if (range && typeof range === "string") {
+              const m = /^bytes=(\d+)-(\d*)$/i.exec(range.trim());
+              if (m) {
+                const start = Number(m[1]);
+                const end = m[2] ? Number(m[2]) : size - 1;
+                if (
+                  Number.isFinite(start) &&
+                  Number.isFinite(end) &&
+                  start >= 0 &&
+                  end >= start &&
+                  start < size
+                ) {
+                  const safeEnd = Math.min(end, size - 1);
+                  res.statusCode = 206;
+                  res.setHeader("Content-Range", `bytes ${start}-${safeEnd}/${size}`);
+                  res.setHeader("Content-Length", String(safeEnd - start + 1));
+                  if (req.method === "HEAD") return res.end();
+                  createReadStream(filePath, { start, end: safeEnd }).pipe(res);
+                  return;
+                }
+              }
+            }
+
             res.statusCode = 200;
-            res.setHeader("Content-Type", "application/epub+zip");
-            res.setHeader("Content-Length", st.size);
-            res.setHeader("Cache-Control", "private, max-age=120");
-            res.setHeader(
-              "Content-Disposition",
-              `inline; filename="${path.basename(filePath).replace(/"/g, "")}"`
-            );
+            res.setHeader("Content-Length", size);
             if (req.method === "HEAD") return res.end();
             createReadStream(filePath).pipe(res);
             return;

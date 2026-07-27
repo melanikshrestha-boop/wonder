@@ -11,7 +11,7 @@ export const PROFILE = {
   provider: "Ververis, Megan",
   patientId: "2581279882",
   conditions: "migraine/chronic pain; cardio/metabolic monitoring",
-  waterGoalMl: 4000,
+  waterGoalMl: 3500, // 3.5 L — linked to Habits “3.5L water + Diet”
 };
 
 export const MACRO_GOALS = {
@@ -53,19 +53,22 @@ export type MealPreset = {
   sections?: MealSection[];
 };
 
-/** Same usuals as Melani app (one-tap log → updates today macros) */
+/**
+ * Meals for now: breakfast only.
+ * Lunch / dinner / snack deliberately not listed — no snack (focus),
+ * lunch+dinner TBD later. Don't invent menus in the UI.
+ */
 export const MEAL_PRESETS: MealPreset[] = [
   {
     id: "breakfast_usual",
     slot: "breakfast",
     title: "Breakfast",
-    // Portions tightened (less volume, still high protein) — macros re-estimated
     calories: 480,
     protein_g: 38,
     carbs_g: 42,
     fat_g: 16,
     fiber_g: 9,
-    notes: "0% added sugar · organic when possible · measured portions",
+    notes: "Same every morning · 0% added sugar · measured portions",
     ingredients: [
       "Fage 0% Greek yogurt: 150g (about ⅔ cup)",
       "Fage 0% kefir: 100ml (about ⅓–½ cup)",
@@ -78,7 +81,6 @@ export const MEAL_PRESETS: MealPreset[] = [
       "1 tsp raw honey max (optional; skip if very sleepy)",
       "1 boiled egg with yolk + 1 egg white (optional)",
     ],
-    // Same look as the open card: notes line + bullets, with small section labels
     sections: [
       {
         items: [
@@ -112,6 +114,16 @@ export const MEAL_PRESETS: MealPreset[] = [
     ],
   },
 ];
+
+/** Active meal ids (breakfast only for now). */
+export const FIXED_DAY_MEAL_IDS = MEAL_PRESETS.map((m) => m.id);
+
+/** One-line summary for Mel. */
+export function fixedDayMenuSummary(): string {
+  return MEAL_PRESETS.map(
+    (m) => `${m.title}: ${m.protein_g}g protein · ${m.calories} cal`
+  ).join(" · ");
+}
 
 /** Daily stack — name · brand/dose · when to take (gold timing label) */
 export const DAILY_SUPPLEMENTS = [

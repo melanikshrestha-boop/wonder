@@ -6,6 +6,7 @@ import type { MelToolResult } from "../melTools";
 import type { ToolCapability } from "./types";
 import { wonderEmit } from "./eventBus";
 import { preferOfflinePath } from "./offlineStore";
+import { recordAndReward } from "../rlAgent";
 
 export type MelPlanStep = {
   id: string;
@@ -106,22 +107,48 @@ export function executePlanSteps(
     }
     try {
       const raw = run(step.args);
+      let result: MelToolResult;
       if (typeof raw === "string") {
         try {
-          out.push(JSON.parse(raw) as MelToolResult);
+          result = JSON.parse(raw) as MelToolResult;
         } catch {
-          out.push({ ok: true, tool: step.tool, summary: raw });
+          result = { ok: true, tool: step.tool, summary: raw };
         }
       } else {
-        out.push(raw);
+        result = raw;
       }
-      wonderEmit("mel.action", "agentRuntime", { tool: step.tool, ok: true });
+      out.push(result);
+      const ok = result.ok !== false;
+      wonderEmit("mel.action", "agentRuntime", { tool: step.tool, ok });
+      // Implicit RL: success is a small reward, failure a penalty
+      try {
+        recordAndReward(
+          "tool",
+          `plan|${plan.intent || "step"}`,
+          step.tool,
+          ok ? 0.3 : -0.5,
+          ok ? "runtime_ok" : "runtime_fail"
+        );
+      } catch {
+        /* never break tools for RL */
+      }
     } catch (e) {
       out.push({
         ok: false,
         tool: step.tool,
         summary: e instanceof Error ? e.message : "Tool failed",
       });
+      try {
+        recordAndReward(
+          "tool",
+          `plan|${plan.intent || "step"}`,
+          step.tool,
+          -0.55,
+          "runtime_throw"
+        );
+      } catch {
+        /* ignore */
+      }
     }
   }
   wonderEmit("mel.plan", "agentRuntime", { plan, results: out.length });

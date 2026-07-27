@@ -33,6 +33,15 @@ import {
   buildAdeptBrief,
   type AdeptBrief,
 } from "./financeAdept";
+import {
+  answerSmartCore,
+  buildSmartCore,
+  type SmartCore,
+} from "./financeSmartCore";
+import {
+  monthTrueIncome,
+  monthTrueSpend,
+} from "./financeTransfers";
 
 /** Default: reinvest at least half of income. Ruthless mode aims higher. */
 export const REINVEST_TARGET_RATE = 0.5;
@@ -102,6 +111,8 @@ export type SmartBrief = {
   accounting: AccountingPack;
   /** Financially adept OS — credit climb + cash discipline */
   adept: AdeptBrief;
+  /** Transfer-aware intelligence (anomalies, true burn, capital score) */
+  smart: SmartCore;
   dataQuality: {
     hasTxs: boolean;
     hasIncome: boolean;
@@ -123,17 +134,23 @@ export function projectMonth(txs: FinanceTx[], ym: string): MonthProjection {
   const thisYm = monthKey(today);
   const dayOfMonth =
     ym === thisYm ? Math.max(1, today.getDate()) : dim;
-  const spentSoFar = monthExpense(txs, ym);
-  const incomeSoFar = monthIncome(txs, ym);
-  const burnPerDay = spentSoFar / dayOfMonth;
-  const incomePerDay = incomeSoFar / dayOfMonth;
+  // True books (exclude transfers / card pays) so burn isn't inflated
+  const spentSoFar = monthTrueSpend(txs, ym);
+  const incomeSoFar = monthTrueIncome(txs, ym);
+  // Fall back to raw if true is empty but raw has data
+  const spent =
+    spentSoFar > 0 ? spentSoFar : monthExpense(txs, ym);
+  const income =
+    incomeSoFar > 0 ? incomeSoFar : monthIncome(txs, ym);
+  const burnPerDay = spent / dayOfMonth;
+  const incomePerDay = income / dayOfMonth;
   const projectedSpend = burnPerDay * dim;
   const projectedIncome = incomePerDay * dim;
   return {
     dayOfMonth,
     daysInMonth: dim,
-    spentSoFar,
-    incomeSoFar,
+    spentSoFar: spent,
+    incomeSoFar: income,
     projectedSpend,
     projectedIncome,
     projectedFlow: projectedIncome - projectedSpend,
@@ -227,8 +244,11 @@ export function buildSmartBrief(
   const goals = state.goals || [];
   const cash = cashOnHand(accounts);
   const debt = creditOwed(accounts);
-  const income = monthIncome(txs, ym);
-  const expense = monthExpense(txs, ym);
+  // Prefer transfer-aware true books for reinvest / flow decisions
+  const trueIncome = monthTrueIncome(txs, ym);
+  const trueExpense = monthTrueSpend(txs, ym);
+  const income = trueIncome > 0 ? trueIncome : monthIncome(txs, ym);
+  const expense = trueExpense > 0 ? trueExpense : monthExpense(txs, ym);
   const cashFlow = income - expense;
   const projection = projectMonth(txs, ym);
   const planPlanned = planRows.reduce((s, r) => s + r.planned, 0);
@@ -245,15 +265,22 @@ export function buildSmartBrief(
     projection,
     reinvest.deployNow
   );
+  // Extremely smart layer first — true burn, anomalies, capital score
+  const smart = buildSmartCore(state, ym);
   const runwayMonths =
-    projection.burnPerDay > 0
-      ? cash / (projection.burnPerDay * 30)
-      : cash > 0
-        ? 99
-        : 0;
+    smart.velocity.runwayMonthsTrue > 0 && smart.velocity.runwayMonthsTrue < 99
+      ? smart.velocity.runwayMonthsTrue
+      : projection.burnPerDay > 0
+        ? cash / (projection.burnPerDay * 30)
+        : cash > 0
+          ? 99
+          : 0;
 
-  const merchants = topMerchants(txs, ym, 5);
-  const topLeak = merchants[0] || null;
+  const merchants = topMerchants(txs, ym, 5).filter(
+    (m) => !/payment|transfer|zelle|venmo/i.test(m.merchant)
+  );
+  const topLeak =
+    smart.concentration.topMerchant || merchants[0] || null;
   const hasInvestAccount = accounts.some((a) => a.kind === "invest");
 
   // Accountant backends (no new screens — feed actions + Ask)
@@ -263,7 +290,7 @@ export function buildSmartBrief(
   const advisory = buildAdvisoryBrief(state, reinvest, audit, tax, forecast);
   // Full accounting desk: 14 modules on live ledger + books extras
   const accounting = buildAccountingPack(state, ym, booksExtra);
-  // Adept OS — real score (677) + her books
+  // Adept OS — real score + her books
   const adept = buildAdeptBrief(state, credit, ym);
 
   const hasTxs = txs.length > 0;
@@ -555,6 +582,40 @@ export function buildSmartBrief(
     });
   }
 
+  // ── Smart core signals → action queue (anomalies, true flow, subs, APR) ──
+  for (const sig of smart.signals.slice(0, 6)) {
+    if (sig.severity === "good" || sig.severity === "low") continue;
+    // Skip if we already have a near-duplicate id prefix
+    if (actions.some((a) => a.id === sig.id || a.title === sig.title)) continue;
+    actions.push({
+      id: sig.id,
+      priority:
+        sig.severity === "critical"
+          ? 95
+          : sig.severity === "high"
+            ? 86
+            : 62,
+      severity: sig.severity,
+      title: sig.title,
+      detail: sig.detail,
+      amount: sig.amount,
+      cta:
+        sig.id.startsWith("anom")
+          ? "Inspect ledger"
+          : sig.id.includes("sub")
+            ? "Subscriptions"
+            : sig.id.includes("runway") || sig.id.includes("true")
+              ? "See true books"
+              : "Act on signal",
+      tab:
+        sig.id.startsWith("anom") || sig.id.includes("conc")
+          ? "transactions"
+          : sig.id.includes("sub")
+            ? "subscriptions"
+            : "overview",
+    });
+  }
+
   // ── Tax / Audit / Forecast / Advisory → same action queue ──
   for (const f of tax.findings.slice(0, 3)) {
     if (f.severity === "info") continue;
@@ -626,37 +687,40 @@ export function buildSmartBrief(
 
   actions.sort((a, b) => b.priority - a.priority);
 
-  // Headline — reinvest doctrine
+  // Headline — capital + true books doctrine
   let headline = "Money desk is cold";
   let sub = "Import bank data so the engine can force reinvestment.";
-  if (
+  if (actions[0]?.severity === "critical") {
+    headline = "Critical · act first";
+    sub = actions[0].title;
+  } else if (
     quality >= 70 &&
     reinvest.actualRate != null &&
     reinvest.actualRate >= REINVEST_RUTHLESS_RATE &&
     cashFlow >= 0
   ) {
     headline = "Ruthless · capital first";
-    sub = `Keeping ${Math.round(reinvest.actualRate * 100)}%. Fun money after reinvest ~${money(safeToSpend)}. ${reinvest.order}`;
+    sub = `True keep ${Math.round(reinvest.actualRate * 100)}%. Capital score ${smart.capital.score}/100. Fun after reinvest ~${money(safeToSpend)}.`;
   } else if (quality >= 50 && reinvest.deployNow > 0) {
     headline = "Deploy before you spend";
     sub = reinvest.order;
-  } else if (quality >= 40 && actions[0]?.severity === "critical") {
-    headline = "Act on the top risk";
-    sub = actions[0].title;
   } else if (quality >= 40) {
-    headline = "Partial picture — still actionable";
+    headline = smart.order;
     sub = actions[0]
-      ? actions[0].title
-      : `Tracking ${txs.length} transactions this device.`;
+      ? actions[0].detail
+      : `True flow ${money(smart.trueFlow.trueFlow)} · confidence ${smart.confidence}/100.`;
   } else if (hasTxs) {
     headline = "Signals forming";
     sub = "Add plan + card limits + Invest account to unlock full decisions.";
   }
 
+  // Blend data quality with smart confidence
+  quality = Math.round(quality * 0.6 + smart.confidence * 0.4);
+
   return {
     headline,
     sub,
-    actions: actions.slice(0, 8),
+    actions: actions.slice(0, 10),
     projection,
     safeToSpend,
     runwayMonths,
@@ -669,6 +733,7 @@ export function buildSmartBrief(
     advisory,
     accounting,
     adept,
+    smart,
     dataQuality: {
       hasTxs,
       hasIncome,
@@ -703,7 +768,10 @@ export function answerFromBrief(
     return "I don't have transactions yet. Import a bank CSV (Accounts) — then I can answer with numbers from your ledger.";
   }
 
-  // Adept OS + accountant backends first
+  // Smart core (true books / anomalies / capital) before keyword routes
+  const smartA = answerSmartCore(q, brief.smart);
+  if (smartA) return smartA;
+  // Adept OS + accountant backends
   const adeptA = answerAdept(q, brief.adept);
   if (adeptA) return adeptA;
   const booksA = answerAccounting(q, brief.accounting);
@@ -756,7 +824,8 @@ export function answerFromBrief(
   }
 
   if (/runway|broke|last|survive/.test(q)) {
-    return `Runway ~${brief.runwayMonths > 20 ? "20+" : brief.runwayMonths.toFixed(1)} months at ${money(brief.projection.burnPerDay)}/day burn. Cash ${money(extras.cash)}. ${brief.runwayMonths < 3 ? "Critical — cut fixed costs or raise income this week." : "Build toward 6+ months."}`;
+    const v = brief.smart.velocity;
+    return `True runway ~${brief.runwayMonths > 20 ? "20+" : brief.runwayMonths.toFixed(1)} months (${v.daysOfCash > 200 ? "200+" : v.daysOfCash} days of cash) at true burn ${money(v.trueBurnPerDay)}/day · ~${money(v.trueBurnPerMonth)}/mo. Cash ${money(extras.cash)}. ${brief.runwayMonths < 3 ? "Critical — cut fixed costs or raise income this week." : "Build toward 6+ months."}`;
   }
 
   if (/cut|save|reduce|leak|merchant/.test(q)) {

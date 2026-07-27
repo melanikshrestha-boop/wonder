@@ -1,15 +1,70 @@
 import sharp from "sharp";
+import {
+  buildCapsuleGaps,
+  buildFabricAudit,
+  buildTailorBrief,
+  defaultSizeProfile,
+  defaultStylePolicy,
+  defaultTailorDirectory,
+  detectFit,
+  evaluatePurchaseQuality,
+  fitLookPenalty,
+  mergeStylePolicy,
+  minimalLookScore,
+  parseFabricText,
+  qualityLookScore,
+  resolveFabricCategory,
+  scoreMaterialQuality,
+} from "./wardrobe-quality.mjs";
+import {
+  TASTE_PHILOSOPHY,
+  buildTasteKnowledge,
+  extractVibesFromPalette,
+  extractVibesFromText,
+  reasonOutfit,
+} from "./taste-knowledge.mjs";
 
-export const WARDROBE_SCHEMA_VERSION = 3;
+export const WARDROBE_SCHEMA_VERSION = 5;
+
+export {
+  TASTE_PHILOSOPHY,
+  buildTasteKnowledge,
+  extractVibesFromPalette,
+  extractVibesFromText,
+  reasonOutfit,
+};
+
+export {
+  buildCapsuleGaps,
+  buildFabricAudit,
+  buildTailorBrief,
+  defaultSizeProfile,
+  defaultStylePolicy,
+  defaultTailorDirectory,
+  detectFit,
+  mergeStylePolicy,
+  parseFabricText,
+  resolveFabricCategory,
+  scoreMaterialQuality,
+};
 
 const ACTIVE_STATUSES = new Set(["clean", "ready", "worn-once", "packed"]);
 const BLOCKED_STATUSES = new Set(["laundry", "repair", "donate", "sold", "archived"]);
 const MODES = new Set(["everyday", "stream", "build", "content", "out"]);
-const STATEMENT_WORDS = /\b(statement|sequin|metallic|neon|graphic|embellished|sparkle|bold)\b/i;
+const STATEMENT_WORDS = /\b(statement|sequin|metallic|neon|graphic|embellished|sparkle|bold|jersey|kit|football|soccer|brasil|brazil)\b/i;
 const COMFORT_WORDS = /\b(soft|relaxed|oversized|cotton|knit|stretch|sweat|hoodie|comfortable)\b/i;
 const FORMAL_WORDS = /\b(formal|tailored|silk|satin|blazer|heel|dress|evening)\b/i;
 const RAIN_WORDS = /\b(waterproof|water-resistant|rain|rubber|leather|boot)\b/i;
 const CAMERA_RISK_WORDS = /\b(tiny stripe|micro stripe|moire|neon|reflective)\b/i;
+/** Melani DNA — what everyday / build should actually look like */
+const JERSEY_WORDS = /\b(jersey|kit|football|soccer|futkulture|brasil|brazil desert|premium kit)\b/i;
+const HOODIE_WORDS = /\b(hoodie|hooded|fleece hoodie|crewneck sweatshirt)\b/i;
+const BASIC_TEE_WORDS = /\b(basic tee|basic t-shirt|crew tee|blank tee|100% cotton)\b/i;
+const JEANS_WORDS = /\b(jean|jeans|denim|raelynn|baggy jean)\b/i;
+const SWEATS_WORDS = /\b(sweatpant|sweatpants|sweats|joggers?|wide sweat)\b/i;
+const DNA_TOP_BRANDS = /\b(stussy|scuffers|essentials|fear of god|cold culture|anti social|assc|uniqlo|everlane|cos|arket|buck mason)\b/i;
+const DNA_BOTTOM_BRANDS = /\b(edikted|uniqlo)\b/i;
+const DNA_SHOE_BRANDS = /\b(nike|adidas|new balance|hoka|blazer|dunk|samba|spezial|jordan|timberland|martens)\b/i;
 
 function clamp(value, min = 0, max = 1) {
   return Math.max(min, Math.min(max, value));
@@ -188,23 +243,40 @@ export function duplicateScore(first, second) {
     + (silhouette * 0.05)).toFixed(4));
 }
 
-export function buildItemProfile(item, operational = {}) {
+export function buildItemProfile(item, operational = {}, policyInput) {
   const state = { ...defaultOperationalState(), ...(operational || {}) };
+  const policy = mergeStylePolicy(policyInput);
   const color = rgbToHsl(hexToRgb(item.color));
   const text = itemText(item);
+  const brand = String(item.brand || "").toLowerCase();
+  const blob = `${text} ${brand}`;
   const kind = partKind(item.part);
-  const statement = STATEMENT_WORDS.test(text);
-  const comfort = COMFORT_WORDS.test(text) || ["top", "bottom"].includes(kind);
+  const isJersey = JERSEY_WORDS.test(blob);
+  const isHoodie = HOODIE_WORDS.test(blob) || resolveFabricCategory(item) === "hoodies";
+  const isBasicTee = (BASIC_TEE_WORDS.test(blob) || (/\btee|t-shirt|tshirt\b/i.test(blob) && !isJersey && !isHoodie));
+  const isJeans = JEANS_WORDS.test(blob) || resolveFabricCategory(item) === "jeans";
+  const isSweats = SWEATS_WORDS.test(blob) || resolveFabricCategory(item) === "sweatpants";
+  // Jersey is always statement; graphic hoodies can be statement without being jersey
+  const statement = isJersey || STATEMENT_WORDS.test(text);
+  const comfort = COMFORT_WORDS.test(text) || ["top", "bottom"].includes(kind) || isSweats || isHoodie;
   const formal = FORMAL_WORDS.test(text) || kind === "dress";
-  const cameraSafe = !CAMERA_RISK_WORDS.test(text) && color.saturation < 0.88 && color.lightness > 0.08 && color.lightness < 0.93;
+  const cameraSafe = !CAMERA_RISK_WORDS.test(text) && !isJersey && color.saturation < 0.88 && color.lightness > 0.08 && color.lightness < 0.93;
   const warmthBase = kind === "jacket" ? 0.82 : kind === "bottom" ? 0.48 : kind === "dress" ? 0.42 : kind === "top" ? 0.35 : 0.2;
   const warmth = clamp(warmthBase + (/\b(wool|fleece|puffer|thermal|heavy)\b/i.test(text) ? 0.18 : 0) - (/\b(linen|mesh|sleeveless|short)\b/i.test(text) ? 0.15 : 0));
-  const metadataSignals = [item.name, item.part, item.color, item.image, (item.tags || []).length > 0, item.intelligence?.visualHash].filter(Boolean).length;
+  const material = scoreMaterialQuality(item.fabric || item.composition, item, policy);
+  const fit = detectFit(item);
+  const metadataSignals = [item.name, item.part, item.color, item.image, (item.tags || []).length > 0, item.intelligence?.visualHash, item.fabric || item.composition].filter(Boolean).length;
+  const dnaTop = DNA_TOP_BRANDS.test(blob) && !isJersey;
+  const dnaBottom = DNA_BOTTOM_BRANDS.test(blob) && (isJeans || isSweats);
+  const dnaShoe = kind === "shoes" && DNA_SHOE_BRANDS.test(blob);
+  // Objective taste knowledge (fabric/fit/color descriptors/vibes) — not comfort:9 scores
+  const taste = buildTasteKnowledge(item, fit);
   return {
     ...item,
     kind,
     operational: state,
-    colorProfile: { ...color, neutral: isNeutral(color) },
+    colorProfile: { ...color, hue: color.hue, saturation: color.saturation, lightness: color.lightness, h: color.hue, s: color.saturation, l: color.lightness, neutral: isNeutral(color) },
+    taste,
     traits: {
       statement,
       comfort,
@@ -212,9 +284,48 @@ export function buildItemProfile(item, operational = {}) {
       cameraSafe,
       rainSafe: RAIN_WORDS.test(text),
       warmth,
+      materialQuality: material.score,
+      materialGrade: material.grade,
+      materialUnknown: material.unknown,
+      hasPolyester: material.hasPolyester,
+      fabricCategory: material.category,
+      materialVeto: material.veto,
+      fit,
+      minimalSafe: !statement && !isJersey && (isNeutral(color) || color.saturation < 0.22) && !material.veto,
+      isJersey,
+      isHoodie,
+      isBasicTee,
+      isJeans,
+      isSweats,
+      dnaTop,
+      dnaBottom,
+      dnaShoe,
+      /** Everyday-stack hero piece (quiet luxury uniform) */
+      everydayHero: (isHoodie && dnaTop) || (isBasicTee && !isJersey) || (isJeans && dnaBottom) || dnaShoe,
+      vibes: taste.vibes,
+      colorKey: taste.color?.key,
+      fabricHand: taste.fabric?.texture,
+      volume: taste.silhouette?.volume,
     },
+    material,
     available: !BLOCKED_STATUSES.has(state.status),
-    metadataConfidence: Number((0.46 + (metadataSignals / 6) * 0.48).toFixed(2)),
+    metadataConfidence: Number((0.42 + (metadataSignals / 7) * 0.52).toFixed(2)),
+  };
+}
+
+/**
+ * Taste from knowledge base — reasons about proportion, color, texture, vibes.
+ * Ranking number is internal only; UI leads with principle text.
+ */
+function fashionTasteScore(items, mode = "everyday", inspoVibes = []) {
+  const reasoned = reasonOutfit(items, { mode, inspoVibes });
+  return {
+    score: reasoned.rank,
+    reasons: reasoned.reasons,
+    summary: reasoned.summary,
+    principles: reasoned.principles,
+    vibes: reasoned.vibes,
+    knowledgeDriven: true,
   };
 }
 
@@ -296,7 +407,8 @@ function learnedPreferenceScore(items, state = {}) {
   return clamp(72 + (average * 9), 28, 100);
 }
 
-function scoreLook(items, context, state = {}) {
+function scoreLook(items, context, state = {}, inspoScore = null, tasteMeta = null) {
+  const policy = mergeStylePolicy(state.stylePolicy);
   const completeBase = items.some((item) => item.kind === "dress")
     || (items.some((item) => item.kind === "top") && items.some((item) => item.kind === "bottom"));
   const color = colorCoherence(items);
@@ -305,15 +417,40 @@ function scoreLook(items, context, state = {}) {
   const rotation = rotationScore(items);
   const preference = learnedPreferenceScore(items, state);
   const availability = items.every((item) => item.available) ? 100 : 0;
-  const total = (completeBase ? 20 : 0)
-    + (color * 0.20)
-    + (mode * 0.18)
-    + (weather * 0.16)
-    + (rotation * 0.10)
-    + (preference * 0.11)
-    + (availability * 0.05);
+  const quality = qualityLookScore(items);
+  const minimal = minimalLookScore(items, policy);
+  const fitPenalty = fitLookPenalty(items, policy);
+  const materialVeto = items.some((item) => item.traits?.materialVeto);
+  const inspo = Number.isFinite(Number(inspoScore)) ? Number(inspoScore) : 72;
+  const taste = Number.isFinite(Number(tasteMeta?.score))
+    ? Number(tasteMeta.score)
+    : fashionTasteScore(items, context.mode, context.inspoVibes || []).score;
+  const hasInspo = Boolean(context.hasInspo);
+  // Taste knowledge dominates ranking — color math is secondary support
+  const tasteWeight = 0.28;
+  const inspoWeight = hasInspo ? 0.14 : 0;
+  const colorWeight = hasInspo ? 0.06 : 0.08;
+  const qualityWeight = 0.08;
+  const modeWeight = 0.06;
+  let total = (completeBase ? 12 : 0)
+    + (color * colorWeight)
+    + (mode * modeWeight)
+    + (weather * 0.08)
+    + (rotation * 0.05)
+    + (preference * 0.06)
+    + (availability * 0.04)
+    + (quality * qualityWeight)
+    + (minimal * 0.07)
+    + (taste * tasteWeight)
+    + (inspo * inspoWeight)
+    - fitPenalty * 0.08;
+  if (materialVeto) total -= 18;
+  // Absolute floor crush for jersey+sweats / anti-taste in everyday
+  if ((context.mode === "everyday" || context.mode === "build") && taste < 45) {
+    total = Math.min(total, 48);
+  }
   return {
-    total: Math.round(clamp(total / 100) * 100),
+    total: Math.round(clamp(total, 0, 100)),
     breakdown: {
       composition: completeBase ? 100 : 0,
       color: Math.round(color),
@@ -322,28 +459,49 @@ function scoreLook(items, context, state = {}) {
       rotation: Math.round(rotation),
       preference: Math.round(preference),
       availability,
+      quality: Math.round(quality),
+      minimal: Math.round(minimal),
+      fitPenalty: Math.round(fitPenalty),
+      inspo: Math.round(inspo),
+      taste: Math.round(taste),
     },
   };
 }
 
-function explainLook(items, context, score) {
+function explainLook(items, context, score, inspoReasons = [], tasteReasons = [], tasteMeta = null) {
   const reasons = [];
-  if (items.some((item) => item.kind === "dress")) reasons.push("The dress is a complete one-piece base, so there is less to coordinate.");
-  else reasons.push("The top and bottom form a complete base outfit.");
-  if (score.breakdown.color >= 85) reasons.push("The colors are neutral, tonal, analogous, or deliberately complementary.");
-  if (context.mode === "stream" && items.every((item) => item.traits.cameraSafe)) reasons.push("The visible pieces avoid the color and micro-pattern risks that commonly fight a camera.");
-  if (context.mode === "build") reasons.push("The score favors low-friction, comfortable pieces for a work block.");
-  if (context.mode === "content") reasons.push(items.some((item) => item.traits.statement) ? "It keeps one clear statement piece and lets the rest support it." : "It stays visually coherent without competing focal points.");
-  if (context.mode === "out") reasons.push("The mix leans toward the more polished pieces in your actual wardrobe.");
-  if (score.breakdown.preference >= 84) reasons.push("Your previous outfit feedback favors this combination.");
-  if (score.breakdown.preference <= 52) reasons.push("Your prior feedback weakens this combination, so it ranks below better matches.");
-  if (context.rain && !items.some((item) => item.traits.rainSafe)) reasons.push("No rain-safe piece is logged, so protect the outfit or add an outer layer manually.");
+  // Lead with knowledge-base principles (why it works) — never "score is high"
+  for (const reason of tasteReasons || []) {
+    if (reason && !reasons.includes(reason)) reasons.push(reason);
+  }
+  for (const reason of inspoReasons || []) {
+    if (reason && !reasons.includes(reason)) reasons.push(reason);
+  }
+  // Secondary operational notes only if room
+  if (items.some((item) => item.traits?.materialVeto) && !reasons.some((r) => /fabric policy|poly/i.test(r))) {
+    reasons.push("At least one piece fails a hard fabric rule (for example poly jeans).");
+  }
+  if (context.mode === "stream" && items.every((item) => item.traits.cameraSafe)) {
+    reasons.push("Camera-safe colors and patterns — no moire or neon fight.");
+  }
+  if (context.rain && !items.some((item) => item.traits.rainSafe)) {
+    reasons.push("No rain-safe piece is logged — protect the look or add an outer layer.");
+  }
+  if (score.breakdown.preference >= 84) {
+    reasons.push("Your previous outfit feedback favors this combination.");
+  }
   const neverWorn = items.filter((item) => !item.operational.lastWornAt);
-  if (neverWorn.length) reasons.push(`${neverWorn.map((item) => item.name).join(" and ")} ${neverWorn.length === 1 ? "has" : "have"} no logged wear yet, so the rotation learns from this choice.`);
-  return reasons;
+  if (neverWorn.length && reasons.length < 6) {
+    reasons.push(`${neverWorn.map((item) => item.name).join(" and ")} ${neverWorn.length === 1 ? "has" : "have"} no logged wear yet — rotation learns from this choice.`);
+  }
+  // Strip legacy score-soup lines if any slipped in
+  return reasons
+    .filter((r) => r && !/taste score|scores high|score is low|score favors/i.test(r))
+    .slice(0, 8);
 }
 
 function publicItem(item) {
+  const taste = item.taste || null;
   return {
     id: item.id,
     name: item.name,
@@ -353,19 +511,68 @@ function publicItem(item) {
     image: item.image,
     thumbnail: item.thumbnail,
     status: item.operational.status,
+    fit: item.traits?.fit || item.fit || taste?.silhouette?.fit || null,
+    materialGrade: item.traits?.materialGrade || item.material?.grade || null,
+    materialQuality: item.traits?.materialQuality ?? item.material?.score ?? null,
+    fabricCategory: item.traits?.fabricCategory || null,
+    // Knowledge-base facts for the UI / future agents (not numeric style scores)
+    taste: taste
+      ? {
+          color: taste.color?.key,
+          colorTraits: taste.color?.traits || [],
+          fabric: taste.fabric?.fabric,
+          texture: taste.fabric?.texture,
+          weight: taste.fabric?.weight,
+          drape: taste.fabric?.drape,
+          fit: taste.silhouette?.fit,
+          volume: taste.silhouette?.volume,
+          leg: taste.silhouette?.leg,
+          vibes: taste.vibes || [],
+          comfort: taste.comfort
+            ? {
+                stretch: taste.comfort.stretch,
+                movement: taste.comfort.movement,
+                weight: taste.comfort.weight,
+                breathability: taste.comfort.breathability,
+              }
+            : null,
+        }
+      : null,
   };
 }
 
+function collectInspoVibes(request = {}, inspoPalettes = []) {
+  const fromRequest = Array.isArray(request.inspoVibes) ? request.inspoVibes.map(String) : [];
+  const fromText = extractVibesFromText(
+    [request.inspoText, ...(Array.isArray(request.inspoTitles) ? request.inspoTitles : [])].filter(Boolean).join(" "),
+  );
+  const fromPalettes = inspoPalettes.flatMap((p) => extractVibesFromPalette(p));
+  return [...new Set([...fromRequest, ...fromText, ...fromPalettes])];
+}
+
 export function generateOutfits(library, state = {}, request = {}) {
+  const inspoPalettes = Array.isArray(request.inspoPalettes) ? request.inspoPalettes : [];
+  const inspoScorer = typeof request.scoreAgainstInspo === "function" ? request.scoreAgainstInspo : null;
+  const inspoVibes = collectInspoVibes(request, inspoPalettes);
   const context = {
     mode: normalizedMode(request.mode),
     temperatureF: Number.isFinite(Number(request.temperatureF)) ? Number(request.temperatureF) : 70,
     rain: Boolean(request.rain),
     count: Math.max(1, Math.min(12, Math.round(Number(request.count) || 3))),
     destination: String(request.destination || "").trim() || null,
+    hasInspo: inspoPalettes.length > 0 || inspoVibes.length > 0,
+    inspoCount: inspoPalettes.length,
+    inspoVibes,
   };
+  const policy = mergeStylePolicy(state.stylePolicy);
+  const isWantPiece = (item) => (
+    item.role === "wishlist"
+    || (item.tags || []).map((t) => String(t).toLowerCase()).includes("want")
+    || (item.tags || []).map((t) => String(t).toLowerCase()).includes("wishlist")
+  );
   const profiles = library
-    .map((item) => buildItemProfile(item, state.items?.[item.id]))
+    .filter((item) => !isWantPiece(item))
+    .map((item) => buildItemProfile(item, state.items?.[item.id], policy))
     .filter((item) => item.available);
   const groups = Object.groupBy
     ? Object.groupBy(profiles, (item) => item.kind)
@@ -379,9 +586,32 @@ export function generateOutfits(library, state = {}, request = {}) {
   const limitGroup = (items) => [...items]
     .sort((first, second) => candidateRank(second) - candidateRank(first) || first.id.localeCompare(second.id))
     .slice(0, 60);
-  const tops = limitGroup(groups.top || []);
-  const bottoms = limitGroup(groups.bottom || []);
+  let tops = limitGroup(groups.top || []);
+  let bottoms = limitGroup(groups.bottom || []);
   const dresses = limitGroup(groups.dress || []);
+  // Everyday / build: rank DNA tops first; don't let football kits dominate the base matrix
+  if (context.mode === "everyday" || context.mode === "build" || context.mode === "stream") {
+    tops = [...tops].sort((a, b) => {
+      const rank = (t) => (
+        (t.traits?.isJersey ? -40 : 0)
+        + (t.traits?.isHoodie ? 24 : 0)
+        + (t.traits?.isBasicTee ? 20 : 0)
+        + (t.traits?.dnaTop ? 12 : 0)
+        + (t.traits?.everydayHero ? 10 : 0)
+        + (t.traits?.minimalSafe ? 6 : 0)
+      );
+      return rank(b) - rank(a) || a.id.localeCompare(b.id);
+    });
+    bottoms = [...bottoms].sort((a, b) => {
+      const rank = (t) => (
+        (t.traits?.isJeans ? 22 : 0)
+        + (t.traits?.isSweats ? 8 : 0)
+        + (t.traits?.dnaBottom ? 10 : 0)
+        + (t.colorProfile && isNeutral(t.colorProfile) ? 4 : 0)
+      );
+      return rank(b) - rank(a) || a.id.localeCompare(b.id);
+    });
+  }
   const baseLooks = [
     ...dresses.map((dress) => [dress]),
     ...tops.flatMap((top) => bottoms.map((bottom) => [top, bottom])),
@@ -398,6 +628,7 @@ export function generateOutfits(library, state = {}, request = {}) {
       warnings: [`A complete outfit needs ${missing.join(" and ")}. Import or mark one clean first.`],
       ownedItemCount: library.length,
       availableItemCount: profiles.length,
+      inspo: { active: context.hasInspo, count: context.inspoCount },
     };
   }
 
@@ -412,7 +643,39 @@ export function generateOutfits(library, state = {}, request = {}) {
     const accessory = bestOptional(groups.accessory || [], items, index);
     if (accessory && items.filter((item) => item.traits.statement).length < 1) items.push(accessory);
     const unique = [...new Map(items.map((item) => [item.id, item])).values()];
-    const score = scoreLook(unique, context, state);
+    let inspoMeta = { score: 72, reasons: [], matched: [] };
+    if (inspoScorer && inspoPalettes.length) {
+      try {
+        inspoMeta = inspoScorer(unique, inspoPalettes) || inspoMeta;
+      } catch {
+        inspoMeta = { score: 72, reasons: [], matched: [] };
+      }
+    }
+    const tasteMeta = fashionTasteScore(unique, context.mode, context.inspoVibes || []);
+    // Everyday: skip generating garbage jersey+sweats as candidates at all
+    if (
+      (context.mode === "everyday" || context.mode === "build")
+      && unique.some((i) => i.traits?.isJersey)
+      && unique.some((i) => i.traits?.isSweats)
+    ) {
+      continue;
+    }
+    // Soft-skip pure anti-taste looks in everyday
+    if (
+      (context.mode === "everyday" || context.mode === "build")
+      && tasteMeta.score < 48
+    ) {
+      continue;
+    }
+    // Everyday: deprioritize jersey looks in the candidate pool (content mode still allows)
+    if (
+      (context.mode === "everyday" || context.mode === "build")
+      && unique.some((i) => i.traits?.isJersey)
+    ) {
+      // keep as low-rank filler only if we need volume — mark via score floor later
+      tasteMeta.score = Math.min(tasteMeta.score, 52);
+    }
+    const score = scoreLook(unique, context, state, inspoMeta.score, tasteMeta);
     candidates.push({
       id: `look-${unique.map((item) => item.id).join("-")}`,
       signature: lookKey(unique),
@@ -420,7 +683,12 @@ export function generateOutfits(library, state = {}, request = {}) {
       confidence: Number(clamp(unique.reduce((sum, item) => sum + item.metadataConfidence, 0) / unique.length * 0.92).toFixed(2)),
       items: unique.map(publicItem),
       breakdown: score.breakdown,
-      reasons: explainLook(unique, context, score),
+      reasons: explainLook(unique, context, score, inspoMeta.reasons, tasteMeta.reasons, tasteMeta),
+      summary: tasteMeta.summary || tasteMeta.reasons?.[0] || null,
+      principles: tasteMeta.principles || [],
+      vibes: tasteMeta.vibes || [],
+      knowledgeDriven: true,
+      inspoMatch: inspoMeta.matched || [],
     });
   }
 
@@ -435,15 +703,28 @@ export function generateOutfits(library, state = {}, request = {}) {
     })
     .slice(0, context.count);
 
+  const warnings = [];
+  if (context.rain && !(groups.jacket || []).some((item) => item.traits.rainSafe)) {
+    warnings.push("Rain is in the context, but no rain-safe outer layer is identified in the wardrobe.");
+  }
+  if (context.hasInspo) {
+    warnings.push(`Scoring with ${context.inspoCount} active inspo ${context.inspoCount === 1 ? "image" : "images"} (drop + Pinterest).`);
+  }
+
   return {
     generatedAt: new Date().toISOString(),
     context,
     looks,
-    warnings: context.rain && !(groups.jacket || []).some((item) => item.traits.rainSafe)
-      ? ["Rain is in the context, but no rain-safe outer layer is identified in the wardrobe."]
-      : [],
+    warnings,
     ownedItemCount: library.length,
     availableItemCount: profiles.length,
+    philosophy: TASTE_PHILOSOPHY,
+    knowledgeDriven: true,
+    inspo: {
+      active: context.hasInspo,
+      count: context.inspoCount,
+      vibes: context.inspoVibes || [],
+    },
   };
 }
 
@@ -560,6 +841,7 @@ export function buildLaundryPlan(library, state = {}) {
 }
 
 export function analyzePurchaseCandidate(library, state = {}, request = {}) {
+  const policy = mergeStylePolicy(state.stylePolicy);
   const part = String(request.part || "upperbody");
   const candidate = buildItemProfile({
     id: "candidate",
@@ -567,10 +849,14 @@ export function analyzePurchaseCandidate(library, state = {}, request = {}) {
     part,
     color: cleanHex(request.color),
     tags: Array.isArray(request.tags) ? request.tags.map(String) : [],
+    fabric: request.fabric || request.composition || null,
+    brand: request.brand || null,
+    productRef: request.productRef || null,
+    fit: request.fit || null,
     image: null,
     intelligence: { visualHash: null },
-  });
-  const profiles = library.map((item) => buildItemProfile(item, state.items?.[item.id]));
+  }, {}, policy);
+  const profiles = library.map((item) => buildItemProfile(item, state.items?.[item.id], policy));
   const comparable = profiles
     .filter((item) => item.kind === candidate.kind)
     .map((item) => ({ item: publicItem(item), similarity: Math.round(colorSimilarity(item.color, candidate.color) * 100) }))
@@ -584,28 +870,52 @@ export function analyzePurchaseCandidate(library, state = {}, request = {}) {
     || (candidate.kind === "shoes" && !overview.byCategory.shoes);
   const redundancy = comparable[0]?.similarity || 0;
   const versatility = partners.length ? Math.round((compatible.length / partners.length) * 100) : 42;
-  const score = Math.round(clamp((fillsGap ? 0.34 : 0.12) + (versatility / 100 * 0.43) + ((100 - redundancy) / 100 * 0.23)) * 100);
-  const verdict = score >= 76 ? "high-leverage" : score >= 55 ? "consider" : "low-leverage";
-  return {
-    generatedAt: new Date().toISOString(),
-    verdict,
-    score,
-    candidate: { name: candidate.name, part: candidate.part, kind: candidate.kind, color: candidate.color, price: Number.isFinite(Number(request.price)) ? Number(request.price) : null },
-    fillsGap,
-    versatility,
-    compatibleOwnedPieces: compatible.map(publicItem).slice(0, 12),
-    nearestOwnedPiece: comparable[0] || null,
+  const baseScore = Math.round(clamp((fillsGap ? 0.34 : 0.12) + (versatility / 100 * 0.43) + ((100 - redundancy) / 100 * 0.23)) * 100);
+  const baseVerdict = baseScore >= 76 ? "high-leverage" : baseScore >= 55 ? "consider" : "low-leverage";
+  const base = {
+    verdict: baseVerdict,
+    score: baseScore,
     reasons: [
       fillsGap ? "It fills a structural category gap in the current wardrobe." : "It does not fill a missing base category.",
       `${compatible.length} of ${partners.length} complementary owned pieces clear the compatibility threshold.`,
       redundancy >= 88 ? `It is highly redundant with ${comparable[0].item.name}.` : "No near-color duplicate dominates the same category.",
-      "Price is reported separately because value depends on your budget and real wear, not a fabricated luxury score.",
     ],
+    candidate: { name: candidate.name, part: candidate.part, kind: candidate.kind, color: candidate.color, price: Number.isFinite(Number(request.price)) ? Number(request.price) : null },
+  };
+  const quality = evaluatePurchaseQuality(library, base, {
+    ...request,
+    name: candidate.name,
+    part,
+    tags: candidate.tags,
+    _ops: state.items || {},
+  }, policy);
+  return {
+    generatedAt: new Date().toISOString(),
+    verdict: quality.verdict,
+    score: quality.score,
+    candidate: {
+      name: candidate.name,
+      part: candidate.part,
+      kind: candidate.kind,
+      color: candidate.color,
+      price: Number.isFinite(Number(request.price)) ? Number(request.price) : null,
+      fit: quality.fit,
+      materialGrade: quality.material.grade,
+      fabricCategory: quality.material.category,
+    },
+    fillsGap,
+    versatility,
+    compatibleOwnedPieces: compatible.map(publicItem).slice(0, 12),
+    nearestOwnedPiece: comparable[0] || null,
+    material: quality.material,
+    flags: quality.flags,
+    reasons: quality.reasons,
   };
 }
 
 export function buildWardrobeOverview(library, state = {}) {
-  const profiles = library.map((item) => buildItemProfile(item, state.items?.[item.id]));
+  const policy = mergeStylePolicy(state.stylePolicy);
+  const profiles = library.map((item) => buildItemProfile(item, state.items?.[item.id], policy));
   const byCategory = profiles.reduce((counts, item) => ({ ...counts, [item.kind]: (counts[item.kind] || 0) + 1 }), {});
   const statusCounts = profiles.reduce((counts, item) => ({ ...counts, [item.operational.status]: (counts[item.operational.status] || 0) + 1 }), {});
   const gaps = [];
@@ -637,6 +947,17 @@ export function buildWardrobeOverview(library, state = {}) {
     learning: totalWearEvents < 7
       ? `Log ${7 - totalWearEvents} more ${7 - totalWearEvents === 1 ? "wear" : "wears"} before rotation and resale signals become reliable.`
       : "The wardrobe has enough wear history for personal rotation signals.",
+    stylePolicy: {
+      aesthetic: policy.aesthetic,
+      tightAllowed: Boolean(policy.fitPreference?.tightAllowed),
+      topsFit: policy.fitPreference?.tops || "baggy",
+    },
+    fabric: {
+      unknown: profiles.filter((item) => item.traits?.materialUnknown).length,
+      qualityReady: profiles.filter((item) => !item.traits?.materialUnknown && (item.traits?.materialQuality || 0) >= 70).length,
+      polyVeto: profiles.filter((item) => item.traits?.materialVeto).length,
+    },
+    nextPurchase: buildCapsuleGaps(library, state, policy).nextPurchase,
   };
 }
 
@@ -740,6 +1061,10 @@ export function defaultWardrobeState() {
     idempotency: {},
     decisions: { lastRecommendation: null, lastPackingPlan: null },
     preferences: defaultPreferences(),
+    stylePolicy: defaultStylePolicy(),
+    sizeProfile: defaultSizeProfile(),
+    tailors: defaultTailorDirectory(),
+    wishlist: { own: [], want: [] },
     lastEventId: null,
     updatedAt: new Date(0).toISOString(),
   };
@@ -764,6 +1089,13 @@ export function ensureWardrobeState(state, library) {
       items: { ...(base.preferences?.items || {}) },
       pairs: { ...(base.preferences?.pairs || {}) },
       looks: { ...(base.preferences?.looks || {}) },
+    },
+    stylePolicy: mergeStylePolicy(base.stylePolicy),
+    sizeProfile: { ...defaultSizeProfile(), ...(base.sizeProfile || {}) },
+    tailors: { ...defaultTailorDirectory(), ...(base.tailors || {}) },
+    wishlist: {
+      own: Array.isArray(base.wishlist?.own) ? base.wishlist.own : [],
+      want: Array.isArray(base.wishlist?.want) ? base.wishlist.want : [],
     },
   };
 }
@@ -814,12 +1146,20 @@ export function reduceWardrobeEvent(state, event) {
         next.preferences.pairs[key] = Number(next.preferences.pairs[key] || 0) + delta;
       }
     }
+  } else if (event.type === "style-policy") {
+    next.stylePolicy = mergeStylePolicy({ ...next.stylePolicy, ...(event.value || {}) });
+  } else if (event.type === "size-profile") {
+    next.sizeProfile = { ...defaultSizeProfile(), ...(next.sizeProfile || {}), ...(event.value || {}), updatedAt: event.at };
+  } else if (event.type === "tailors") {
+    next.tailors = { ...defaultTailorDirectory(), ...(next.tailors || {}), ...(event.value || {}) };
   } else if (event.type === "undo") {
     if (event.before?.itemId && event.before?.state) next.items[event.before.itemId] = event.before.state;
     if (event.before?.items) {
       for (const [itemId, itemState] of Object.entries(event.before.items)) next.items[itemId] = itemState;
     }
     if (event.before?.preferences) next.preferences = event.before.preferences;
+    if (event.before?.stylePolicy) next.stylePolicy = event.before.stylePolicy;
+    if (event.before?.sizeProfile) next.sizeProfile = event.before.sizeProfile;
     if (event.targetIdempotencyKey) delete next.idempotency[event.targetIdempotencyKey];
   }
   next.revision = Number.isFinite(Number(event.sequence))

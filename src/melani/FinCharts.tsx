@@ -1,11 +1,11 @@
 /**
- * Labeled finance charts — every chart has a title, x/y axis labels,
- * and per-point hover tooltips (native SVG <title> + highlight dot).
- * Data first, no filler words.
+ * Finance charts — soft Habits fill + real X/Y axes + clear title.
+ * Cursor-follow hover (no precise click targets). Fluid width.
  */
-import { useState } from "react";
+import { useId, useState, type MouseEvent } from "react";
 import type { FinanceTx } from "./financeStore";
 import { money, moneyCents } from "./financeStore";
+import { categoryColor, normalizeCategory } from "./financeCategorize";
 
 const PALETTE = [
   "#1f6f8b", "#e8743b", "#4b8f6b", "#b5651d", "#7d5ba6",
@@ -13,17 +13,85 @@ const PALETTE = [
   "#6b8e9e", "#9e6b8e",
 ];
 
-/* ────────────────────────── Line / area chart ────────────────────────── */
-
 export type LinePoint = { x: string; y: number; label: string };
 
+/** Compact axis money: $0 · $1k · −$200 */
+function axisMoney(n: number): string {
+  if (!Number.isFinite(n)) return "";
+  if (Math.abs(n) >= 1000) {
+    const k = n / 1000;
+    const s = k % 1 === 0 ? String(k) : k.toFixed(1);
+    return `${n < 0 ? "−" : ""}$${Math.abs(Number(s))}k`;
+  }
+  return money(n).replace("-", "−");
+}
+
+/** Nice upper bound for axes (0, 1, 2, 2.5, 5, 10… scale). */
+function niceCeil(raw: number): number {
+  if (!Number.isFinite(raw) || raw <= 0) return 1;
+  const exp = Math.floor(Math.log10(raw));
+  const base = Math.pow(10, exp);
+  const err = raw / base;
+  if (err <= 1) return base;
+  if (err <= 2) return 2 * base;
+  if (err <= 2.5) return 2.5 * base;
+  if (err <= 5) return 5 * base;
+  return 10 * base;
+}
+
+/** Drop ticks that would render as the same label (stops stacked “5.2h”). */
+function uniqueTicks(values: number[], format: (n: number) => string): number[] {
+  const seen = new Set<string>();
+  const out: number[] = [];
+  for (const v of values) {
+    const label = format(v);
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    out.push(v);
+  }
+  return out.length ? out : values.slice(0, 1);
+}
+
+/**
+ * Catmull-Rom → cubic bezier path. Soft sleep-style curves (not jagged L segments).
+ */
+function smoothLinePath(
+  pts: { x: number; y: number }[],
+  tension = 0.18
+): string {
+  if (!pts.length) return "";
+  if (pts.length === 1) return `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  if (pts.length === 2) {
+    return `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+  }
+  let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i === 0 ? 0 : i - 1];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] ?? p2;
+    const c1x = p1.x + ((p2.x - p0.x) * tension);
+    const c1y = p1.y + ((p2.y - p0.y) * tension);
+    const c2x = p2.x - ((p3.x - p1.x) * tension);
+    const c2y = p2.y - ((p3.y - p1.y) * tension);
+    d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
+/**
+ * Soft cyan area (Habits) + labeled axes so the graph is readable.
+ * Hover follows the cursor across the plot — no thin hit columns.
+ */
 export function LabeledLineChart({
   title,
   xLabel,
   yLabel,
   points,
-  color = "#1f6f8b",
+  color = "#38bdf8",
   height = 220,
+  /** Default formats as money (finance). Pass e.g. (n) => `${n}h` for hours. */
+  formatY,
 }: {
   title: string;
   xLabel: string;
@@ -31,14 +99,23 @@ export function LabeledLineChart({
   points: LinePoint[];
   color?: string;
   height?: number;
+  formatY?: (n: number) => string;
 }) {
+  const tickY = formatY ?? axisMoney;
   const [hover, setHover] = useState<number | null>(null);
+  const gradId = useId().replace(/:/g, "");
   const W = 640;
-  const H = height;
-  const PAD_L = 64;
-  const PAD_R = 16;
-  const PAD_T = 34;
-  const PAD_B = 44;
+  // Allow compact charts (Focus Mac/Phone) — min was 200 and ate the page
+  const H = Math.max(100, height);
+  const compact = H < 160;
+  // Room for Y ticks left — no space reserved for rotated axis title on compact
+  // (rotated "h"/"Hours" was cutting through middle tick labels)
+  const showYTitle = Boolean(yLabel?.trim()) && !compact;
+  const showXTitle = Boolean(xLabel?.trim()) && !compact;
+  const PAD_L = compact ? 40 : showYTitle ? 56 : 48;
+  const PAD_R = 12;
+  const PAD_T = compact ? 8 : 12;
+  const PAD_B = compact ? 18 : showXTitle ? 40 : 28;
   const plotW = W - PAD_L - PAD_R;
   const plotH = H - PAD_T - PAD_B;
 
@@ -47,264 +124,528 @@ export function LabeledLineChart({
   const ys = points.map((p) => p.y);
   const yMaxRaw = Math.max(...ys, 0);
   const yMinRaw = Math.min(...ys, 0);
-  const span = yMaxRaw - yMinRaw || 1;
-  const yMax = yMaxRaw + span * 0.08;
-  const yMin = yMinRaw - span * 0.08;
+  // Hours / counts that never go negative: don't invent −1.1h axis padding
+  const yMin = yMinRaw >= 0 ? 0 : yMinRaw;
+  // Nice ceiling so ticks are 0 / 4 / 8 / 12 not 0 / 3.1 / 6.2 / 9.3
+  const yMax = niceCeil(Math.max(yMaxRaw * 1.05, yMin + 1e-6));
 
   const px = (i: number) =>
     PAD_L + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW);
-  const py = (v: number) => PAD_T + ((yMax - v) / (yMax - yMin)) * plotH;
+  const py = (v: number) => PAD_T + ((yMax - v) / (yMax - yMin || 1)) * plotH;
 
-  // 4 y-axis ticks
-  const ticks = [0, 1, 2, 3].map((i) => yMin + ((yMax - yMin) * i) / 3);
-
-  // x tick indices — first, middle-ish, last (avoid crowding)
+  // Compact: 4 ticks; full: 5 — dedupe after format so labels never stack
+  const tickCount = compact ? 3 : 4;
+  const yTicksRaw = Array.from({ length: tickCount + 1 }, (_, i) =>
+    yMin + ((yMax - yMin) * i) / tickCount
+  );
+  const yTicks = uniqueTicks(yTicksRaw, tickY);
   const xTickIdx = Array.from(
-    new Set([0, Math.floor(points.length / 2), points.length - 1])
+    new Set([
+      0,
+      Math.floor(points.length / 4),
+      Math.floor(points.length / 2),
+      Math.floor((points.length * 3) / 4),
+      points.length - 1,
+    ].filter((i) => i >= 0 && i < points.length))
   );
 
-  const path = points
-    .map((p, i) => `${i === 0 ? "M" : "L"}${px(i).toFixed(1)},${py(p.y).toFixed(1)}`)
-    .join(" ");
-  const area = `${path} L${px(points.length - 1).toFixed(1)},${py(Math.max(yMin, 0)).toFixed(1)} L${px(0).toFixed(1)},${py(Math.max(yMin, 0)).toFixed(1)} Z`;
+  // Smooth path (catmull-rom → cubic) — sleep/fitness feel, not jagged polyline
+  const pts = points.map((p, i) => ({ x: px(i), y: py(p.y) }));
+  const path = smoothLinePath(pts);
+  // Area to zero baseline when range crosses 0; else to bottom of plot
+  const baseY = yMin < 0 && yMax > 0 ? py(0) : PAD_T + plotH;
+  const area = `${path} L${px(points.length - 1).toFixed(1)},${baseY.toFixed(1)} L${px(0).toFixed(1)},${baseY.toFixed(1)} Z`;
+
+  /** Nearest day under the cursor — move freely, no precise target. */
+  function onPlotMove(e: MouseEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const x = ((e.clientX - rect.left) / rect.width) * W;
+    const y = ((e.clientY - rect.top) / rect.height) * H;
+    if (x < PAD_L - 4 || x > W - PAD_R + 4 || y < PAD_T - 4 || y > PAD_T + plotH + 8) {
+      setHover(null);
+      return;
+    }
+    let best = 0;
+    let bestD = Infinity;
+    for (let i = 0; i < points.length; i++) {
+      const d = Math.abs(px(i) - x);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    setHover((prev) => (prev === best ? prev : best));
+  }
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className="wd-linechart"
-      role="img"
-      aria-label={title}
-    >
-      {/* Title */}
-      <text x={W / 2} y={18} textAnchor="middle" className="wd-chart-title">
-        {title}
-      </text>
+    <div className="wd-hab-chart-wrap">
+      {title ? (
+        <header className="wd-hab-chart-head">
+          <h3 className="wd-hab-chart-title">{title}</h3>
+        </header>
+      ) : null}
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="wd-hab-chart"
+        role="img"
+        aria-label={title}
+        onMouseMove={onPlotMove}
+        onMouseLeave={() => setHover(null)}
+      >
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.42" />
+            <stop offset="55%" stopColor={color} stopOpacity="0.12" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+          </linearGradient>
+        </defs>
 
-      {/* Grid + y ticks */}
-      {ticks.map((t) => (
-        <g key={t}>
+        {/* Soft horizontal grid + Y axis labels */}
+        {yTicks.map((t) => (
+          <g key={`y-${t}`}>
+            <line
+              x1={PAD_L}
+              y1={py(t)}
+              x2={W - PAD_R}
+              y2={py(t)}
+              className="wd-hab-grid"
+            />
+            <text
+              x={PAD_L - 6}
+              y={py(t) + 3.5}
+              textAnchor="end"
+              className={`wd-hab-chart-tick${compact ? " is-compact" : ""}`}
+            >
+              {tickY(t)}
+            </text>
+          </g>
+        ))}
+
+        {/* Zero emphasis when range crosses 0 */}
+        {yMin < 0 && yMax > 0 ? (
           <line
             x1={PAD_L}
-            y1={py(t)}
+            y1={py(0)}
             x2={W - PAD_R}
-            y2={py(t)}
-            className="wd-chart-grid"
+            y2={py(0)}
+            className="wd-hab-zero"
           />
-          <text
-            x={PAD_L - 8}
-            y={py(t) + 4}
-            textAnchor="end"
-            className="wd-chart-tick"
-          >
-            {money(t)}
-          </text>
-        </g>
-      ))}
+        ) : null}
 
-      {/* Zero line if the range crosses zero */}
-      {yMin < 0 && yMax > 0 ? (
+        {/* X + Y axes */}
         <line
           x1={PAD_L}
-          y1={py(0)}
-          x2={W - PAD_R}
-          y2={py(0)}
-          className="wd-chart-zero"
+          y1={PAD_T}
+          x2={PAD_L}
+          y2={PAD_T + plotH}
+          className="wd-hab-axis"
         />
-      ) : null}
+        <line
+          x1={PAD_L}
+          y1={PAD_T + plotH}
+          x2={W - PAD_R}
+          y2={PAD_T + plotH}
+          className="wd-hab-axis"
+        />
 
-      {/* Axes */}
-      <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={H - PAD_B} className="wd-chart-axis" />
-      <line x1={PAD_L} y1={H - PAD_B} x2={W - PAD_R} y2={H - PAD_B} className="wd-chart-axis" />
+        {/* Soft area + smooth line (sleep / Focus language) */}
+        <path d={area} fill={`url(#${gradId})`} style={{ pointerEvents: "none" }} />
+        <path
+          d={path}
+          fill="none"
+          stroke={color}
+          strokeWidth="2.75"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          style={{ pointerEvents: "none" }}
+        />
 
-      {/* Axis labels */}
-      <text
-        x={PAD_L + plotW / 2}
-        y={H - 8}
-        textAnchor="middle"
-        className="wd-chart-axis-label"
-      >
-        {xLabel}
-      </text>
-      <text
-        x={14}
-        y={PAD_T + plotH / 2}
-        textAnchor="middle"
-        transform={`rotate(-90 14 ${PAD_T + plotH / 2})`}
-        className="wd-chart-axis-label"
-      >
-        {yLabel}
-      </text>
-
-      {/* x ticks */}
-      {xTickIdx.map((i) => (
-        <text
-          key={i}
-          x={px(i)}
-          y={H - PAD_B + 16}
-          textAnchor="middle"
-          className="wd-chart-tick"
-        >
-          {points[i].x}
-        </text>
-      ))}
-
-      {/* Area + line */}
-      <path d={area} fill={color} opacity={0.12} />
-      <path d={path} fill="none" stroke={color} strokeWidth={2} />
-
-      {/* Points with hover labels */}
-      {points.map((p, i) => (
-        <g key={i}>
-          <circle
-            cx={px(i)}
-            cy={py(p.y)}
-            r={hover === i ? 5 : 3}
-            fill={color}
-            stroke="var(--wd-bg, #101010)"
-            strokeWidth={1.5}
-            onMouseEnter={() => setHover(i)}
-            onMouseLeave={() => setHover(null)}
-          >
-            <title>{p.label}</title>
-          </circle>
-          {/* wide invisible hit area so hovering is easy */}
-          <rect
-            x={px(i) - (plotW / Math.max(points.length - 1, 1)) / 2}
-            y={PAD_T}
-            width={plotW / Math.max(points.length - 1, 1)}
-            height={plotH}
-            fill="transparent"
-            onMouseEnter={() => setHover(i)}
-            onMouseLeave={() => setHover(null)}
-          >
-            <title>{p.label}</title>
-          </rect>
-        </g>
-      ))}
-
-      {/* Hover readout pinned to the top of the plot */}
-      {hover != null ? (
-        <g>
-          <line
-            x1={px(hover)}
-            y1={PAD_T}
-            x2={px(hover)}
-            y2={H - PAD_B}
-            className="wd-chart-cursor"
-          />
+        {/* X ticks */}
+        {xTickIdx.map((i) => (
           <text
-            x={Math.min(Math.max(px(hover), PAD_L + 70), W - PAD_R - 70)}
-            y={PAD_T + 14}
+            key={`x-${i}`}
+            x={px(i)}
+            y={PAD_T + plotH + 16}
             textAnchor="middle"
-            className="wd-chart-hover"
+            className="wd-hab-chart-tick"
           >
-            {points[hover].label}
+            {points[i].x}
           </text>
-        </g>
-      ) : null}
-    </svg>
+        ))}
+
+        {/* Axis titles — skip on compact (was colliding with tick labels) */}
+        {showXTitle ? (
+          <text
+            x={PAD_L + plotW / 2}
+            y={H - 4}
+            textAnchor="middle"
+            className="wd-hab-axis-label"
+          >
+            {xLabel}
+          </text>
+        ) : null}
+        {showYTitle ? (
+          <text
+            x={14}
+            y={PAD_T + plotH / 2}
+            textAnchor="middle"
+            transform={`rotate(-90 14 ${PAD_T + plotH / 2})`}
+            className="wd-hab-axis-label"
+          >
+            {yLabel}
+          </text>
+        ) : null}
+
+        {/* Full-plot hit slab so mousemove always fires over empty areas */}
+        <rect
+          x={PAD_L}
+          y={PAD_T}
+          width={plotW}
+          height={plotH}
+          fill="rgba(0,0,0,0.001)"
+          style={{ cursor: "crosshair" }}
+        />
+
+        {hover != null ? (
+          <g style={{ pointerEvents: "none" }}>
+            <line
+              x1={px(hover)}
+              y1={PAD_T}
+              x2={px(hover)}
+              y2={PAD_T + plotH}
+              className="wd-hab-cursor"
+            />
+            <circle
+              cx={px(hover)}
+              cy={py(points[hover].y)}
+              r={5.5}
+              fill={color}
+              stroke="#f7f7fa"
+              strokeWidth={2.2}
+              className="wd-hab-hover-dot"
+            />
+            <text
+              x={Math.min(Math.max(px(hover), PAD_L + 70), W - PAD_R - 70)}
+              y={PAD_T + 14}
+              textAnchor="middle"
+              className="wd-hab-chart-hover"
+            >
+              {points[hover].label}
+            </text>
+          </g>
+        ) : null}
+      </svg>
+    </div>
   );
 }
 
-/* ────────────────────────── Pie chart ────────────────────────── */
+export type PieSlice = {
+  name: string;
+  value: number;
+  /** Optional fixed color; otherwise category palette */
+  color?: string;
+};
 
-export type PieSlice = { name: string; value: number };
+/** Full pie wedge or donut ring segment */
+function pieSlicePath(
+  cx: number,
+  cy: number,
+  rOuter: number,
+  rInner: number,
+  a0: number,
+  a1: number,
+  fullCircle: boolean
+): string {
+  if (fullCircle) {
+    if (rInner <= 0.5) {
+      return `M${cx - rOuter},${cy} a${rOuter},${rOuter} 0 1,0 ${rOuter * 2},0 a${rOuter},${rOuter} 0 1,0 ${-rOuter * 2},0`;
+    }
+    // Full donut ring as two circles is handled separately; near-full uses arcs
+    const x0 = cx + rOuter * Math.cos(-Math.PI / 2);
+    const y0 = cy + rOuter * Math.sin(-Math.PI / 2);
+    return `M${x0},${y0} A${rOuter},${rOuter} 0 1 1 ${x0 - 0.01},${y0} A${rOuter},${rOuter} 0 1 1 ${x0},${y0}`;
+  }
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  const xo0 = cx + rOuter * Math.cos(a0);
+  const yo0 = cy + rOuter * Math.sin(a0);
+  const xo1 = cx + rOuter * Math.cos(a1);
+  const yo1 = cy + rOuter * Math.sin(a1);
+  if (rInner <= 0.5) {
+    return `M${cx},${cy} L${xo0.toFixed(2)},${yo0.toFixed(2)} A${rOuter},${rOuter} 0 ${large} 1 ${xo1.toFixed(2)},${yo1.toFixed(2)} Z`;
+  }
+  const xi0 = cx + rInner * Math.cos(a0);
+  const yi0 = cy + rInner * Math.sin(a0);
+  const xi1 = cx + rInner * Math.cos(a1);
+  const yi1 = cy + rInner * Math.sin(a1);
+  // Outer arc, then reverse inner arc
+  return [
+    `M${xo0.toFixed(2)},${yo0.toFixed(2)}`,
+    `A${rOuter},${rOuter} 0 ${large} 1 ${xo1.toFixed(2)},${yo1.toFixed(2)}`,
+    `L${xi1.toFixed(2)},${yi1.toFixed(2)}`,
+    `A${rInner},${rInner} 0 ${large} 0 ${xi0.toFixed(2)},${yi0.toFixed(2)}`,
+    "Z",
+  ].join(" ");
+}
 
+/**
+ * Interactive pie / donut — every chart should use this.
+ * Cursor on the disk: black border + pop + dim others + name/value.
+ */
+export function InteractivePieChart({
+  title,
+  slices,
+  size = 220,
+  /** 0 = full pie; ~0.55 = donut hole */
+  holeRatio = 0,
+  centerPrimary,
+  centerSecondary,
+  showLegend = true,
+  formatValue,
+  className = "",
+}: {
+  title?: string;
+  slices: PieSlice[];
+  size?: number;
+  holeRatio?: number;
+  centerPrimary?: string;
+  centerSecondary?: string;
+  showLegend?: boolean;
+  formatValue?: (value: number, frac: number) => string;
+  className?: string;
+}) {
+  const [hover, setHover] = useState<number | null>(null);
+  const total = slices.reduce((s, x) => s + Math.max(0, x.value), 0);
+  if (!slices.length || total <= 0) return null;
+
+  const pad = 14;
+  const R = size / 2 - pad;
+  const rInner = Math.max(0, R * Math.min(0.85, Math.max(0, holeRatio)));
+  const CX = size / 2;
+  const CY = size / 2;
+  const H = size;
+  const HIT_R = R + 10;
+  const popDist = holeRatio > 0 ? 6 : 9;
+
+  let angle = -Math.PI / 2;
+  const arcs = slices.map((s, i) => {
+    const frac = Math.max(0, s.value) / total;
+    const a0 = angle;
+    const a1 = angle + frac * 2 * Math.PI;
+    angle = a1;
+    const mid = (a0 + a1) / 2;
+    const full = frac >= 0.999;
+    const d = pieSlicePath(CX, CY, R, rInner, a0, a1, full);
+    return {
+      d,
+      a0,
+      a1,
+      mid,
+      frac,
+      slice: s,
+      color: s.color || categoryColor(s.name) || PALETTE[i % PALETTE.length],
+    };
+  });
+
+  function sliceAtPointer(
+    clientX: number,
+    clientY: number,
+    svg: SVGSVGElement
+  ): number | null {
+    const rect = svg.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const x = ((clientX - rect.left) / rect.width) * size;
+    const y = ((clientY - rect.top) / rect.height) * H;
+    const dx = x - CX;
+    const dy = y - CY;
+    const dist = Math.hypot(dx, dy);
+    // Outside ring or in donut hole → no hit
+    if (dist > HIT_R) return null;
+    if (rInner > 2 && dist < rInner - 2) return null;
+
+    let ang = Math.atan2(dy, dx);
+    if (ang < -Math.PI / 2) ang += 2 * Math.PI;
+
+    for (let i = 0; i < arcs.length; i++) {
+      const a = arcs[i];
+      if (ang >= a.a0 && (ang < a.a1 || i === arcs.length - 1)) return i;
+    }
+    return null;
+  }
+
+  function onPieMove(e: MouseEvent<SVGSVGElement>) {
+    const next = sliceAtPointer(e.clientX, e.clientY, e.currentTarget);
+    setHover((prev) => (prev === next ? prev : next));
+  }
+
+  const hot = hover != null ? arcs[hover] : null;
+  const valueLine = (v: number, frac: number) =>
+    formatValue
+      ? formatValue(v, frac)
+      : `${moneyCents(v)} · ${(frac * 100).toFixed(0)}%`;
+
+  // Donut / static center: labels live in the SVG hole.
+  // Full pie (no hole, no static center): labels live only in the HTML chip.
+  // Never both — that stacked "Credit card paym…" + full name on the pie.
+  const useSvgCenter = Boolean(
+    centerPrimary || centerSecondary || holeRatio > 0
+  );
+  const centerMain = useSvgCenter
+    ? hot
+      ? hot.slice.name
+      : centerPrimary ?? null
+    : null;
+  const centerSub = useSvgCenter
+    ? hot
+      ? valueLine(hot.slice.value, hot.frac)
+      : centerSecondary ?? null
+    : null;
+
+  return (
+    <div className={`wd-pie-block ${className}`.trim()}>
+      {title ? <div className="wd-hab-chart-title">{title}</div> : null}
+      <div className="wd-pie-wrap">
+        {/* SVG + optional HTML chip share one box so the chip centers on the pie, not the legend */}
+        <div className="wd-pie-disk">
+          <svg
+            viewBox={`0 0 ${size} ${H}`}
+            role="img"
+            aria-label={title || "Pie chart"}
+            className="wd-pie-svg"
+            onMouseMove={onPieMove}
+            onMouseLeave={() => setHover(null)}
+          >
+            {arcs.map((a, i) => {
+              const isHot = hover === i;
+              const dim = hover != null && !isHot;
+              const tx = isHot ? Math.cos(a.mid) * popDist : 0;
+              const ty = isHot ? Math.sin(a.mid) * popDist : 0;
+              return (
+                <path
+                  key={`${a.slice.name}-${i}`}
+                  d={a.d}
+                  fill={a.color}
+                  className={
+                    isHot
+                      ? "wd-pie-slice is-hot"
+                      : dim
+                        ? "wd-pie-slice is-dim"
+                        : "wd-pie-slice"
+                  }
+                  transform={
+                    isHot
+                      ? `translate(${tx.toFixed(2)},${ty.toFixed(2)})`
+                      : undefined
+                  }
+                  style={{
+                    pointerEvents: "none",
+                    opacity: dim ? 0.28 : 1,
+                    paintOrder: "stroke fill",
+                    transition:
+                      "opacity 0.15s ease, transform 0.15s ease, stroke-width 0.12s ease",
+                  }}
+                  stroke={isHot ? "#0a0a0a" : "rgba(0,0,0,0.14)"}
+                  strokeWidth={isHot ? 2.75 : 0.65}
+                  strokeLinejoin="round"
+                />
+              );
+            })}
+            {/* Hit layer */}
+            <circle
+              cx={CX}
+              cy={CY}
+              r={HIT_R}
+              fill="rgba(0,0,0,0.001)"
+              style={{ cursor: "crosshair" }}
+            />
+            {/* Center labels — donut / static center only (never stacked with HTML chip) */}
+            {centerMain || centerSub ? (
+              <g className="wd-pie-center" style={{ pointerEvents: "none" }}>
+                {centerMain ? (
+                  <text
+                    x={CX}
+                    y={centerSub ? CY - 4 : CY + 5}
+                    textAnchor="middle"
+                    className={
+                      hot ? "wd-pie-center-hot" : "wd-pie-center-main"
+                    }
+                  >
+                    {centerMain.length > 18
+                      ? `${centerMain.slice(0, 16)}…`
+                      : centerMain}
+                  </text>
+                ) : null}
+                {centerSub ? (
+                  <text
+                    x={CX}
+                    y={centerMain ? CY + 14 : CY + 5}
+                    textAnchor="middle"
+                    className="wd-pie-center-sub"
+                  >
+                    {centerSub}
+                  </text>
+                ) : null}
+              </g>
+            ) : null}
+          </svg>
+          {/* Full-pie hover: one clean label over the disk (not the legend) */}
+          {hot && !useSvgCenter ? (
+            <div className="wd-pie-hover" aria-live="polite">
+              <p className="wd-pie-hover-name">{hot.slice.name}</p>
+              <p className="wd-pie-hover-val">
+                {valueLine(hot.slice.value, hot.frac)}
+              </p>
+            </div>
+          ) : null}
+        </div>
+        {showLegend ? (
+          <ul className="wd-pie-legend">
+            {arcs.map((a, i) => (
+              <li
+                key={`${a.slice.name}-${i}`}
+                onMouseEnter={() => setHover(i)}
+                onMouseLeave={() => setHover(null)}
+                className={hover === i ? "is-hot" : undefined}
+              >
+                <span
+                  className="wd-sub-dot"
+                  style={{ background: a.color }}
+                />
+                <span className="wd-sub-legend-name">{a.slice.name}</span>
+                <span className="wd-sub-legend-val">
+                  {valueLine(a.slice.value, a.frac)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** Spend-by-category pie (month books, copilot) */
 export function LabeledPieChart({
   title,
   slices,
-  size = 200,
+  size = 220,
 }: {
   title: string;
   slices: PieSlice[];
   size?: number;
 }) {
-  const [hover, setHover] = useState<number | null>(null);
-  const total = slices.reduce((s, x) => s + x.value, 0);
-  if (!slices.length || total <= 0) return null;
-
-  const R = size / 2 - 10;
-  const CX = size / 2;
-  const CY = size / 2 + 14;
-  const H = size + 28;
-
-  let angle = -Math.PI / 2;
-  const arcs = slices.map((s, i) => {
-    const frac = s.value / total;
-    const a0 = angle;
-    const a1 = angle + frac * 2 * Math.PI;
-    angle = a1;
-    const large = a1 - a0 > Math.PI ? 1 : 0;
-    const x0 = CX + R * Math.cos(a0);
-    const y0 = CY + R * Math.sin(a0);
-    const x1 = CX + R * Math.cos(a1);
-    const y1 = CY + R * Math.sin(a1);
-    const mid = (a0 + a1) / 2;
-    const d =
-      frac >= 0.999
-        ? // full circle
-          `M${CX - R},${CY} a${R},${R} 0 1,0 ${R * 2},0 a${R},${R} 0 1,0 ${-R * 2},0`
-        : `M${CX},${CY} L${x0.toFixed(2)},${y0.toFixed(2)} A${R},${R} 0 ${large} 1 ${x1.toFixed(2)},${y1.toFixed(2)} Z`;
-    return { d, mid, frac, slice: s, color: PALETTE[i % PALETTE.length] };
-  });
-
   return (
-    <div className="wd-pie-wrap">
-      <svg
-        viewBox={`0 0 ${size} ${H}`}
-        width={size}
-        height={H}
-        role="img"
-        aria-label={title}
-      >
-        <text x={size / 2} y={16} textAnchor="middle" className="wd-chart-title">
-          {title}
-        </text>
-        {arcs.map((a, i) => (
-          <path
-            key={a.slice.name}
-            d={a.d}
-            fill={a.color}
-            opacity={hover == null || hover === i ? 1 : 0.35}
-            transform={
-              hover === i
-                ? `translate(${Math.cos(a.mid) * 4},${Math.sin(a.mid) * 4})`
-                : undefined
-            }
-            onMouseEnter={() => setHover(i)}
-            onMouseLeave={() => setHover(null)}
-          >
-            <title>
-              {`${a.slice.name}: ${moneyCents(a.slice.value)} (${(a.frac * 100).toFixed(1)}%)`}
-            </title>
-          </path>
-        ))}
-      </svg>
-      <ul className="wd-pie-legend">
-        {arcs.map((a, i) => (
-          <li
-            key={a.slice.name}
-            onMouseEnter={() => setHover(i)}
-            onMouseLeave={() => setHover(null)}
-            className={hover === i ? "is-hot" : undefined}
-          >
-            <span className="wd-sub-dot" style={{ background: a.color }} />
-            <span className="wd-sub-legend-name">{a.slice.name}</span>
-            <span className="wd-sub-legend-val">
-              {moneyCents(a.slice.value)} · {(a.frac * 100).toFixed(0)}%
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <InteractivePieChart
+      title={title}
+      slices={slices}
+      size={size}
+      holeRatio={0}
+      showLegend
+    />
   );
 }
 
-/* ─────────────── Month charts under each ledger book ─────────────── */
-
-/** Build day-by-day spend/income and category split for one month. */
 export function monthChartData(rows: FinanceTx[], month: string) {
-  // month = YYYY-MM
   const [y, m] = month.split("-").map(Number);
   const days = new Date(y, m, 0).getDate();
   const out = new Array<number>(days).fill(0);
@@ -316,20 +657,40 @@ export function monthChartData(rows: FinanceTx[], month: string) {
     if (!d || d > days) continue;
     if (t.kind === "expense") {
       out[d - 1] += t.amount;
-      byCat.set(t.category || "Uncategorized", (byCat.get(t.category || "Uncategorized") || 0) + t.amount);
+      const cat = normalizeCategory(
+        t.category,
+        `${t.merchant || ""} ${t.note || ""}`
+      );
+      if (cat === "Income") continue;
+      byCat.set(cat, (byCat.get(cat) || 0) + t.amount);
     } else if (t.kind === "income") {
       inn[d - 1] += t.amount;
     }
   }
 
-  let run = 0;
+  // Cumulative spend (always has shape) — primary sleep-style series
+  let runSpend = 0;
+  let runNet = 0;
+  let totalIn = 0;
+  let totalOut = 0;
+  const spendPoints: LinePoint[] = [];
   const netPoints: LinePoint[] = [];
   for (let d = 0; d < days; d++) {
-    run += inn[d] - out[d];
+    runSpend += out[d];
+    runNet += inn[d] - out[d];
+    totalIn += inn[d];
+    totalOut += out[d];
+    const spend = Math.round(runSpend * 100) / 100;
+    const net = Math.round(runNet * 100) / 100;
+    spendPoints.push({
+      x: String(d + 1),
+      y: spend,
+      label: `Day ${d + 1}: spent ${moneyCents(spend)} · that day ${moneyCents(out[d])}`,
+    });
     netPoints.push({
       x: String(d + 1),
-      y: Math.round(run * 100) / 100,
-      label: `Day ${d + 1}: net ${moneyCents(run)} (in ${moneyCents(inn[d])} · out ${moneyCents(out[d])})`,
+      y: net,
+      label: `Day ${d + 1}: net ${moneyCents(net)} (in ${moneyCents(inn[d])} · out ${moneyCents(out[d])})`,
     });
   }
 
@@ -337,7 +698,6 @@ export function monthChartData(rows: FinanceTx[], month: string) {
     .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
     .sort((a, b) => b.value - a.value);
 
-  // group tiny slices into Other so the pie stays readable
   const MAX = 9;
   const top = slices.slice(0, MAX);
   const rest = slices.slice(MAX);
@@ -348,7 +708,14 @@ export function monthChartData(rows: FinanceTx[], month: string) {
     });
   }
 
-  return { netPoints, slices: top };
+  return {
+    spendPoints,
+    netPoints,
+    slices: top,
+    totalIn: Math.round(totalIn * 100) / 100,
+    totalOut: Math.round(totalOut * 100) / 100,
+    net: Math.round((totalIn - totalOut) * 100) / 100,
+  };
 }
 
 export function MonthBookCharts({
@@ -360,19 +727,94 @@ export function MonthBookCharts({
   month: string;
   monthLabel: string;
 }) {
-  const { netPoints, slices } = monthChartData(rows, month);
+  const { spendPoints, slices, totalIn, totalOut, net } = monthChartData(
+    rows,
+    month
+  );
   if (!rows.length) return null;
+
+  // Whoop Recovery format: TITLE · big avg · latest / Δ / range · soft graph
+  const vals = spendPoints.map((p) => p.y);
+  const n = vals.length;
+  // Average daily spend on days that actually moved
+  const daysWithSpend = spendPoints.filter((p, i) => {
+    const prev = i === 0 ? 0 : spendPoints[i - 1].y;
+    return p.y > prev;
+  }).length;
+  const avgDaily =
+    daysWithSpend > 0
+      ? Math.round((totalOut / daysWithSpend) * 100) / 100
+      : totalOut;
+  const latest = vals[vals.length - 1] ?? 0;
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const delta = latest - avgDaily;
+
   return (
     <div className="wd-month-charts">
-      <div className="wd-month-charts-line">
-        <LabeledLineChart
-          title={`${monthLabel} — running net cash flow`}
-          xLabel="Day of month"
-          yLabel="Net flow ($)"
-          points={netPoints}
+      <div className="wd-month-charts-line wx">
+        <article className="wx-panel wd-fin-metric">
+          <header className="wx-panel-head">
+            <div className="wx-panel-title-row">
+              <h3 className="wx-panel-title">SPEND · {monthLabel.toUpperCase()}</h3>
+            </div>
+            <div className="wx-panel-nums">
+              <span className="wx-panel-v">
+                {moneyCents(avgDaily).replace(/\.00$/, "")}
+                <small>avg / active day</small>
+              </span>
+              <span className="wx-panel-meta">
+                <span className="wx-panel-latest">
+                  latest: {moneyCents(latest)}
+                </span>
+                {Math.abs(delta) >= 0.5 ? (
+                  <span
+                    className={`wx-metric-delta ${
+                      delta > 0 ? "is-down" : "is-up"
+                    }`}
+                  >
+                    {delta > 0 ? "+" : ""}
+                    {moneyCents(delta)} vs avg
+                  </span>
+                ) : null}
+                <span className="wx-panel-range">
+                  {moneyCents(min)}–{moneyCents(max)}
+                </span>
+              </span>
+            </div>
+          </header>
+          <LabeledLineChart
+            title=""
+            xLabel=""
+            yLabel=""
+            points={spendPoints}
+            color="#0284c7"
+            height={180}
+          />
+          <footer className="wx-panel-foot">
+            <span>
+              n = {n || spendPoints.length}
+              {" · out "}
+              {moneyCents(totalOut)}
+              {" · in "}
+              {moneyCents(totalIn)}
+              {" · net "}
+              {moneyCents(net)}
+            </span>
+          </footer>
+        </article>
+      </div>
+      <div className="wd-month-charts-pie">
+        <InteractivePieChart
+          title="Spend by category"
+          slices={slices}
+          size={240}
+          holeRatio={0.58}
+          centerPrimary={moneyCents(totalOut)}
+          centerSecondary="total out"
+          showLegend
         />
       </div>
-      <LabeledPieChart title={`${monthLabel} — spend by category`} slices={slices} />
     </div>
   );
 }

@@ -12,7 +12,19 @@ export type ProductLink = {
   altUrl?: string;
   altStore?: "amazon" | "sephora" | "brand";
   note?: string;
+  /**
+   * Typical US retail price (USD) for the usual size you’d buy.
+   * Approximate — stores change sale prices; shown as “~$X” in the routine dropdown.
+   */
+  priceUsd?: number;
 };
+
+/** Format for UI: ~$19 */
+export function formatProductPrice(priceUsd: number | undefined | null): string | null {
+  if (priceUsd == null || !Number.isFinite(priceUsd) || priceUsd <= 0) return null;
+  const n = Math.round(priceUsd);
+  return `~$${n}`;
+}
 
 /**
  * Only use URLs that actually work on amazon.com (2025+).
@@ -182,7 +194,10 @@ export function openAmazonProductsForTitles(
   return { opened: urls.length, urls };
 }
 
-/** Keyed by exact step title in hygieneRoutines.ts */
+/**
+ * Keyed by exact step title in hygieneRoutines.ts
+ * priceUsd = typical full-size US retail (Amazon / Sephora street) — approximate.
+ */
 export const PRODUCT_LINKS: Record<string, ProductLink> = {
   "La Roche-Posay Lipikar AP+ Gentle Foaming Cleansing Oil": {
     name: "La Roche-Posay Lipikar AP+ Gentle Foaming Cleansing Oil",
@@ -191,16 +206,19 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     altStore: "brand",
     altUrl:
       "https://www.laroche-posay.us/our-products/body-care/body-wash/lipikar-ap-gentle-foaming-cleansing-oil-3337875890238.html",
+    priceUsd: 20,
   },
   "PanOxyl 10% Wash": {
     name: "PanOxyl 10% Benzoyl Peroxide Acne Foaming Wash",
     store: "amazon",
     url: amz("B081KL2QYJ"),
+    priceUsd: 12,
   },
   "PanOxyl 10% Benzoyl Peroxide Acne Foaming Wash": {
     name: "PanOxyl 10% Benzoyl Peroxide Acne Foaming Wash",
     store: "amazon",
     url: amz("B081KL2QYJ"),
+    priceUsd: 12,
   },
   "Soft Services Comfort Cleanse": {
     name: "Soft Services Comfort Cleanse",
@@ -208,6 +226,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     url: "https://www.sephora.com/product/soft-services-comfort-cleanse-ultra-soothing-moisturizing-body-wash-P510357",
     altStore: "brand",
     altUrl: "https://softservices.com/products/comfort-cleanse",
+    priceUsd: 38,
   },
   "Nécessaire The Body Serum": {
     name: "Nécessaire The Body Serum",
@@ -215,6 +234,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     url: "https://www.sephora.com/product/necessaire-the-body-serum-with-hyaluronic-acid-P474847",
     altStore: "amazon",
     altUrl: amz("B087GZYVJR"),
+    priceUsd: 50,
   },
   "La Roche-Posay Lipikar AP+M Triple Repair Body Cream": {
     name: "La Roche-Posay Lipikar AP+MAX Triple Repair Body Cream",
@@ -223,6 +243,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     altStore: "brand",
     altUrl:
       "https://www.laroche-posay.us/our-products/body-care/body-moisturizer/lipikar-ap-plus-triple-repair-moisturizing-cream-3337872413397.html",
+    priceUsd: 20,
   },
   "Ingrown Hair Exfoliating Scrub": {
     name: "Soft Services Buffing Bar (ingrown / KP)",
@@ -230,6 +251,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     url: "https://www.sephora.com/product/soft-services-buffing-bar-exfoliating-body-bar-for-kp-ingrown-hair-2-pack-P510346",
     altStore: "brand",
     altUrl: "https://softservices.com/products/buffing-bar",
+    priceUsd: 28,
   },
   "L'Occitane Almond Shower Oil & Razor": {
     name: "L'Occitane Almond Shower Oil",
@@ -237,6 +259,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     url: amz("B001G60EK8"),
     altStore: "brand",
     altUrl: "https://usa.loccitane.com/almond-shower-oil-16.9-fl-oz-P007819.htm",
+    priceUsd: 28,
   },
   "The Ordinary Glycolic Acid 7% Exfoliating Solution": {
     name: "The Ordinary Glycolic Acid 7% Exfoliating Toner",
@@ -245,6 +268,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     altStore: "brand",
     altUrl:
       "https://theordinary.com/en-us/glycolic-acid-7-exfoliating-toner-100425.html",
+    priceUsd: 9,
   },
   "La Roche-Posay Toleriane Hydrating Gentle Cleanser": {
     name: "La Roche-Posay Toleriane Hydrating Gentle Cleanser",
@@ -253,42 +277,50 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     altStore: "brand",
     altUrl:
       "https://www.laroche-posay.us/our-products/face/face-wash/toleriane-hydrating-gentle-facial-cleanser-tolerianehydratinggentlefacialcleanser.html",
+    priceUsd: 15,
   },
   "Anua Rice 70 Glow Milky Toner": {
     name: "Anua Rice 70 Glow Milky Toner",
     store: "amazon",
     url: amz("B0D54F8XYK"),
+    priceUsd: 18,
   },
   "Anua 10+ Azelaic Acid Serum": {
     name: "Anua Azelaic Acid 10 Serum",
     store: "amazon",
     url: amz("B0DG1DQ2S7"),
+    priceUsd: 18,
   },
   // Restock list / display-name aliases → same product page
   "Anua Azelaic Acid 10 Serum": {
     name: "Anua Azelaic Acid 10 Serum",
     store: "amazon",
     url: amz("B0DG1DQ2S7"),
+    priceUsd: 18,
   },
   "Anua Azelaic Acid 10 Hyaluron Redness Soothing Serum": {
     name: "Anua Azelaic Acid 10 Serum",
     store: "amazon",
     url: amz("B0DG1DQ2S7"),
+    priceUsd: 18,
   },
   "Centella Ampoule": {
     name: "SKIN1004 Madagascar Centella Ampoule",
     store: "amazon",
     url: amz("B06Y15D1LH"),
+    priceUsd: 15,
   },
   "Centella Brightening Serum": {
     name: "SKIN1004 Centella Tone Brightening Capsule Ampoule",
     store: "amazon",
     url: amz("B09TLFY4GP"),
+    priceUsd: 18,
   },
   "Ole Henriksen Banana Bright+ Vitamin C Eye Crème": {
     name: "OLEHENRIKSEN Banana Bright+ Vitamin C Eye Crème",
     store: "sephora",
     url: "https://www.sephora.com/product/banana-bright-vitamin-c-eye-cre-me-P500613",
+    priceUsd: 42,
   },
   "La Roche-Posay SPF 50": {
     name: "La Roche-Posay Anthelios Melt-In Milk SPF 60",
@@ -297,6 +329,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     altStore: "brand",
     altUrl:
       "https://www.laroche-posay.us/our-products/sun/face-body-sunscreen/anthelios-melt-in-milk-sunscreen-spf-60-3337872410990.html",
+    priceUsd: 30,
   },
   "Tatcha Lip Balm": {
     name: "Tatcha The Kissu Lip Mask",
@@ -304,26 +337,31 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     url: "https://www.sephora.com/product/tatcha-the-kissu-lip-mask-P453225",
     altStore: "amazon",
     altUrl: amz("B08D3FXF64"),
+    priceUsd: 32,
   },
   "Anua Oil Cleanser": {
     name: "Anua Heartleaf Pore Control Cleansing Oil",
     store: "amazon",
     url: amz("B0BN2PX8V3"),
+    priceUsd: 16,
   },
   "Anua Heartleaf Pore Deep Cleanse": {
     name: "Anua Heartleaf Quercetinol Pore Deep Cleansing Foam",
     store: "amazon",
     url: amz("B0BVV8BNYJ"),
+    priceUsd: 14,
   },
   "Anua Oil Cleanser & Heartleaf Pore Deep Cleanse": {
     name: "Anua Double Cleansing Duo",
     store: "amazon",
     url: amz("B0CMPSYW3M"),
+    priceUsd: 28,
   },
   "Anua Niacinamide 10 + TXA 4 Serum": {
     name: "Anua Niacinamide 10 + TXA 4 Serum",
     store: "amazon",
     url: amz("B0CLLV2T1P"),
+    priceUsd: 18,
   },
   "Tatcha Luminous Deep Hydration Firming Eye Serum": {
     name: "Tatcha Luminous Deep Hydration Firming Eye Serum",
@@ -331,6 +369,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     url: amz("B019IG2IWE"),
     altStore: "brand",
     altUrl: "https://www.tatcha.com/products/luminous-deep-hydration-firming-eye-serum",
+    priceUsd: 68,
   },
   "Tatcha Eye Serum": {
     name: "Tatcha Luminous Deep Hydration Firming Eye Serum",
@@ -338,6 +377,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     url: amz("B019IG2IWE"),
     altStore: "brand",
     altUrl: "https://www.tatcha.com/products/luminous-deep-hydration-firming-eye-serum",
+    priceUsd: 68,
   },
   "La Roche-Posay Toleriane Double Repair Face Moisturizer": {
     name: "La Roche-Posay Toleriane Double Repair Face Moisturizer",
@@ -346,33 +386,39 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     altStore: "brand",
     altUrl:
       "https://www.laroche-posay.us/our-products/face/face-moisturizer/toleriane-double-repair-face-moisturizer-3337875546041.html",
+    priceUsd: 22,
   },
   "CeraVe Resurfacing Retinol Serum (Teal Bottle)": {
     name: "CeraVe Resurfacing Retinol Serum",
     store: "amazon",
     url: amz("B07VWSN95S"),
+    priceUsd: 20,
   },
   "MediCube pore mask": {
     name: "medicube Zero Pore Pad 2.0",
     store: "amazon",
     url: amz("B09V7Z4TJG"),
+    priceUsd: 20,
   },
   "Turmeric Mask or Collagen Mask": {
     name: "Turmeric face mask",
     store: "amazon",
     url: "https://www.amazon.com/s?k=turmeric+face+mask",
     note: "No brand set in guide — Amazon search.",
+    priceUsd: 12,
   },
   "Turmeric Mask or MediCube Pink Mask": {
     name: "medicube / turmeric mask",
     store: "amazon",
     url: "https://www.amazon.com/s?k=medicube+pink+mask",
+    priceUsd: 18,
   },
   "Lash/Brow Serum": {
     name: "Lash brow serum",
     store: "amazon",
     url: "https://www.amazon.com/s?k=lash+brow+growth+serum",
     note: "Brand not specified in guide.",
+    priceUsd: 20,
   },
   "Fable & Mane MahaMane Smooth Scalp & Hair Oil": {
     name: "Fable & Mane MahaMane Smooth Scalp & Hair Oil",
@@ -380,6 +426,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     url: "https://www.sephora.com/brand/fable-mane",
     altStore: "brand",
     altUrl: "https://fableandmane.com/",
+    priceUsd: 38,
   },
   "The Ordinary Natural Moisturizing Factors + HA for Scalp": {
     name: "The Ordinary NMF + HA for Scalp",
@@ -388,6 +435,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     altStore: "brand",
     altUrl:
       "https://theordinary.com/en-us/natural-moisturizing-factors-ha-for-scalp-hair-scalp-treatment-100422.html",
+    priceUsd: 12,
   },
   "Kérastase Spécifique Bain Divalent Balancing Shampoo": {
     name: "Kérastase Specifique Bain Divalent Shampoo",
@@ -396,16 +444,19 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     altStore: "brand",
     altUrl:
       "https://www.kerastase-usa.com/collections/specifique/bain-divalent-balancing-shampoo.html",
+    priceUsd: 42,
   },
   "Redken Frizz Dismiss Conditioner": {
     name: "Redken Frizz Dismiss Conditioner",
     store: "amazon",
     url: amz("B00UJZRO50"),
+    priceUsd: 28,
   },
   "Redken Acidic Bonding Concentrate Leave-In Treatment": {
     name: "Redken Acidic Bonding Concentrate Leave-In",
     store: "amazon",
     url: amz("B08P67N41H"),
+    priceUsd: 32,
   },
   "Kérastase Genesis Serum Fortifiant": {
     name: "Kérastase Genesis Serum Fortifiant",
@@ -413,6 +464,7 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     url: amz("B086TPQJTT"),
     altStore: "sephora",
     altUrl: "https://www.sephora.com/product/kerastase-genesis-scalp-serum-P454999",
+    priceUsd: 55,
   },
   "Kérastase Elixir Ultime Hair Oil": {
     name: "Kérastase Elixir Ultime Hair Oil",
@@ -420,16 +472,19 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     url: "https://www.sephora.com/product/kerastase-elixir-ultime-refillable-hydrating-hair-oil-P511702",
     altStore: "amazon",
     altUrl: amz("B0D2LV7DHF"),
+    priceUsd: 55,
   },
   "Wide-Tooth Shower Comb": {
     name: "Wide-tooth shower comb",
     store: "amazon",
     url: "https://www.amazon.com/s?k=wide+tooth+shower+comb",
+    priceUsd: 8,
   },
   "Microfibre towel": {
     name: "Microfiber hair towel",
     store: "amazon",
     url: "https://www.amazon.com/s?k=microfiber+hair+towel",
+    priceUsd: 12,
   },
 };
 

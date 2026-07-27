@@ -1,4 +1,7 @@
-/* Mel — quiet black panel, serif everywhere, soft motion */
+/**
+ * Mel chat — editorial flat. Source Serif. No bubbles, no fat chrome, no sticker UI.
+ * Light and dark both readable; type is the interface.
+ */
 
 .mai-root {
   position: relative;
@@ -8,40 +11,42 @@
   font-family: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif !important;
 }
 
+/* Open Mel — same size as topbar controls, no ball shadow */
 .mai-bubble {
   width: 28px;
   height: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 50%;
-  background: #0a0a0a;
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted, rgba(255, 255, 255, 0.55));
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: none;
   font-family: inherit !important;
-  transition:
-    border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: color 0.12s ease, background 0.12s ease;
 }
 
 .mai-bubble:hover {
-  border-color: rgba(255, 255, 255, 0.35);
-  color: #fff;
-  transform: none;
-  box-shadow: none;
+  color: var(--text, #fff);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .mai-bubble.is-open {
-  color: rgba(255, 255, 255, 0.5);
-  border-color: rgba(255, 255, 255, 0.1);
-  transform: none;
+  color: var(--text-faint, rgba(255, 255, 255, 0.4));
+}
+
+html.theme-light .mai-bubble {
+  color: rgba(26, 28, 34, 0.55);
+}
+
+html.theme-light .mai-bubble:hover {
+  color: #1a1c22;
+  background: rgba(26, 28, 34, 0.05);
 }
 
 .mai-bubble:focus {
@@ -49,42 +54,75 @@
 }
 
 .mai-bubble:focus-visible {
-  outline: 1px solid rgba(168, 196, 240, 0.55);
+  outline: 1px solid rgba(26, 28, 34, 0.25);
   outline-offset: 2px;
 }
 
+/* ── Panel ── */
 .mai-panel {
+  --mai-font: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif;
+  --mai-bg: #0a0a0a;
+  --mai-panel: #0a0a0a;
+  --mai-line: rgba(255, 255, 255, 0.08);
+  --mai-text: rgba(255, 255, 255, 0.92);
+  --mai-sub: rgba(255, 255, 255, 0.48);
+  --mai-faint: rgba(255, 255, 255, 0.34);
+  --mai-user: rgba(255, 255, 255, 0.72);
+  --mai-msg: 15px;
+  --mai-input: 15px;
+  --mai-title: 12px;
+  --mai-lh: 1;
+
   position: fixed;
   z-index: 120;
-  right: 12px;
-  top: 53px;
-  bottom: 12px;
+  right: 0;
+  top: 45px;
+  bottom: 0;
   width: min(400px, calc(100vw - 24px));
   height: auto;
   display: flex;
   flex-direction: column;
-  background: #080808;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  background: var(--mai-panel);
+  color: var(--mai-text);
+  border: none;
+  border-left: 1px solid var(--mai-line);
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
-  font-family: inherit !important;
-  animation: mai-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  /* Chat text size (− / +) */
-  --mai-msg: 17px;
-  --mai-input: 16px;
-  --mai-line: 1.45; /* single-spaced feel */
-  --mai-title: 14px;
-  --mai-quick: 13px;
+  font-family: var(--mai-font) !important;
 }
 
-/* Drag left edge to extend Mel */
+/* Light panel — same structure, ink on paper */
+html.theme-light .mai-panel {
+  --mai-bg: #f7f7fa;
+  --mai-panel: #f7f7fa;
+  --mai-line: rgba(26, 28, 34, 0.1);
+  --mai-text: #1a1c22;
+  --mai-sub: rgba(26, 28, 34, 0.52);
+  --mai-faint: rgba(26, 28, 34, 0.38);
+  --mai-user: rgba(26, 28, 34, 0.62);
+  background: var(--mai-panel) !important;
+  color: var(--mai-text) !important;
+  border-left-color: var(--mai-line);
+}
+
+html body .mai-panel,
+html body .mai-panel button,
+html body .mai-panel input,
+html body .mai-panel textarea,
+html body .mai-panel p,
+html body .mai-panel span,
+html body .mai-panel div,
+html body .mai-panel a {
+  font-family: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif !important;
+}
+
 .mai-resize {
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  width: 8px;
+  width: 6px;
   cursor: ew-resize;
   z-index: 5;
   touch-action: none;
@@ -92,171 +130,130 @@
 
 .mai-resize:hover,
 .mai-resize:active {
-  background: linear-gradient(
-    90deg,
-    rgba(168, 196, 240, 0.18),
-    transparent 70%
-  );
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html.theme-light .mai-resize:hover,
+html.theme-light .mai-resize:active {
+  background: rgba(26, 28, 34, 0.04);
 }
 
 .mai-panel.mai-size-s {
-  --mai-msg: 15px;
+  --mai-msg: 14px;
   --mai-input: 14px;
-  --mai-line: 1.5;
-  --mai-title: 13px;
-  --mai-quick: 12px;
+  --mai-title: 11px;
 }
 
 .mai-panel.mai-size-m {
-  --mai-msg: 17px;
-  --mai-input: 16px;
-  --mai-line: 1.55;
-  --mai-title: 14px;
-  --mai-quick: 13px;
+  --mai-msg: 15px;
+  --mai-input: 15px;
+  --mai-title: 12px;
 }
 
 .mai-panel.mai-size-l {
-  --mai-msg: 19px;
-  --mai-input: 18px;
-  --mai-line: 1.48;
-  --mai-title: 15px;
-  --mai-quick: 14px;
+  --mai-msg: 16px;
+  --mai-input: 16px;
+  --mai-title: 12px;
 }
 
 .mai-panel.mai-size-xl {
-  --mai-msg: 22px;
-  --mai-input: 20px;
-  --mai-line: 1.5;
-  --mai-title: 16px;
-  --mai-quick: 15px;
+  --mai-msg: 17px;
+  --mai-input: 17px;
+  --mai-title: 13px;
 }
 
 .mai-size-btn {
-  min-width: 28px;
-  font-weight: 600 !important;
-  font-size: 16px !important;
+  min-width: 22px;
+  font-weight: 500 !important;
+  font-size: 14px !important;
   letter-spacing: 0;
   line-height: 1;
+  padding: 2px 4px !important;
 }
 
 .mai-size-btn:disabled {
-  opacity: 0.25;
+  opacity: 0.28;
   cursor: default;
 }
 
-@keyframes mai-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
+/* Header — one line, no fat bar */
 .mai-head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  gap: 2px;
+  padding: 12px 14px 8px;
+  border-bottom: none;
+  background: transparent;
+  flex-shrink: 0;
 }
 
 .mai-title {
   margin: 0;
   flex: 1;
-  font-size: var(--mai-title, 14px);
+  font-size: var(--mai-title);
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--mai-sub);
   font-family: inherit;
 }
 
 .mai-title span {
-  margin-left: 7px;
-  color: #a8c4f0;
-  font-size: 9px;
-  letter-spacing: 0.08em;
+  margin-left: 6px;
+  color: var(--mai-sub);
+  font-size: 0.9em;
+  letter-spacing: 0.06em;
+  font-weight: 500;
 }
 
 .mai-head-btn {
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--mai-sub);
   font-family: inherit !important;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: color 0.18s ease, background 0.18s ease;
+  padding: 4px 6px;
+  border-radius: 0;
+  transition: color 0.12s ease;
 }
 
 .mai-head-btn:hover {
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.mai-head-btn.is-active {
-  color: #fff;
-}
-
-/* Single Brief action — no Food / Status / Explain grid of boxes */
-.mai-quick {
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  min-height: 36px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.mai-quick button {
-  min-height: 32px;
-  border: 0;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.55);
-  font-family: inherit !important;
-  font-size: var(--mai-quick, 13px);
-  font-weight: 500;
-  cursor: pointer;
-  padding: 0 4px;
-  transition: color 0.18s ease;
-}
-
-.mai-quick button:hover:not(:disabled) {
-  color: #fff;
+  color: var(--mai-text);
   background: transparent;
 }
 
-.mai-quick button:disabled {
-  opacity: 0.3;
-}
-
+/* Messages — plain type, no chat bubbles */
 .mai-msgs {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 16px;
+  padding: 12px 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   scroll-behavior: smooth;
+  background: transparent;
 }
 
 .mai-welcome {
-  margin: 8px 0 0;
-  font-size: var(--mai-msg, 17px);
-  line-height: var(--mai-line, 1.55);
-  color: rgba(255, 255, 255, 0.42);
+  margin: 4px 0 0;
+  font-size: var(--mai-msg);
+  line-height: var(--mai-lh);
+  color: var(--mai-sub);
   font-family: inherit;
+  max-width: 28em;
 }
 
 .mai-msg {
-  max-width: 94%;
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-size: var(--mai-msg, 17px);
-  line-height: var(--mai-line, 1.55);
+  max-width: 100%;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent !important;
+  font-size: var(--mai-msg);
+  line-height: var(--mai-lh);
   white-space: pre-wrap;
   word-break: break-word;
   font-family: inherit;
@@ -272,120 +269,369 @@
   margin: 0;
   font-size: inherit;
   line-height: inherit;
+  color: inherit;
 }
 
-/* Headers always larger than body lines */
 .mai-line-head {
   font-weight: 600;
-  font-size: 1.08em;
-  color: rgba(255, 255, 255, 0.95);
-  margin-top: 0.35em;
-  margin-bottom: 0.1em;
-  line-height: 1.3;
+  font-size: inherit;
+  color: var(--mai-text);
+  margin-top: 0.3em;
+  margin-bottom: 0.02em;
+  line-height: 1;
+  letter-spacing: 0.01em;
 }
 
 .mai-line-gap {
-  min-height: 0.4em;
+  min-height: 0.3em;
 }
 
 .mai-msg a {
-  color: #a8c4f0;
+  color: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
+  opacity: 0.9;
 }
 
+/* User: quiet, right-aligned plain text — no pill */
 .mai-msg.is-user {
   align-self: flex-end;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.94);
-  border-bottom-right-radius: 4px;
+  max-width: 92%;
+  color: var(--mai-user);
+  text-align: right;
+  font-weight: 500;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent !important;
 }
 
+/* Mel: full-width editorial body */
 .mai-msg.is-ai {
-  align-self: flex-start;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.82);
-  padding: 4px 2px;
+  align-self: stretch;
+  color: var(--mai-text);
+  text-align: left;
+  padding: 0;
   border-radius: 0;
+  background: transparent !important;
 }
 
 .mai-msg.is-long {
-  line-height: 1.6;
+  line-height: 1;
+}
+
+/* RL thumbs — trial-and-error feedback on Mel’s last action */
+.mai-rl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+.mai-msg.is-ai:hover .mai-rl,
+.mai-rl:focus-within {
+  opacity: 1;
+}
+.mai-rl-btn {
+  appearance: none;
+  border: 1px solid var(--mai-line, rgba(128, 128, 128, 0.35));
+  background: transparent;
+  color: inherit;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.mai-rl-btn:hover:not(:disabled) {
+  border-color: var(--mai-text, currentColor);
+}
+.mai-rl-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.mai-rl-btn.is-on {
+  opacity: 1;
+  border-color: #3d9a5f;
+  background: rgba(61, 154, 95, 0.12);
+}
+.mai-rl-btn.is-on.is-down {
+  border-color: #c45c5c;
+  background: rgba(196, 92, 92, 0.12);
+}
+.mai-rl-note {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--mai-faint, var(--mai-sub));
+  user-select: none;
 }
 
 .mai-typing {
   margin: 0;
-  color: rgba(255, 255, 255, 0.35);
-  font-size: 16px;
+  color: var(--mai-faint);
+  font-size: var(--mai-msg);
   letter-spacing: 0.12em;
-  padding: 4px 2px;
+  padding: 0;
 }
 
+/* Composer — hairline only, no rounded chat box */
 .mai-form {
   display: flex;
-  gap: 8px;
-  padding: 12px 12px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  gap: 10px;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--mai-line);
   align-items: flex-end;
+  background: transparent;
 }
 
 .mai-input {
   flex: 1;
-  min-height: 44px;
-  max-height: 140px;
+  min-height: 28px;
+  max-height: 120px;
   resize: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  color: #fff;
-  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--mai-line);
+  border-radius: 0;
+  background: transparent !important;
+  color: var(--mai-text);
+  padding: 6px 0;
   font-family: inherit !important;
-  font-size: var(--mai-input, 16px);
-  line-height: 1.45;
+  font-size: var(--mai-input);
+  line-height: 1;
   outline: none;
-  transition: border-color 0.18s ease, background 0.18s ease;
+  box-shadow: none !important;
+  transition: border-color 0.12s ease;
 }
 
 .mai-input:focus {
-  border-color: rgba(168, 196, 240, 0.35);
-  background: rgba(255, 255, 255, 0.04);
+  border-bottom-color: var(--mai-sub);
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .mai-input::placeholder {
-  color: rgba(255, 255, 255, 0.28);
+  color: var(--mai-faint);
 }
 
 .mai-send {
-  width: 40px;
-  height: 40px;
+  width: auto;
+  height: auto;
+  min-height: 28px;
+  min-width: 0;
   border: 0;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  font-size: 16px;
+  border-radius: 0;
+  background: transparent !important;
+  color: var(--mai-sub);
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   flex-shrink: 0;
+  padding: 6px 0 6px 4px;
   font-family: inherit !important;
-  transition: background 0.18s ease, opacity 0.18s ease;
+  transition: color 0.12s ease, opacity 0.12s ease;
 }
 
 .mai-send:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.16);
+  color: var(--mai-text);
+  background: transparent !important;
 }
 
 .mai-send:disabled {
-  opacity: 0.3;
+  opacity: 0.28;
   cursor: default;
 }
 
 @media (max-width: 600px) {
   .mai-panel {
-    inset: 51px 8px 8px;
-    width: auto !important;
+    inset: 45px 0 0;
+    width: 100% !important;
     height: auto;
+    border-left: none;
   }
 
   .mai-resize {
     display: none;
+  }
+}
+
+/* ── Science mode (Math Empire + metrics inside Mel) ── */
+.mai-panel.is-science {
+  max-width: min(920px, calc(100vw - 24px));
+}
+
+.mai-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: auto;
+  margin-left: 8px;
+  border: 1px solid var(--mai-line);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.mai-mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--mai-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit !important;
+}
+
+.mai-mode-btn.on {
+  color: var(--mai-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.theme-light .mai-mode-btn.on {
+  background: rgba(26, 28, 34, 0.07);
+}
+
+.mai-science {
+  display: grid;
+  grid-template-columns: minmax(120px, 28%) 1fr;
+  gap: 0;
+  border-bottom: 1px solid var(--mai-line);
+  max-height: min(46vh, 420px);
+  min-height: 200px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.mai-science-side {
+  border-right: 1px solid var(--mai-line);
+  padding: 10px 12px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.mai-science-label {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mai-faint);
+}
+
+.mai-science-side .mai-science-label + .mai-science-label,
+.mai-science-side .mai-exp-open + .mai-science-label,
+.mai-science-side .mai-metric-list + .mai-science-label {
+  margin-top: 14px;
+}
+
+.mai-metric-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mai-metric-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--mai-sub);
+}
+
+.mai-metric-name {
+  color: var(--mai-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mai-metric-val {
+  flex-shrink: 0;
+  color: var(--mai-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.mai-metric-empty {
+  margin: 0;
+  color: var(--mai-faint);
+  font-size: 12px;
+}
+
+.mai-exp-open {
+  margin: 0;
+  color: var(--mai-text);
+  font-size: 12px;
+}
+
+.mai-exp-open strong {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mai-faint);
+  font-weight: 650;
+  margin-bottom: 4px;
+}
+
+.mai-exp-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--mai-faint);
+  font-size: 11px;
+}
+
+.mai-science-board {
+  overflow: auto;
+  min-width: 0;
+  background: transparent;
+}
+
+/* Math board inside Mel — tighter padding, inherit Mel ink */
+.mai-science-board .mlab {
+  padding: 10px 12px 16px;
+  max-width: none;
+}
+
+.mai-science-board .mlab-title {
+  font-size: 22px;
+}
+
+.mai-science-board .mlab-body {
+  grid-template-columns: minmax(100px, 34%) 1fr;
+  gap: 10px;
+}
+
+.mai-science-board .mlab-out {
+  font-size: 11px;
+  max-height: 180px;
+}
+
+.mai-msgs.is-science-chat {
+  flex: 1 1 auto;
+  min-height: 120px;
+}
+
+@media (max-width: 720px) {
+  .mai-science {
+    grid-template-columns: 1fr;
+    max-height: min(50vh, 360px);
+  }
+
+  .mai-science-side {
+    border-right: none;
+    border-bottom: 1px solid var(--mai-line);
+    max-height: 100px;
   }
 }

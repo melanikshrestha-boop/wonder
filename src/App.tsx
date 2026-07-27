@@ -21,7 +21,10 @@ import { PageEditor } from "./components/PageEditor";
 import { SearchModal } from "./components/SearchModal";
 import { iconForPage, MinimalIcon } from "./components/MinimalIcon";
 import { isMelaniRichPage, MelaniRichPage } from "./melani/MelaniViews";
+import { isHygienePage } from "./melani/pageRoutes";
+import { isWardrobePage } from "./melani/wardrobe/route";
 import { MelaniAI } from "./melani/MelaniAI";
+import { SelectionResearch } from "./melani/SelectionResearch";
 import { FocusOverlay } from "./melani/FocusOverlay";
 import {
   MEL_NAVIGATE_EVENT,
@@ -30,6 +33,12 @@ import {
 } from "./melani/melActions";
 import { applyMelWorkspaceAction } from "./melani/melWorkspace";
 import { canUndo, performUndo, pushUndo } from "./undoStack";
+import {
+  applyTheme,
+  loadTheme,
+  toggleTheme,
+  type WonderTheme,
+} from "./theme";
 import "./notion.css";
 
 /**
@@ -53,6 +62,11 @@ export default function App() {
     }
     return base;
   });
+  const [theme, setTheme] = useState<WonderTheme>(() => {
+    const t = loadTheme();
+    applyTheme(t);
+    return t;
+  });
   const [searchOpen, setSearchOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [compactLayout, setCompactLayout] = useState(() =>
@@ -69,11 +83,17 @@ export default function App() {
     saveWorkspace(ws);
   }, [ws]);
 
+  // Keep document theme in sync (Habits stays light via CSS even if dark is set)
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
   useEffect(() => {
     const query = window.matchMedia("(max-width: 768px)");
     const syncLayout = (matches: boolean) => {
       setCompactLayout(matches);
-      if (matches) setCompactSidebarOpen(false);
+      // Never leave the dimmed drawer backdrop stuck when size class changes
+      setCompactSidebarOpen(false);
     };
 
     syncLayout(query.matches);
@@ -185,18 +205,92 @@ export default function App() {
 
   function openPage(id: string) {
     setWs((prev) => setActivePage(prev, id));
-    if (compactLayout) setCompactSidebarOpen(false);
+    // Always dismiss mobile drawer + scrim when navigating
+    setCompactSidebarOpen(false);
     setMoreOpen(false);
   }
 
   useEffect(() => {
     const navigate = (event: Event) => {
       const pageId = (event as CustomEvent<{ pageId: string }>).detail?.pageId;
-      if (pageId) {
-        setWs((prev) => setActivePage(prev, pageId));
-        if (window.matchMedia("(max-width: 768px)").matches) {
-          setCompactSidebarOpen(false);
+      if (!pageId) return;
+      setWs((prev) => {
+        // Mel transport: if system page missing, seed it so setActivePage works
+        let next = prev;
+        if (!next.pages.some((p) => p.id === pageId && !p.trashedAt)) {
+          const titles: Record<string, string> = {
+            "pg-am-skin": "AM skincare",
+            "pg-pm-skin": "PM skincare",
+            "pg-shower-daily": "Daily shower",
+            "pg-shower-everything": "Everything shower",
+            "pg-hair": "Hair care",
+            "pg-hygiene": "Hygiene",
+            "pg-sleep": "Sleep",
+            "pg-meals": "Meals",
+            "pg-gym": "Gym",
+            "pg-focus": "Focus",
+            "pg-fitness": "Fitness",
+            "pg-habits": "Habits",
+            "pg-library": "Bookshelf",
+            "pg-finance": "Finances",
+            "pg-math": "Content",
+            "pg-failures": "Failures",
+            "pg-agent-care": "Care Concierge",
+            "pg-fashion-os": "Wardrobe",
+            "pg-data": "My Data",
+            "pg-screentime": "Focus",
+            "pg-screen-time": "Focus",
+          };
+          const title = titles[pageId];
+          if (title) {
+            const parentId =
+              pageId.startsWith("pg-shower") ||
+              pageId === "pg-hair" ||
+              pageId === "pg-am-skin" ||
+              pageId === "pg-pm-skin"
+                ? "pg-hygiene"
+                : pageId === "pg-sleep" ||
+                    pageId === "pg-meals" ||
+                    pageId === "pg-gym" ||
+                    pageId === "pg-focus" ||
+                    pageId === "pg-screentime" ||
+                    pageId === "pg-screen-time"
+                  ? "pg-fitness"
+                  : null;
+            const now = Date.now();
+            next = {
+              ...next,
+              pages: [
+                ...next.pages,
+                {
+                  id: pageId,
+                  title,
+                  icon: "",
+                  parentId,
+                  createdAt: now,
+                  updatedAt: now,
+                  blocks: [{ id: `b-${now}`, type: "paragraph" as const, text: "" }],
+                  kind: "page" as const,
+                  favorite: false,
+                  trashedAt: null,
+                  cover: null,
+                },
+              ],
+            };
+          }
         }
+        return setActivePage(next, pageId);
+      });
+      if (window.matchMedia("(max-width: 768px)").matches) {
+        setCompactSidebarOpen(false);
+      }
+      // Keep URL deep-link honest so refresh stays on that desk
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("page", pageId);
+        window.history.replaceState({}, "", url.toString());
+      } catch {
+        /* ignore */
       }
     };
     window.addEventListener(MEL_NAVIGATE_EVENT, navigate);
@@ -258,14 +352,6 @@ export default function App() {
 
   if (!activePage) return null;
 
-  const edited = new Date(activePage.updatedAt);
-  const editedLabel = `Edited ${edited.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  })}`;
-
   // Melani UI is content inside this Notion page (not a separate app mode)
   const melaniMode = isMelaniRichPage(activePage.id);
   const sidebarIsOpen = compactLayout ? compactSidebarOpen : ws.sidebarOpen;
@@ -325,7 +411,17 @@ export default function App() {
       />
 
       {/* Always Notion main: topbar + breadcrumbs + page body */}
-      <main className={`main${melaniMode ? " is-melani" : ""}`}>
+      <main
+        className={`main${melaniMode ? " is-melani" : ""}${
+          isWardrobePage(activePage.id) ? " is-wardrobe" : ""
+        }${
+          activePage.id === "pg-finance" || activePage.id === "pg-finances"
+            ? " is-finances"
+            : ""
+        }${activePage.id === "pg-habits" ? " is-habits" : ""}${
+          isHygienePage(activePage.id) ? " is-hygiene" : ""
+        }`}
+      >
         <header className="topbar">
           <button
             type="button"
@@ -365,34 +461,50 @@ export default function App() {
           </div>
 
           <div className="topbar-spacer" />
-          <span className="topbar-meta">{editedLabel}</span>
-          <button
-            type="button"
-            className="topbar-btn"
-            title="Favorite"
-            onClick={() =>
-              commitWorkspace((p) => toggleFavorite(p, activePage.id))
-            }
-          >
-            {activePage.favorite ? "★" : "☆"}
-          </button>
-          <button
-            type="button"
-            className="topbar-btn"
-            title="Search (⌘K)"
-            onClick={() => setSearchOpen(true)}
-          >
-            ⌕
-          </button>
-          <div className="topbar-more-wrap">
+          {/* Tight cluster: same size, almost flush — no “Edited …” meta */}
+          <div className="topbar-actions">
+            <button
+              type="button"
+              className="topbar-btn topbar-theme-btn"
+              title={
+                theme === "light"
+                  ? "Switch to dark mode"
+                  : "Switch to light mode (Habits white + Source Serif)"
+              }
+              aria-label={
+                theme === "light" ? "Switch to dark mode" : "Switch to light mode"
+              }
+              onClick={() => setTheme((t) => toggleTheme(t))}
+            >
+              {theme === "light" ? "Dark" : "Light"}
+            </button>
             <button
               type="button"
               className="topbar-btn"
-              title="More"
-              onClick={() => setMoreOpen((v) => !v)}
+              title="Favorite"
+              onClick={() =>
+                commitWorkspace((p) => toggleFavorite(p, activePage.id))
+              }
             >
-              ···
+              {activePage.favorite ? "★" : "☆"}
             </button>
+            <button
+              type="button"
+              className="topbar-btn"
+              title="Search (⌘K)"
+              onClick={() => setSearchOpen(true)}
+            >
+              ⌕
+            </button>
+            <div className="topbar-more-wrap">
+              <button
+                type="button"
+                className="topbar-btn"
+                title="More"
+                onClick={() => setMoreOpen((v) => !v)}
+              >
+                ···
+              </button>
             {moreOpen && (
               <div className="more-menu">
                 <button
@@ -444,8 +556,10 @@ export default function App() {
                 </button>
               </div>
             )}
+            </div>
           </div>
           <MelaniAI pageId={activePage.id} pageTitle={activePage.title} />
+          <SelectionResearch />
         </header>
 
         {/* Page body scrolls here — Notion pages OR Melani content inside page */}

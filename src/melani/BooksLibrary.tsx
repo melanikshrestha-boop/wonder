@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type DragEvent,
@@ -38,6 +39,7 @@ import {
   goodreadsSearchUrl,
   parseGoodreadsCsv,
 } from "./bookCovers";
+import { GREATS_AUTHORS } from "./greatsBlogs";
 import {
   BOOK_OPEN_EVENT,
   type Book,
@@ -75,7 +77,15 @@ const BookReader = lazy(async () => {
   return { default: module.BookReader };
 });
 
-type Filter = "all" | BookStatus;
+/**
+ * Library sections (top chips):
+ * All · Books · Blogs · Reading · Next · Done
+ * - All: book drives + blogs underneath
+ * - Books: book drives only
+ * - Blogs: greats blogs/essays only
+ * - Reading / Next (want) / Done: status-filtered books
+ */
+type Filter = "all" | "books" | "blogs" | BookStatus;
 type GroupMode = "subjects" | "status";
 type ShelfGroup = {
   id: string;
@@ -85,6 +95,24 @@ type ShelfGroup = {
   canRename: boolean;
   custom: boolean;
 };
+
+const LIBRARY_CHIPS: { id: Filter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "books", label: "Books" },
+  { id: "blogs", label: "Blogs" },
+  { id: "reading", label: "Reading" },
+  { id: "want", label: "Next" },
+  { id: "finished", label: "Done" },
+];
+
+function isBookStatusFilter(filter: Filter): filter is BookStatus {
+  return (
+    filter === "reading" ||
+    filter === "want" ||
+    filter === "finished" ||
+    filter === "paused"
+  );
+}
 type SyncState =
   | { state: "idle"; message: string }
   | { state: "syncing"; message: string }
@@ -175,6 +203,8 @@ export function BooksLibrary({
     state: "idle",
     message: "Apple Books",
   });
+  /** Deep-link applied once: ?page=pg-library&book=id&read=1 */
+  const deepLinkDone = useRef(false);
 
   // Auto-hide placement toast after a few seconds
   useEffect(() => {
@@ -204,22 +234,39 @@ export function BooksLibrary({
     setBooks((current) => mergeWonderBookPages(current, workspacePages));
   }, [workspacePages]);
 
-  const syncApple = useCallback(async () => {
-    setSync({ state: "syncing", message: "Syncing Apple Books" });
+  const syncApple = useCallback(async (options?: { quiet?: boolean }) => {
+    if (!options?.quiet) {
+      setSync({ state: "syncing", message: "Syncing Apple Books" });
+    }
     try {
       const result = await fetchAppleBooks();
       setBooks((current) => mergeAppleBooks(current, result.books));
-      setSync({
-        state: "done",
-        message: `${result.count} from Apple Books`,
-      });
+      if (!options?.quiet) {
+        setSync({
+          state: "done",
+          message: `${result.count} from Apple Books`,
+        });
+      } else {
+        // Quiet poll still updates the badge with live annotation counts
+        setSync((prev) =>
+          prev.state === "error"
+            ? prev
+            : {
+                state: "done",
+                message: `${result.count} books · annotations live`,
+              }
+        );
+      }
     } catch {
       // No backend reachable (e.g. the shared web link, or the local server
       // isn't running). Apple Books can only be read from your own Mac.
-      setSync({
-        state: "error",
-        message: "Apple Books syncs on your Mac — run Wonder locally to pull your library",
-      });
+      if (!options?.quiet) {
+        setSync({
+          state: "error",
+          message:
+            "Apple Books syncs on your Mac — run Wonder locally to pull your library",
+        });
+      }
     }
   }, []);
 
@@ -317,15 +364,18 @@ export function BooksLibrary({
     void syncAll();
   }, [syncAll]);
 
-  // Keep scanning while Bookshelf is open — new Downloads appear without refresh
+  // Keep library + annotations live while Bookshelf is open
+  // Apple Books annotations, Downloads EPUBs, covers — no manual refresh needed
   useEffect(() => {
     const tick = () => {
       if (document.visibilityState !== "visible") return;
-      void syncLocalFiles({ quiet: true }).then(() =>
-        enrichCovers({ quiet: true })
+      void syncApple({ quiet: true }).then(() =>
+        syncLocalFiles({ quiet: true }).then(() =>
+          enrichCovers({ quiet: true })
+        )
       );
     };
-    const timer = window.setInterval(tick, 20_000);
+    const timer = window.setInterval(tick, 25_000);
     window.addEventListener("focus", tick);
     document.addEventListener("visibilitychange", tick);
     return () => {
@@ -333,7 +383,7 @@ export function BooksLibrary({
       window.removeEventListener("focus", tick);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [syncLocalFiles, enrichCovers]);
+  }, [syncApple, syncLocalFiles, enrichCovers]);
 
   /** Goodreads library CSV → Want / Reading / Finished shelves */
   function importGoodreadsCsv(file: File | null) {
@@ -468,9 +518,13 @@ export function BooksLibrary({
   );
 
   const filtered = useMemo(() => {
+    // Blogs tab is essays only — no books in the list.
+    if (filter === "blogs") return [] as Book[];
     const query = q.trim().toLowerCase();
     return books.filter((book) => {
-      if (filter !== "all" && book.status !== filter) return false;
+      // Status chips: Reading / Next (want) / Done / Paused
+      if (isBookStatusFilter(filter) && book.status !== filter) return false;
+      // all + books: every status (drives of books)
       if (!query) return true;
       return [
         book.title,
@@ -488,7 +542,10 @@ export function BooksLibrary({
   }, [books, filter, q]);
 
   const groups = useMemo<ShelfGroup[]>(() => {
+    if (filter === "blogs") return [];
     if (groupMode === "subjects") {
+      const showEmptyCustom =
+        (filter === "all" || filter === "books") && !q.trim();
       return folders
         .map((folder) => ({
           id: folder.id,
@@ -498,9 +555,8 @@ export function BooksLibrary({
           canRename: true,
           custom: !folder.builtIn,
         }))
-        .filter((group) =>
-          group.books.length > 0 ||
-          (group.custom && filter === "all" && !q.trim())
+        .filter(
+          (group) => group.books.length > 0 || (group.custom && showEmptyCustom)
         );
     }
     return STATUS_ORDER.map((status) => ({
@@ -512,6 +568,9 @@ export function BooksLibrary({
       custom: false,
     })).filter((group) => group.books.length);
   }, [filter, filtered, folders, groupMode, q]);
+
+  /** Blogs under books on All, or alone on Blogs. */
+  const showBlogs = filter === "all" || filter === "blogs";
 
   const folderById = useMemo(
     () => new Map(folders.map((folder) => [folder.id, folder])),
@@ -755,10 +814,91 @@ export function BooksLibrary({
     });
   }
 
-  function readBook(id: string, cfi?: string) {
-    setReaderStartCfi(cfi);
-    setReaderId(id);
+  function writeBookDeepLink(bookId: string | null, read: boolean) {
+    if (typeof window === "undefined") return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("page", "pg-library");
+      if (bookId) {
+        url.searchParams.set("book", bookId);
+        if (read) url.searchParams.set("read", "1");
+        else url.searchParams.delete("read");
+      } else {
+        url.searchParams.delete("book");
+        url.searchParams.delete("read");
+      }
+      window.history.replaceState(window.history.state, "", url);
+    } catch {
+      /* ignore */
+    }
   }
+
+  function continueCfi(book: Book): string | undefined {
+    return book.smartBookmark?.cfi || book.readerCfi || undefined;
+  }
+
+  function readBook(id: string, cfi?: string) {
+    const book = books.find((b) => b.id === id);
+    const start = cfi || (book ? continueCfi(book) : undefined);
+    setReaderStartCfi(start);
+    setReaderId(id);
+    writeBookDeepLink(id, true);
+  }
+
+  function openBookDetails(id: string) {
+    setOpenId(id);
+    writeBookDeepLink(id, false);
+  }
+
+  function copyContinueLink(book: Book) {
+    if (typeof window === "undefined") return;
+    try {
+      const url = new URL(window.location.origin + window.location.pathname);
+      url.searchParams.set("page", "pg-library");
+      url.searchParams.set("book", book.id);
+      if (book.readerUrl) url.searchParams.set("read", "1");
+      void navigator.clipboard.writeText(url.toString()).then(() => {
+        setToast(
+          book.readerUrl
+            ? "Continue link copied — opens at your place"
+            : "Book link copied"
+        );
+      });
+    } catch {
+      setToast("Could not copy link");
+    }
+  }
+
+  // Deep link: open book / resume reader after library hydrates
+  useEffect(() => {
+    if (deepLinkDone.current || !books.length) return;
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const bookParam = params.get("book");
+      if (!bookParam) {
+        deepLinkDone.current = true;
+        return;
+      }
+      const book = books.find(
+        (b) =>
+          b.id === bookParam ||
+          b.sourceId === bookParam ||
+          b.id === `apple-${bookParam.toLowerCase()}`
+      );
+      if (!book) return; // wait for sync to bring the book in
+      deepLinkDone.current = true;
+      const wantRead = params.get("read") === "1";
+      if (wantRead && book.readerUrl) {
+        setReaderStartCfi(continueCfi(book));
+        setReaderId(book.id);
+      } else {
+        setOpenId(book.id);
+      }
+    } catch {
+      deepLinkDone.current = true;
+    }
+  }, [books]);
 
   /** One-tap cover fetch for a single book */
   async function lookupAndSetCover(bookId: string) {
@@ -788,6 +928,7 @@ export function BooksLibrary({
           onClose={() => {
             setReaderId(null);
             setReaderStartCfi(undefined);
+            writeBookDeepLink(reader.id, false);
           }}
           onProgress={(cfi, progress) => {
             const localProgress = Math.max(
@@ -849,7 +990,7 @@ export function BooksLibrary({
               placeholder="Author"
               onChange={(event) => patchBook(open.id, { author: event.target.value })}
             />
-            {/* One main action — no pile of fat buttons */}
+            {/* One main action — resume from saved place */}
             <div className="bl-detail-actions">
               {open.readerUrl ? (
                 <button
@@ -858,9 +999,19 @@ export function BooksLibrary({
                   onClick={() => readBook(open.id)}
                 >
                   <BookOpen size={15} aria-hidden />
-                  Read here
+                  {(open.readerProgress || 0) > 0.01
+                    ? `Continue · ${progressPercent(open.readerProgress || 0)}%`
+                    : "Read here"}
                 </button>
               ) : null}
+              <button
+                type="button"
+                className="bl-link-quiet"
+                onClick={() => copyContinueLink(open)}
+                title="Copy link that opens this book at your place"
+              >
+                Copy continue link
+              </button>
               <a
                 className="bl-link-quiet"
                 href={
@@ -1238,12 +1389,6 @@ export function BooksLibrary({
           <span><b>{stats.finished}</b> finished</span>
           <span><b>{stats.quotes}</b> quotes</span>
         </div>
-        <p className="bl-download-hint">
-          New EPUB? Drop it in{" "}
-          <strong>Downloads</strong> — the shelf picks it up automatically.
-          Covers load from Open Library. Goodreads: export your library CSV and
-          import here. (We don’t auto-download from pirate sites.)
-        </p>
       </header>
 
       <div className="bl-toolbar">
@@ -1251,7 +1396,7 @@ export function BooksLibrary({
           className="bl-search-wrap"
           onSubmit={(event) => {
             event.preventDefault();
-            // Want tab: search finds a book + auto-files it (legal catalogs only)
+            // Next tab: search finds a book + auto-files it (legal catalogs only)
             if (filter === "want") {
               void findWantAndFile(q || finderQuery);
               return;
@@ -1262,23 +1407,26 @@ export function BooksLibrary({
           <MagnifyingGlass size={15} aria-hidden />
           <input
             className="bl-search"
-            value={filter === "want" ? q : q}
+            value={q}
             onChange={(event) => {
               setQ(event.target.value);
               if (filter === "want") setFinderQuery(event.target.value);
             }}
             placeholder={
-              filter === "want"
-                ? "Want a book? Type the title + Enter (legal free/catalog search)"
-                : "Search titles, authors, notes, or quotes"
+              filter === "blogs"
+                ? "Blogs open as links — switch to Books to search the shelf"
+                : filter === "want"
+                  ? "Next to read? Type a title + Enter (legal free/catalog search)"
+                  : "Search titles, authors, notes, or quotes"
             }
+            disabled={filter === "blogs"}
           />
           {filter === "want" ? (
             <button
               type="submit"
               className="bl-want-go"
               disabled={wantBusy || !q.trim()}
-              title="Find and file into Want"
+              title="Find and file into Next"
             >
               {wantBusy ? "…" : "Get"}
             </button>
@@ -1480,23 +1628,15 @@ export function BooksLibrary({
         </section>
       ) : null}
 
-      <div className="bl-filter" aria-label="Reading status filter">
-        {(
-          [
-            ["all", "All"],
-            ["reading", "Reading"],
-            ["want", "Want"],
-            ["paused", "Paused"],
-            ["finished", "Done"],
-          ] as const
-        ).map(([id, label]) => (
+      <div className="bl-filter" aria-label="Library sections">
+        {LIBRARY_CHIPS.map(({ id, label }) => (
           <button
             key={id}
             type="button"
             className={`bl-chip${filter === id ? " is-on" : ""}`}
             onClick={() => {
               setFilter(id);
-              // Switching to Want: focus the “get this book” flow
+              // Next (want): focus the “get this book” flow
               if (id === "want") {
                 setFinderOpen(true);
                 setFinderMessage(
@@ -1509,14 +1649,6 @@ export function BooksLibrary({
           </button>
         ))}
       </div>
-
-      {filter === "want" ? (
-        <p className="bl-want-hint">
-          <strong>Want</strong> = books you don’t have yet. Search above → we look up{" "}
-          <em>legal</em> free/public or catalog copies, file them into a folder for you, and show
-          a short toast of where they went. Pirate sites are not used.
-        </p>
-      ) : null}
 
       {adding ? (
         <div className="bl-add-panel">
@@ -1561,107 +1693,184 @@ export function BooksLibrary({
         </div>
       ) : null}
 
-      {groups.length === 0 ? (
-        <p className="bl-empty-all">
-          {q ? "No books match that search." : "Your library is ready for its first book."}
-        </p>
-      ) : (
-        groups.map((group) => {
-          const expanded = Boolean(openFolders[group.id]) || Boolean(q.trim());
-          return <section
-            key={group.id}
-            className={`bl-shelf${expanded ? " is-open" : ""}${dropFolderId === group.id ? " is-drop-target" : ""}`}
-            style={folderTone(group.accent)}
-            onDragOver={(event) => {
-              if (groupMode !== "subjects") return;
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "move";
-              setDropFolderId(group.id);
-            }}
-            onDragLeave={() => {
-              if (dropFolderId === group.id) setDropFolderId(null);
-            }}
-            onDrop={(event) => {
-              if (groupMode !== "subjects") return;
-              event.preventDefault();
-              const bookId = draggingBookId || event.dataTransfer.getData("text/wonder-book-id");
-              if (bookId) moveBookToFolder(bookId, group.id);
-            }}
-          >
-            <div className="bl-folder-row">
-              <button type="button" className="bl-folder" onClick={() => setOpenFolders((current) => ({ ...current, [group.id]: !current[group.id] }))} aria-expanded={expanded}>
-                <CaretRight className="bl-folder-caret" size={14} aria-hidden />
-                <FolderSimple className="bl-folder-icon" size={22} weight="fill" aria-hidden />
-                <span className="bl-folder-copy"><strong>{group.label}</strong><small>{group.books.length} {group.books.length === 1 ? "book" : "books"}</small></span>
-              </button>
-              {group.canRename ? (
-                <button
-                  type="button"
-                  className="bl-folder-edit"
-                  onClick={() => beginRenameFolder(group)}
-                  title={`Rename ${group.label}`}
-                  aria-label={`Rename ${group.label}`}
-                >
-                  <PencilSimple size={14} aria-hidden />
-                </button>
-              ) : null}
-            </div>
-            {renamingFolderId === group.id ? (
-              <form
-                className="bl-folder-rename"
-                onSubmit={(event) => {
+      {/* Book drives — hidden on Blogs tab */}
+      {filter !== "blogs" ? (
+        groups.length === 0 ? (
+          <p className="bl-empty-all">
+            {q
+              ? "No books match that search."
+              : filter === "reading"
+                ? "Nothing in Reading yet."
+                : filter === "want"
+                  ? "Nothing in Next yet — type a title above to find one."
+                  : filter === "finished"
+                    ? "Nothing marked Done yet."
+                    : "Your library is ready for its first book."}
+          </p>
+        ) : (
+          groups.map((group) => {
+            const expanded = Boolean(openFolders[group.id]) || Boolean(q.trim());
+            return (
+              <section
+                key={group.id}
+                className={`bl-shelf${expanded ? " is-open" : ""}${dropFolderId === group.id ? " is-drop-target" : ""}`}
+                style={folderTone(group.accent)}
+                onDragOver={(event) => {
+                  if (groupMode !== "subjects") return;
                   event.preventDefault();
-                  saveFolderName();
+                  event.dataTransfer.dropEffect = "move";
+                  setDropFolderId(group.id);
+                }}
+                onDragLeave={() => {
+                  if (dropFolderId === group.id) setDropFolderId(null);
+                }}
+                onDrop={(event) => {
+                  if (groupMode !== "subjects") return;
+                  event.preventDefault();
+                  const bookId =
+                    draggingBookId ||
+                    event.dataTransfer.getData("text/wonder-book-id");
+                  if (bookId) moveBookToFolder(bookId, group.id);
                 }}
               >
-                <input
-                  className="bl-input"
-                  value={folderRenameDraft}
-                  autoFocus
-                  onChange={(event) => setFolderRenameDraft(event.target.value)}
-                  aria-label="Folder name"
-                />
-                <button type="submit" className="bl-icon-btn" title="Save name" aria-label="Save folder name">
-                  <Check size={16} weight="bold" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  className="bl-icon-btn"
-                  onClick={() => {
-                    setRenamingFolderId(null);
-                    setFolderRenameDraft("");
-                  }}
-                  title="Cancel"
-                  aria-label="Cancel renaming folder"
+                <div className="bl-folder-row">
+                  <button
+                    type="button"
+                    className="bl-folder"
+                    onClick={() =>
+                      setOpenFolders((current) => ({
+                        ...current,
+                        [group.id]: !current[group.id],
+                      }))
+                    }
+                    aria-expanded={expanded}
+                  >
+                    <CaretRight className="bl-folder-caret" size={14} aria-hidden />
+                    <FolderSimple
+                      className="bl-folder-icon"
+                      size={22}
+                      weight="fill"
+                      aria-hidden
+                      style={{ color: group.accent, fill: group.accent }}
+                    />
+                    <span className="bl-folder-copy">
+                      <strong>{group.label}</strong>
+                      <small>
+                        {group.books.length}{" "}
+                        {group.books.length === 1 ? "book" : "books"}
+                      </small>
+                    </span>
+                  </button>
+                  {group.canRename ? (
+                    <button
+                      type="button"
+                      className="bl-folder-edit"
+                      onClick={() => beginRenameFolder(group)}
+                      title={`Rename ${group.label}`}
+                      aria-label={`Rename ${group.label}`}
+                    >
+                      <PencilSimple size={14} aria-hidden />
+                    </button>
+                  ) : null}
+                </div>
+                {renamingFolderId === group.id ? (
+                  <form
+                    className="bl-folder-rename"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      saveFolderName();
+                    }}
+                  >
+                    <input
+                      className="bl-input"
+                      value={folderRenameDraft}
+                      autoFocus
+                      onChange={(event) =>
+                        setFolderRenameDraft(event.target.value)
+                      }
+                      aria-label="Folder name"
+                    />
+                    <button
+                      type="submit"
+                      className="bl-icon-btn"
+                      title="Save name"
+                      aria-label="Save folder name"
+                    >
+                      <Check size={16} weight="bold" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      className="bl-icon-btn"
+                      onClick={() => {
+                        setRenamingFolderId(null);
+                        setFolderRenameDraft("");
+                      }}
+                      title="Cancel"
+                      aria-label="Cancel renaming folder"
+                    >
+                      <X size={15} aria-hidden />
+                    </button>
+                  </form>
+                ) : null}
+                {expanded ? (
+                  <div className="bl-grid">
+                    {group.books.map((book) => (
+                      <BookCard
+                        key={book.id}
+                        book={book}
+                        folderLabel={group.label}
+                        draggable={groupMode === "subjects"}
+                        dragging={draggingBookId === book.id}
+                        onOpen={() => openBookDetails(book.id)}
+                        onContinue={
+                          book.readerUrl ? () => readBook(book.id) : undefined
+                        }
+                        onDragStart={(event) => {
+                          setDraggingBookId(book.id);
+                          event.dataTransfer.effectAllowed = "move";
+                          event.dataTransfer.setData(
+                            "text/wonder-book-id",
+                            book.id
+                          );
+                        }}
+                        onDragEnd={() => {
+                          setDraggingBookId(null);
+                          setDropFolderId(null);
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+            );
+          })
+        )
+      ) : null}
+
+      {/* Blogs under book drives on All; alone on Blogs — plain links only for now */}
+      {showBlogs ? (
+        <section
+          className={`bl-greats${filter === "all" ? " bl-greats-after-books" : ""}`}
+          aria-label="Blogs and essays"
+        >
+          <h2 className="bl-greats-h">Blogs</h2>
+          <ul className="bl-greats-links">
+            {GREATS_AUTHORS.map((author) => (
+              <li key={author.id}>
+                <a
+                  className="bl-greats-link"
+                  href={author.homeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  <X size={15} aria-hidden />
-                </button>
-              </form>
-            ) : null}
-            {expanded && <div className="bl-grid">
-              {group.books.map((book) => (
-                <BookCard
-                  key={book.id}
-                  book={book}
-                  folderLabel={group.label}
-                  draggable={groupMode === "subjects"}
-                  dragging={draggingBookId === book.id}
-                  onOpen={() => setOpenId(book.id)}
-                  onDragStart={(event) => {
-                    setDraggingBookId(book.id);
-                    event.dataTransfer.effectAllowed = "move";
-                    event.dataTransfer.setData("text/wonder-book-id", book.id);
-                  }}
-                  onDragEnd={() => {
-                    setDraggingBookId(null);
-                    setDropFolderId(null);
-                  }}
-                />
-              ))}
-            </div>}
-          </section>;
-        })
-      )}
+                  {author.name}
+                </a>
+                <span className="bl-greats-link-url">{author.homeUrl}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {/* Short placement popup after Want auto-file */}
       {toast ? (
@@ -1723,6 +1932,7 @@ function BookCard({
   draggable,
   dragging,
   onOpen,
+  onContinue,
   onDragStart,
   onDragEnd,
 }: {
@@ -1731,6 +1941,7 @@ function BookCard({
   draggable: boolean;
   dragging: boolean;
   onOpen: () => void;
+  onContinue?: () => void;
   onDragStart: (event: DragEvent<HTMLButtonElement>) => void;
   onDragEnd: () => void;
 }) {
@@ -1745,31 +1956,45 @@ function BookCard({
         : STATUS_LABEL[book.status];
 
   return (
-    <button
-      type="button"
-      className={`bl-card${dragging ? " is-dragging" : ""}`}
-      draggable={draggable}
-      onClick={onOpen}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      title={draggable ? "Open, or drag to another folder" : "Open book"}
-    >
-      <BookCover book={book} className="bl-card-cover" folderLabel={folderLabel} />
-      <span className="bl-card-title">{book.title || "Untitled"}</span>
-      {book.author ? <span className="bl-card-author">{book.author}</span> : null}
-      <span className="bl-card-meta">
-        <span>{progressLabel}</span>
-        {book.rating > 0 ? (
-          <span className="bl-card-stars">{stars(book.rating)}</span>
-        ) : book.readingFormat === "physical+digital" ? (
-          <span>physical + digital</span>
-        ) : null}
-      </span>
-      {progress > 0 ? (
-        <span className="bl-card-progress" aria-hidden>
-          <i style={{ width: `${Math.max(1, progress * 100)}%` }} />
+    <div className={`bl-card-wrap${dragging ? " is-dragging" : ""}`}>
+      <button
+        type="button"
+        className="bl-card"
+        draggable={draggable}
+        onClick={onOpen}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        title={draggable ? "Open, or drag to another folder" : "Open book"}
+      >
+        <BookCover book={book} className="bl-card-cover" folderLabel={folderLabel} />
+        <span className="bl-card-title">{book.title || "Untitled"}</span>
+        {book.author ? <span className="bl-card-author">{book.author}</span> : null}
+        <span className="bl-card-meta">
+          <span>{progressLabel}</span>
+          {book.rating > 0 ? (
+            <span className="bl-card-stars">{stars(book.rating)}</span>
+          ) : book.readingFormat === "physical+digital" ? (
+            <span>physical + digital</span>
+          ) : null}
         </span>
+        {progress > 0 ? (
+          <span className="bl-card-progress" aria-hidden>
+            <i style={{ width: `${Math.max(1, progress * 100)}%` }} />
+          </span>
+        ) : null}
+      </button>
+      {onContinue && progress > 0.01 ? (
+        <button
+          type="button"
+          className="bl-card-continue"
+          onClick={(e) => {
+            e.stopPropagation();
+            onContinue();
+          }}
+        >
+          Continue
+        </button>
       ) : null}
-    </button>
+    </div>
   );
 }

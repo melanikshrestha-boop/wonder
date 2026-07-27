@@ -22,8 +22,9 @@ const ACTION_START = [
   "rename", "delete", "trash", "remove", "restore", "duplicate", "copy", "write", "append",
   "replace", "clear", "favorite", "unfavorite", "close", "collapse", "expand", "log", "undo",
   "drink", "drank", "ate", "had", "slept", "took", "pin", "unpin", "set", "goal", "add",
-  "start", "finish", "complete", "reopen", "mark", "find", "search", "research", "wear", "lock", "choose",
-  "brain fog", "status", "brief", "food", "weather", "outfit", "read", "resume", "continue",
+  "start", "finish", "complete", "reopen", "mark", "check", "uncheck", "tick", "find", "search", "research", "wear", "lock", "choose",
+  "brain fog", "bowel", "poop", "shit", "status", "brief", "food", "weather", "outfit", "read", "resume", "continue",
+  "spent", "paid", "recategorize", "reclassify", "log", "deploy", "reinvest", "transfer",
 ].join("|");
 
 const ACTION_LOOKAHEAD = `(?:please\\s+)?(?:i\\s+)?(?:${ACTION_START})\\b`;
@@ -116,9 +117,21 @@ export function formatMelReceipts(limit = 1): { summary: string; receipts: MelAc
 
 export function toolActionDomain(tool: string): string | null {
   if (tool.startsWith("wardrobe_")) return "wardrobe";
-  if (tool === "log_water" || tool === "undo_water") return "water";
-  if (tool === "log_usual_meal" || tool === "undo_usual_meal") return "breakfast";
+  if (tool === "log_water" || tool === "undo_water" || tool === "set_water_liters") return "water";
+  if (
+    tool === "log_usual_meal" ||
+    tool === "undo_usual_meal" ||
+    tool === "log_food_nl"
+  ) {
+    return "breakfast";
+  }
   if (tool === "log_meat_eaten" || tool === "undo_meat_eaten" || tool === "lock_meat") return "meat";
+  if (
+    tool === "check_habits"
+    || tool === "uncheck_habits"
+    || tool === "set_habit_check"
+    || tool === "list_habits_status"
+  ) return "habits";
   if (tool === "task") return "tasks";
   if (tool === "shopping") return "shopping";
   if (
@@ -128,6 +141,27 @@ export function toolActionDomain(tool: string): string | null {
     || tool === "collapse_sidebar_sections"
     || tool === "set_sidebar_section"
   ) return "workspace";
+  if (tool === "log_bowel_movement" || tool === "get_bowel_today") return "bowel";
+  if (
+    tool === "bookshelf_knowledge" ||
+    tool === "open_book" ||
+    tool === "find_books" ||
+    tool === "search_highlights" ||
+    tool === "evidence_pack"
+  ) {
+    return "bookshelf";
+  }
+  if (tool === "econ_knowledge" || tool === "trading_knowledge") return "markets";
+  if (
+    tool === "weekly_intelligence_digest" ||
+    tool === "last_intelligence_digest" ||
+    tool === "operating_brain_brief" ||
+    tool === "list_due_decisions" ||
+    tool === "log_decision" ||
+    tool === "list_decisions"
+  ) {
+    return "intelligence";
+  }
   if (/^(?:log_|set_goal|pin|unpin|life_log)/.test(tool)) return "health";
   return null;
 }

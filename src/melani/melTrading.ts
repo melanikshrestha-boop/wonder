@@ -94,7 +94,7 @@ export function offlineTradingBrief(topic?: string): string {
       "2) Guide: raise / reiterate / cut.",
       "3) Margin direction and FCF quality.",
       "4) What multiple the market is paying after the print.",
-      "Open World Monitor → Reports for live quarterly packs on the watchlist.",
+      "Ask for a ticker quarterly (e.g. NVDA quarterly) for live packs.",
     ].join("\n");
   }
   if (/risk|size|position|stop/.test(t)) {
@@ -109,7 +109,7 @@ export function offlineTradingBrief(topic?: string): string {
   return [
     "Markets mode is on.",
     "I can walk equities, earnings, options structures, and risk like a serious desk.",
-    "Ask for a ticker quarterly (e.g. NVDA quarterly), an options structure, or open World Monitor → Reports.",
+    "Ask for a ticker quarterly (e.g. NVDA quarterly) or an options structure.",
     "Not advice: frameworks only.",
   ].join("\n");
 }

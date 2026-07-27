@@ -1,0 +1,760 @@
+/* Whoop lab — numbers first, meaning last */
+
+.wx {
+  --wx-font: "Source Serif 4", Georgia, "Times New Roman", Times, ui-serif, serif;
+  --wx-mono: "SF Mono", Menlo, Consolas, ui-monospace, monospace;
+  --wx-muted: var(--fx-muted, rgba(255, 255, 255, 0.48));
+  --wx-faint: var(--fx-faint, rgba(255, 255, 255, 0.32));
+  --wx-soft: rgba(255, 255, 255, 0.72);
+  --wx-strong: var(--fx-strong, #fff);
+  --wx-text: var(--fx-text, rgba(255, 255, 255, 0.9));
+  --wx-up: #22c55e;
+  --wx-down: #ef4444;
+  --wx-accent: var(--fx-accent, #7dd3fc);
+  --wx-grid: rgba(255, 255, 255, 0.08);
+  --wx-card: rgba(255, 255, 255, 0.04);
+  --wx-card-hover: rgba(255, 255, 255, 0.06);
+  --wx-border: rgba(255, 255, 255, 0.1);
+  --wx-line: rgba(255, 255, 255, 0.08);
+  /* Section header (TRAINING) → first subheading (ENERGY BURNED): always 1.5em, never stacked padding */
+  --wx-header-subhead-gap: 1.5em;
+  font-family: var(--wx-font);
+  color: var(--wx-text);
+  line-height: 1;
+}
+
+html.theme-light .fx-page .wx {
+  --wx-muted: rgba(26, 28, 34, 0.55);
+  --wx-faint: rgba(26, 28, 34, 0.42);
+  --wx-soft: rgba(26, 28, 34, 0.72);
+  --wx-strong: #1a1c22;
+  --wx-text: #1a1c22;
+  --wx-up: #16a34a;
+  --wx-down: #dc2626;
+  --wx-accent: #2563eb;
+  --wx-grid: rgba(26, 28, 34, 0.08);
+  --wx-card: rgba(26, 28, 34, 0.04);
+  --wx-card-hover: rgba(26, 28, 34, 0.06);
+  --wx-border: rgba(26, 28, 34, 0.1);
+  --wx-line: rgba(26, 28, 34, 0.1);
+}
+
+.wx-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin: 0 0 12px;
+}
+
+.wx-h {
+  margin: 0 0 var(--wx-header-subhead-gap, 1.5em);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wx-muted);
+}
+
+.wx-meta {
+  font-size: 12px;
+  color: var(--wx-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+
+
+.wx-actions {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.wx-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--wx-accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.wx-link:hover {
+  color: var(--wx-strong);
+}
+
+.wx-link-primary {
+  font-weight: 650;
+  text-decoration-thickness: 1.5px;
+}
+
+
+
+
+/* ── Full graph panels (one metric each) ───────────────────── */
+
+.wx-graph-section {
+  margin-bottom: 22px;
+}
+
+/* Titled metric blocks (Sleep · Overnight · Body signals · Ready · Training) */
+.wx-metric-section {
+  margin-top: 20px;
+}
+
+.wx-metric-section.is-first {
+  margin-top: 0;
+}
+
+/* Section label > individual graph title (never same size as .wx-panel-title) */
+.wx-metric-section .wx-h {
+  /* Exactly 1.5em to first subheading — no extra panel padding on top */
+  margin: 0 0 var(--wx-header-subhead-gap, 1.5em);
+  padding: 0;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wx-strong, #fff);
+  line-height: 1;
+}
+
+html.theme-light .fx-page .wx-metric-section .wx-h {
+  color: #1a1c22;
+}
+
+.wx-panel-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  /* gap only between panels — not before the first subheading */
+  margin: 0;
+  padding: 0;
+}
+
+/* Full screen: two graphs side by side; narrow stays stacked */
+@media (min-width: 1100px) {
+  .wx-panel-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.wx-panel {
+  /* Editorial flat — no card box / no rounded border chrome */
+  /* Top padding 0 so header→subhead gap is only the 1.5em on .wx-h */
+  padding: 0 0 14px;
+  margin: 0;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+}
+
+.wx-panel-head {
+  margin: 0 0 6px;
+  padding: 0;
+}
+
+.wx-panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+/* Graph name — quieter / smaller than section title (TRAINING etc.) */
+.wx-panel-title {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wx-faint);
+  text-align: left;
+  line-height: 1;
+}
+
+.wx-panel-title.is-clickable {
+  cursor: pointer;
+  color: var(--wx-muted);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+
+.wx-panel-title.is-clickable:hover {
+  color: var(--wx-accent);
+  text-decoration-color: currentColor;
+}
+
+.wx-panel-nums {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+}
+
+.wx-panel-v {
+  font-family: var(--wx-mono);
+  font-size: 28px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--wx-strong);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.wx-panel-v small {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wx-muted);
+  margin-left: 3px;
+}
+
+.wx-panel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  font-size: 12px;
+  color: var(--wx-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.wx-panel-latest {
+  color: var(--wx-muted);
+}
+
+.wx-panel-asof {
+  color: var(--wx-faint);
+}
+
+.wx-panel-range {
+  color: var(--wx-faint);
+}
+
+.wx-metric-info {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  color: var(--wx-faint);
+  font-size: 11px;
+  font-weight: 650;
+  font-family: inherit;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wx-metric-info:hover {
+  color: var(--wx-accent);
+  border-color: var(--wx-accent);
+}
+
+.wx-metric-delta {
+  font-weight: 600;
+}
+
+.wx-metric-delta.is-up {
+  color: var(--wx-up);
+}
+
+.wx-metric-delta.is-down {
+  color: var(--wx-down);
+}
+
+/* ── Graphs ────────────────────────────────────────────────── */
+
+/* Deep sleep regression caption under the graph */
+.wx-forecast-cap {
+  margin: 8px 2px 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--wx-line, rgba(255, 255, 255, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.wx-forecast-sum {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--wx-soft, rgba(255, 255, 255, 0.65));
+}
+.wx-forecast-math {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--wx-faint, rgba(255, 255, 255, 0.45));
+  word-break: break-word;
+}
+.wx-forecast-log {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--wx-accent, #7eb8ff);
+}
+/* Light: same hierarchy as dark — body text near-black, math slightly quieter, accents stay blue */
+html.theme-light .wx-forecast-cap {
+  border-top-color: rgba(26, 28, 34, 0.1);
+}
+html.theme-light .wx-forecast-sum {
+  color: #1a1c22;
+}
+html.theme-light .wx-forecast-math {
+  color: rgba(26, 28, 34, 0.72);
+}
+html.theme-light .wx-forecast-log {
+  color: #1d4ed8;
+}
+
+.wx-forecast-rl {
+  margin: 2px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--wx-soft, rgba(255, 255, 255, 0.78));
+  background: color-mix(in srgb, var(--wx-accent, #7eb8ff) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--wx-accent, #7eb8ff) 28%, transparent);
+}
+.wx-forecast-rl strong {
+  color: var(--wx-accent, #93c5fd);
+  font-weight: 650;
+}
+html.theme-light .wx-forecast-rl {
+  color: #1a1c22;
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.28);
+}
+html.theme-light .wx-forecast-rl strong {
+  color: #1d4ed8;
+}
+.wx-forecast-k {
+  font-weight: 650;
+  color: inherit;
+  letter-spacing: 0.01em;
+}
+html.theme-light .wx-forecast-k {
+  color: #0a0b0e;
+}
+.wx-forecast-rl-action {
+  font-weight: 600;
+}
+html.theme-light .wx-forecast-rl-action {
+  color: #1a1c22;
+}
+html.theme-light .wx-forecast-rl-tip {
+  color: rgba(26, 28, 34, 0.82);
+}
+
+
+.wx-panel-foot {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--wx-faint, rgba(255, 255, 255, 0.42));
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+html.theme-light .fx-page .wx-panel-foot,
+html.theme-light .gx .wx-panel-foot {
+  color: rgba(26, 28, 34, 0.42);
+}
+.wx-goal-label {
+  fill: var(--wx-goal, #c9a227);
+  font-size: 10px;
+  font-family: "Source Serif 4", Georgia, serif;
+}
+html.theme-light .fx-page .wx-goal-label,
+html.theme-light .gx .wx-goal-label {
+  fill: #a67c00;
+}
+
+.wx-graph-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+}
+
+.wx-graph {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 160px;
+  color: var(--wx-text);
+}
+
+.wx-graph.is-interactive {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.wx-grid-line {
+  stroke: var(--wx-grid);
+  stroke-width: 1;
+}
+
+.wx-axis-y,
+.wx-axis-x {
+  fill: var(--wx-faint);
+  font-size: 10px;
+  font-family: var(--wx-mono);
+}
+
+/* Hover popup — day + value for the nearest point */
+.wx-tip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  min-width: 7.5rem;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--wx-border);
+  background: rgba(12, 14, 18, 0.94);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: var(--wx-text);
+  font-variant-numeric: tabular-nums;
+}
+
+html.theme-light .fx-page .wx-tip {
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 8px 24px rgba(26, 28, 34, 0.12);
+}
+
+.wx-tip-day {
+  font-size: 11px;
+  color: var(--wx-muted);
+  margin-bottom: 2px;
+}
+
+.wx-tip-val {
+  font-family: var(--wx-mono);
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--wx-strong);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.wx-tip-label {
+  font-family: var(--wx-font);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--wx-faint);
+  letter-spacing: 0;
+}
+
+.wx-tip-times {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--wx-border);
+  font-family: var(--wx-font);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--wx-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.wx-tip-times-sep {
+  color: var(--wx-faint);
+}
+
+.wx-graph-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 14px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--wx-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.wx-graph-n {
+  font-family: var(--wx-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--wx-faint);
+}
+
+/* ── Meaning popup (click metric name) ─────────────────────── */
+
+.wx-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.wx-modal {
+  width: min(32rem, 100%);
+  max-height: min(85vh, 640px);
+  overflow: auto;
+  padding: 18px 18px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--wx-border);
+  background: rgba(16, 18, 22, 0.98);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  color: var(--wx-text);
+}
+
+html.theme-light .fx-page .wx-modal {
+  background: #fafafb;
+  box-shadow: 0 20px 50px rgba(26, 28, 34, 0.18);
+}
+
+.wx-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.wx-modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--wx-strong);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.wx-modal-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wx-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.wx-modal-close:hover {
+  color: var(--wx-strong);
+  background: var(--wx-card-hover);
+}
+
+.wx-modal-nums {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-bottom: 10px;
+  font-family: var(--wx-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--wx-muted);
+}
+
+.wx-modal-nums em {
+  font-style: normal;
+  font-family: var(--wx-font);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wx-faint);
+  margin-right: 4px;
+}
+
+.wx-modal-read {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--wx-accent);
+  line-height: 1;
+}
+
+.wx-modal-dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.wx-modal-dl dt {
+  margin: 0 0 4px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wx-faint);
+}
+
+.wx-modal-dl dd {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--wx-text);
+}
+
+/* Typeset equation block — looks like printed math, not monospaced code */
+.wx-modal-formula {
+  margin: 8px 0 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--wx-border);
+  background: rgba(0, 0, 0, 0.28);
+  overflow-x: auto;
+}
+
+html.theme-light .fx-page .wx-modal-formula {
+  background: rgba(26, 28, 34, 0.05);
+}
+
+.wx-modal-formula-math {
+  color: var(--wx-accent);
+  font-size: 15px;
+  line-height: 1;
+  overflow-x: auto;
+}
+
+/* Native MathML — stacked fractions, true subscripts */
+.wx-modal-formula-math math {
+  display: block;
+  margin: 0;
+  color: inherit;
+  font-family: "Latin Modern Math", "STIX Two Math", "Cambria Math",
+    "Times New Roman", Times, serif;
+  font-size: 1.05em;
+}
+
+.wx-modal-formula-math math + math {
+  margin-top: 10px;
+}
+
+.wx-modal-formula-math mfrac {
+  padding: 0 0.12em;
+}
+
+.wx-modal-formula-math mfrac > * {
+  padding: 0 0.2em;
+}
+
+.wx-modal-formula-math msub > *:last-child,
+.wx-modal-formula-math msup > *:last-child,
+.wx-modal-formula-math msubsup > *:nth-child(n + 2) {
+  font-size: 0.72em;
+}
+
+.wx-modal-formula-note {
+  margin: 8px 0 0;
+  font-family: var(--wx-font);
+  font-size: 11.5px;
+  line-height: 1;
+  color: var(--wx-muted);
+  font-style: normal;
+}
+
+
+
+/* ── Layout chrome ─────────────────────────────────────────── */
+
+.wx-section {
+  margin: 0 0 18px;
+}
+
+.wx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-family: var(--wx-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.wx-table th {
+  text-align: left;
+  font-family: var(--wx-font);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wx-faint);
+  padding: 0 8px 4px 0;
+}
+
+.wx-table td {
+  padding: 3px 8px 3px 0;
+  color: var(--wx-text);
+  vertical-align: baseline;
+}
+
+.wx-table .is-up {
+  color: var(--wx-up);
+}
+
+.wx-table .is-down {
+  color: var(--wx-down);
+}
+
+.wx-corr {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--wx-muted);
+  line-height: 1;
+}
+
+.wx-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--wx-faint);
+  font-style: italic;
+}
+
+.wx-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+
+.wx-day-list {
+  max-height: 280px;
+  overflow: auto;
+}
+
+
+@media (max-width: 720px) {
+  .wx-panel-v {
+    font-size: 24px;
+  }
+
+  .wx-modal {
+    max-height: 85vh;
+  }
+
+  .wx-direction-h {
+    font-size: 18px;
+  }
+}

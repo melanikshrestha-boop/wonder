@@ -14,6 +14,7 @@ import {
 } from "./hygieneRoutines";
 import {
   amazonShopUrlForTitle,
+  formatProductPrice,
   isAmazonReady,
   linkForProduct,
   openAmazonLogin,
@@ -35,6 +36,35 @@ function titlesFromSections(secs: RoutineSection[]): string[] {
     }
   }
   return [...titles].sort((a, b) => a.localeCompare(b));
+}
+
+/** Cost rollup for one routine page — unique products only (same item twice = once). */
+function routineCostTotal(secs: RoutineSection[]): {
+  total: number;
+  priced: number;
+  unpriced: number;
+  lines: { title: string; price: number }[];
+} {
+  const seen = new Set<string>();
+  const lines: { title: string; price: number }[] = [];
+  let unpriced = 0;
+  for (const s of secs) {
+    for (const step of s.steps) {
+      const t = step.title?.trim();
+      if (!t || seen.has(t.toLowerCase())) continue;
+      // Skip non-product steps (e.g. "Blow-dry")
+      if (/^blow-?dry$/i.test(t) || /^routine$/i.test(t)) continue;
+      seen.add(t.toLowerCase());
+      const link = resolveBuyLink(t);
+      if (link.priceUsd != null && link.priceUsd > 0) {
+        lines.push({ title: t, price: link.priceUsd });
+      } else {
+        unpriced += 1;
+      }
+    }
+  }
+  const total = lines.reduce((s, x) => s + x.price, 0);
+  return { total, priced: lines.length, unpriced, lines };
 }
 
 /** AM skincare products only (for restock picker) */
@@ -96,14 +126,14 @@ const WEEK_DAYS: { key: DayKey; short: string; initial: string }[] = [
 ];
 
 const SHOWER_TYPES = [
-  { id: "daily_shower", label: "Daily shower", icon: "shower-daily", color: "#6eb4ff" },
+  { id: "daily_shower", label: "Daily shower", icon: "shower-daily", color: "#2563eb" },
   {
     id: "everything_shower",
     label: "Everything shower",
     icon: "shower-everything",
-    color: "#f9a8d4",
+    color: "#db2777",
   },
-  { id: "hair_care", label: "Hair care", icon: "hair", color: "#c4b5fd" },
+  { id: "hair_care", label: "Hair care", icon: "hair", color: "#7c3aed" },
 ] as const;
 
 const WEEK_KEY = "dr-melani-hygiene-shower-week";
@@ -320,70 +350,72 @@ function HygieneHub({ onGo }: { onGo: (id: string) => void }) {
 
       <section className="hx-section">
         <h2 className="hx-h2">Shower routine</h2>
-        <h3 className="hx-h3">This week</h3>
-        <div className="hx-week-strip">
-          {strip.map((c) => {
-            const icons = iconsForDay(c.key);
-            return (
-              <div
-                key={c.key}
-                className={`hx-week-cell${c.isToday ? " is-today" : ""}`}
-              >
-                <span className="hx-week-dow">{c.initial}</span>
-                <span className="hx-week-num">{c.dateNum}</span>
-                <span className="hx-week-icons">
-                  {icons.length
-                    ? icons.map((name) => (
-                        <span
-                          key={name}
-                          className={`hx-week-ic-wrap is-${name}`}
-                          title={name}
-                        >
-                          <MinimalIcon
-                            name={name}
-                            size={13}
-                            className="hx-week-ic"
-                          />
-                        </span>
-                      ))
-                    : null}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        <button
-          type="button"
-          className="hx-choose-toggle"
-          onClick={() => setChooseOpen((v) => !v)}
-        >
-          {chooseOpen ? "▾" : "▸"} Choose routines for this week
-        </button>
-        {chooseOpen && (
-          <div className="hx-choose">
-            {SHOWER_TYPES.map((t) => (
-              <div key={t.id} className="hx-choose-row">
-                <p className="hx-choose-label">{t.label}</p>
-                <div className="hx-day-picks">
-                  {WEEK_DAYS.map((d) => {
-                    const on = (showerPlan[t.id] || []).includes(d.key);
-                    return (
-                      <button
-                        key={d.key}
-                        type="button"
-                        className={`hx-day-pick${on ? " is-on" : ""}`}
-                        onClick={() => toggleDay(t.id, d.key)}
-                      >
-                        {d.short}
-                      </button>
-                    );
-                  })}
+        <div className="hx-week-block">
+          <h3 className="hx-h3">This week</h3>
+          <div className="hx-week-strip">
+            {strip.map((c) => {
+              const icons = iconsForDay(c.key);
+              return (
+                <div
+                  key={c.key}
+                  className={`hx-week-cell${c.isToday ? " is-today" : ""}`}
+                >
+                  <span className="hx-week-dow">{c.initial}</span>
+                  <span className="hx-week-num">{c.dateNum}</span>
+                  <span className="hx-week-icons">
+                    {icons.length
+                      ? icons.map((name) => (
+                          <span
+                            key={name}
+                            className={`hx-week-ic-wrap is-${name}`}
+                            title={name}
+                          >
+                            <MinimalIcon
+                              name={name}
+                              size={13}
+                              className="hx-week-ic"
+                            />
+                          </span>
+                        ))
+                      : null}
+                  </span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        )}
+
+          <button
+            type="button"
+            className="hx-choose-toggle"
+            onClick={() => setChooseOpen((v) => !v)}
+          >
+            Choose routines for this week
+          </button>
+          {chooseOpen ? (
+            <div className="hx-choose">
+              {SHOWER_TYPES.map((t) => (
+                <div key={t.id} className="hx-choose-row">
+                  <p className="hx-choose-label">{t.label}</p>
+                  <div className="hx-day-picks">
+                    {WEEK_DAYS.map((d) => {
+                      const on = (showerPlan[t.id] || []).includes(d.key);
+                      return (
+                        <button
+                          key={d.key}
+                          type="button"
+                          className={`hx-day-pick${on ? " is-on" : ""}`}
+                          onClick={() => toggleDay(t.id, d.key)}
+                        >
+                          {d.short}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
 
         <div className="hx-nav">
           <button
@@ -690,9 +722,15 @@ function RestockSection() {
               const link = resolveBuyLink(item.title);
               const asin = resolveAmazonAsin(item.title);
               const shopUrl = amazonShopUrlForTitle(item.title);
+              const priceLabel = formatProductPrice(link.priceUsd);
               return (
                 <li key={item.id} className="hx-product-row">
-                  <span className="hx-product-name">{link.name}</span>
+                  <span className="hx-product-name">
+                    {link.name}
+                    {priceLabel ? (
+                      <span className="hx-product-price"> {priceLabel}</span>
+                    ) : null}
+                  </span>
                   <span className="hx-product-buys">
                     {/* Real href only (product page or search). Never dead cart endpoints. */}
                     <a
@@ -842,74 +880,76 @@ function PmHub({
         <span>PM skincare</span>
       </h2>
 
-      <h3 className="hx-h3">This week</h3>
-      <div className="hx-week-strip">
-        {strip.map((c) => {
-          const ic = iconForDay(c.key);
-          return (
-          <div
-            key={c.key}
-            className={`hx-week-cell${c.isToday ? " is-today" : ""}`}
-          >
-            <span className="hx-week-dow">{c.initial}</span>
-            <span className="hx-week-num">{c.dateNum}</span>
-            <span className="hx-week-icons">
-              {ic ? (
-                <MinimalIcon name={ic} size={12} className="hx-week-ic" />
-              ) : (
-                "\u00a0"
-              )}
-            </span>
-          </div>
-          );
-        })}
-      </div>
-
-      <button
-        type="button"
-        className="hx-choose-toggle"
-        onClick={() => setChooseOpen((v) => !v)}
-      >
-        {chooseOpen ? "▾" : "▸"} Choose PM skincare for this week
-      </button>
-      {chooseOpen && (
-        <div className="hx-choose">
-          {PM_ORDER.map((id) => {
-            const r = PM_ROUTINES[id];
+      <div className="hx-week-block">
+        <h3 className="hx-h3">This week</h3>
+        <div className="hx-week-strip">
+          {strip.map((c) => {
+            const ic = iconForDay(c.key);
             return (
-              <div key={id} className="hx-choose-row">
-                <p className="hx-choose-label hx-choose-label-ic">
-                  <MinimalIcon name={r.icon} size={12} /> {r.short}
-                </p>
-                <div className="hx-day-picks">
-                  {WEEK_DAYS.map((d) => {
-                    const on = (pmPlan[id] || []).includes(d.key);
-                    const blocked = !on && isPmDayBlocked(id, d.key);
-                    return (
-                      <button
-                        key={d.key}
-                        type="button"
-                        disabled={blocked}
-                        title={
-                          blocked
-                            ? "That day already has another PM routine"
-                            : undefined
-                        }
-                        className={`hx-day-pick${on ? " is-on" : ""}${
-                          blocked ? " is-blocked" : ""
-                        }`}
-                        onClick={() => toggleDay(id, d.key)}
-                      >
-                        {d.short}
-                      </button>
-                    );
-                  })}
-                </div>
+              <div
+                key={c.key}
+                className={`hx-week-cell${c.isToday ? " is-today" : ""}`}
+              >
+                <span className="hx-week-dow">{c.initial}</span>
+                <span className="hx-week-num">{c.dateNum}</span>
+                <span className="hx-week-icons">
+                  {ic ? (
+                    <MinimalIcon name={ic} size={12} className="hx-week-ic" />
+                  ) : (
+                    "\u00a0"
+                  )}
+                </span>
               </div>
             );
           })}
         </div>
-      )}
+
+        <button
+          type="button"
+          className="hx-choose-toggle"
+          onClick={() => setChooseOpen((v) => !v)}
+        >
+          Choose PM skincare for this week
+        </button>
+        {chooseOpen ? (
+          <div className="hx-choose">
+            {PM_ORDER.map((id) => {
+              const r = PM_ROUTINES[id];
+              return (
+                <div key={id} className="hx-choose-row">
+                  <p className="hx-choose-label hx-choose-label-ic">
+                    <MinimalIcon name={r.icon} size={12} /> {r.short}
+                  </p>
+                  <div className="hx-day-picks">
+                    {WEEK_DAYS.map((d) => {
+                      const on = (pmPlan[id] || []).includes(d.key);
+                      const blocked = !on && isPmDayBlocked(id, d.key);
+                      return (
+                        <button
+                          key={d.key}
+                          type="button"
+                          disabled={blocked}
+                          title={
+                            blocked
+                              ? "That day already has another PM routine"
+                              : undefined
+                          }
+                          className={`hx-day-pick${on ? " is-on" : ""}${
+                            blocked ? " is-blocked" : ""
+                          }`}
+                          onClick={() => toggleDay(id, d.key)}
+                        >
+                          {d.short}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
 
       <div className="hx-nav hx-nav-pm">
         {PM_ORDER.map((id) => {
@@ -961,15 +1001,19 @@ function SectionedRoutinePage({
 }) {
   // Which step is open — always start with ALL closed
   const [openNum, setOpenNum] = useState<number | null>(null);
+  const [costOpen, setCostOpen] = useState(false);
 
   // Reset every time you land on this page
   useEffect(() => {
     setOpenNum(null);
+    setCostOpen(false);
   }, [pageId]);
 
   function toggleOpen(n: number) {
     setOpenNum((prev) => (prev === n ? null : n));
   }
+
+  const cost = useMemo(() => routineCostTotal(sections), [sections]);
 
   const theme =
     pageId === "pg-hair"
@@ -1003,6 +1047,50 @@ function SectionedRoutinePage({
           </ol>
         </section>
       ))}
+
+      {/* Total calculator — unique products on this page */}
+      {cost.priced > 0 ? (
+        <section className="hx-cost-calc" aria-label="Routine cost total">
+          <button
+            type="button"
+            className="hx-cost-bar"
+            onClick={() => setCostOpen((v) => !v)}
+            aria-expanded={costOpen}
+          >
+            <span className="hx-cost-label">
+              {costOpen ? "▾" : "▸"} Routine total
+              <span className="hx-cost-meta">
+                {" "}
+                · {cost.priced} product{cost.priced === 1 ? "" : "s"}
+                {cost.unpriced > 0
+                  ? ` · ${cost.unpriced} without price`
+                  : ""}
+              </span>
+            </span>
+            <span className="hx-cost-total">
+              {formatProductPrice(cost.total) || `~$${Math.round(cost.total)}`}
+            </span>
+          </button>
+          {costOpen ? (
+            <ul className="hx-cost-lines">
+              {cost.lines.map((line) => (
+                <li key={line.title}>
+                  <span className="hx-cost-line-name">{line.title}</span>
+                  <span className="hx-cost-line-price">
+                    {formatProductPrice(line.price)}
+                  </span>
+                </li>
+              ))}
+              <li className="hx-cost-lines-sum">
+                <span>Total (unique products)</span>
+                <span>
+                  {formatProductPrice(cost.total) || `~$${Math.round(cost.total)}`}
+                </span>
+              </li>
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -1052,10 +1140,12 @@ function StepRow({
   open: boolean;
   onToggle: () => void;
 }) {
-  const product = linkForProduct(step.title);
+  // Prefer exact map; fall back so every listed product still gets a price/shop row
+  const product = linkForProduct(step.title) || resolveBuyLink(step.title);
+  const priceLabel = formatProductPrice(product.priceUsd);
   const hasBullets = Boolean(step.bullets && step.bullets.length > 0);
-  const hasBuy = Boolean(product && product.url);
-  const hasDetails = hasBullets || Boolean(step.note) || hasBuy;
+  const hasBuy = Boolean(product.url);
+  const hasDetails = hasBullets || Boolean(step.note) || hasBuy || Boolean(priceLabel);
 
   return (
     <li className={`hx-step-wrap${open ? " is-open" : ""}`}>
@@ -1081,33 +1171,42 @@ function StepRow({
       </button>
       {open && hasDetails ? (
         <div className="hx-step-panel">
-          {hasBullets ? (
-            <ul className="hx-step-details">
-              {step.bullets!.map((b, i) => (
-                <li key={i}>{highlightTimingPhrases(b)}</li>
-              ))}
-            </ul>
-          ) : null}
-          {hasBuy && product ? (
-            <div className="hx-buy-row">
-              <button
-                type="button"
-                className="hx-buy-link"
-                onClick={(e) => openShop(product.url, e)}
-              >
-                Buy on {storeLabel(product.store)} →
-              </button>
-              {product.altUrl && product.altStore ? (
+          <ul className="hx-step-details">
+            {hasBullets
+              ? step.bullets!.map((b, i) => (
+                  <li key={i}>{highlightTimingPhrases(b)}</li>
+                ))
+              : null}
+            {hasBuy ? (
+              <li className="hx-step-buy">
+                {priceLabel ? (
+                  <span className="hx-buy-price">
+                    {priceLabel}
+                  </span>
+                ) : null}
+                {priceLabel ? " " : null}
                 <button
                   type="button"
-                  className="hx-buy-link hx-buy-alt"
-                  onClick={(e) => openShop(product.altUrl!, e)}
+                  className="hx-buy-link"
+                  onClick={(e) => openShop(product.url, e)}
                 >
-                  or {storeLabel(product.altStore)} →
+                  Buy on {storeLabel(product.store)} →
                 </button>
-              ) : null}
-            </div>
-          ) : null}
+                {product.altUrl && product.altStore ? (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      className="hx-buy-link hx-buy-alt"
+                      onClick={(e) => openShop(product.altUrl!, e)}
+                    >
+                      or {storeLabel(product.altStore)} →
+                    </button>
+                  </>
+                ) : null}
+              </li>
+            ) : null}
+          </ul>
         </div>
       ) : null}
     </li>

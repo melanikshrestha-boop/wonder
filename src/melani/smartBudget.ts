@@ -261,10 +261,8 @@ export function suggestCuts(
   categories: CategorySpend[],
   target: number, // how much to cut
   essentials: Set<string> = new Set([
-    "Utilities",
-    "Food / groceries",
+    "Groceries",
     "Transport",
-    "Health",
   ])
 ): { category: string; cut: number; reasoning: string }[] {
   const suggestions: { category: string; cut: number; reasoning: string }[] = [];

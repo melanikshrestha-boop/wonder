@@ -32,7 +32,7 @@
   font-weight: 650;
   letter-spacing: 0.02em;
   text-transform: capitalize;
-  line-height: 1.2;
+  line-height: 1;
   /* text color only — never a filled background on the word */
   background: none !important;
 }
@@ -55,7 +55,7 @@
   margin: 0;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.4);
-  line-height: 1.3;
+  line-height: 1;
 }
 
 /* ── 2. Color key ── */
@@ -441,7 +441,7 @@
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
   color: rgba(255, 255, 255, 0.9);
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1;
   font-family: "Times New Roman", Times, serif;
 }
 
@@ -486,7 +486,7 @@
 .ct-popup-oneliner {
   margin: 0 0 12px;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1;
   color: rgba(255, 255, 255, 0.55);
   white-space: normal;
   overflow: visible;
@@ -509,7 +509,7 @@
 .ct-popup-block p {
   margin: 0;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1;
   color: rgba(255, 255, 255, 0.88);
   white-space: normal;
   overflow: visible;
@@ -522,10 +522,216 @@
   margin: 0;
   padding: 0 0 0 1.1em;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1;
   color: rgba(255, 255, 255, 0.88);
 }
 
 .ct-popup-list li {
   margin: 0 0 5px;
 }
+
+/* ═══════════════════════════════════════════
+   Light mode — match Wonder shell (no black island)
+   ═══════════════════════════════════════════ */
+html.theme-light .ct {
+  color: #1a1c22;
+  /* Stronger fills on white so calendar reads like dark mode, not gray mush */
+  --ct-menstrual: #c47884;
+  --ct-menstrual-soft: #9a4a58;
+  --ct-follicular: #6a9b82;
+  --ct-follicular-soft: #3d6b55;
+  --ct-ovulatory: #8b7ab8;
+  --ct-ovulatory-soft: #5a4a80;
+  --ct-luteal: #c4a86a;
+  --ct-luteal-soft: #8a7040;
+}
+
+html.theme-light .ct-phase-name.is-menstrual { color: var(--ct-menstrual-soft); }
+html.theme-light .ct-phase-name.is-follicular { color: var(--ct-follicular-soft); }
+html.theme-light .ct-phase-name.is-ovulatory { color: var(--ct-ovulatory-soft); }
+html.theme-light .ct-phase-name.is-luteal { color: var(--ct-luteal-soft); }
+
+html.theme-light .ct-meta,
+html.theme-light .ct-key-item,
+html.theme-light .ct-weekdays,
+html.theme-light .ct-log-label,
+html.theme-light .ct-learn-hint,
+html.theme-light .ct-bar-dates {
+  color: rgba(26, 28, 34, 0.45);
+}
+
+html.theme-light .ct-key-item.is-menstrual { color: #9a4a58 !important; }
+html.theme-light .ct-key-item.is-follicular { color: #1f6b45 !important; }
+html.theme-light .ct-key-item.is-ovulatory { color: #4c3d7a !important; }
+html.theme-light .ct-key-item.is-luteal { color: #7a5f28 !important; }
+
+html.theme-light .ct-nav {
+  color: rgba(26, 28, 34, 0.45);
+}
+html.theme-light .ct-nav:hover {
+  color: #1a1c22;
+}
+
+html.theme-light .ct-cal-title {
+  color: #1a1c22;
+}
+
+/* Empty / out-of-month only — NEVER wash out phase-colored days */
+html.theme-light .ct-day:not(.is-menstrual):not(.is-follicular):not(.is-ovulatory):not(.is-luteal) {
+  background: rgba(26, 28, 34, 0.07);
+  color: rgba(26, 28, 34, 0.48);
+}
+
+html.theme-light .ct-day.out {
+  background: transparent !important;
+  color: rgba(26, 28, 34, 0.18) !important;
+}
+
+/* Phase dots — same solids as dark mode, full color on white desk */
+html.theme-light .ct-key-dot.is-menstrual,
+html.theme-light .ct-day.is-menstrual,
+html.theme-light .ct-seg.is-menstrual {
+  background: var(--ct-menstrual) !important;
+}
+html.theme-light .ct-key-dot.is-follicular,
+html.theme-light .ct-day.is-follicular,
+html.theme-light .ct-seg.is-follicular {
+  background: var(--ct-follicular) !important;
+}
+html.theme-light .ct-key-dot.is-ovulatory,
+html.theme-light .ct-day.is-ovulatory,
+html.theme-light .ct-seg.is-ovulatory {
+  background: var(--ct-ovulatory) !important;
+}
+html.theme-light .ct-key-dot.is-luteal,
+html.theme-light .ct-day.is-luteal,
+html.theme-light .ct-seg.is-luteal {
+  background: var(--ct-luteal) !important;
+}
+
+html.theme-light .ct-day.is-menstrual,
+html.theme-light .ct-day.is-follicular,
+html.theme-light .ct-day.is-ovulatory,
+html.theme-light .ct-day.is-luteal {
+  color: #fff !important;
+}
+
+html.theme-light .ct-day.today {
+  box-shadow: 0 0 0 2px rgba(26, 28, 34, 0.55);
+}
+
+html.theme-light .ct-stats {
+  color: rgba(26, 28, 34, 0.45);
+}
+html.theme-light .ct-stats b {
+  color: #1a1c22;
+}
+html.theme-light .ct-bar-lab {
+  color: rgba(26, 28, 34, 0.62);
+}
+html.theme-light .ct-bar {
+  background: rgba(26, 28, 34, 0.06);
+}
+
+html.theme-light .ct-flow-btn {
+  border-color: rgba(26, 28, 34, 0.12);
+  color: rgba(26, 28, 34, 0.5);
+  background: #fff;
+}
+html.theme-light .ct-flow-btn.on {
+  border-color: rgba(176, 112, 122, 0.5);
+  color: var(--ct-menstrual-soft);
+  background: rgba(176, 112, 122, 0.12);
+}
+
+html.theme-light .ct-start {
+  color: #2563eb;
+}
+html.theme-light .ct-start:hover {
+  color: #1d4ed8;
+}
+
+/* Phase pills on white — bold phase ink (never ghost white / pale wash) */
+html.theme-light .ct-learn-tab.is-menstrual {
+  color: #9a4a58 !important;
+  border-color: rgba(154, 74, 88, 0.45) !important;
+  background: rgba(196, 120, 132, 0.14) !important;
+}
+/* Follicular = clear green font on soft green wash */
+html.theme-light .ct-learn-tab.is-follicular {
+  color: #1f6b45 !important;
+  border-color: rgba(31, 107, 69, 0.4) !important;
+  background: rgba(106, 155, 130, 0.16) !important;
+}
+html.theme-light .ct-learn-tab.is-ovulatory {
+  color: #4c3d7a !important;
+  border-color: rgba(76, 61, 122, 0.4) !important;
+  background: rgba(139, 122, 184, 0.14) !important;
+}
+html.theme-light .ct-learn-tab.is-luteal {
+  color: #7a5f28 !important;
+  border-color: rgba(122, 95, 40, 0.4) !important;
+  background: rgba(196, 168, 106, 0.16) !important;
+}
+
+/* Current phase: solid fill + white type */
+html.theme-light .ct-learn-tab.is-menstrual.on {
+  color: #fff !important;
+  background: #c47884 !important;
+  border-color: #c47884 !important;
+}
+html.theme-light .ct-learn-tab.is-follicular.on {
+  color: #fff !important;
+  background: #2f8f5b !important;
+  border-color: #2f8f5b !important;
+}
+html.theme-light .ct-learn-tab.is-ovulatory.on {
+  color: #fff !important;
+  background: #8b7ab8 !important;
+  border-color: #8b7ab8 !important;
+}
+html.theme-light .ct-learn-tab.is-luteal.on {
+  color: #fff !important;
+  background: #c4a86a !important;
+  border-color: #c4a86a !important;
+}
+
+/* Legend row text matches pill ink */
+html.theme-light .ct-key-item.is-follicular {
+  color: #1f6b45 !important;
+}
+html.theme-light .ct-phase-name.is-follicular {
+  color: #1f6b45 !important;
+}
+
+html.theme-light .ct-popup-backdrop {
+  background: rgba(15, 18, 28, 0.45);
+}
+html.theme-light .ct-popup {
+  background: #fff !important;
+  border-color: rgba(26, 28, 34, 0.1) !important;
+  color: #1a1c22 !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15) !important;
+}
+html.theme-light .ct-popup,
+html.theme-light .ct-popup * {
+  color: #1a1c22;
+}
+html.theme-light .ct-popup-close {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+html.theme-light .ct-popup-close:hover {
+  color: #1a1c22 !important;
+}
+html.theme-light .ct-popup-oneliner,
+html.theme-light .ct-popup-block p,
+html.theme-light .ct-popup-list {
+  color: #1a1c22 !important;
+}
+html.theme-light .ct-popup-label {
+  color: rgba(26, 28, 34, 0.48) !important;
+}
+html.theme-light .ct-popup-title.is-menstrual { color: var(--ct-menstrual-soft) !important; }
+html.theme-light .ct-popup-title.is-follicular { color: var(--ct-follicular-soft) !important; }
+html.theme-light .ct-popup-title.is-ovulatory { color: var(--ct-ovulatory-soft) !important; }
+html.theme-light .ct-popup-title.is-luteal { color: var(--ct-luteal-soft) !important; }

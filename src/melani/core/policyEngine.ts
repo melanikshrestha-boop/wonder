@@ -5,6 +5,7 @@
 import type { MeatId, PolicyContext, PolicyDecision } from "./types";
 import { wonderEmit } from "./eventBus";
 import { offlineGetJson, offlineSetJson } from "./offlineStore";
+import { meatState, recordAction, rlSoftPrefer } from "../rlAgent";
 
 export type PolicyRule<T extends string = string> = {
   id: string;
@@ -199,9 +200,45 @@ export function evaluatePolicy<T extends string>(
 }
 
 export function decideMeat(ctx: PolicyContext): PolicyDecision<MeatId> {
-  return evaluatePolicy(meatRules(), ctx, "meat");
+  const decision = evaluatePolicy(meatRules(), ctx, "meat");
+  const state = meatState(ctx);
+  // Trial-and-error: if Q clearly prefers the other meat from past rewards, soft-override
+  try {
+    const soft = rlSoftPrefer("policy_meat", state, ["beef", "salmon"], 0.2);
+    if (soft?.override && (soft.action === "beef" || soft.action === "salmon")) {
+      if (soft.action !== decision.value) {
+        decision.value = soft.action;
+        decision.reasons = [
+          `RL preference (Q=${soft.q.toFixed(2)} from your past rewards).`,
+          ...decision.reasons,
+        ];
+        decision.ruleIds = ["rl-soft", ...decision.ruleIds];
+      }
+    }
+    // Log the choice so later meat.eaten / undo can reward or penalize
+    recordAction({
+      domain: "policy_meat",
+      state,
+      action: decision.value,
+      setPending: false,
+    });
+  } catch {
+    /* RL must never break food policy */
+  }
+  return decision;
 }
 
 export function decideDressHint(ctx: PolicyContext): PolicyDecision<string> {
-  return evaluatePolicy(dressRules(), ctx, "dress");
+  const decision = evaluatePolicy(dressRules(), ctx, "dress");
+  try {
+    recordAction({
+      domain: "policy_dress",
+      state: `rain=${ctx.rain}|t=${ctx.temperatureF ?? "?"}`,
+      action: decision.value,
+      setPending: false,
+    });
+  } catch {
+    /* ignore */
+  }
+  return decision;
 }

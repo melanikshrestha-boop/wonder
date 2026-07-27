@@ -16,7 +16,11 @@ export type WonderEventType =
   | "policy.decided"
   | "mel.plan"
   | "mel.action"
-  | "data.changed";
+  | "data.changed"
+  /** Agent took an action (trial); reward may arrive later */
+  | "rl.action"
+  /** Reward or penalty applied to a past action */
+  | "rl.reward";
 
 export type WonderEvent<T = unknown> = {
   type: WonderEventType;

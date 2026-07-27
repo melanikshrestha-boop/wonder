@@ -68,9 +68,19 @@ function applySidebarWidth(w: number) {
 }
 
 /** Health section roots */
-const HEALTH_ROOT_IDS = ["pg-fitness", "pg-nutrition", "pg-hygiene", "pg-habits", "pg-data"] as const;
-/** Learn section roots — Bookshelf + World Monitor + Finances. No Work section. */
-const LEARN_ROOT_IDS = ["pg-library", "pg-world-monitor", "pg-finance", "pg-paper-trading"] as const;
+const HEALTH_ROOT_IDS = [
+  "pg-fitness",
+  "pg-hygiene",
+  "pg-habits",
+  "pg-data",
+] as const;
+/** Learn section roots — Bookshelf + Finances. No World Monitor / paper trading / Operator. */
+const LEARN_ROOT_IDS = [
+  "pg-library",
+  "pg-finance",
+  "pg-math",
+  "pg-failures",
+] as const;
 
 /** true = closed (kids hidden). Opening a parent always forces its kids closed. */
 function markClosed(ids: readonly string[], map: Record<string, boolean>) {
@@ -96,7 +106,15 @@ const SIDEBAR_HIDDEN_IDS = new Set([
   "pg-books", // Bookshelf is pg-library
   "pg-my-data", // use pg-data
   "pg-agents", // hub is hidden; children show under Agents
-  "pg-work", // Work section removed — stocks live on World Monitor under Learn
+  "pg-work", // Work section removed
+  "pg-world-monitor", // permanently deleted
+  "pg-operator",
+  "pg-empire",
+  "pg-paper-trading",
+  "pg-trading",
+  "pg-day-trade",
+  "pg-daytrade",
+  "pg-day-trading",
 ]);
 
 /** Section collapse keys (double-tap Health / Learn labels) */
@@ -113,7 +131,6 @@ function loadCollapsed(): Record<string, boolean> {
     "pg-hygiene": true,
     "pg-data": true,
     "pg-library": true,
-    "pg-world-monitor": true,
     "pg-finance": true,
     // Sections start open so you see the three Health roots (each still closed inside)
     [SECTION_KEYS.health]: false,
@@ -623,7 +640,7 @@ export function Sidebar({
       const sectionMatch =
         /^(health)$/.test(query)
           ? { key: SECTION_KEYS.health, label: "Health" }
-          : /^(learn|learning|bookshelf|library|stocks?|markets?|world monitor)$/.test(query)
+          : /^(learn|learning|bookshelf|library|finances?|money)$/.test(query)
             ? { key: SECTION_KEYS.learn, label: "Learn" }
             : null;
 
@@ -688,7 +705,7 @@ export function Sidebar({
     (p): p is Page => Boolean(p) && !SIDEBAR_HIDDEN_IDS.has(p!.id) && !p!.trashedAt
   );
 
-  // Learn ALWAYS prefers Bookshelf + World Monitor (stocks), even if parent got weird
+  // Learn ALWAYS prefers Bookshelf + Finances, even if parent got weird
   const learnTop = LEARN_ROOT_IDS.map((id) => pageById(id)).filter(
     (p): p is Page => Boolean(p) && !SIDEBAR_HIDDEN_IDS.has(p!.id) && !p!.trashedAt
   );
@@ -871,7 +888,7 @@ export function Sidebar({
           ))}
           {learnTop.length === 0 ? (
             <p className="sidebar-empty-hint">
-              Bookshelf and World Monitor will show here after a refresh.
+              Bookshelf and Finances will show here after a refresh.
             </p>
           ) : null}
           <button type="button" className="sidebar-new" onClick={onNewPage}>

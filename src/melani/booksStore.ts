@@ -242,6 +242,9 @@ export function categorizeBook(
       "search for meaning",
       "viktor frankl",
       "frankl",
+      "gad saad",
+      "suicidal empathy",
+      "parasitic mind",
       "psychology",
       "self-help",
       "self development",
@@ -401,13 +404,569 @@ function normalizeStoredBook(value: Partial<Book>, index: number): Book {
   };
 }
 
+/** Nic Muñoz Top 50 sections — stable custom folder ids (see bookFolders.NIC_MUNOZ_FOLDERS). */
+const NIC = {
+  entrepreneur: "custom:nic-entrepreneur",
+  conqueror: "custom:nic-conqueror",
+  genius: "custom:nic-genius",
+  mustRead: "custom:nic-must-read-stories",
+  historical: "custom:nic-historical-narratives",
+} as const;
+
+type EnsureWantBook = {
+  id: string;
+  title: string;
+  author: string;
+  category: BookCategory;
+  notes: string;
+  description?: string;
+  externalUrl?: string;
+  /** Extra title keys that count as “already on shelf” (avoid dupes). */
+  alsoMatch?: string[];
+  /** When true, refile an existing match into this Nic section folder. */
+  refile?: boolean;
+};
+
+/**
+ * Curated Want picks — Suicidal Empathy + full Nic Muñoz Top 50
+ * (https://www.nicmunoz.com/p/top50list), filed under his exact section names.
+ * Stable ids; only added if missing. Genius-section books refile into Genius.
+ */
+const ENSURE_WANT_BOOKS: EnsureWantBook[] = [
+  // ── personal add (not on Nic’s list) ───────────────────────────────────
+  {
+    id: "bk-want-suicidal-empathy",
+    title: "Suicidal Empathy",
+    author: "Gad Saad",
+    category: "Psychology & Self-Development",
+    notes: "Read at some point. Subtitle: Dying to Be Kind. Author of The Parasitic Mind.",
+    description:
+      "Dying to Be Kind — Saad on maladaptive empathy and civilizational risk. #1 NYT bestseller; follow-up to The Parasitic Mind.",
+    externalUrl: "https://www.harpercollins.com/products/suicidal-empathy-gad-saad",
+  },
+
+  // ── Entrepreneur ───────────────────────────────────────────────────────
+  {
+    id: "bk-nic-ent-01-walt-disney",
+    title: "Walt Disney",
+    author: "Neal Gabler",
+    category: NIC.entrepreneur,
+    notes: "Nic Muñoz Top 50 · Entrepreneur #1",
+    refile: true,
+  },
+  {
+    id: "bk-nic-ent-02-elon-vance",
+    title: "Elon Musk",
+    author: "Ashlee Vance",
+    category: NIC.entrepreneur,
+    notes: "Nic Muñoz Top 50 · Entrepreneur #2",
+    alsoMatch: ["elon musk ashlee vance", "elon musk by ashlee vance"],
+    refile: true,
+  },
+  {
+    id: "bk-nic-ent-03-rockefeller-letters",
+    title: "The 38 Letters From John D. Rockefeller To His Son",
+    author: "John D. Rockefeller",
+    category: NIC.entrepreneur,
+    notes: "Nic Muñoz Top 50 · Entrepreneur #3",
+    alsoMatch: [
+      "38 letters from john d rockefeller",
+      "the 38 letters from john d rockefeller to his son",
+    ],
+    refile: true,
+  },
+  {
+    id: "bk-nic-ent-04-nvidia-way",
+    title: "The Nvidia Way",
+    author: "Tae Kim",
+    category: NIC.entrepreneur,
+    notes: "Nic Muñoz Top 50 · Entrepreneur #4",
+    refile: true,
+  },
+  {
+    id: "bk-nic-ent-05-steve-jobs",
+    title: "Steve Jobs",
+    author: "Walter Isaacson",
+    category: NIC.entrepreneur,
+    notes: "Nic Muñoz Top 50 · Entrepreneur #5",
+    refile: true,
+  },
+  {
+    id: "bk-nic-ent-06-titan",
+    title: "Titan",
+    author: "Ron Chernow",
+    category: NIC.entrepreneur,
+    notes: "Nic Muñoz Top 50 · Entrepreneur #6 — Rockefeller",
+    alsoMatch: ["titan the life of john d rockefeller", "titan ron chernow"],
+    refile: true,
+  },
+  {
+    id: "bk-nic-ent-07-source-code",
+    title: "Source Code",
+    author: "Bill Gates",
+    category: NIC.entrepreneur,
+    notes: "Nic Muñoz Top 50 · Entrepreneur #7",
+    alsoMatch: ["source code bill gates", "source code my beginnings"],
+    refile: true,
+  },
+  {
+    id: "bk-nic-ent-08-book-of-elon",
+    title: "The Book of Elon",
+    author: "Eric Jorgenson",
+    category: NIC.entrepreneur,
+    notes: "Nic Muñoz Top 50 · Entrepreneur #8",
+    refile: true,
+  },
+  {
+    id: "bk-nic-ent-09-poor-charlie",
+    title: "Poor Charlie's Almanack",
+    author: "Charlie Munger",
+    category: NIC.entrepreneur,
+    notes: "Nic Muñoz Top 50 · Entrepreneur #9",
+    alsoMatch: [
+      "poor charlie s almanac",
+      "poor charlies almanack",
+      "poor charlies almanac",
+      "poor charlie s almanack",
+    ],
+    refile: true,
+  },
+  {
+    id: "bk-nic-ent-10-fish-whale",
+    title: "The Fish That Ate the Whale",
+    author: "Rich Cohen",
+    category: NIC.entrepreneur,
+    notes: "Nic Muñoz Top 50 · Entrepreneur #10",
+    refile: true,
+  },
+
+  // ── Conqueror ──────────────────────────────────────────────────────────
+  {
+    id: "bk-nic-con-01-alexander",
+    title: "Alexander the Great",
+    author: "Philip Freeman",
+    category: NIC.conqueror,
+    notes: "Nic Muñoz Top 50 · Conqueror #1",
+    refile: true,
+  },
+  {
+    id: "bk-nic-con-02-hannibal",
+    title: "Hannibal",
+    author: "Philip Freeman",
+    category: NIC.conqueror,
+    notes: "Nic Muñoz Top 50 · Conqueror #2",
+    refile: true,
+  },
+  {
+    id: "bk-nic-con-03-caesar",
+    title: "Caesar",
+    author: "Philip Freeman",
+    category: NIC.conqueror,
+    notes: "Nic Muñoz Top 50 · Conqueror #3",
+    refile: true,
+  },
+  {
+    id: "bk-nic-con-04-napoleon-roberts",
+    title: "Napoleon: A Life",
+    author: "Andrew Roberts",
+    category: NIC.conqueror,
+    notes: "Nic Muñoz Top 50 · Conqueror #4",
+    alsoMatch: ["napoleon a life", "napoleon andrew roberts"],
+    refile: true,
+  },
+  {
+    id: "bk-nic-con-05-masters-command",
+    title: "Masters of Command",
+    author: "Barry Strauss",
+    category: NIC.conqueror,
+    notes: "Nic Muñoz Top 50 · Conqueror #5",
+    refile: true,
+  },
+  {
+    id: "bk-nic-con-06-cleopatra",
+    title: "Cleopatra",
+    author: "Stacy Schiff",
+    category: NIC.conqueror,
+    notes: "Nic Muñoz Top 50 · Conqueror #6",
+    refile: true,
+  },
+  {
+    id: "bk-nic-con-07-philip-alexander",
+    title: "Philip and Alexander",
+    author: "Adrian Goldsworthy",
+    category: NIC.conqueror,
+    notes: "Nic Muñoz Top 50 · Conqueror #7",
+    refile: true,
+  },
+  {
+    id: "bk-nic-con-08-hitler-charisma",
+    title: "Hitler's Charisma",
+    author: "Laurence Rees",
+    category: NIC.conqueror,
+    notes: "Nic Muñoz Top 50 · Conqueror #8",
+    refile: true,
+  },
+  {
+    id: "bk-nic-con-09-talleyrand",
+    title: "Talleyrand",
+    author: "Duff Cooper",
+    category: NIC.conqueror,
+    notes: "Nic Muñoz Top 50 · Conqueror #9",
+    refile: true,
+  },
+  {
+    id: "bk-nic-con-10-napoleon-maxims",
+    title: "Napoleon's Military Maxims",
+    author: "Napoleon Bonaparte",
+    category: NIC.conqueror,
+    notes: "Nic Muñoz Top 50 · Conqueror #10",
+    alsoMatch: ["napoleons military maxims", "napoleon s military maxims"],
+    refile: true,
+  },
+
+  // ── Genius ─────────────────────────────────────────────────────────────
+  {
+    id: "bk-want-wright-brothers",
+    title: "The Wright Brothers",
+    author: "David McCullough",
+    category: NIC.genius,
+    notes: "Nic Muñoz Top 50 · Genius #1",
+    refile: true,
+  },
+  {
+    id: "bk-want-einstein-isaacson",
+    title: "Einstein",
+    author: "Walter Isaacson",
+    category: NIC.genius,
+    notes: "Nic Muñoz Top 50 · Genius #2",
+    alsoMatch: ["einstein his life and universe"],
+    refile: true,
+  },
+  {
+    id: "bk-want-feynman-joking",
+    title: "Surely You're Joking, Mr. Feynman!",
+    author: "Richard P. Feynman",
+    category: NIC.genius,
+    notes: "Nic Muñoz Top 50 · Genius #3",
+    alsoMatch: [
+      "surely you re joking mr feynman",
+      "surely youre joking mr feynman",
+      "surely you are joking mr feynman",
+    ],
+    refile: true,
+  },
+  {
+    id: "bk-want-genius-gleick",
+    title: "Genius",
+    author: "James Gleick",
+    category: NIC.genius,
+    notes: "Nic Muñoz Top 50 · Genius #4",
+    alsoMatch: ["genius the life and science of richard feynman"],
+    refile: true,
+  },
+  {
+    id: "bk-want-tesla-carlson",
+    title: "Tesla: Inventor of the Electrical Age",
+    author: "W. Bernard Carlson",
+    category: NIC.genius,
+    notes: "Nic Muñoz Top 50 · Genius #5",
+    alsoMatch: ["tesla inventor of the electrical age"],
+    refile: true,
+  },
+  {
+    id: "bk-want-leonardo-isaacson",
+    title: "Leonardo da Vinci",
+    author: "Walter Isaacson",
+    category: NIC.genius,
+    notes: "Nic Muñoz Top 50 · Genius #6",
+    refile: true,
+  },
+  {
+    id: "bk-want-tesla-autobiography",
+    title: "My Inventions: The Autobiography of Nikola Tesla",
+    author: "Nikola Tesla",
+    category: NIC.genius,
+    notes: "Nic Muñoz Top 50 · Genius #7 — Tesla’s autobiography",
+    alsoMatch: [
+      "tesla s autobiography",
+      "teslas autobiography",
+      "my inventions",
+      "autobiography of nikola tesla",
+    ],
+    refile: true,
+  },
+  {
+    id: "bk-want-wizard-menlo-park",
+    title: "The Wizard of Menlo Park",
+    author: "Randall Stross",
+    category: NIC.genius,
+    notes: "Nic Muñoz Top 50 · Genius #8",
+    alsoMatch: ["wizard of menlo park"],
+    refile: true,
+  },
+  {
+    id: "bk-want-newton-gleick",
+    title: "Isaac Newton",
+    author: "James Gleick",
+    category: NIC.genius,
+    notes: "Nic Muñoz Top 50 · Genius #9",
+    refile: true,
+  },
+  {
+    id: "bk-want-franklin-isaacson",
+    title: "Benjamin Franklin",
+    author: "Walter Isaacson",
+    category: NIC.genius,
+    notes: "Nic Muñoz Top 50 · Genius #10",
+    alsoMatch: [
+      "benjamin franklin an american life",
+      "benjamin franklin a life",
+    ],
+    refile: true,
+  },
+
+  // ── Must-Read Stories ──────────────────────────────────────────────────
+  {
+    id: "bk-nic-mrs-01-founders",
+    title: "The Founders",
+    author: "Jimmy Soni",
+    category: NIC.mustRead,
+    notes: "Nic Muñoz Top 50 · Must-Read Stories #1",
+    alsoMatch: ["the founders jimmy soni", "the founders jimmy sonni"],
+    refile: true,
+  },
+  {
+    id: "bk-nic-mrs-02-endurance",
+    title: "Endurance",
+    author: "Alfred Lansing",
+    category: NIC.mustRead,
+    notes: "Nic Muñoz Top 50 · Must-Read Stories #2",
+    alsoMatch: ["endurance shackleton", "endurance alfred lansing"],
+    refile: true,
+  },
+  {
+    id: "bk-nic-mrs-03-liftoff",
+    title: "Liftoff",
+    author: "Eric Berger",
+    category: NIC.mustRead,
+    notes: "Nic Muñoz Top 50 · Must-Read Stories #3",
+    alsoMatch: ["lift off", "liftoff eric berger"],
+    refile: true,
+  },
+  {
+    id: "bk-nic-mrs-04-alone-wall",
+    title: "Alone on the Wall",
+    author: "Alex Honnold",
+    category: NIC.mustRead,
+    notes: "Nic Muñoz Top 50 · Must-Read Stories #4",
+    refile: true,
+  },
+  {
+    id: "bk-nic-mrs-05-ogilvy",
+    title: "Confessions of an Advertising Man",
+    author: "David Ogilvy",
+    category: NIC.mustRead,
+    notes: "Nic Muñoz Top 50 · Must-Read Stories #5",
+    refile: true,
+  },
+  {
+    id: "bk-nic-mrs-06-instant-polaroid",
+    title: "Instant: The Story of Polaroid",
+    author: "Christopher Bonanos",
+    category: NIC.mustRead,
+    notes: "Nic Muñoz Top 50 · Must-Read Stories #6",
+    refile: true,
+  },
+  {
+    id: "bk-nic-mrs-07-bushido",
+    title: "Bushido: The Code of the Samurai",
+    author: "Inazo Nitobe",
+    category: NIC.mustRead,
+    notes: "Nic Muñoz Top 50 · Must-Read Stories #7",
+    alsoMatch: ["bushido code of the samurai", "bushido the soul of japan"],
+    refile: true,
+  },
+  {
+    id: "bk-nic-mrs-08-reentry",
+    title: "Reentry",
+    author: "Eric Berger",
+    category: NIC.mustRead,
+    notes: "Nic Muñoz Top 50 · Must-Read Stories #8",
+    refile: true,
+  },
+  {
+    id: "bk-nic-mrs-09-glock",
+    title: "Glock",
+    author: "Paul M. Barrett",
+    category: NIC.mustRead,
+    notes: "Nic Muñoz Top 50 · Must-Read Stories #9",
+    refile: true,
+  },
+  {
+    id: "bk-nic-mrs-10-talk-strangers",
+    title: "Talk to Strangers",
+    author: "Matt Dahila",
+    category: NIC.mustRead,
+    notes: "Nic Muñoz Top 50 · Must-Read Stories #10 (as listed by Nic Muñoz)",
+    refile: true,
+  },
+
+  // ── Historical Narratives ──────────────────────────────────────────────
+  {
+    id: "bk-nic-hn-01-lessons-history",
+    title: "The Lessons of History",
+    author: "Will and Ariel Durant",
+    category: NIC.historical,
+    notes: "Nic Muñoz Top 50 · Historical Narratives #1",
+    refile: true,
+  },
+  {
+    id: "bk-nic-hn-02-changing-world-order",
+    title: "The Changing World Order",
+    author: "Ray Dalio",
+    category: NIC.historical,
+    notes: "Nic Muñoz Top 50 · Historical Narratives #2",
+    alsoMatch: [
+      "principles for dealing with the changing world order",
+      "changing world order",
+    ],
+    refile: true,
+  },
+  {
+    id: "bk-nic-hn-03-zero-to-one",
+    title: "Zero to One",
+    author: "Peter Thiel",
+    category: NIC.historical,
+    notes: "Nic Muñoz Top 50 · Historical Narratives #3",
+    refile: true,
+  },
+  {
+    id: "bk-nic-hn-04-33-strategies",
+    title: "The 33 Strategies of War",
+    author: "Robert Greene",
+    category: NIC.historical,
+    notes: "Nic Muñoz Top 50 · Historical Narratives #4",
+    refile: true,
+  },
+  {
+    id: "bk-nic-hn-05-art-of-seduction",
+    title: "The Art of Seduction",
+    author: "Robert Greene",
+    category: NIC.historical,
+    notes: "Nic Muñoz Top 50 · Historical Narratives #5",
+    refile: true,
+  },
+  {
+    id: "bk-nic-hn-06-mastery",
+    title: "Mastery",
+    author: "Robert Greene",
+    category: NIC.historical,
+    notes: "Nic Muñoz Top 50 · Historical Narratives #6",
+    refile: true,
+  },
+  {
+    id: "bk-nic-hn-07-guns-germs-steel",
+    title: "Guns, Germs, and Steel",
+    author: "Jared Diamond",
+    category: NIC.historical,
+    notes: "Nic Muñoz Top 50 · Historical Narratives #7",
+    refile: true,
+  },
+  {
+    id: "bk-nic-hn-08-principles",
+    title: "Principles",
+    author: "Ray Dalio",
+    category: NIC.historical,
+    notes: "Nic Muñoz Top 50 · Historical Narratives #8",
+    alsoMatch: ["principles life and work", "principles ray dalio"],
+    refile: true,
+  },
+  {
+    id: "bk-nic-hn-09-12-rules",
+    title: "12 Rules for Life",
+    author: "Jordan B. Peterson",
+    category: NIC.historical,
+    notes: "Nic Muñoz Top 50 · Historical Narratives #9",
+    refile: true,
+  },
+  {
+    id: "bk-nic-hn-10-beyond-order",
+    title: "Beyond Order",
+    author: "Jordan B. Peterson",
+    category: NIC.historical,
+    notes: "Nic Muñoz Top 50 · Historical Narratives #10",
+    alsoMatch: ["beyond order 12 more rules for life"],
+    refile: true,
+  },
+];
+
+function bookTitleKey(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/** Merge explicit Want picks into the shelf without duplicating title or stable id. */
+function ensureWantBooks(books: Book[]): Book[] {
+  let next = books;
+  let changed = false;
+  const now = Date.now();
+  for (const want of ENSURE_WANT_BOOKS) {
+    const keys = new Set([
+      bookTitleKey(want.title),
+      ...(want.alsoMatch || []).map(bookTitleKey),
+    ]);
+    const matchIndex = next.findIndex(
+      (b) => b.id === want.id || keys.has(bookTitleKey(b.title))
+    );
+    if (matchIndex >= 0) {
+      // Already on shelf — optionally refile into Nic’s exact section folder
+      if (want.refile && next[matchIndex].category !== want.category) {
+        const copy = [...next];
+        copy[matchIndex] = {
+          ...copy[matchIndex],
+          category: want.category,
+          categoryOverride: true,
+          updatedAt: now,
+          notes:
+            copy[matchIndex].notes?.includes("Nic Muñoz")
+              ? copy[matchIndex].notes
+              : want.notes,
+        };
+        next = copy;
+        changed = true;
+      }
+      continue;
+    }
+    const book = newBook({
+      id: want.id,
+      title: want.title,
+      author: want.author,
+      status: "want",
+      statusOverride: true,
+      category: want.category,
+      categoryOverride: true,
+      notes: want.notes,
+      description: want.description,
+      externalUrl: want.externalUrl,
+      source: "manual",
+      format: "manual",
+      createdAt: now,
+      updatedAt: now,
+    });
+    next = [book, ...next];
+    changed = true;
+  }
+  if (changed) saveBooks(next);
+  return next;
+}
+
 export function loadBooks(): Book[] {
+  let books: Book[] = [];
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const arr = JSON.parse(raw) as Partial<Book>[];
       if (Array.isArray(arr)) {
-        return arr
+        books = arr
           .map(normalizeStoredBook)
           .filter(keepBook)
           // Drop the old baked "starter shelf" seed so only your real books show
@@ -415,10 +974,10 @@ export function loadBooks(): Book[] {
       }
     }
   } catch {
-    /* fall through to an empty shelf */
+    /* fall through to empty + ensure-want */
   }
-  // Never seed placeholder books — your shelf is only your synced/imported library
-  return [];
+  // Real library + Suicidal Empathy + full Nic Muñoz Top 50 (his section folders)
+  return ensureWantBooks(books);
 }
 
 export function keepBook(book: Pick<Book, "title" | "category">): boolean {

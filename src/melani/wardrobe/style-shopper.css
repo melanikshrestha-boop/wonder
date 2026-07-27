@@ -1,0 +1,384 @@
+/* Style Shopper — cream desk, same house as wardrobe gallery */
+.ss-root {
+  padding: 8px 52px 64px;
+  color: #191919;
+  max-width: 1100px;
+}
+
+.ss-hero {
+  margin: 0 0 28px;
+  padding: 0 0 22px;
+  border-bottom: 1px solid rgba(25, 22, 18, 0.12);
+}
+
+.ss-eyebrow {
+  margin: 0 0 8px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8d877e;
+}
+
+.ss-hero h2 {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: #141210;
+}
+
+.ss-hero p {
+  margin: 0;
+  max-width: 36rem;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #5c574f;
+}
+
+.ss-dna {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ss-dna li {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(25, 22, 18, 0.06);
+  color: #3f3c38;
+}
+
+.ss-philosophy {
+  margin: 12px 0 0 !important;
+  max-width: 40rem;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: #6a645c !important;
+}
+
+.ss-cotton-btn {
+  border: 1px solid rgba(25, 22, 18, 0.18);
+  border-radius: 999px;
+  background: #191612;
+  color: #f4f0e8;
+  padding: 0 16px;
+  min-height: 44px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ss-cotton-btn:hover {
+  background: #2c2824;
+}
+
+.ss-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.ss-badge {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(25, 22, 18, 0.07);
+  color: #4a4640;
+}
+
+.ss-badge-cotton {
+  background: rgba(46, 90, 58, 0.12);
+  color: #2a5a36;
+}
+
+.ss-badge-live {
+  background: rgba(40, 80, 140, 0.12);
+  color: #244a7a;
+}
+
+.ss-ask {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+  align-items: stretch;
+}
+
+.ss-ask input {
+  flex: 1 1 16rem;
+  min-height: 44px;
+  border: 0;
+  border-bottom: 1px solid rgba(25, 22, 18, 0.2);
+  border-radius: 0;
+  background: transparent;
+  padding: 8px 0;
+  font: inherit;
+  font-size: 15px;
+  color: #141210;
+  outline: none;
+}
+
+.ss-ask input::placeholder {
+  color: #9a948c;
+}
+
+.ss-ask button {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: #191919;
+  color: #f4f0e8;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0 18px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.ss-ask button:hover {
+  background: #2c2a27;
+}
+
+.ss-lanes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 4px;
+  margin: 0 0 22px;
+}
+
+.ss-lanes button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 520;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8d877e;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.ss-lanes button.active {
+  color: #f4f0e8;
+  background: #191919;
+}
+
+.ss-lanes button:hover:not(.active) {
+  color: #171512;
+  background: rgba(25, 25, 25, 0.06);
+}
+
+.ss-reply {
+  margin: 0 0 28px;
+  padding: 16px 0;
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #3f3c38;
+  border-top: 1px solid rgba(25, 22, 18, 0.08);
+  border-bottom: 1px solid rgba(25, 22, 18, 0.08);
+}
+
+.ss-section-title {
+  margin: 0 0 14px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8d877e;
+}
+
+.ss-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px 18px;
+  margin: 0 0 36px;
+}
+
+.ss-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 16px 14px;
+  border: 1px solid rgba(25, 22, 18, 0.1);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.35);
+  min-height: 100%;
+}
+
+.ss-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.ss-brand {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8d877e;
+}
+
+.ss-score {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #6e302e;
+}
+
+.ss-card h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 550;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: #141210;
+}
+
+.ss-price {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #141210;
+  font-variant-numeric: tabular-nums;
+}
+
+.ss-why {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ss-why li {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #5c574f;
+}
+
+.ss-meta {
+  margin: 0;
+  font-size: 11px;
+  color: #8d877e;
+}
+
+.ss-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.ss-actions a,
+.ss-actions button {
+  appearance: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border: 1px solid rgba(25, 22, 18, 0.18);
+  background: transparent;
+  color: #141210;
+}
+
+.ss-actions a.primary,
+.ss-actions button.primary {
+  background: #191919;
+  color: #f4f0e8;
+  border-color: #191919;
+}
+
+.ss-actions a:hover,
+.ss-actions button:hover {
+  border-color: #191919;
+}
+
+.ss-gaps {
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ss-gaps li {
+  font-size: 13px;
+  color: #3f3c38;
+  padding-left: 0;
+}
+
+.ss-gaps li::before {
+  content: "→ ";
+  color: #8d877e;
+}
+
+.ss-brands {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.ss-brand-card {
+  padding: 12px 14px;
+  border-top: 1px solid rgba(25, 22, 18, 0.12);
+}
+
+.ss-brand-card strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  margin-bottom: 4px;
+  color: #141210;
+}
+
+.ss-brand-card span {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #5c574f;
+}
+
+.ss-brand-card a {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #141210;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+  .ss-root {
+    padding: 8px 20px 48px;
+  }
+}

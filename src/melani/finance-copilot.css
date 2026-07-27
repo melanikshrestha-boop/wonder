@@ -1,363 +1,421 @@
-/* Finance Copilot — Cursor-style docked chat panel. */
-.fc {
-  --fc-bg: #16181d;
-  --fc-panel: #1c1f26;
-  --fc-line: rgba(255, 255, 255, 0.08);
-  --fc-text: #e8e9ec;
-  --fc-sub: rgba(232, 233, 236, 0.5);
-  --fc-accent: #6ea8fe;
+/**
+ * Quant desk — extremely good, borderless.
+ *
+ * Rules:
+ *  - No boxes, no hairlines, no shadows on chrome
+ *  - Content stacks from the top (no dead middle void)
+ *  - Single vertical rhythm: 4 / 8 / 12 / 16 / 24
+ *  - Same paper as Finances (#f7f7fa)
+ */
+
+.fc-backdrop {
   position: fixed;
-  top: 0;
+  inset: 0;
+  z-index: 70;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(26, 28, 34, 0.08);
+  cursor: default;
+}
+
+.fc {
+  --ink: #1a1c22;
+  --soft: rgba(26, 28, 34, 0.55);
+  --faint: rgba(26, 28, 34, 0.36);
+  --green: #0f766e;
+  --paper: #f7f7fa;
+  --font: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif;
+  --pad: 22px;
+
+  position: fixed;
+  top: 48px;
   right: 0;
   bottom: 0;
-  width: 380px;
-  max-width: 92vw;
-  background: var(--fc-bg);
-  border-left: 1px solid var(--fc-line);
+  width: min(392px, 100vw);
+  z-index: 75;
   display: flex;
   flex-direction: column;
-  z-index: 60;
-  box-shadow: -18px 0 48px rgba(0, 0, 0, 0.4);
-  color: var(--fc-text);
-  animation: fc-slide 0.22s ease;
-}
-@keyframes fc-slide {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .fc { animation: none; }
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  border: 0;
+  box-shadow: none;
 }
 
-/* Header */
-.fc-head {
+html body .fc,
+html body .fc * {
+  font-family: var(--font) !important;
+  box-sizing: border-box;
+}
+
+/* nuke residual chrome */
+.fc,
+.fc *,
+.fc button,
+.fc textarea {
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* ═══ TOP ═══ */
+.fc-top {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--fc-line);
+  gap: 16px;
+  padding: 18px var(--pad) 0;
+  flex-shrink: 0;
 }
+
 .fc-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.fc-spark {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #6ea8fe, #a78bfa);
-  color: #0b0d12;
-  font-size: 15px;
-}
-.fc-title h2 {
+  margin: 0;
   font-size: 15px;
   font-weight: 600;
-  margin: 0;
-  line-height: 1.1;
-}
-.fc-title p {
-  font-size: 11px;
-  color: var(--fc-sub);
-  margin: 2px 0 0;
-}
-.fc-x {
-  background: none;
-  border: 0;
-  color: var(--fc-sub);
-  font-size: 22px;
+  letter-spacing: -0.02em;
   line-height: 1;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-.fc-x:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--fc-text);
+  color: var(--ink);
 }
 
-/* Context strip */
-.fc-context {
+.fc-top-right {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--fc-line);
-  background: var(--fc-panel);
+  align-items: baseline;
+  gap: 12px;
+  flex-shrink: 0;
 }
-.fc-context-label {
+
+.fc-engine {
   font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--fc-sub);
-  margin-right: 2px;
+  color: var(--faint);
+  line-height: 1;
 }
-.fc-context-chip {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: rgba(110, 168, 254, 0.12);
-  color: #a9c8ff;
-  border: 1px solid rgba(110, 168, 254, 0.2);
+
+.fc-engine.is-on {
+  color: var(--green);
+}
+
+.fc-textbtn {
+  background: transparent;
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.fc-textbtn:hover {
+  color: var(--ink);
+}
+
+/* Facts — one breath under title */
+.fc-facts {
+  margin: 6px 0 0;
+  padding: 0 var(--pad);
+  font-size: 12px;
+  line-height: 1;
+  color: var(--soft);
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Modes */
+.fc-modes {
+  display: flex;
+  gap: 16px;
+  padding: 14px var(--pad) 0;
+  flex-shrink: 0;
+}
+
+.fc-mode {
+  background: transparent;
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.fc-mode:hover {
+  color: var(--soft);
+}
+
+.fc-mode.is-on {
+  color: var(--ink);
+}
+
+/* ═══ SCROLL — content from top ═══ */
+.fc-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px var(--pad) 8px;
+}
+
+/* Empty scroll area — minimal, no marketing copy */
+.fc-empty-block {
+  min-height: 0;
+}
+
+.fc-eyebrow {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--green);
+  line-height: 1;
+}
+
+/* Prompts glued to the type bar (above composer), single-spaced */
+.fc-prompts {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0 var(--pad) 8px;
+  background: var(--paper);
+}
+
+.fc-prompt {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--soft);
+  font-size: 13.5px;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.fc-prompt + .fc-prompt {
+  margin-top: 0.15em;
+}
+
+.fc-prompt:hover {
+  color: var(--ink);
 }
 
 /* Thread */
 .fc-thread {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
-.fc-welcome {
-  margin: auto 0;
-  text-align: center;
-  padding: 20px 8px;
-}
-.fc-welcome-h {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0 0 6px;
-}
-.fc-welcome-p {
-  font-size: 13px;
-  color: var(--fc-sub);
-  margin: 0;
-  line-height: 1.5;
-}
+
 .fc-msg {
   display: flex;
-  gap: 8px;
-  align-items: flex-start;
-}
-.fc-msg-user {
-  justify-content: flex-end;
-}
-.fc-avatar {
-  width: 22px;
-  height: 22px;
-  flex: 0 0 auto;
-  border-radius: 6px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #6ea8fe, #a78bfa);
-  color: #0b0d12;
-  font-size: 11px;
-  margin-top: 2px;
-}
-.fc-bubble {
-  max-width: 84%;
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-size: 13.5px;
-  line-height: 1.5;
-}
-.fc-msg-assistant .fc-bubble {
-  background: var(--fc-panel);
-  border: 1px solid var(--fc-line);
-  border-top-left-radius: 4px;
-}
-.fc-msg-user .fc-bubble {
-  background: linear-gradient(135deg, #3b5bdb, #4c6ef5);
-  color: #fff;
-  border-top-right-radius: 4px;
-}
-.fc-text {
-  margin: 0;
-  white-space: pre-wrap;
-}
-/* Typeset formula block. MathML is rendered natively by the browser, so the
-   only job here is to give it room and a slightly larger size than body text. */
-.fc-formula {
-  margin: 10px 0 4px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  overflow-x: auto;
-}
-.fc-formula-math {
-  font-size: 1.18em;
-  line-height: 1.5;
-  /* Fallback for any engine that ignores MathML: the source stays legible. */
-  text-align: center;
-}
-.fc-formula-math math {
-  font-size: inherit;
-}
-.fc-formula-note {
-  margin-top: 9px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.55);
-  text-align: left;
+  flex-direction: column;
+  gap: 3px;
 }
 
+.fc-msg-user {
+  align-items: flex-end;
+}
+
+.fc-msg-who {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  line-height: 1;
+}
+
+.fc-msg-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--ink);
+}
+
+.fc-msg-user .fc-msg-text {
+  text-align: right;
+  font-weight: 500;
+  max-width: 96%;
+}
+
+.fc-working {
+  margin: 0;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--soft);
+}
+
+.fc-formula,
 .fc-chart {
-  margin-top: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
-  padding: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  background: transparent;
 }
-.fc-chart svg {
+
+.fc-formula-math {
+  overflow-x: auto;
+  font-size: 14px;
+}
+
+.fc-formula-note {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--faint);
+}
+
+.fc-table {
   width: 100%;
-  height: auto;
-}
-.fc-chart .wd-pie-wrap {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-.fc-data {
-  width: 100%;
-  margin-top: 8px;
   border-collapse: collapse;
   font-size: 12.5px;
+  margin-top: 4px;
 }
-.fc-data td {
-  padding: 4px 0;
-  border-top: 1px solid var(--fc-line);
-  color: var(--fc-text);
+
+.fc-table td {
+  padding: 2px 0;
+  color: var(--soft);
+  line-height: 1;
+  vertical-align: baseline;
 }
-.fc-data tr:first-child td {
-  border-top: 0;
+
+.fc-table td:first-child {
+  color: var(--faint);
+  padding-right: 14px;
 }
-.fc-data-val {
+
+.fc-table td.num {
   text-align: right;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--fc-accent);
-  white-space: nowrap;
-  padding-left: 12px;
+  color: var(--ink);
 }
-.fc-sources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 9px;
+
+/* Week */
+.fc-week {
+  max-width: 24rem;
 }
-.fc-source {
-  font-size: 10px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--fc-sub);
-  border: 1px solid var(--fc-line);
-}
-.fc-reading {
+
+.fc-week-body {
   margin: 0;
-  color: var(--fc-sub);
+  padding: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12.5px;
+  line-height: 1;
+  color: var(--ink);
+  background: transparent;
+  font-family: var(--font) !important;
+}
+
+.fc-priority {
+  margin: 16px 0 0;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.fc-priority .fc-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.fc-inline-action {
+  display: inline-block;
+  margin-top: 14px;
+  background: transparent;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0;
+  cursor: pointer;
+}
+
+.fc-inline-action:hover {
+  color: var(--ink);
+}
+
+.fc-muted {
+  color: var(--faint);
   font-size: 13px;
 }
-.fc-dots i {
-  animation: fc-blink 1.2s infinite;
-  font-style: normal;
-}
-.fc-dots i:nth-child(2) { animation-delay: 0.2s; }
-.fc-dots i:nth-child(3) { animation-delay: 0.4s; }
-@keyframes fc-blink {
-  0%, 100% { opacity: 0.2; }
-  50% { opacity: 1; }
+
+/* ═══ COMPOSER ═══ */
+.fc-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px var(--pad) 18px;
+  flex-shrink: 0;
+  background: var(--paper);
 }
 
-/* Suggestions */
-.fc-suggest {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0 16px 10px;
-}
-.fc-suggest-btn {
-  text-align: left;
-  background: var(--fc-panel);
-  border: 1px solid var(--fc-line);
-  color: var(--fc-text);
-  border-radius: 8px;
-  padding: 8px 11px;
-  font-size: 12.5px;
-  cursor: pointer;
-}
-.fc-suggest-btn:hover {
-  border-color: var(--fc-accent);
-  background: rgba(110, 168, 254, 0.08);
-}
-
-/* Input */
-.fc-input {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  padding: 12px 16px 16px;
-  border-top: 1px solid var(--fc-line);
-}
-.fc-input textarea {
+.fc-bar textarea {
   flex: 1;
+  min-height: 1.35em;
+  max-height: 5em;
   resize: none;
-  max-height: 120px;
-  background: var(--fc-panel);
-  border: 1px solid var(--fc-line);
-  border-radius: 10px;
-  padding: 10px 12px;
-  color: var(--fc-text);
-  font-size: 13.5px;
-  font-family: inherit;
-  line-height: 1.4;
+  background: transparent !important;
+  color: var(--ink);
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  color-scheme: light;
 }
-.fc-input textarea:focus {
-  outline: none;
-  border-color: var(--fc-accent);
+
+.fc-bar textarea::placeholder {
+  color: var(--faint);
 }
-.fc-send {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
-  border-radius: 9px;
-  border: 0;
-  background: var(--fc-accent);
-  color: #0b0d12;
-  font-size: 16px;
-  font-weight: 700;
+
+.fc-go {
+  flex-shrink: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0;
   cursor: pointer;
 }
-.fc-send:disabled {
-  opacity: 0.4;
+
+.fc-go:hover:not(:disabled) {
+  color: var(--green);
+}
+
+.fc-go:disabled {
+  opacity: 0.28;
   cursor: default;
 }
 
-/* The launcher button that opens the copilot */
-.wd-copilot-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: linear-gradient(135deg, #3b5bdb, #7048e8);
-  border: 0;
-  color: #fff;
-  border-radius: 999px;
-  padding: 7px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
+/* scrollbars */
+.fc-scroll::-webkit-scrollbar {
+  width: 3px;
 }
-.wd-copilot-btn:hover {
-  filter: brightness(1.08);
+.fc-scroll::-webkit-scrollbar-thumb {
+  background: rgba(26, 28, 34, 0.12);
+  border-radius: 99px;
 }
 
-/* Light theme */
-@media (prefers-color-scheme: light) {
+@media (max-width: 560px) {
   .fc {
-    --fc-bg: #ffffff;
-    --fc-panel: #f5f6f8;
-    --fc-line: rgba(0, 0, 0, 0.1);
-    --fc-text: #1a1c20;
-    --fc-sub: rgba(26, 28, 32, 0.55);
+    width: 100vw;
   }
-  .fc-msg-assistant .fc-bubble {
-    background: #f5f6f8;
+  .fc-backdrop {
+    display: none;
+  }
+  .fc-headline {
+    font-size: 22px;
   }
 }

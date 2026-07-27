@@ -107,6 +107,7 @@ npm run build
 | `scripts/wardrobe/import-job-api.mjs` | Local SegFormer import path, visual fingerprints, dedupe, optional legacy provider path, and library assets |
 | `scripts/wardrobe/local-fashion-segmentation.mjs` | On-device clothes/subject masks, cutouts, category, palette, and color extraction |
 | `scripts/wardrobe/wardrobe-intelligence.mjs` | Deterministic outfit, packing, rotation, graph, laundry, resale, and purchase reasoning |
+| `scripts/wardrobe/wardrobe-quality.mjs` | Quality capsule: fabric parse/score, poly-by-category, baggy fit, Uniqlo hero discipline, capsule gaps, tailor brief |
 | `scripts/wardrobe/wardrobe-store.mjs` | Atomic state snapshot, sequenced write-ahead events with crash replay, idempotency, grouped outfit actions, feedback, and undo |
 | `scripts/wardrobe/wardrobe-intelligence-api.mjs` | Local operational and decision API under `/api/wardrobe` |
 | `scripts/wardrobe/responsive-image-api.mjs` | Original IPX responsive-image middleware |
@@ -167,6 +168,12 @@ wear outfit 1
 I liked outfit 1
 plan my outfits for 7 days
 should I buy an olive dress for $120
+what should I buy next
+fabric audit
+should I buy polyester blend jeans
+should I buy another gray Uniqlo sweatpant
+tailor brief for black jeans
+baggy only
 create a page called Neurotech Ideas under Planning
 rename this page to Research
 add prototype notes to this page

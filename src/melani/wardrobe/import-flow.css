@@ -238,7 +238,7 @@
 .import-editor { display: grid; grid-template-columns: minmax(140px, 0.8fr) minmax(0, 1.2fr); gap: 20px; }
 .import-editor__preview { width: 100%; max-height: 360px; object-fit: contain; background: var(--import-ivory); border-radius: 16px; }
 .import-cleanup-editor { display: grid; gap: 14px; }
-.import-cleanup-editor > .import-card__detail { max-width: 680px; line-height: 1.45; }
+.import-cleanup-editor > .import-card__detail { max-width: 680px; line-height: 1; }
 .import-cleanup-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .import-cleanup-comparison figure { margin: 0; overflow: hidden; border: 1px solid var(--import-line); border-radius: 14px; background-color: var(--import-ivory); background-image: linear-gradient(45deg, rgba(36, 35, 31, .045) 25%, transparent 25%), linear-gradient(-45deg, rgba(36, 35, 31, .045) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(36, 35, 31, .045) 75%), linear-gradient(-45deg, transparent 75%, rgba(36, 35, 31, .045) 75%); background-position: 0 0, 0 7px, 7px -7px, -7px 0; background-size: 14px 14px; }
 .import-cleanup-comparison img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; }
@@ -258,7 +258,7 @@
 .import-field textarea:focus { outline: 1px solid var(--import-ink); outline-offset: 1px; }
 .import-color-row { display: grid; grid-template-columns: 52px 1fr; gap: 8px; }
 .import-color-row input[type="color"] { height: 44px; padding: 5px; cursor: pointer; }
-.import-field-error { color: #8a3f35; font-size: 10px; line-height: 1.35; }
+.import-field-error { color: #8a3f35; font-size: 10px; line-height: 1; }
 .import-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
 .import-button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 16px; border: 1px solid var(--import-line); border-radius: 999px; color: var(--import-ink); background: transparent; font: 500 12px/1 "Instrument Sans", sans-serif; cursor: pointer; }
 .import-button--primary { color: var(--import-paper); background: var(--import-ink); border-color: var(--import-ink); }

@@ -5,13 +5,9 @@
  */
 import { useMemo, useRef, useState } from "react";
 import { money, type FinanceTx } from "./financeStore";
+import { categoryColor, normalizeCategory } from "./financeCategorize";
 import { isTransferLike } from "./financeTransfers";
 import "./spend-3d.css";
-
-const COLORS = [
-  "#1f6f8b", "#e8743b", "#4b8f6b", "#b5651d", "#7d5ba6",
-  "#c94f7c", "#3a7d99", "#d1a13a", "#5c8d5c", "#a0522d",
-];
 
 export function Spend3D({ txs }: { txs: FinanceTx[] }) {
   const [rot, setRot] = useState({ x: 22, y: -28 });
@@ -21,7 +17,11 @@ export function Spend3D({ txs }: { txs: FinanceTx[] }) {
     const map = new Map<string, number>();
     for (const t of txs) {
       if (t.kind !== "expense" || isTransferLike(t)) continue;
-      map.set(t.category || "Other", (map.get(t.category || "Other") || 0) + t.amount);
+      const cat = normalizeCategory(
+        t.category,
+        `${t.merchant || ""} ${t.note || ""}`
+      );
+      map.set(cat, (map.get(cat) || 0) + t.amount);
     }
     return [...map.entries()]
       .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
@@ -69,7 +69,7 @@ export function Spend3D({ txs }: { txs: FinanceTx[] }) {
           {bars.map((b, i) => {
             const h = Math.max(6, (b.value / max) * MAX_H);
             const x = (i - (bars.length - 1) / 2) * 74;
-            const color = COLORS[i % COLORS.length];
+            const color = categoryColor(b.name);
             return (
               <div
                 key={b.name}

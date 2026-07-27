@@ -180,9 +180,10 @@ const ROWS: Row[] = [
   ["Peach", "peach|peaches", "fruit", 39, 0.9, 9.5, 0.3, 1.5, "medium:150"],
   ["Pear", "pear|pears", "fruit", 57, 0.4, 15.2, 0.1, 3.1, "medium:178"],
   ["Kiwi", "kiwi|kiwifruit", "fruit", 61, 1.1, 14.7, 0.5, 3, "medium:69"],
-  ["Cherries", "cherries|cherry", "fruit", 63, 1.1, 16, 0.2, 2.1, "cup:154"],
+  ["Cherries", "cherries|cherry", "fruit", 63, 1.1, 16, 0.2, 2.1, "cup:154|bowl:230|handful:50"],
   ["Dates", "dates|date|medjool", "fruit", 277, 1.8, 75, 0.2, 6.7, "date:24|cup:147"],
-  ["Pomegranate seeds", "pomegranate|pomegranate seeds", "fruit", 83, 1.7, 18.7, 1.2, 4, "cup:174"],
+  // whole ≈ arils from one medium fruit (~160 g edible)
+  ["Pomegranate seeds", "pomegranate|pomegranate seeds|whole pomegranate", "fruit", 83, 1.7, 18.7, 1.2, 4, "cup:174|whole:160|half:80"],
 
   // ── Vegetables ────────────────────────────────────────────────────────────
   ["Broccoli, cooked", "broccoli", "veg", 35, 2.4, 7.2, 0.4, 3.3, "cup:156|floret:11"],
@@ -232,6 +233,8 @@ const ROWS: Row[] = [
   ["Potato chips", "chips|crisps|potato chips", "snack", 536, 7, 53, 34, 4.4, "oz:28.35|bag:42|handful:20"],
   ["Dark chocolate, 70%", "dark chocolate|chocolate", "sweet", 598, 7.8, 45.9, 42.6, 10.9, "square:10|bar:100|oz:28.35"],
   ["Milk chocolate", "milk chocolate", "sweet", 535, 7.6, 59.4, 29.7, 3.4, "bar:44|square:8"],
+  // Glico-style chocolate Pocky — ~360 kcal / 70 g box (common US label)
+  ["Pocky, chocolate", "pocky|pockys|chocolate pocky|glico pocky", "sweet", 514, 5.7, 72.9, 22.9, 1.4, "pack:70|box:70|stick:5|sleeve:40"],
   ["Cookie, chocolate chip", "cookie|cookies", "sweet", 488, 5.1, 63.9, 24.3, 2.6, "cookie:16"],
   ["Brownie", "brownie|brownies", "sweet", 466, 6, 50, 28, 2.5, "brownie:56"],
   ["Donut, glazed", "donut|doughnut", "sweet", 452, 4.9, 51, 25, 1.5, "donut:60"],

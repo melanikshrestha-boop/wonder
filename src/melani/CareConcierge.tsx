@@ -459,10 +459,106 @@ function ProviderEditor({
   );
 }
 
+/** Parse clinic SMS / text like the Dr. Lili Invisalign confirmation. */
+function parseAppointmentSms(text: string): {
+  title: string;
+  providerName: string;
+  startsAt: string;
+  address: string;
+  notes: string;
+} | null {
+  const raw = text.trim();
+  if (!raw) return null;
+  // e.g. 8/17/26 at 9:00 AM
+  const when =
+    raw.match(
+      /(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+at\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i
+    ) ||
+    raw.match(
+      /(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i
+    );
+  if (!when) return null;
+  let year = Number(when[3]);
+  if (year < 100) year += 2000;
+  let hour = Number(when[4]);
+  const minute = Number(when[5]);
+  const ap = when[6].toUpperCase();
+  if (ap === "PM" && hour < 12) hour += 12;
+  if (ap === "AM" && hour === 12) hour = 0;
+  const month = Number(when[1]);
+  const day = Number(when[2]);
+  const starts = new Date(year, month - 1, day, hour, minute, 0);
+  if (Number.isNaN(starts.getTime())) return null;
+
+  const fromMatch = raw.match(/Msg from\s+([^:]+):/i);
+  const providerName = (fromMatch?.[1] || "").replace(/&/g, "and").trim() || "Office";
+  const addrMatch = raw.match(
+    /(\d{2,5}\s+[\w.\s]+(?:Blvd|St|Ave|Rd|Dr|Way|Lane|Pkwy)\.?[\s,]*[\w\s,]*\d{5})/i
+  );
+  const address = (addrMatch?.[1] || "").replace(/\s+/g, " ").trim();
+  const isInvisalign = /invisalign|console|consult/i.test(raw);
+  const title = isInvisalign
+    ? "Invisalign consult"
+    : /appointment/i.test(raw)
+      ? "Appointment"
+      : "Clinic visit";
+
+  return {
+    title,
+    providerName,
+    startsAt: starts.toISOString(),
+    address,
+    notes: raw.slice(0, 400),
+  };
+}
+
+const INVISALIGN_SEED_ID = "appt-invisalign-lili-2026-08-17";
+
+function ensureInvisalignFromSmsSeed() {
+  const state = loadCareState();
+  if (state.appointments.some((a) => a.id === INVISALIGN_SEED_ID)) return;
+  // Seed once from the confirmation Melani received (Aug 17 2026 9:00 AM LA)
+  saveCareAppointment({
+    id: INVISALIGN_SEED_ID,
+    title: "Invisalign consult",
+    providerName: "Dr. Lili and Associates",
+    service: "specialist",
+    startsAt: new Date(2026, 7, 17, 9, 0, 0).toISOString(), // month 7 = August
+    address: "2368 W. Pico Blvd., Los Angeles, CA 90006",
+    visitMode: "in-person",
+    status: "scheduled",
+    notes: "From clinic SMS confirmation",
+  });
+  // Office card
+  if (!state.providers.some((p) => /lili/i.test(p.name))) {
+    saveCareProvider({
+      name: "Dr. Lili and Associates",
+      specialty: "Invisalign / Orthodontics",
+      phone: "",
+      address: "2368 W. Pico Blvd., Los Angeles, CA 90006",
+      website: "",
+      preferred: true,
+    });
+  }
+}
+
+function isSameLocalDay(iso: string, vs = new Date()): boolean {
+  const d = new Date(iso);
+  return (
+    d.getFullYear() === vs.getFullYear() &&
+    d.getMonth() === vs.getMonth() &&
+    d.getDate() === vs.getDate()
+  );
+}
+
 export function CareConcierge() {
-  const [state, setState] = useState<CareState>(loadCareState);
+  const [state, setState] = useState<CareState>(() => {
+    ensureInvisalignFromSmsSeed();
+    return loadCareState();
+  });
   const [selectedId, setSelectedId] = useState<string | null>(() => activeCareRequests(loadCareState())[0]?.id || null);
   const [input, setInput] = useState("");
+  const [smsDraft, setSmsDraft] = useState("");
   const [interim, setInterim] = useState("");
   const [voiceState, setVoiceState] = useState<CareVoiceState>(canRecognizeSpeech() ? "idle" : "unsupported");
   const [notice, setNotice] = useState<{ text: string; tone: "normal" | "danger" } | null>(null);
@@ -482,6 +578,10 @@ export function CareConcierge() {
   const active = useMemo(() => activeCareRequests(state), [state]);
   const appointments = useMemo(() => upcomingCareAppointments(state), [state]);
   const selected = state.requests.find((request) => request.id === selectedId) || active[0] || null;
+  const todayAppts = useMemo(
+    () => appointments.filter((a) => isSameLocalDay(a.startsAt)),
+    [appointments]
+  );
 
   function sync() {
     const next = loadCareState();
@@ -492,11 +592,40 @@ export function CareConcierge() {
   }
 
   useEffect(() => {
+    ensureInvisalignFromSmsSeed();
+    sync();
     window.addEventListener(CARE_EVENT, sync);
     void loadCareCapabilities().then(setCapabilities);
     const refreshVoices = () => setVoices(installedCareVoices());
     refreshVoices();
     if (canSpeak()) window.speechSynthesis.addEventListener("voiceschanged", refreshVoices);
+
+    // Day-of browser notification (not SMS — no home-screen access; this is in-app + Notification API)
+    try {
+      const key = `care-day-notify-${new Date().toISOString().slice(0, 10)}`;
+      if (!sessionStorage.getItem(key)) {
+        const todays = upcomingCareAppointments().filter((a) => isSameLocalDay(a.startsAt));
+        if (todays.length && typeof Notification !== "undefined") {
+          const fire = () => {
+            for (const a of todays) {
+              new Notification("Care · today", {
+                body: `${a.title} with ${a.providerName || "your office"} · ${formatAppointment(a.startsAt)}`,
+              });
+            }
+            sessionStorage.setItem(key, "1");
+          };
+          if (Notification.permission === "granted") fire();
+          else if (Notification.permission !== "denied") {
+            void Notification.requestPermission().then((p) => {
+              if (p === "granted") fire();
+            });
+          }
+        }
+      }
+    } catch {
+      /* notifications optional */
+    }
+
     return () => {
       window.removeEventListener(CARE_EVENT, sync);
       if (canSpeak()) window.speechSynthesis.removeEventListener("voiceschanged", refreshVoices);
@@ -504,6 +633,41 @@ export function CareConcierge() {
       stopSpeaking.current?.();
     };
   }, []);
+
+  function importSms() {
+    const parsed = parseAppointmentSms(smsDraft);
+    if (!parsed) {
+      announce("Could not read a date/time in that text. Paste the full clinic SMS.", "danger");
+      return;
+    }
+    saveCareAppointment({
+      title: parsed.title,
+      providerName: parsed.providerName,
+      service: /invisalign/i.test(parsed.title) ? "specialist" : "other",
+      startsAt: parsed.startsAt,
+      address: parsed.address,
+      visitMode: "in-person",
+      status: "scheduled",
+      notes: parsed.notes,
+    });
+    if (parsed.providerName) {
+      const exists = loadCareState().providers.some((p) =>
+        p.name.toLowerCase().includes(parsed.providerName.toLowerCase().slice(0, 12))
+      );
+      if (!exists) {
+        saveCareProvider({
+          name: parsed.providerName,
+          specialty: /invisalign/i.test(parsed.title) ? "Invisalign / Orthodontics" : "",
+          address: parsed.address,
+          phone: "",
+          website: "",
+        });
+      }
+    }
+    setSmsDraft("");
+    sync();
+    announce(`Saved ${parsed.title} · ${formatAppointment(parsed.startsAt)}.`);
+  }
 
   function announce(text: string, tone: "normal" | "danger" = "normal") {
     setNotice({ text, tone });
@@ -578,12 +742,12 @@ export function CareConcierge() {
     <div className="care-concierge">
       <header className="care-page-head">
         <div>
-          <p>Care operations</p>
-          <h1>Care Concierge</h1>
+          <p>Appointments · offices · day-of nudges</p>
+          <h1>Care</h1>
         </div>
         <div className="care-head-actions">
-          <span className={`care-connection${capabilities.configured ? " is-connected" : ""}`}>
-            <span /> {capabilities.configured ? "Voice connected" : "Local mode"}
+          <span className={`care-connection${capabilities.configured ? " is-ready" : ""}`}>
+            <span /> {capabilities.configured ? "Voice connected" : "On this device"}
           </span>
           <button type="button" className="care-icon-button" title="Care profile" aria-label="Care profile" onClick={() => setProfileOpen((value) => !value)}>
             <User size={16} />
@@ -598,9 +762,66 @@ export function CareConcierge() {
         </div>
       </header>
 
-      {/* The agent half: what it found on its own, the vault it draws on,
-          and the standing authorisation that lets it send. */}
+      {/* Care agent: due list, profile vault, phone-first call prep */}
       <CareAgentPanel />
+
+      {todayAppts.length ? (
+        <div className="care-day-of" role="status">
+          <p>Today</p>
+          {todayAppts.map((a) => (
+            <div key={a.id}>
+              <h2>{a.title}</h2>
+              <p className="care-day-meta">
+                {formatAppointment(a.startsAt)}
+                {a.providerName ? ` · ${a.providerName}` : ""}
+                {a.address ? ` · ${a.address}` : ""}
+              </p>
+            </div>
+          ))}
+          <p className="care-day-meta" style={{ marginTop: 8 }}>
+            Browser can notify you the day of. SMS from Wonder needs your phone later — for now this banner + Notification is the nudge.
+          </p>
+        </div>
+      ) : null}
+
+      {appointments.length ? (
+        <section className="care-upcoming" aria-label="Upcoming appointments">
+          {appointments.map((a) => (
+            <article key={a.id} className="care-appt-card">
+              <h3>{a.title}</h3>
+              <p>{formatAppointment(a.startsAt)}</p>
+              {a.providerName ? <p>{a.providerName}</p> : null}
+              {a.address ? <p>{a.address}</p> : null}
+              <div className="care-appt-actions">
+                <button
+                  type="button"
+                  className="care-secondary"
+                  onClick={() => downloadAppointmentCalendar(a)}
+                >
+                  <CalendarBlank size={14} /> Calendar
+                </button>
+              </div>
+            </article>
+          ))}
+        </section>
+      ) : null}
+
+      <section className="care-sms-panel" aria-label="Paste clinic text">
+        <h2>Paste a clinic text</h2>
+        <p>
+          Drop the SMS here (like the Invisalign confirmation). Care extracts date, time, office, address — no retyping.
+        </p>
+        <textarea
+          value={smsDraft}
+          onChange={(e) => setSmsDraft(e.target.value)}
+          placeholder="Msg from Dr. Lili… appointment on 8/17/26 at 9:00 AM…"
+        />
+        <div className="care-sms-actions">
+          <button type="button" className="care-primary" disabled={!smsDraft.trim()} onClick={importSms}>
+            Save appointment
+          </button>
+        </div>
+      </section>
 
       {profileOpen ? (
         <section className="care-profile-panel">

@@ -83,12 +83,15 @@ export function buildAnnualBook(txs: FinanceTx[], year: number): AnnualBook {
       const label = (t.merchant || t.note || "Other income").trim() || "Other income";
       if (!incomeMap.has(label)) incomeMap.set(label, new Array(12).fill(0));
       incomeMap.get(label)![m] += t.amount;
-    } else if (t.kind === "expense" && t.category === "Transfers") {
-      const label = (t.merchant || t.note || "Transfer").trim() || "Transfer";
+    } else if (
+      t.kind === "expense" &&
+      (t.category === "Transfers" || t.category === "Zelle")
+    ) {
+      const label = (t.merchant || t.note || t.category).trim() || t.category;
       if (!savingsMap.has(label)) savingsMap.set(label, new Array(12).fill(0));
       savingsMap.get(label)![m] += t.amount;
     } else if (t.kind === "expense" && !isTransferLike(t)) {
-      const label = t.category || "Uncategorized";
+      const label = t.category || "Other";
       if (!expenseMap.has(label)) expenseMap.set(label, new Array(12).fill(0));
       expenseMap.get(label)![m] += t.amount;
     }

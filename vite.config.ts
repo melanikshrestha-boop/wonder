@@ -14,6 +14,7 @@ import { intelFeedsApi } from "./scripts/intel-feeds-api.mjs";
 import { careConciergeApi } from "./scripts/care-concierge-api.mjs";
 import { plaidFinanceApi } from "./scripts/plaid-finance-api.mjs";
 import { marketQuoteApi } from "./scripts/market-quote-api.mjs";
+import { screentimeApi } from "./scripts/screentime-api.mjs";
 
 // Wonder is one app on :5173. Gym/Fitness/etc. are native React (no iframe / no PIN).
 // Optional legacy proxy if an old health backend is still running locally.
@@ -46,6 +47,8 @@ export default defineConfig(({ mode }) => {
       marketQuoteApi(),
       // Bank connect for Finances (needs PLAID_CLIENT_ID + PLAID_SECRET)
       plaidFinanceApi({ env }),
+      // Mac knowledgeC screen time → Wonder desk
+      screentimeApi(),
     ],
     build: {
       rollupOptions: {

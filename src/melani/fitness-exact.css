@@ -5,16 +5,36 @@
 
 .fx-page {
   --fx-font: "Source Serif 4", Georgia, "Times New Roman", Times, ui-serif, serif;
+  /* Dark (default) — same structure as light; only tokens flip */
+  --fx-bg: #000000;
   --fx-text: rgba(255, 255, 255, 0.92);
   --fx-muted: rgba(255, 255, 255, 0.48);
   --fx-faint: rgba(255, 255, 255, 0.32);
   --fx-accent: #9ecbff;
+  --fx-strong: #ffffff;
+  --fx-line: rgba(255, 255, 255, 0.08);
+  --fx-yes: #ef4444;
+  --fx-no: #22c55e;
+  --fx-chart-grid: rgba(255, 255, 255, 0.08);
+  --fx-chart-label: rgba(255, 255, 255, 0.45);
+  --fx-chart-goal: rgba(34, 197, 94, 0.55);
+  --fx-chart-line: rgba(255, 255, 255, 0.92);
+  /* Meals rings / tracks (dark) */
+  --fx-ring-track: rgba(255, 255, 255, 0.08);
+  --fx-ring-cal: rgba(255, 255, 255, 0.28);
+  --fx-ring-hole: #000000;
+  --fx-dot-cal: rgba(255, 255, 255, 0.45);
+  --fx-water-track: rgba(255, 255, 255, 0.12);
+  --fx-supp-name: #fecdd3;
+  --fx-supp-when: #fdba74;
+  --fx-supp-num: #fb7185;
+  --fx-supp-done: rgba(255, 255, 255, 0.32);
 
-  background: #000;
+  background: var(--fx-bg);
   color: var(--fx-text);
   font-family: var(--fx-font);
   min-height: 100%;
-  padding: 0 0 72px;
+  padding: 0 0 28px; /* was 72 — less dead black under last content */
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -23,12 +43,38 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* Light mode: same UI, inverted tokens only — Meals must match dark readability */
+html.theme-light .fx-page {
+  --fx-bg: #f7f7fa;
+  --fx-text: #1a1c22;
+  --fx-muted: rgba(26, 28, 34, 0.58);
+  --fx-faint: rgba(26, 28, 34, 0.4);
+  --fx-accent: #2563eb;
+  --fx-strong: #1a1c22;
+  --fx-line: rgba(26, 28, 34, 0.1);
+  --fx-yes: #dc2626;
+  --fx-no: #16a34a;
+  --fx-chart-grid: rgba(26, 28, 34, 0.08);
+  --fx-chart-label: rgba(26, 28, 34, 0.45);
+  --fx-chart-goal: rgba(22, 163, 74, 0.55);
+  --fx-chart-line: rgba(26, 28, 34, 0.85);
+  --fx-ring-track: rgba(26, 28, 34, 0.1);
+  --fx-ring-cal: rgba(26, 28, 34, 0.28);
+  --fx-ring-hole: #f7f7fa;
+  --fx-dot-cal: rgba(26, 28, 34, 0.4);
+  --fx-water-track: rgba(26, 28, 34, 0.12);
+  --fx-supp-name: #be123c;
+  --fx-supp-when: #c2410c;
+  --fx-supp-num: #e11d48;
+  --fx-supp-done: rgba(26, 28, 34, 0.35);
+}
+
 .fx-inner {
-  /* Edge-to-edge of main column; comfortable page margins only */
+  /* Edge-to-edge of main column; tight single-spaced page */
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 10px clamp(18px, 3.2vw, 48px) 56px;
+  padding: 8px clamp(18px, 3.2vw, 48px) 16px;
   text-align: left;
   box-sizing: border-box;
   min-width: 0;
@@ -42,7 +88,7 @@
 
 /* Quote — plain editorial text, no bubble */
 .fx-quote {
-  margin: 0 0 18px;
+  margin: 0 0 10px;
   padding: 0;
   border: none;
   background: transparent;
@@ -50,44 +96,40 @@
 
 .fx-quote-text {
   margin: 0;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 400;
-  line-height: 1.45;
-  color: #fff;
+  line-height: 1;
+  color: var(--fx-strong);
   font-family: var(--fx-font);
   letter-spacing: -0.01em;
 }
 
 .fx-quote-author {
-  margin: 6px 0 0;
+  margin: 2px 0 0;
   font-size: 13px;
   color: var(--fx-accent);
   font-family: var(--fx-font);
   font-weight: 400;
+  line-height: 1;
 }
 
-/* Subnav: Sleep · Meals · Gym — text only, like page links */
+/* Subnav: Sleep Meals Gym — text only, no middle dots */
 .fx-subnav {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0;
-  margin: 0 0 28px;
-  padding: 0 0 14px;
+  gap: 0 1.1rem;
+  margin: 0 0 12px;
+  padding: 0 0 8px;
   font-size: 14px;
   font-family: var(--fx-font);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  line-height: 1;
+  border-bottom: none;
 }
 
 .fx-subnav-item {
   display: inline-flex;
   align-items: baseline;
-}
-
-.fx-dot {
-  margin: 0 10px;
-  color: var(--fx-faint);
-  user-select: none;
 }
 
 .fx-subnav-link {
@@ -105,17 +147,17 @@
 }
 
 .fx-subnav-link.is-active {
-  color: #fff;
+  color: var(--fx-strong);
   font-weight: 600;
 }
 
 .fx-subnav-link:hover {
-  color: #fff;
+  color: var(--fx-strong);
 }
 
-/* Sections — airy, no boxes */
+/* Sections — single-spaced stack, no airy gaps */
 .fx-section {
-  margin: 0 0 32px;
+  margin: 0 0 14px;
   padding: 0;
   border: none;
   background: transparent;
@@ -152,7 +194,7 @@
   margin: 0;
   color: var(--fx-muted);
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1;
 }
 
 .smart-meal-kicker {
@@ -211,7 +253,7 @@
 .smart-meal-sheet header button { border: 0; background: transparent; color: #aaa; cursor: pointer; }
 .smart-meal-sheet > img { width: 100%; max-height: 260px; object-fit: cover; border-radius: 6px; background: #111; }
 .smart-meal-thinking { display: flex; align-items: center; gap: 8px; margin: 18px 0 4px; color: #a7d2ff; }
-.smart-meal-error { color: #ffb4b4; font-size: 12px; line-height: 1.4; }
+.smart-meal-error { color: #ffb4b4; font-size: 12px; line-height: 1; }
 .smart-meal-title { display: grid; gap: 5px; margin: 14px 0; color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
 .smart-meal-title input { border: 0; border-bottom: 1px solid #282828; background: transparent; color: white; padding: 7px 0; font: inherit; font-size: 18px; text-transform: none; letter-spacing: 0; outline: none; }
 .smart-meal-items { border-top: 1px solid #202020; border-bottom: 1px solid #202020; padding: 5px 0; }
@@ -219,7 +261,7 @@
 .smart-meal-items span { color: #777; }
 .smart-meal-confidence { display: inline-block; margin: 12px 0 6px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
 .smart-meal-confidence.is-high { color: #42d58b; } .smart-meal-confidence.is-medium { color: #f3c85b; } .smart-meal-confidence.is-low { color: #ff8e8e; }
-.smart-meal-caveat { margin: 0 0 12px; color: #8a8a8a; font-size: 12px; line-height: 1.45; }
+.smart-meal-caveat { margin: 0 0 12px; color: #8a8a8a; font-size: 12px; line-height: 1; }
 .smart-meal-macros { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }
 .smart-meal-macros label { display: grid; gap: 4px; color: #777; font-size: 10px; text-transform: uppercase; }
 .smart-meal-macros input { width: 100%; box-sizing: border-box; border: 1px solid #242424; border-radius: 5px; background: #0c0c0c; color: #fff; padding: 8px 5px; font: inherit; font-size: 13px; }
@@ -241,35 +283,242 @@
 
 /* Section titles — quiet uppercase labels, not loud UI chrome */
 .fx-h2 {
-  margin: 0 0 12px;
+  margin: 0 0 4px;
   padding: 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--fx-muted);
   font-family: var(--fx-font);
+  line-height: 1;
 }
 
 /* Sleep time hint when bed/wake don't form a real night */
 .fx-sleep-hint {
-  margin-top: 6px;
+  margin: 0;
   font-size: 13px;
   color: rgba(251, 113, 133, 0.88);
-  line-height: 1.4;
+  line-height: 1;
   max-width: 36rem;
 }
 
-/* Data rows — read like a clean list */
+.fx-time-plain {
+  font-size: 13px;
+  color: var(--fx-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.fx-section-label {
+  margin: 14px 0 8px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fx-faint, rgba(255, 255, 255, 0.32));
+}
+
+/* Bottom of Sleep — single-spaced under last graph, lines tight to each other */
+.fx-nights-footer {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  padding: 0;
+  border-top: none;
+  max-width: 36rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  line-height: 1;
+}
+
+/* Quiet weekly CSV import — not a whole Whoop page */
+.fx-whoop-import {
+  margin-top: 0;
+  padding: 0;
+  line-height: 1;
+}
+
+.fx-whoop-import-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.34);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.fx-whoop-import-btn:hover:not(:disabled) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.fx-whoop-import-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+html.theme-light .fx-page .fx-whoop-import-btn {
+  color: rgba(26, 28, 34, 0.4);
+}
+
+html.theme-light .fx-page .fx-nights-footer {
+  border-top-color: rgba(26, 28, 34, 0.08);
+}
+
+.fx-nights-toggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: var(--fx-faint, rgba(255, 255, 255, 0.34));
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease;
+}
+
+.fx-nights-toggle:hover,
+.fx-nights-toggle.is-open {
+  color: var(--fx-muted, rgba(255, 255, 255, 0.5));
+}
+
+.fx-nights-count {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  opacity: 0.75;
+  letter-spacing: 0.02em;
+}
+
+.fx-nights-toggle.is-open .fx-nights-count {
+  opacity: 0.9;
+}
+
+.fx-sleep-nights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: min(42vh, 320px);
+  overflow: auto;
+  margin-top: 6px;
+  padding-right: 4px;
+  /* Soft fade at bottom of scroll */
+  mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
+}
+
+.fx-sleep-night {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: baseline;
+  width: 100%;
+  margin: 0;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.fx-sleep-night:hover,
+.fx-sleep-night.is-active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+html.theme-light .fx-page .fx-sleep-night:hover,
+html.theme-light .fx-page .fx-sleep-night.is-active {
+  background: rgba(26, 28, 34, 0.05);
+}
+
+.fx-sleep-night-day {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--fx-faint, rgba(255, 255, 255, 0.34));
+}
+
+.fx-sleep-night-span {
+  font-size: 13px;
+  color: var(--fx-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.fx-sleep-night.is-active .fx-sleep-night-span {
+  color: var(--fx-strong);
+}
+
+.fx-sleep-night-h {
+  font-size: 12px;
+  color: var(--fx-faint, rgba(255, 255, 255, 0.34));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Whoop sleep graphs embedded under Fitness → Sleep */
+.fx-sleep-whoop-graphs {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.fx-sleep-whoop-graphs .wx-on-sleep {
+  margin: 0;
+  padding: 0;
+}
+
+.fx-sleep-whoop-graphs .wx-panel-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.fx-sleep-whoop-graphs .wx-body-signals {
+  margin-top: 12px;
+}
+
+/* Last graph panel — no bottom padding before “every night logged” */
+.fx-sleep-whoop-graphs .wx-metric-section:last-child .wx-panel:last-child,
+.fx-sleep-whoop-graphs .wx-panel-stack .wx-panel:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+@media (min-width: 1100px) {
+  .fx-sleep-whoop-graphs .wx-panel-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Last graph row + footer: no extra section air after body signals */
+.fx-section.fx-sleep-whoop-graphs {
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+/* Data rows — single-spaced list */
 .fx-line {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px 10px;
-  margin: 0 0 8px;
+  gap: 4px 10px;
+  margin: 0;
   padding: 0;
   font-size: 15px;
-  line-height: 1.45;
+  line-height: 1;
   color: var(--fx-text);
   font-family: var(--fx-font);
 }
@@ -281,107 +530,691 @@
 }
 
 .fx-val {
-  color: #fff;
+  color: var(--fx-strong);
 }
 
+/* Same in light and dark: flat text field, no box chrome */
 .fx-input {
   display: inline-block;
   width: auto;
   min-width: 5.5em;
   margin: 0;
   padding: 0 2px;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  color: #fff;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--fx-strong) !important;
   font-family: var(--fx-font);
   font-size: 15px;
-  line-height: 1.45;
+  line-height: 1;
   -webkit-appearance: none;
   appearance: none;
+  box-shadow: none !important;
+  color-scheme: inherit;
 }
 
 .fx-input:focus {
   outline: none;
-  color: var(--fx-accent);
+  color: var(--fx-accent) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .fx-meta {
   margin: 0 0 8px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--fx-muted);
   font-family: var(--fx-font);
 }
 
 .fx-meta strong {
-  color: #fff;
+  color: var(--fx-strong);
   font-weight: 600;
 }
 
-/* Brain fog Yes / No — text only */
+/* Brain fog / Bowel Yes · No — plain text only. No pills, no boxes, no chrome. */
+.fx-bf-section {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
 .fx-bf-btns {
   display: flex;
-  gap: 16px;
-  margin: 2px 0 12px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 14px;
+  margin: 0 0 2px;
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
 }
 
 .fx-bf-tap {
-  border: none;
-  background: transparent;
-  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  min-height: 0;
+  min-width: 0;
+  padding: 2px 0;
+  margin: 0;
+  border-radius: 0;
   font-family: var(--fx-font);
   font-size: 15px;
+  font-weight: 400;
+  line-height: 1;
   color: var(--fx-muted);
   cursor: pointer;
   text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  user-select: none;
+  transition: color 0.1s ease, font-weight 0.1s ease;
 }
 
+.fx-bf-tap:hover {
+  color: var(--fx-strong);
+  background: transparent !important;
+  border: none !important;
+}
+
+.fx-bf-tap:active {
+  transform: none;
+  opacity: 0.85;
+}
+
+/* On = weight + color only. Zero fill, zero border. */
 .fx-bf-yes.is-on {
-  color: #ef4444;
+  color: var(--fx-yes) !important;
   font-weight: 600;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .fx-bf-no.is-on {
-  color: #22c55e;
+  color: var(--fx-no) !important;
   font-weight: 600;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
-/* Week letters — plain text row */
+.fx-bm-yes.is-on {
+  color: var(--fx-no) !important;
+  font-weight: 600;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.fx-bm-no.is-on {
+  color: var(--fx-muted) !important;
+  font-weight: 600;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.fx-bf-tap.is-locked,
+.fx-bf-tap:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+/* Quiet day clock: midnight → 11:59 PM lock. Hairline only — no box. */
+.fx-bf-clock {
+  margin: 4px 0 6px;
+  max-width: 16rem;
+}
+
+.fx-bf-clock-rail {
+  position: relative;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 0 0 4px;
+}
+
+.fx-bf-clock-fill {
+  display: block;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.38);
+  max-width: 100%;
+}
+
+.fx-bf-clock-now {
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+}
+
+.fx-bf-clock.is-locked .fx-bf-clock-now {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.fx-bf-clock-meta {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.34);
+  font-variant-numeric: tabular-nums;
+}
+
+html.theme-light .fx-page .fx-bf-clock-rail {
+  background: rgba(26, 28, 34, 0.12);
+}
+
+html.theme-light .fx-page .fx-bf-clock-fill {
+  background: rgba(26, 28, 34, 0.4);
+}
+
+html.theme-light .fx-page .fx-bf-clock-now {
+  background: rgba(26, 28, 34, 0.65);
+}
+
+html.theme-light .fx-page .fx-bf-clock-meta {
+  color: rgba(26, 28, 34, 0.38);
+}
+
+/* Lifetime pie toggle — small gray text, no chevron, no box */
+.fx-bf-life-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 4px 0 0;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.38);
+  text-decoration: none !important;
+  cursor: pointer;
+  text-align: left;
+}
+
+.fx-bf-life-toggle:hover {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.fx-bf-pie-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+  margin-top: 8px;
+}
+
+.fx-bf-pie {
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+}
+
+.fx-bf-pie-yes {
+  fill: #ef4444;
+}
+
+.fx-bf-pie-no {
+  fill: #22c55e;
+}
+
+.fx-bf-pie-hole {
+  fill: var(--fx-bg, #000);
+}
+
+.fx-bf-pie-n {
+  fill: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  font-family: var(--fx-font);
+}
+
+.fx-bf-pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--fx-muted);
+}
+
+.fx-bf-leg-yes {
+  color: #f87171;
+}
+
+.fx-bf-leg-no {
+  color: #4ade80;
+}
+
+.fx-bf-pie-empty {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.38);
+  line-height: 1;
+}
+
+/* Bristol 1–7 legend — color swatch + type count */
+.fx-bm-pie-legend {
+  gap: 5px;
+}
+
+.fx-bm-leg-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--fx-muted);
+}
+
+.fx-bm-leg-type i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+html.theme-light .fx-page .fx-bm-leg-type {
+  color: rgba(26, 28, 34, 0.58);
+}
+
+/* Bristol multi-line lifetime graph (replaces type pie) */
+.fx-bm-type-graph {
+  margin: 8px 0 4px;
+  max-width: 42rem;
+}
+.fx-bm-type-graph .wx-panel-v {
+  color: #22c55e;
+}
+html.theme-light .fx-page .fx-bm-type-graph .wx-panel-v {
+  color: #15803d;
+}
+.fx-bm-line-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.fx-bm-line-leg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.62);
+  cursor: pointer;
+  line-height: 1;
+}
+.fx-bm-line-leg i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.fx-bm-line-leg.is-hot,
+.fx-bm-line-leg:hover {
+  color: rgba(255, 255, 255, 0.92);
+}
+html.theme-light .fx-page .fx-bm-line-leg {
+  color: rgba(26, 28, 34, 0.58);
+}
+html.theme-light .fx-page .fx-bm-line-leg.is-hot,
+html.theme-light .fx-page .fx-bm-line-leg:hover {
+  color: #1a1c22;
+}
+.fx-bm-type-graph .wx-graph-wrap {
+  position: relative;
+}
+.fx-bm-graph-tip {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  padding: 6px 8px;
+  background: rgba(12, 12, 14, 0.88);
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.25;
+  color: #fff;
+  pointer-events: none;
+  z-index: 2;
+}
+.fx-bm-graph-tip strong {
+  display: block;
+  margin-bottom: 3px;
+  font-weight: 650;
+}
+.fx-bm-graph-tip ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fx-bm-graph-tip li {
+  font-variant-numeric: tabular-nums;
+}
+html.theme-light .fx-page .fx-bm-graph-tip {
+  background: rgba(255, 255, 255, 0.96);
+  color: #1a1c22;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Week letters still used by bowel history strip */
 .fx-bf-week {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 16px;
-  margin: 2px 0 8px;
+  gap: 2px 8px;
+  margin: 0 0 2px;
 }
 
 .fx-bf-day {
   border: none;
   background: transparent;
-  padding: 0;
+  min-height: 28px;
+  min-width: 28px;
+  padding: 2px 6px;
   margin: 0;
+  border-radius: 8px;
   font-family: var(--fx-font);
   font-size: 15px;
+  line-height: 1;
   color: var(--fx-muted);
   text-decoration: none;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fx-bf-day:hover {
+  color: var(--fx-strong);
 }
 
 .fx-bf-day.is-fog {
   color: #ef4444;
-  font-weight: 600;
+  font-weight: 650;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .fx-bf-summary {
-  margin: 6px 0 0;
-  font-size: 14px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1;
   color: var(--fx-muted);
   font-family: var(--fx-font);
 }
 
+html.theme-light .fx-page .fx-bf-life-toggle {
+  color: rgba(26, 28, 34, 0.4);
+}
+
+html.theme-light .fx-page .fx-bf-pie-n {
+  fill: rgba(26, 28, 34, 0.5);
+}
+
+html.theme-light .fx-page .fx-bf-pie-hole {
+  fill: var(--fx-bg, #f7f7fa);
+}
+
+/*
+  Bowel Yes = good (green). Bowel No = bad (red).
+  Tokens are inverted for fog (fog Yes = red via --fx-yes).
+*/
+.fx-bm-yes.is-on {
+  color: #22c55e !important;
+  font-weight: 650;
+  background: rgba(34, 197, 94, 0.14);
+}
+.fx-bm-no.is-on {
+  color: #ef4444 !important;
+  font-weight: 650;
+  background: rgba(239, 68, 68, 0.12);
+}
+.fx-bf-day.is-bm {
+  color: #22c55e !important;
+  font-weight: 650;
+  background: rgba(34, 197, 94, 0.12);
+}
+.fx-bf-day.is-bm-no {
+  color: #ef4444 !important;
+  font-weight: 650;
+  background: rgba(239, 68, 68, 0.1);
+}
+.fx-bf-day.is-bm-hard {
+  color: #d97706;
+}
+.fx-bf-day.is-bm-loose {
+  color: #0ea5e9;
+}
+.fx-bf-day.is-bm-flag {
+  color: #dc2626;
+}
+
+.fx-bowel {
+  overflow: visible;
+}
+.fx-bowel-meta {
+  margin: 0 0 2px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--fx-muted);
+  font-variant-numeric: tabular-nums;
+}
+.fx-bm-details {
+  margin-top: 6px;
+  overflow: visible;
+}
+.fx-bm-type-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fx-muted);
+  font-family: var(--fx-font);
+}
+html.theme-light .fx-page .fx-bm-type-hint {
+  color: rgba(26, 28, 34, 0.5);
+}
+
+/* Closed log row: summary + Done / Change type (no drawings) */
+.fx-bm-closed-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0 0 4px;
+}
+.fx-bm-toggle {
+  border: none;
+  background: transparent;
+  padding: 6px 0;
+  margin: 0;
+  font-family: var(--fx-font);
+  font-size: 13px;
+  color: var(--fx-accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fx-bm-toggle:hover {
+  color: var(--fx-strong);
+}
+html.theme-light .fx-page .fx-bm-toggle {
+  color: #2563eb;
+}
+
+/* Week strip = history display only (not buttons) */
+.fx-bm-week-ro .fx-bm-day-ro {
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+}
+.fx-bm-week-ro .fx-bm-day-ro.is-today {
+  /* Today still not clickable — edit via Yes/No only */
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 255, 255, 0.2);
+}
+html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
+  text-decoration-color: rgba(26, 28, 34, 0.2);
+}
+.fx-bm-week-ro .fx-bm-day-ro.is-future {
+  opacity: 0.35;
+}
+.fx-bm-week-type {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.8;
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Type chips — must read as tappable + selected (was invisible = felt broken) */
+.fx-bm-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 2px 0 4px;
+  overflow: visible;
+}
+.fx-bm-chip {
+  position: relative;
+  z-index: 1;
+}
+.fx-bm-chip:hover {
+  z-index: 30;
+}
+.fx-bm-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  min-width: 5.25rem;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 980px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fx-muted);
+  font-family: var(--fx-font);
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.15s ease;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  -webkit-tap-highlight-color: transparent;
+}
+.fx-bm-chip:hover .fx-bm-chip-btn {
+  color: var(--fx-strong);
+  transform: scale(1.03);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.fx-bm-chip.is-on .fx-bm-chip-btn {
+  color: #fff;
+  font-weight: 650;
+  background: rgba(34, 197, 94, 0.22);
+  box-shadow: inset 0 0 0 1.5px rgba(34, 197, 94, 0.75);
+}
+.fx-bm-chip.is-on:hover .fx-bm-chip-btn {
+  background: rgba(34, 197, 94, 0.28);
+  box-shadow: inset 0 0 0 1.5px rgba(34, 197, 94, 0.9);
+}
+.fx-bm-pill-n {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+.fx-bm-pill-art {
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  opacity: 0.92;
+  transform: scale(0.9);
+  transform-origin: center;
+}
+
+/* Hover tip under chip — no instruction labels in the UI */
+.fx-bm-tip {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 10px);
+  z-index: 50;
+  width: min(20rem, 80vw);
+  padding: 13px 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #141414;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease, visibility 0.12s;
+  text-align: left;
+  font-family: var(--fx-font);
+}
+.fx-bm-chip:hover .fx-bm-tip,
+.fx-bm-chip:focus-within .fx-bm-tip {
+  opacity: 1;
+  visibility: visible;
+}
+.fx-inner,
+.fx-sleep-spread,
+.fx-section.fx-bowel {
+  overflow: visible !important;
+}
+.fx-bm-tip-title {
+  margin: 0 0 9px;
+  font-size: 15px;
+  font-weight: 650;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+.fx-bm-tip-title span {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(196, 165, 116, 0.95);
+}
+.fx-bm-tip p {
+  margin: 0 0 9px;
+  font-size: 13px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.58);
+}
+.fx-bm-tip p:last-child {
+  margin-bottom: 0;
+}
+.fx-bm-tip strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+}
+
 /* Chart sits on the page — no framed card */
 .fx-chart-wrap {
-  margin-top: 10px;
-  padding: 4px 0 0;
+  margin-top: 4px;
+  padding: 0;
   border-radius: 0;
   border: none;
   background: transparent;
@@ -398,20 +1231,21 @@
 /* iPhone — same quiet page, tighter side pad */
 @media (max-width: 560px) {
   .fx-inner {
-    padding: 8px 16px 48px;
+    padding: 8px 16px 36px;
   }
 
   .fx-quote-text {
-    font-size: 16px;
+    font-size: 15px;
+    line-height: 1;
   }
 
   .fx-subnav {
-    margin-bottom: 22px;
-    padding-bottom: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
   }
 
   .fx-section {
-    margin-bottom: 28px;
+    margin-bottom: 12px;
   }
 
   .fx-chart {
@@ -427,12 +1261,13 @@
   }
 }
 
-/* Macro rings — left-aligned on the page (editorial, not app dashboard center) */
-.macro-ring-wrap {
+/* Macro rings — always centered; never left-pin with empty void on the right */
+.fx-page .macro-ring-wrap {
   position: relative;
-  width: 168px;
-  height: 168px;
-  margin: 4px 0 14px;
+  width: 200px;
+  height: 200px;
+  margin: 8px auto 18px;
+  isolation: isolate;
 }
 
 .macro-rings {
@@ -449,14 +1284,14 @@
 }
 
 .ring-track {
-  stroke: rgba(255, 255, 255, 0.06);
+  stroke: var(--fx-ring-track, rgba(255, 255, 255, 0.06));
 }
 .ring-protein {
   stroke: #2eea7f;
   stroke-width: 6.5;
 }
 .ring-cal {
-  stroke: rgba(255, 255, 255, 0.28);
+  stroke: var(--fx-ring-cal, rgba(255, 255, 255, 0.28));
 }
 .ring-carbs {
   stroke: #facc15;
@@ -468,7 +1303,7 @@
   stroke: #4da3ff;
 }
 .ring-hole {
-  fill: #000;
+  fill: var(--fx-ring-hole, #000);
   stroke: none;
 }
 
@@ -484,10 +1319,10 @@
 }
 
 .macro-ring-num {
-  color: #fff;
+  color: var(--fx-strong);
   font-size: 1.58rem;
   font-weight: 600;
-  line-height: 1.05;
+  line-height: 1;
   font-family: var(--fx-font);
 }
 
@@ -502,7 +1337,7 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--fx-muted);
   margin-top: 2px;
 }
 
@@ -512,15 +1347,17 @@
   margin: 0;
   font-size: 14px;
   font-family: var(--fx-font);
+  color: var(--fx-text);
 }
 
 .macro-stats li {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 0;
+  padding: 4px 0;
   border-top: none;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--fx-text);
+  line-height: 1;
 }
 
 .macro-stats li:first-child {
@@ -529,7 +1366,13 @@
 
 .macro-stats strong {
   margin-left: auto;
-  color: #fff;
+  color: var(--fx-strong);
+  font-weight: 650;
+}
+
+/* trailing “/ goal” sits after strong — keep readable */
+.macro-stats li {
+  font-variant-numeric: tabular-nums;
 }
 
 .dot {
@@ -539,7 +1382,7 @@
   flex-shrink: 0;
 }
 .dot-cal {
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--fx-dot-cal, rgba(255, 255, 255, 0.45));
 }
 .dot-protein {
   background: #2eea7f;
@@ -562,13 +1405,13 @@
   margin: 0 0 2px;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: var(--fx-strong);
 }
 
 .fx-line-muted {
   margin: 0 0 12px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--fx-muted);
 }
 
 /* ── My usuals — plain list, no cards ── */
@@ -580,11 +1423,11 @@
 .usual-flash {
   margin: 0 0 10px;
   font-size: 13px;
-  color: var(--fx-accent, #9ecbff);
+  color: var(--fx-accent);
 }
 
 .usual-card {
-  margin: 0 0 18px;
+  margin: 0 0 14px;
   padding: 0 0 2px;
   border: none;
   border-radius: 0;
@@ -601,20 +1444,22 @@
   margin: 0 0 2px;
   font-size: 12px;
   text-transform: capitalize;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--fx-muted);
 }
 
 .usual-title {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   font-size: 15px;
   font-weight: 650;
-  color: #fff;
+  color: var(--fx-strong);
+  line-height: 1;
 }
 
 .usual-macro-line {
-  margin: 0 0 10px;
+  margin: 0 0 6px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.55);
+  line-height: 1;
+  color: var(--fx-muted);
 }
 
 /* Soft text button — not a fat pill */
@@ -623,8 +1468,8 @@
   border: none;
   background: none;
   padding: 0;
-  margin: 0 0 8px;
-  color: #6eb4ff;
+  margin: 0 0 4px;
+  color: var(--fx-accent);
   font-family: inherit;
   font-size: 14px;
   text-decoration: underline;
@@ -633,26 +1478,26 @@
 }
 
 .usual-log-btn:hover {
-  color: #9ccfff;
+  color: var(--fx-strong);
 }
 
 .usual-logged-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 8px;
+  margin: 0 0 4px;
 }
 
 .usual-logged-label {
   font-size: 13px;
-  color: rgba(46, 234, 127, 0.9);
+  color: #16a34a;
 }
 
 .usual-undo-btn {
   border: none;
   background: none;
   padding: 0;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--fx-muted);
   font-family: inherit;
   font-size: 13px;
   text-decoration: underline;
@@ -665,8 +1510,8 @@
   border: none;
   background: none;
   padding: 0;
-  margin: 4px 0 0;
-  color: rgba(255, 255, 255, 0.5);
+  margin: 2px 0 0;
+  color: var(--fx-muted);
   font-family: inherit;
   font-size: 13px;
   cursor: pointer;
@@ -674,25 +1519,25 @@
 }
 
 .usual-details-toggle:hover {
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--fx-strong);
 }
 
 .usual-details {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .usual-notes {
   margin: 0 0 6px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--fx-faint);
 }
 
 .usual-ingredients {
   margin: 0;
   padding-left: 18px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.75);
-  line-height: 1.45;
+  color: var(--fx-text);
+  line-height: 1;
 }
 
 .usual-ingredients li {
@@ -701,7 +1546,7 @@
 
 /* Group labels inside "What's in it" (Seeds + nuts, Fruit, …) */
 .usual-sec {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
 }
 
 .usual-sec:last-child {
@@ -709,10 +1554,10 @@
 }
 
 .usual-sec-title {
-  margin: 8px 0 4px;
+  margin: 6px 0 2px;
   font-size: 12px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--fx-muted);
   letter-spacing: 0.01em;
 }
 
@@ -725,9 +1570,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 0;
+  padding: 4px 0;
   border-bottom: none;
-  font-family: "Times New Roman", Times, serif;
+  font-family: var(--fx-font);
 }
 
 .consume-row:last-child {
@@ -738,10 +1583,10 @@
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border: 1.5px solid var(--fx-faint);
   border-radius: 4px;
   background: transparent;
-  color: #fff;
+  color: var(--fx-strong);
   font-size: 12px;
   line-height: 1;
   cursor: pointer;
@@ -754,7 +1599,7 @@
 .consume-check.is-on {
   background: rgba(46, 234, 127, 0.2);
   border-color: #2eea7f;
-  color: #2eea7f;
+  color: #16a34a;
 }
 
 .consume-main {
@@ -767,13 +1612,13 @@
 
 .consume-name {
   font-size: 14px;
-  color: #fff;
-  line-height: 1.25;
+  color: var(--fx-strong);
+  line-height: 1;
 }
 
 .consume-sub {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--fx-muted);
 }
 
 /* Time in a different color (blue) */
@@ -784,8 +1629,8 @@
   border-bottom: none;
   border-radius: 0;
   background: transparent;
-  color: #6eb4ff;
-  font-family: "Times New Roman", Times, serif;
+  color: var(--fx-accent);
+  font-family: var(--fx-font);
   font-size: 13px;
   text-align: right;
   padding: 2px 0;
@@ -793,43 +1638,46 @@
 }
 
 .consume-time::placeholder {
-  color: rgba(110, 180, 255, 0.35);
+  color: var(--fx-faint);
 }
 
 .consume-time:focus {
-  border-bottom-color: #6eb4ff;
+  border-bottom-color: var(--fx-accent);
 }
 
 /* Done = gray only, no strikethrough */
 .consume-row.is-done .consume-name {
   text-decoration: none;
-  color: rgba(255, 255, 255, 0.38);
+  color: var(--fx-faint);
 }
 
 .consume-row.is-done .consume-sub {
   text-decoration: none;
-  color: rgba(255, 255, 255, 0.28);
+  color: var(--fx-faint);
+  opacity: 0.85;
 }
 
 .consume-row.is-done .consume-time {
-  color: rgba(110, 180, 255, 0.55);
+  color: var(--fx-muted);
   text-decoration: none;
 }
 
-/* ── Water: Melani style — thin bar + plain text (NO underlines, NO boxes) ── */
+/* ── Water: thin bar + plain text (NO underlines, NO boxes) ── */
 .fx-water-title {
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  font-size: 13px;
-  margin: 0 0 8px;
+  font-size: 12px;
+  margin: 0 0 4px;
+  color: var(--fx-muted);
+  line-height: 1;
 }
 
 .fx-water-bar {
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--fx-water-track, rgba(255, 255, 255, 0.12));
   overflow: hidden;
-  margin: 0 0 10px;
+  margin: 0 0 6px;
 }
 
 .fx-water-fill {
@@ -844,7 +1692,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0 16px;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
 }
 
 .fx-water-btn {
@@ -853,15 +1701,16 @@
   border-radius: 0;
   padding: 0;
   margin: 0;
-  color: rgba(255, 255, 255, 0.72);
-  font-family: "Times New Roman", Times, serif;
+  color: var(--fx-text);
+  font-family: var(--fx-font);
   font-size: 13px;
   cursor: pointer;
   text-decoration: none !important;
+  line-height: 1;
 }
 
 .fx-water-btn:hover:not(:disabled) {
-  color: #fff;
+  color: var(--fx-strong);
   background: none;
   text-decoration: none !important;
 }
@@ -882,15 +1731,16 @@
   background: none;
   padding: 0;
   margin: 0;
-  color: rgba(255, 255, 255, 0.42);
-  font-family: "Times New Roman", Times, serif;
+  color: var(--fx-muted);
+  font-family: var(--fx-font);
   font-size: 13px;
   cursor: pointer;
   text-decoration: none !important;
+  line-height: 1;
 }
 
 .fx-water-action:hover:not(:disabled) {
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--fx-strong);
   text-decoration: none !important;
 }
 
@@ -913,19 +1763,19 @@
   width: 100%;
   border: none;
   background: transparent;
-  padding: 4px 0;
+  padding: 2px 0;
   margin: 0;
-  font-family: "Times New Roman", Times, serif;
+  font-family: var(--fx-font);
   font-size: 14px;
   text-align: left;
   cursor: pointer;
-  line-height: 1.45;
+  line-height: 1;
 }
 
 .fx-supp-num {
   flex-shrink: 0;
   min-width: 1.4em;
-  color: #fb7185; /* rose number like hygiene */
+  color: var(--fx-supp-num);
   font-variant-numeric: tabular-nums;
 }
 
@@ -934,27 +1784,27 @@
   min-width: 0;
 }
 
-/* Product name — soft pink (same family as La Roche step titles) */
+/* Product name — rose (dark soft pink / light deep rose) */
 .fx-supp-name {
-  color: #fecdd3;
+  color: var(--fx-supp-name);
   font-weight: 500;
 }
 
-/* Brand + when to take — warm gold (like hygiene role labels) */
+/* Brand + when to take — gold / amber */
 .fx-supp-when {
-  color: #fdba74;
+  color: var(--fx-supp-when);
   font-weight: 500;
 }
 
 /* Number stays clear — only the writing (name / dose / when) gets crossed out */
 .fx-supp-item.is-done .fx-supp-num {
-  color: #fb7185; /* keep the rose number; never strike through 1. 2. 3. */
+  color: var(--fx-supp-num);
   text-decoration: none;
 }
 
 .fx-supp-item.is-done .fx-supp-name,
 .fx-supp-item.is-done .fx-supp-when {
-  color: rgba(255, 255, 255, 0.32);
+  color: var(--fx-supp-done);
   text-decoration: line-through;
   text-decoration-thickness: 1px;
 }
@@ -980,6 +1830,256 @@
   color: #fff;
 }
 
+/* Shell matches page — only black when global theme is dark */
 .main.is-fitness {
   background: #000;
+}
+html.theme-light .main.is-fitness {
+  background: #f7f7fa !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIGHT MODE PARITY — same structure as dark, token flip only
+   (html.theme-light .fx-page variables are set at top of file)
+   ═══════════════════════════════════════════════════════════ */
+
+html.theme-light .main.is-fitness,
+html.theme-light .main.is-fitness .main-scroll {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+
+html.theme-light .main.is-fitness .topbar {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+
+html.theme-light .fx-page .fx-h2,
+html.theme-light .fx-page .fx-quote-text,
+html.theme-light .fx-page .fx-val,
+html.theme-light .fx-page .fx-key,
+html.theme-light .fx-page .fx-line,
+html.theme-light .fx-page .fx-bf-summary,
+html.theme-light .fx-page .fx-bowel-meta,
+html.theme-light .fx-page .fx-subnav-link,
+html.theme-light .fx-page .fx-meta,
+html.theme-light .fx-page .fx-sleep-hint {
+  /* use tokens; force no leftover hard whites */
+  color: var(--fx-muted);
+}
+
+html.theme-light .fx-page .fx-quote-text,
+html.theme-light .fx-page .fx-val,
+html.theme-light .fx-page .fx-subnav-link.is-active,
+html.theme-light .fx-page .fx-meta strong {
+  color: var(--fx-strong) !important;
+}
+
+html.theme-light .fx-page .fx-line {
+  color: var(--fx-text) !important;
+}
+
+html.theme-light .fx-page .fx-h2 {
+  color: var(--fx-faint) !important;
+}
+
+html.theme-light .fx-page .fx-quote-author {
+  color: var(--fx-accent) !important;
+}
+
+html.theme-light .fx-page .fx-bf-summary,
+html.theme-light .fx-page .fx-bowel-meta {
+  color: var(--fx-muted) !important;
+}
+
+html.theme-light .fx-page .fx-bf-tap {
+  color: rgba(26, 28, 34, 0.48);
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html.theme-light .fx-page .fx-bf-tap:hover {
+  color: #1a1c22;
+  background: transparent !important;
+}
+
+/* Fog: Yes = red, No = green. Bowel: Yes = green. Text only. */
+html.theme-light .fx-page .fx-bf-yes.is-on {
+  color: #dc2626 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html.theme-light .fx-page .fx-bf-no.is-on {
+  color: #16a34a !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html.theme-light .fx-page .fx-bm-yes.is-on {
+  color: #16a34a !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html.theme-light .fx-page .fx-bm-no.is-on {
+  color: rgba(26, 28, 34, 0.55) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html.theme-light .fx-page .fx-bf-day {
+  color: var(--fx-faint);
+}
+
+html.theme-light .fx-page .fx-bf-day.is-fog {
+  color: #dc2626 !important;
+  background: rgba(220, 38, 38, 0.08) !important;
+}
+
+html.theme-light .fx-page .fx-bf-day.is-bm {
+  color: #16a34a !important;
+  background: rgba(22, 163, 74, 0.1) !important;
+}
+
+html.theme-light .fx-page .fx-bf-day.is-bm-no {
+  color: #dc2626 !important;
+  background: rgba(220, 38, 38, 0.08) !important;
+}
+
+/* Bristol type chips — light: visible shell + green selected */
+html.theme-light .fx-page .fx-bm-chip-btn {
+  color: rgba(26, 28, 34, 0.62) !important;
+  background: rgba(26, 28, 34, 0.05) !important;
+  box-shadow: inset 0 0 0 1px rgba(26, 28, 34, 0.1) !important;
+}
+
+html.theme-light .fx-page .fx-bm-chip:hover .fx-bm-chip-btn {
+  color: #1a1c22 !important;
+  background: rgba(26, 28, 34, 0.08) !important;
+  box-shadow: inset 0 0 0 1px rgba(26, 28, 34, 0.16) !important;
+}
+
+html.theme-light .fx-page .fx-bm-chip.is-on .fx-bm-chip-btn,
+html.theme-light .fx-page .fx-bm-chip.is-on:hover .fx-bm-chip-btn {
+  color: #14532d !important;
+  font-weight: 650;
+  background: rgba(22, 163, 74, 0.16) !important;
+  box-shadow: inset 0 0 0 1.5px rgba(22, 163, 74, 0.7) !important;
+}
+
+/*
+  Meals light lock — force every surface that used to be white-on-white.
+  Tokens already flip on .fx-page; these catch leftover hard-coded / inheritance gaps.
+*/
+html.theme-light .fx-page .macro-ring-num,
+html.theme-light .fx-page .macro-stats strong,
+html.theme-light .fx-page .usual-title,
+html.theme-light .fx-page h3 {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .fx-page .macro-ring-sub,
+html.theme-light .fx-page .macro-ring-goal,
+html.theme-light .fx-page .usual-macro-line,
+html.theme-light .fx-page .usual-details-toggle,
+html.theme-light .fx-page .usual-undo-btn,
+html.theme-light .fx-page .usual-slot,
+html.theme-light .fx-page .usual-notes,
+html.theme-light .fx-page .usual-sec-title,
+html.theme-light .fx-page .fx-line-muted,
+html.theme-light .fx-page .fx-water-title,
+html.theme-light .fx-page .fx-water-action,
+html.theme-light .fx-page .consume-sub {
+  color: rgba(26, 28, 34, 0.55) !important;
+}
+
+html.theme-light .fx-page .macro-stats li,
+html.theme-light .fx-page .usual-ingredients,
+html.theme-light .fx-page .fx-water-btn,
+html.theme-light .fx-page .consume-name {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .fx-page .usual-log-btn {
+  color: #2563eb !important;
+}
+
+html.theme-light .fx-page .usual-log-btn:hover {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .fx-page .usual-logged-label {
+  color: #16a34a !important;
+}
+
+html.theme-light .fx-page .fx-water-bar {
+  background: rgba(26, 28, 34, 0.12) !important;
+}
+
+html.theme-light .fx-page .ring-hole {
+  fill: #f7f7fa !important;
+}
+
+html.theme-light .fx-page .ring-track {
+  stroke: rgba(26, 28, 34, 0.1) !important;
+}
+
+html.theme-light .fx-page .ring-cal {
+  stroke: rgba(26, 28, 34, 0.28) !important;
+}
+
+html.theme-light .fx-page .dot-cal {
+  background: rgba(26, 28, 34, 0.4) !important;
+}
+
+html.theme-light .fx-page .fx-supp-name {
+  color: #be123c !important;
+}
+
+html.theme-light .fx-page .fx-supp-when {
+  color: #c2410c !important;
+}
+
+html.theme-light .fx-page .fx-supp-num {
+  color: #e11d48 !important;
+}
+
+html.theme-light .fx-page .fx-supp-item.is-done .fx-supp-name,
+html.theme-light .fx-page .fx-supp-item.is-done .fx-supp-when {
+  color: rgba(26, 28, 34, 0.35) !important;
+}
+
+html.theme-light .fx-page .consume-check {
+  border-color: rgba(26, 28, 34, 0.35) !important;
+  color: #1a1c22 !important;
+}
+
+/* Exclude gym set/link buttons — they keep blue accent like dark mode */
+html.theme-light .fx-page button:not(.fx-bf-tap):not(.fx-bf-day):not(.fx-bm-chip-btn):not(.fx-subnav-link):not(.usual-log-btn):not(.fx-water-btn):not(.fx-water-action):not(.fx-supp-item):not(.gx-set):not(.gx-today-link):not(.gx-save-week):not(.gx-day-pick):not(.gx-weight-chart-toggle):not(.gx-warmup-item) {
+  color: #1a1c22;
+}
+
+html.theme-light .fx-menu-btn {
+  background: transparent;
+  color: rgba(26, 28, 34, 0.55);
+}
+
+html.theme-light .fx-menu-btn:hover {
+  background: transparent;
+  color: #1a1c22;
+}
+
+/* Whoop link already themed; ensure visible */
+html.theme-light .whoop-bar-link {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+
+html.theme-light .whoop-bar-link:hover:not(:disabled) {
+  color: #1a1c22 !important;
 }

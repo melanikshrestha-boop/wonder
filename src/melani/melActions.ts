@@ -8,6 +8,8 @@ export const MEL_NAVIGATE_EVENT = "wonder-mel-navigate";
 export const MEL_WORKSPACE_ACTION_EVENT = "wonder-mel-workspace-action";
 export const MEL_SIDEBAR_ACTION_EVENT = "wonder-mel-sidebar-action";
 export const MEL_PROMPT_EVENT = "wonder-mel-prompt";
+/** Open Mel panel in Science mode (Math Empire + metrics). */
+export const MEL_OPEN_SCIENCE_EVENT = "wonder-mel-open-science";
 
 export type MelPromptRequest = {
   text: string;

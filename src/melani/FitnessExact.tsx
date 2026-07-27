@@ -1,9 +1,8 @@
 /**
- * Fitness page — Wonder Fitness (Sleep · Meals · Gym · Body).
- * Quote + subnav + sleep/brain fog/weekly chart exactly like the app screenshot.
+ * Fitness page — Wonder Fitness (Sleep · Meals · Gym · Focus).
+ * Quote + subnav; Focus is app hours (where attention goes).
  */
-import { useEffect, useMemo, useRef, useState } from "react";
-// useState used for consume checklist
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CIRC,
   DAILY_SUPPLEMENTS,
@@ -13,11 +12,37 @@ import {
   todayKey,
   type ConsumeLog,
 } from "./data";
+import {
+  addEntry,
+  applyPendingSnackSeed,
+  loadDay as loadNutriDay,
+  NUTRITION_EVENT,
+  removeEntry,
+  totalsFor as nutriTotalsFor,
+} from "./nutrition/nutritionStore";
 import { GymExact } from "./GymExact";
-import { SmartMealCamera, type SmartMealDraft } from "./SmartMealCamera";
+import { ScreenTime } from "./ScreenTime";
 import { MEL_DATA_EVENT } from "./melTools";
+import { notifyHabitAutoSync, WATER_GOAL_ML } from "./habitAutoSync";
+
+import {
+  buildWhoopAnalytics,
+  importWhoopCsvTexts,
+  importWhoopFromPublicLatest,
+  listWhoopSleepNights,
+  loadWhoopDay,
+  loadWhoopStore,
+  resolveSleepForDay,
+  syncAllWhoopSleepToSleepStore,
+  WHOOP_EVENT,
+  type WhoopDay,
+} from "./whoopStore";
+import { groupMetricsBySection, metricDef } from "./whoopMetrics";
+import { MetricExplainModal, MetricGraphPanel } from "./whoopMetricUi";
+import { todayQuote, msUntilNextQuoteSlot } from "./dailyQuotes";
 import "./fitness-exact.css";
 import "./gym-exact.css";
+import "./whoop-lab.css";
 
 const CONSUME_KEY = "dr-melani-meals-consume";
 
@@ -41,91 +66,767 @@ function saveDayLog(day: string, log: DayLog) {
   }
 }
 
-export type FitnessTab = "sleep" | "meals" | "gym";
-
-const QUOTE = {
-  text: "The best way to predict the future is to invent it.",
-  source: "Alan Kay",
-};
+export type FitnessTab = "sleep" | "meals" | "gym" | "focus";
 
 function tabFromPageId(pageId: string): FitnessTab {
   if (pageId === "pg-meals") return "meals";
-  // Old Body page redirects to Gym (weight under warm-up)
-  if (pageId === "pg-gym" || pageId === "pg-body") return "gym";
+  if (pageId === "pg-gym") return "gym";
+  // Focus was "Screen Time" — same desk, new name under Fitness
+  if (
+    pageId === "pg-focus" ||
+    pageId === "pg-screentime" ||
+    pageId === "pg-screen-time"
+  ) {
+    return "focus";
+  }
+  // Old Whoop page → Sleep (data lives on Sleep / Gym / Meals, not a Whoop tab)
   return "sleep";
 }
 
+/** Quiet silhouettes for dark Fitness page (not a loud medical poster). */
+function BowelLookIcon({ look }: { look: BowelLook }) {
+  const fill = "rgba(196, 165, 116, 0.92)";
+  if (look === 1) {
+    return (
+      <svg viewBox="0 0 56 28" width="52" height="26" aria-hidden>
+        <circle cx="10" cy="14" r="5" fill={fill} />
+        <circle cx="24" cy="11" r="4.5" fill={fill} />
+        <circle cx="36" cy="16" r="5" fill={fill} />
+        <circle cx="48" cy="12" r="4" fill={fill} />
+      </svg>
+    );
+  }
+  if (look === 2) {
+    return (
+      <svg viewBox="0 0 56 28" width="52" height="26" aria-hidden>
+        <path
+          d="M6 16c2-8 8-11 14-8 4 2 6 5 10 5 5 0 7-4 12-4 6 0 10 4 10 9 0 4-4 7-12 7H16C8 25 4 21 6 16z"
+          fill={fill}
+        />
+        <circle cx="18" cy="12" r="2.2" fill="#c4a574" opacity="0.5" />
+        <circle cx="28" cy="11" r="2" fill="#c4a574" opacity="0.45" />
+      </svg>
+    );
+  }
+  if (look === 3) {
+    return (
+      <svg viewBox="0 0 56 28" width="52" height="26" aria-hidden>
+        <path
+          d="M4 15c2-7 8-11 16-11 7 0 11 3 14 3s10 1 14 7c2 3-1 9-11 9H16C7 23 2 20 4 15z"
+          fill={fill}
+        />
+        <path
+          d="M14 11h6M24 10h8M36 11h6"
+          stroke="#f5efe6"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          opacity="0.55"
+        />
+      </svg>
+    );
+  }
+  if (look === 4) {
+    return (
+      <svg viewBox="0 0 56 28" width="52" height="26" aria-hidden>
+        <path
+          d="M3 15c2-7 9-11 18-11 7 0 11 3 14 3s11 1 14 7c2 3-1 9-12 9H15C6 23 1 20 3 15z"
+          fill={fill}
+        />
+      </svg>
+    );
+  }
+  if (look === 5) {
+    return (
+      <svg viewBox="0 0 56 28" width="52" height="26" aria-hidden>
+        <ellipse cx="14" cy="15" rx="8" ry="6.5" fill={fill} />
+        <ellipse cx="32" cy="13" rx="7" ry="5.5" fill={fill} />
+        <ellipse cx="46" cy="16" rx="6.5" ry="5" fill={fill} />
+      </svg>
+    );
+  }
+  if (look === 6) {
+    return (
+      <svg viewBox="0 0 56 28" width="52" height="26" aria-hidden>
+        <path
+          d="M6 18c0-5 4-9 8-7 3 1 4 3 7 2 3-2 3-6 8-6s5 4 8 3 4-4 8-2 6 4 5 9c-1 4-5 6-11 6H14c-5 0-8-2-8-5z"
+          fill={fill}
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 56 28" width="52" height="26" aria-hidden>
+      <path
+        d="M4 9c5 0 6 4 10 4s6-4 12-4 7 4 11 4 6-3 11-3v12H4V9z"
+        fill={fill}
+        opacity="0.5"
+      />
+      <path
+        d="M8 16c4 0 5-3 9-3s5 3 9 3 6-3 10-3 6 2 10 2"
+        stroke={fill}
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 import {
+  BOWEL_DETAIL_RESTORE_EVENT,
+  BOWEL_EXTERNAL_RESTORE_EVENT,
+  BOWEL_LOOK_GUIDE,
+  BOWEL_TYPE_POPUP,
   FOG_EXTERNAL_RESTORE_EVENT,
+  FOG_LOCK_HOUR,
+  FOG_LOCK_MINUTE,
+  applyPendingBowelCorrections,
+  isFogDayWritable,
+  loadBowelDetailMap,
+  loadBowelMap,
   loadFogMap,
-  loadSleepDay,
-  saveFogMap,
+  msUntilFogLock,
+  setFogDay,
   saveSleepDay,
+  seedBowelDetailUndoBaseline,
+  seedBowelUndoBaseline,
   seedFogUndoBaseline,
+  upsertBowelDay,
+  type BowelDayLog,
+  type BowelLook,
   SLEEP_EXTERNAL_RESTORE_EVENT,
-  sleepHours,
+  formatHm12,
   sleepWeekDays,
-  weekSleepHours,
 } from "./sleepStore";
+
+/**
+ * Fog day clock — isolated so Sleep graphs don't re-render on every tick.
+ * Timeline: local midnight → 11:59 PM lock.
+ */
+function FogDayClock({
+  dayIso,
+  onWritableChange,
+}: {
+  dayIso: string;
+  onWritableChange: (writable: boolean) => void;
+}) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    tick();
+    // 30s is enough for countdown; was 15s and re-rendered entire Sleep page
+    const id = window.setInterval(tick, 30_000);
+    window.addEventListener("focus", tick);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("focus", tick);
+    };
+  }, []);
+
+  const writable = isFogDayWritable(dayIso, now);
+  useEffect(() => {
+    onWritableChange(writable);
+  }, [writable, onWritableChange]);
+
+  const lockMs = msUntilFogLock(now);
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const lockAt = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    FOG_LOCK_HOUR,
+    FOG_LOCK_MINUTE,
+    0,
+    0
+  );
+  const span = Math.max(1, lockAt.getTime() - start.getTime());
+  const elapsed = Math.min(span, Math.max(0, now.getTime() - start.getTime()));
+  const pct = Math.round((elapsed / span) * 100);
+  const leftMin = Math.ceil(lockMs / 60_000);
+  const leftH = Math.floor(leftMin / 60);
+  const leftM = leftMin % 60;
+  const leftLabel =
+    leftMin <= 0
+      ? "locked"
+      : leftH > 0
+        ? `${leftH}h ${leftM}m left`
+        : `${leftM}m left`;
+
+  return (
+    <div
+      className={`fx-bf-clock${writable ? "" : " is-locked"}`}
+      aria-label={
+        writable
+          ? `Fog answer open. Locks at 11:59 PM. ${leftLabel}.`
+          : "Fog answer locked for today at 11:59 PM"
+      }
+    >
+      <div className="fx-bf-clock-rail" aria-hidden>
+        <span className="fx-bf-clock-fill" style={{ width: `${pct}%` }} />
+        <span className="fx-bf-clock-now" style={{ left: `${pct}%` }} />
+      </div>
+      <p className="fx-bf-clock-meta">
+        {writable
+          ? `open · locks 11:59 PM · ${leftLabel}`
+          : "locked · final for today"}
+      </p>
+    </div>
+  );
+}
+
+/** Thin donut slice paths (shared geometry for fog + Bristol pies). */
+function donutSlicePath(
+  cx: number,
+  cy: number,
+  rOuter: number,
+  startFrac: number,
+  endFrac: number
+): string {
+  const tau = Math.PI * 2;
+  if (endFrac - startFrac >= 0.999) {
+    return `M ${cx} ${cy - rOuter} A ${rOuter} ${rOuter} 0 1 1 ${cx} ${cy + rOuter} A ${rOuter} ${rOuter} 0 1 1 ${cx} ${cy - rOuter}`;
+  }
+  const a0 = -Math.PI / 2 + startFrac * tau;
+  const a1 = -Math.PI / 2 + endFrac * tau;
+  const x0 = cx + rOuter * Math.cos(a0);
+  const y0 = cy + rOuter * Math.sin(a0);
+  const x1 = cx + rOuter * Math.cos(a1);
+  const y1 = cy + rOuter * Math.sin(a1);
+  const large = endFrac - startFrac > 0.5 ? 1 : 0;
+  return `M ${cx} ${cy} L ${x0} ${y0} A ${rOuter} ${rOuter} 0 ${large} 1 ${x1} ${y1} Z`;
+}
+
+/** Bristol 1–7 lifetime colors (type 4 = ideal green). */
+const BRISTOL_LINE_COLORS: Record<1 | 2 | 3 | 4 | 5 | 6 | 7, string> = {
+  1: "#78716c",
+  2: "#a8a29e",
+  3: "#a3e635",
+  4: "#22c55e",
+  5: "#eab308",
+  6: "#f97316",
+  7: "#ef4444",
+};
+
+type BristolType = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+const BRISTOL_TYPES: BristolType[] = [1, 2, 3, 4, 5, 6, 7];
+
+/**
+ * Lifetime Bristol multi-line graph — one cumulative line per type 1–7.
+ * Same Recovery panel language (title · big n · soft lines · footer).
+ */
+function BowelBristolLifetimeGraph({
+  series,
+  counts,
+  n,
+}: {
+  /** day → cumulative count for each type after that day */
+  series: { day: string; byType: Record<BristolType, number> }[];
+  counts: Record<BristolType, number>;
+  n: number;
+}) {
+  const [hoverDay, setHoverDay] = useState<string | null>(null);
+  const [hotType, setHotType] = useState<BristolType | null>(null);
+
+  if (n < 1 || series.length < 1) {
+    return (
+      <p className="fx-bf-pie-empty">
+        Log Yes and pick type 1–7 — the graph fills for life.
+      </p>
+    );
+  }
+
+  const w = 640;
+  const h = 180;
+  const padL = 36;
+  const padR = 14;
+  const padT = 12;
+  const padB = 28;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+
+  const maxY = Math.max(
+    1,
+    ...BRISTOL_TYPES.map((t) => counts[t]),
+    ...series.flatMap((s) => BRISTOL_TYPES.map((t) => s.byType[t]))
+  );
+  // Nice top
+  const yHi = maxY <= 2 ? 2 : maxY <= 5 ? 5 : Math.ceil(maxY * 1.12);
+  const yOf = (v: number) => padT + ((yHi - v) / yHi) * plotH;
+  const xOf = (i: number) =>
+    padL + (series.length === 1 ? plotW / 2 : (i / (series.length - 1)) * plotW);
+
+  const activeTypes = BRISTOL_TYPES.filter((t) => counts[t] > 0);
+  const lines = activeTypes.map((t) => {
+    const pts = series.map((s, i) => ({
+      x: xOf(i),
+      y: yOf(s.byType[t]),
+      v: s.byType[t],
+      day: s.day,
+    }));
+    const d = pts
+      .map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+      .join(" ");
+    return { t, pts, d, color: BRISTOL_LINE_COLORS[t] };
+  });
+
+  const yTicks = [0, Math.round(yHi / 2), yHi].filter(
+    (v, i, a) => a.indexOf(v) === i
+  );
+  const xIdx =
+    series.length <= 4
+      ? series.map((_, i) => i)
+      : [
+          0,
+          Math.floor(series.length / 3),
+          Math.floor((series.length * 2) / 3),
+          series.length - 1,
+        ];
+
+  function onMove(e: React.MouseEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const svgX = ((e.clientX - rect.left) / rect.width) * w;
+    let best = 0;
+    let bestD = Infinity;
+    for (let i = 0; i < series.length; i++) {
+      const d = Math.abs(xOf(i) - svgX);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    setHoverDay(series[best].day);
+  }
+
+  const hoverIdx = hoverDay
+    ? series.findIndex((s) => s.day === hoverDay)
+    : -1;
+  const hoverRow = hoverIdx >= 0 ? series[hoverIdx] : null;
+
+  const shortDay = (iso: string) => {
+    const m = iso.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return iso;
+    return `${Number(m[2])}/${Number(m[3])}`;
+  };
+
+  // Dominant type (most logs)
+  const topType = activeTypes.reduce((a, b) =>
+    counts[a] >= counts[b] ? a : b
+  );
+
+  return (
+    <article className="wx-panel fx-bm-type-graph">
+      <header className="wx-panel-head">
+        <div className="wx-panel-title-row">
+          <h3 className="wx-panel-title">BRISTOL TYPES</h3>
+        </div>
+        <div className="wx-panel-nums">
+          <span className="wx-panel-v">
+            {n}
+            <small>logs</small>
+          </span>
+          <span className="wx-panel-meta">
+            <span className="wx-panel-latest">
+              top: Type {topType} · {counts[topType]} (
+              {Math.round((counts[topType] / n) * 100)}%)
+            </span>
+            <span className="wx-panel-range">
+              {activeTypes.length} type{activeTypes.length === 1 ? "" : "s"}{" "}
+              seen
+            </span>
+          </span>
+        </div>
+      </header>
+
+      <div className="wx-graph-wrap">
+        <svg
+          className="wx-graph is-interactive fx-bm-multi"
+          viewBox={`0 0 ${w} ${h}`}
+          role="img"
+          aria-label="Lifetime Bristol types — cumulative counts by type"
+          onMouseMove={onMove}
+          onMouseLeave={() => setHoverDay(null)}
+        >
+          {yTicks.map((v) => (
+            <g key={v}>
+              <line
+                x1={padL}
+                x2={padL + plotW}
+                y1={yOf(v)}
+                y2={yOf(v)}
+                className="wx-grid-line"
+              />
+              <text
+                x={padL - 6}
+                y={yOf(v) + 3}
+                textAnchor="end"
+                className="wx-axis-y"
+              >
+                {v}
+              </text>
+            </g>
+          ))}
+          {lines.map((line) => {
+            const dim =
+              (hotType != null && hotType !== line.t) ||
+              (hoverDay != null && hotType == null && false);
+            const emphasis = hotType === line.t;
+            return (
+              <g key={line.t} opacity={dim ? 0.22 : 1}>
+                <path
+                  d={line.d}
+                  fill="none"
+                  stroke={line.color}
+                  strokeWidth={emphasis ? 3 : 2.25}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  pointerEvents="none"
+                />
+                {line.pts.map((p, i) => (
+                  <circle
+                    key={`${line.t}-${i}`}
+                    cx={p.x}
+                    cy={p.y}
+                    r={
+                      hoverIdx === i
+                        ? emphasis
+                          ? 5
+                          : 3.5
+                        : emphasis
+                          ? 3
+                          : 2.2
+                    }
+                    fill={line.color}
+                    pointerEvents="none"
+                  />
+                ))}
+              </g>
+            );
+          })}
+          {hoverIdx >= 0 ? (
+            <line
+              x1={xOf(hoverIdx)}
+              x2={xOf(hoverIdx)}
+              y1={padT}
+              y2={padT + plotH}
+              stroke="rgba(26,28,34,0.2)"
+              strokeDasharray="3 3"
+              pointerEvents="none"
+            />
+          ) : null}
+          {xIdx.map((i) => (
+            <text
+              key={series[i].day}
+              x={xOf(i)}
+              y={h - 8}
+              textAnchor="middle"
+              className="wx-axis-x"
+            >
+              {shortDay(series[i].day)}
+            </text>
+          ))}
+          <rect
+            x={padL}
+            y={padT}
+            width={plotW}
+            height={plotH}
+            fill="transparent"
+          />
+        </svg>
+        {hoverRow ? (
+          <div className="fx-bm-graph-tip" role="tooltip">
+            <strong>{shortDay(hoverRow.day)}</strong>
+            <ul>
+              {activeTypes.map((t) => (
+                <li key={t} style={{ color: BRISTOL_LINE_COLORS[t] }}>
+                  T{t}: {hoverRow.byType[t]}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="fx-bm-line-legend" role="list">
+        {activeTypes.map((t) => {
+          const pct = Math.round((counts[t] / n) * 100);
+          return (
+            <button
+              key={t}
+              type="button"
+              role="listitem"
+              className={`fx-bm-line-leg${hotType === t ? " is-hot" : ""}`}
+              onMouseEnter={() => setHotType(t)}
+              onMouseLeave={() => setHotType(null)}
+              onFocus={() => setHotType(t)}
+              onBlur={() => setHotType(null)}
+            >
+              <i style={{ background: BRISTOL_LINE_COLORS[t] }} aria-hidden />
+              Type {t} · {counts[t]} ({pct}%)
+            </button>
+          );
+        })}
+      </div>
+      <footer className="wx-panel-foot">
+        <span>
+          n = {n} · cumulative count of each Bristol type over time
+        </span>
+      </footer>
+    </article>
+  );
+}
+
+/** Lifetime yes/no pie — hover = black border + which slice */
+function BrainFogLifetimePie({ yes, no }: { yes: number; no: number }) {
+  const [hover, setHover] = useState<"yes" | "no" | null>(null);
+  const n = yes + no;
+  if (n < 1) {
+    return (
+      <p className="fx-bf-pie-empty">
+        Tap Yes or No today — the pie fills as you log for life.
+      </p>
+    );
+  }
+  const yesPct = (yes / n) * 100;
+  const noPct = (no / n) * 100;
+  const rOuter = 54;
+  const rHole = 44;
+  const cx = 70;
+  const cy = 70;
+  const yesEnd = yes / n;
+
+  function onMove(e: React.MouseEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 140;
+    const y = ((e.clientY - rect.top) / rect.height) * 140;
+    const dx = x - cx;
+    const dy = y - cy;
+    const dist = Math.hypot(dx, dy);
+    if (dist > rOuter + 4 || dist < rHole - 2) {
+      setHover(null);
+      return;
+    }
+    let ang = Math.atan2(dy, dx);
+    if (ang < -Math.PI / 2) ang += 2 * Math.PI;
+    const aYesEnd = -Math.PI / 2 + yesEnd * Math.PI * 2;
+    if (yes > 0 && ang < aYesEnd) setHover("yes");
+    else if (no > 0) setHover("no");
+    else setHover(yes > 0 ? "yes" : null);
+  }
+
+  return (
+    <div className="fx-bf-pie-wrap">
+      <svg
+        className="fx-bf-pie"
+        viewBox="0 0 140 140"
+        role="img"
+        aria-label={`Brain fog lifetime: yes ${yes}, no ${no}, n ${n}`}
+        onMouseMove={onMove}
+        onMouseLeave={() => setHover(null)}
+        style={{ cursor: "crosshair" }}
+      >
+        {yes > 0 ? (
+          <path
+            className="fx-bf-pie-yes"
+            d={donutSlicePath(cx, cy, rOuter, 0, yesEnd)}
+            opacity={hover === "no" ? 0.28 : 1}
+            stroke={hover === "yes" ? "#0a0a0a" : "transparent"}
+            strokeWidth={hover === "yes" ? 2.5 : 0}
+            style={{ pointerEvents: "none", paintOrder: "stroke fill" }}
+          />
+        ) : null}
+        {no > 0 ? (
+          <path
+            className="fx-bf-pie-no"
+            d={donutSlicePath(cx, cy, rOuter, yesEnd, 1)}
+            opacity={hover === "yes" ? 0.28 : 1}
+            stroke={hover === "no" ? "#0a0a0a" : "transparent"}
+            strokeWidth={hover === "no" ? 2.5 : 0}
+            style={{ pointerEvents: "none", paintOrder: "stroke fill" }}
+          />
+        ) : null}
+        <circle className="fx-bf-pie-hole" cx={cx} cy={cy} r={rHole} />
+        <text className="fx-bf-pie-n" x={cx} y={cy + 4} textAnchor="middle">
+          {hover === "yes"
+            ? `Yes ${Math.round(yesPct)}%`
+            : hover === "no"
+              ? `No ${Math.round(noPct)}%`
+              : `n = ${n}`}
+        </text>
+      </svg>
+      <div className="fx-bf-pie-legend">
+        <span
+          className={`fx-bf-leg-yes${hover === "yes" ? " is-hot" : ""}`}
+          onMouseEnter={() => setHover("yes")}
+          onMouseLeave={() => setHover(null)}
+        >
+          Yes {yes} ({Math.round(yesPct)}%)
+        </span>
+        <span
+          className={`fx-bf-leg-no${hover === "no" ? " is-hot" : ""}`}
+          onMouseEnter={() => setHover("no")}
+          onMouseLeave={() => setHover(null)}
+        >
+          No {no} ({Math.round(noPct)}%)
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function SleepPanel() {
   // Calendar day this panel is editing (local YYYY-MM-DD).
   // When the clock rolls to a new day, bed/wake go blank for that day;
   // older nights stay in storage and still show on the weekly line.
   const [dayIso, setDayIso] = useState(() => todayKey());
-  const week = useMemo(() => {
-    const [y, m, d] = dayIso.split("-").map(Number);
-    return sleepWeekDays(new Date(y, m - 1, d));
-  }, [dayIso]);
 
-  const [bedtime, setBedtime] = useState(
-    () => loadSleepDay(todayKey()).bedtime
-  );
-  const [wake, setWake] = useState(() => loadSleepDay(todayKey()).wake);
+  // Prefer Whoop band onset/wake when present
+  const [bedtime, setBedtime] = useState(() => resolveSleepForDay(todayKey()).bedtime);
+  const [wake, setWake] = useState(() => resolveSleepForDay(todayKey()).wake);
+  const [nightsTick, setNightsTick] = useState(0);
   const [fogMap, setFogMap] = useState<Record<string, boolean>>(() => {
     const map = loadFogMap();
     seedFogUndoBaseline(map);
     return map;
   });
-  const [weekHours, setWeekHours] = useState<(number | null)[]>(() => {
-    const iso = todayKey();
-    const s = loadSleepDay(iso);
-    const w = sleepWeekDays();
-    return weekSleepHours(
-      w.map((x) => x.iso),
-      iso,
-      s.bedtime,
-      s.wake
-    );
-  });
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const [whoop, setWhoop] = useState<WhoopDay | null>(() =>
+    loadWhoopDay(todayKey())
+  );
+  const [whoopStoreTick, setWhoopStoreTick] = useState(0);
+  const [explainKey, setExplainKey] = useState<string | null>(null);
+  /** Lifetime brain-fog pie (yes vs no) — not a weekly strip */
+  const [fogPieOpen, setFogPieOpen] = useState(false);
+  /** Collapsed by default — every-night log lives at page bottom */
+  const [nightsOpen, setNightsOpen] = useState(false);
+  /** Quiet CSV import (no separate Whoop page) */
+  const whoopFileRef = useRef<HTMLInputElement>(null);
+  const [whoopImportBusy, setWhoopImportBusy] = useState(false);
+  const nights = useMemo(
+    () => listWhoopSleepNights(45),
+    [nightsTick, whoop]
+  );
 
-  const hoursToday = sleepHours(bedtime, wake);
-  const fogCount = week.filter((d) => fogMap[d.iso]).length;
-  const todayFog = fogMap[dayIso] === true;
-  const weekLabel = `Week of ${week[0].label} to ${week[6].label}`;
-  const dayLabel = (() => {
-    const [y, m, d] = dayIso.split("-").map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString(undefined, {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
+  // Sleep page: Sleep · Overnight · Body signals (titled like Body signals)
+  const sleepPageSections = useMemo(() => {
+    const analytics = buildWhoopAnalytics(loadWhoopStore());
+    const onSleep = analytics.series.filter((m) => {
+      const g = metricDef(m.key)?.group;
+      return g === "sleep" || g === "body";
     });
-  })();
+    return groupMetricsBySection(onSleep);
+  }, [whoopStoreTick, nightsTick]);
+  const explainSeries =
+    explainKey != null
+      ? sleepPageSections
+          .flatMap((s) => s.metrics)
+          .find((m) => m.key === explainKey) ?? null
+      : null;
 
-  // New calendar day → blank bed/wake for today (yesterday already saved)
+  const todayFogYes = fogMap[dayIso] === true;
+  const todayFogNo = fogMap[dayIso] === false;
+  // Lock state only — clock UI lives in FogDayClock so graphs don't re-render every tick
+  const [fogWritable, setFogWritable] = useState(() => isFogDayWritable(dayIso));
+  const onFogWritableChange = useCallback((w: boolean) => {
+    setFogWritable(w);
+  }, []);
+  useEffect(() => {
+    setFogWritable(isFogDayWritable(dayIso));
+  }, [dayIso]);
+
+  // Lifetime tallies — every logged day, forever (no week window)
+  const fogLife = useMemo(() => {
+    let yes = 0;
+    let no = 0;
+    for (const v of Object.values(fogMap)) {
+      if (v === true) yes += 1;
+      else if (v === false) no += 1;
+    }
+    return { yes, no, n: yes + no };
+  }, [fogMap]);
+
+  /**
+   * Free Yes ↔ No switch while the day is open (before 11:59 PM).
+   * Same answer re-tap keeps it (no accidental clear). Past days / after lock refuse.
+   */
+  function setTodayFog(value: boolean) {
+    // Re-check clock at click time (not stale 15s state)
+    if (!isFogDayWritable(dayIso, new Date())) {
+      setFogWritable(false);
+      return;
+    }
+    const next = setFogDay(dayIso, value);
+    setFogMap(next);
+    seedFogUndoBaseline(next);
+    try {
+      window.dispatchEvent(
+        new CustomEvent(MEL_DATA_EVENT, {
+          detail: { domain: "brainFog", day: dayIso },
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // On mount: hydrate from local store first (instant). Network import only if empty.
+  useEffect(() => {
+    const s = loadWhoopStore();
+    const empty = Object.keys(s.days).length === 0 && s.workouts.length === 0;
+    const hydrate = () => {
+      const r = resolveSleepForDay(dayIso);
+      setBedtime(r.bedtime);
+      setWake(r.wake);
+      setWhoop(loadWhoopDay(dayIso));
+      setNightsTick((t) => t + 1);
+      setWhoopStoreTick((t) => t + 1);
+    };
+    // Instant path — never block first paint on /whoop/latest fetches
+    hydrate();
+    if (!empty) return;
+    void importWhoopFromPublicLatest()
+      .catch(() => ({ ok: false as const }))
+      .finally(hydrate);
+    // dayIso only for initial hydrate of "today"; intentional empty deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function onWhoopFiles(fileList: FileList | null) {
+    if (!fileList?.length || whoopImportBusy) return;
+    setWhoopImportBusy(true);
+    try {
+      const files: Array<{ name: string; text: string }> = [];
+      for (const file of Array.from(fileList)) {
+        if (/\.zip$/i.test(file.name)) continue;
+        if (!/\.csv$/i.test(file.name) && !/\.txt$/i.test(file.name)) continue;
+        files.push({ name: file.name, text: await file.text() });
+      }
+      if (files.length) {
+        importWhoopCsvTexts(files);
+        syncAllWhoopSleepToSleepStore();
+        setWhoop(loadWhoopDay(dayIso));
+        setNightsTick((t) => t + 1);
+        setWhoopStoreTick((t) => t + 1);
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setWhoopImportBusy(false);
+      if (whoopFileRef.current) whoopFileRef.current.value = "";
+    }
+  }
+
+  // New calendar day → load that day's Whoop/manual times
   useEffect(() => {
     function rollToToday() {
       const now = todayKey();
       if (now === dayIso) return;
       setDayIso(now);
-      const next = loadSleepDay(now); // empty if never logged this day
+      const next = resolveSleepForDay(now);
       setBedtime(next.bedtime);
       setWake(next.wake);
     }
     rollToToday();
-    const id = window.setInterval(rollToToday, 20_000); // catch midnight while open
+    const id = window.setInterval(rollToToday, 20_000);
     window.addEventListener("focus", rollToToday);
     document.addEventListener("visibilitychange", rollToToday);
     return () => {
@@ -135,32 +836,54 @@ function SleepPanel() {
     };
   }, [dayIso]);
 
-  // Save THIS day's times + rebuild weekly line (history + live today)
+  // When the open day changes, hydrate bed/wake from Whoop first
   useEffect(() => {
-    if (bedtime || wake) {
-      saveSleepDay(dayIso, bedtime, wake);
-    }
-    setWeekHours(
-      weekSleepHours(
-        week.map((d) => d.iso),
-        dayIso,
-        bedtime,
-        wake
-      )
-    );
-  }, [bedtime, wake, dayIso, week]);
+    const r = resolveSleepForDay(dayIso);
+    setBedtime(r.bedtime);
+    setWake(r.wake);
+    setWhoop(loadWhoopDay(dayIso));
+  }, [dayIso]);
 
+  // Persist sleep only when values actually changed (was rewriting every hydrate)
   useEffect(() => {
-    saveFogMap(fogMap);
-  }, [fogMap]);
+    if (!bedtime && !wake) return;
+    try {
+      const raw = localStorage.getItem(`dr-melani-sleep-v1:${dayIso}`);
+      if (raw) {
+        const prev = JSON.parse(raw) as { bedtime?: string; wake?: string };
+        if (prev.bedtime === bedtime && prev.wake === wake) return;
+      }
+    } catch {
+      /* write through */
+    }
+    saveSleepDay(dayIso, bedtime, wake);
+    notifyHabitAutoSync(dayIso);
+  }, [bedtime, wake, dayIso]);
+
+  // Fog: setTodayFog already persists — do not re-save entire map every render tick
+
+  // Whoop import → light refresh (skip full re-sync of every night unless import changed times)
+  useEffect(() => {
+    const onWhoop = () => {
+      syncAllWhoopSleepToSleepStore();
+      const r = resolveSleepForDay(dayIso);
+      setBedtime(r.bedtime);
+      setWake(r.wake);
+      setWhoop(loadWhoopDay(dayIso));
+      setNightsTick((t) => t + 1);
+      setWhoopStoreTick((t) => t + 1);
+    };
+    window.addEventListener(WHOOP_EVENT, onWhoop);
+    return () => window.removeEventListener(WHOOP_EVENT, onWhoop);
+  }, [dayIso]);
 
   useEffect(() => {
     const refresh = (event: Event) => {
       const domain = (event as CustomEvent<{ domain?: string }>).detail?.domain;
       if (domain !== "sleep" && domain !== "brainFog") return;
-      const sleep = loadSleepDay(dayIso);
-      setBedtime(sleep.bedtime);
-      setWake(sleep.wake);
+      const r = resolveSleepForDay(dayIso);
+      setBedtime(r.bedtime);
+      setWake(r.wake);
       setFogMap(loadFogMap());
     };
     window.addEventListener(MEL_DATA_EVENT, refresh);
@@ -183,19 +906,11 @@ function SleepPanel() {
     const onSleep = (event: Event) => {
       const iso =
         (event as CustomEvent<{ iso?: string }>).detail?.iso || dayIso;
-      const sleep = loadSleepDay(iso);
+      const sleep = resolveSleepForDay(iso);
       if (iso === dayIso) {
         setBedtime(sleep.bedtime);
         setWake(sleep.wake);
       }
-      setWeekHours(
-        weekSleepHours(
-          week.map((d) => d.iso),
-          dayIso,
-          iso === dayIso ? sleep.bedtime : bedtime,
-          iso === dayIso ? sleep.wake : wake
-        )
-      );
     };
     window.addEventListener(FOG_EXTERNAL_RESTORE_EVENT, onFog);
     window.addEventListener(SLEEP_EXTERNAL_RESTORE_EVENT, onSleep);
@@ -203,231 +918,201 @@ function SleepPanel() {
       window.removeEventListener(FOG_EXTERNAL_RESTORE_EVENT, onFog);
       window.removeEventListener(SLEEP_EXTERNAL_RESTORE_EVENT, onSleep);
     };
-  }, [dayIso, week, bedtime, wake]);
-
-  // Draw linear weekly sleep chart (hours per day, line + dots)
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const wrap = wrapRef.current;
-    if (!canvas || !wrap) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const draw = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const w = Math.max(wrap.clientWidth || 300, 220);
-      const h = 180;
-      canvas.style.width = w + "px";
-      canvas.style.height = h + "px";
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      const padL = 36;
-      const padR = 12;
-      const padT = 22;
-      const padB = 28;
-      const plotW = w - padL - padR;
-      const plotH = h - padT - padB;
-      // Y axis 0–14 so 8h goal sits mid-upper; clamp points into range
-      const yMax = 14;
-
-      ctx.clearRect(0, 0, w, h);
-      // Grid
-      ctx.strokeStyle = "rgba(255,255,255,0.06)";
-      ctx.lineWidth = 1;
-      for (let i = 0; i <= 3; i++) {
-        const y = padT + (plotH * i) / 3;
-        ctx.beginPath();
-        ctx.moveTo(padL, y);
-        ctx.lineTo(padL + plotW, y);
-        ctx.stroke();
-      }
-      ctx.fillStyle = "rgba(255,255,255,0.45)";
-      ctx.font = '12px "Times New Roman", Times, serif';
-      ctx.textAlign = "right";
-      [14, 10, 5, 0].forEach((v, i) => {
-        ctx.fillText(String(v), padL - 8, padT + (plotH * i) / 3 + 4);
-      });
-      ctx.save();
-      ctx.translate(12, padT + plotH / 2);
-      ctx.rotate(-Math.PI / 2);
-      ctx.textAlign = "center";
-      ctx.fillText("Hours", 0, 0);
-      ctx.restore();
-
-      // 8h goal line (green dashed)
-      const y8 = padT + plotH * (1 - 8 / yMax);
-      ctx.strokeStyle = "rgba(34,197,94,0.55)";
-      ctx.setLineDash([4, 5]);
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(padL, y8);
-      ctx.lineTo(padL + plotW, y8);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // One point per day that has hours (index keeps Mon under Mon, etc.)
-      const points: { x: number; y: number; hr: number; i: number }[] = [];
-      weekHours.forEach((hr, i) => {
-        if (hr == null || Number.isNaN(hr)) return;
-        const x = padL + (plotW * (i + 0.5)) / 7;
-        const clamped = Math.max(0, Math.min(yMax, hr));
-        const y = padT + plotH * (1 - clamped / yMax);
-        points.push({ x, y, hr, i });
-      });
-
-      if (points.length > 0) {
-        // Linear line: connect days in week order (gaps skip missing nights)
-        ctx.strokeStyle = "rgba(255,255,255,0.92)";
-        ctx.lineWidth = 2;
-        ctx.lineJoin = "round";
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        points.forEach((p, idx) => {
-          if (idx === 0) ctx.moveTo(p.x, p.y);
-          else ctx.lineTo(p.x, p.y);
-        });
-        ctx.stroke();
-
-        // Dots + hour labels
-        points.forEach((p) => {
-          ctx.beginPath();
-          ctx.fillStyle = p.hr >= 7.5 ? "#22c55e" : "#fb7185";
-          ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-          ctx.fill();
-          // white ring so it pops on dark bg
-          ctx.strokeStyle = "rgba(0,0,0,0.35)";
-          ctx.lineWidth = 1;
-          ctx.stroke();
-          ctx.fillStyle = "rgba(255,255,255,0.9)";
-          ctx.font = '11px "Times New Roman", Times, serif';
-          ctx.textAlign = "center";
-          ctx.fillText(String(p.hr), p.x, p.y - 9);
-        });
-      }
-
-      // Day labels
-      ctx.fillStyle = "rgba(255,255,255,0.45)";
-      ctx.font = '12px "Times New Roman", Times, serif';
-      ctx.textAlign = "center";
-      week.forEach((d, i) => {
-        const isToday = d.iso === dayIso;
-        ctx.fillStyle = isToday
-          ? "rgba(255,255,255,0.85)"
-          : "rgba(255,255,255,0.45)";
-        ctx.fillText(d.short, padL + (plotW * (i + 0.5)) / 7, h - 8);
-      });
-    };
-
-    draw();
-    const ro = new ResizeObserver(() => draw());
-    ro.observe(wrap);
-    return () => ro.disconnect();
-  }, [weekHours, week, dayIso]);
-
-  // Hint when both times set but hours invalid (e.g. 1 AM → 11 PM = 22h)
-  const timesSet = Boolean(bedtime && wake);
-  const hoursInvalid = timesSet && hoursToday == null;
+  }, [dayIso]);
 
   return (
     /* Wide screens put sleep + brain fog side by side; chart under both */
     <div className="fx-sleep-spread">
-      <section className="fx-section">
-        <h2 className="fx-h2">SLEEP</h2>
-        <p className="fx-line">
-          <span className="fx-key">Day:</span>
-          <span className="fx-val">{dayLabel}</span>
-        </p>
-        <p className="fx-line">
-          <span className="fx-key">Bedtime:</span>
-          <input
-            className="fx-input"
-            type="time"
-            value={bedtime}
-            onChange={(e) => setBedtime(e.target.value)}
-            aria-label="Bedtime"
-          />
-        </p>
-        <p className="fx-line">
-          <span className="fx-key">Wake:</span>
-          <input
-            className="fx-input"
-            type="time"
-            value={wake}
-            onChange={(e) => setWake(e.target.value)}
-            aria-label="Wake"
-          />
-        </p>
-        {hoursToday != null ? (
-          <p className="fx-line">
-            <span className="fx-key">Hours:</span>
-            <span className="fx-val">{hoursToday} h</span>
-          </p>
-        ) : null}
-        {hoursInvalid ? (
-          <p className="fx-line fx-sleep-hint">
-            Times look off (need about 1–16 hours). Example: bed 11:00 PM, wake
-            7:00 AM — or bed 1:00 AM, wake 11:00 AM.
-          </p>
-        ) : null}
-      </section>
+      {/* No "SLEEP" heading — subnav already says Sleep. Weight lives on Gym. */}
+      {whoop && (whoop.sleepScore != null || whoop.sleepHours != null) ? (
+        <section className="fx-section fx-section-sleep" aria-label="Tonight sleep from Whoop">
+          <div className="fx-whoop-metrics">
+            {whoop.sleepScore != null ? (
+              <p className="fx-line">
+                <span className="fx-key">Sleep score:</span>
+                <span className="fx-val">{Math.round(whoop.sleepScore)}%</span>
+              </p>
+            ) : null}
+            {whoop.sleepHours != null ? (
+              <p className="fx-line">
+                <span className="fx-key">Asleep:</span>
+                <span className="fx-val">{whoop.sleepHours} h</span>
+              </p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
-      <section className="fx-section">
+      <section className="fx-section fx-bf-section" aria-label="Brain fog">
         <h2 className="fx-h2">BRAIN FOG</h2>
-        <div className="fx-bf-btns">
+        <div
+          className="fx-bf-btns"
+          role="group"
+          aria-label={
+            fogWritable
+              ? "Brain fog today — change freely until 11:59 PM"
+              : "Brain fog locked for today"
+          }
+        >
           <button
             type="button"
-            className={`fx-bf-tap fx-bf-yes${todayFog ? " is-on" : ""}`}
-            onClick={() => setFogMap((m) => ({ ...m, [dayIso]: true }))}
+            className={`fx-bf-tap fx-bf-yes${todayFogYes ? " is-on" : ""}${
+              !fogWritable ? " is-locked" : ""
+            }`}
+            aria-pressed={todayFogYes}
+            disabled={!fogWritable}
+            title={
+              fogWritable
+                ? "Had fog today — you can switch until 11:59 PM"
+                : "Locked at 11:59 PM — final for this day"
+            }
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setTodayFog(true);
+            }}
           >
             Yes
           </button>
           <button
             type="button"
-            className={`fx-bf-tap fx-bf-no${
-              fogMap[dayIso] === false ? " is-on" : ""
+            className={`fx-bf-tap fx-bf-no${todayFogNo ? " is-on" : ""}${
+              !fogWritable ? " is-locked" : ""
             }`}
-            onClick={() => setFogMap((m) => ({ ...m, [dayIso]: false }))}
+            aria-pressed={todayFogNo}
+            disabled={!fogWritable}
+            title={
+              fogWritable
+                ? "No fog today — you can switch until 11:59 PM"
+                : "Locked at 11:59 PM — final for this day"
+            }
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setTodayFog(false);
+            }}
           >
             No
           </button>
         </div>
-        <div className="fx-bf-week">
-          {week.map((d) => (
-            <button
-              key={d.iso}
-              type="button"
-              className={`fx-bf-day${fogMap[d.iso] ? " is-fog" : ""}`}
-              title={d.label}
-              onClick={() =>
-                setFogMap((m) => ({ ...m, [d.iso]: !m[d.iso] }))
-              }
-            >
-              {d.short[0]}
-            </button>
-          ))}
-        </div>
-        <p className="fx-bf-summary">Brain fog {fogCount} of 7 days</p>
+        <FogDayClock dayIso={dayIso} onWritableChange={onFogWritableChange} />
+        {/* Lifetime pie — not a week row; n = all days ever logged */}
+        <button
+          type="button"
+          className="fx-bf-life-toggle"
+          aria-expanded={fogPieOpen}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setFogPieOpen((o) => !o);
+          }}
+        >
+          Lifetime · n = {fogLife.n}
+          {fogLife.n > 0
+            ? ` · yes ${fogLife.yes} · no ${fogLife.no}`
+            : ""}
+        </button>
+        {fogPieOpen ? (
+          <BrainFogLifetimePie yes={fogLife.yes} no={fogLife.no} />
+        ) : null}
       </section>
 
-      <section className="fx-section">
-        <h2 className="fx-h2">WEEKLY SLEEP</h2>
-        <p className="fx-line">
-          <span className="fx-key">Week:</span>
-          <span className="fx-val">{weekLabel}</span>
-        </p>
-        <div className="fx-chart-wrap" ref={wrapRef}>
-          <canvas ref={canvasRef} className="fx-chart" />
+      {/* Whoop trends — titled sections (Sleep · Overnight · Body signals) */}
+      {sleepPageSections.length > 0 ? (
+        <section className="fx-section fx-sleep-whoop-graphs" aria-label="Sleep graphs">
+          <div className="wx wx-on-sleep">
+            {sleepPageSections.map((sec, i) => (
+              <div
+                key={sec.title}
+                className={`wx-metric-section${i === 0 ? " is-first" : ""}`}
+              >
+                <h3 className="wx-h">{sec.title}</h3>
+                <div className="wx-panel-stack">
+                  {sec.metrics.map((m) => (
+                    <MetricGraphPanel
+                      key={m.key}
+                      series={m}
+                      onOpenExplain={() => setExplainKey(m.key)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          {explainSeries ? (
+            <MetricExplainModal
+              series={explainSeries}
+              onClose={() => setExplainKey(null)}
+            />
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* Bottom: every night log + quiet weekly CSV import (no Whoop page) */}
+      <footer className="fx-nights-footer">
+        {nights.length > 0 ? (
+          <>
+            <button
+              type="button"
+              className={`fx-nights-toggle${nightsOpen ? " is-open" : ""}`}
+              aria-expanded={nightsOpen}
+              onClick={() => setNightsOpen((o) => !o)}
+            >
+              every night logged
+              <span className="fx-nights-count">{nights.length}</span>
+            </button>
+            {nightsOpen ? (
+              <div className="fx-sleep-nights-list" role="list">
+                {nights.map((n) => (
+                  <button
+                    key={n.day}
+                    type="button"
+                    className={`fx-sleep-night${n.day === dayIso ? " is-active" : ""}`}
+                    onClick={() => setDayIso(n.day)}
+                  >
+                    <span className="fx-sleep-night-day">
+                      {(() => {
+                        const parts = n.day.split("-").map(Number);
+                        return `${parts[1]}/${parts[2]}`;
+                      })()}
+                    </span>
+                    <span className="fx-sleep-night-span">
+                      {formatHm12(n.bedtime)} - {formatHm12(n.wake)}
+                    </span>
+                    <span className="fx-sleep-night-h">
+                      {n.hours != null ? `${n.hours}h` : "—"}
+                      {n.score != null ? ` · ${Math.round(n.score)}%` : ""}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : null}
+        <div className="fx-whoop-import">
+          <button
+            type="button"
+            className="fx-whoop-import-btn"
+            disabled={whoopImportBusy}
+            onClick={() => whoopFileRef.current?.click()}
+          >
+            {whoopImportBusy ? "Importing…" : "Import weekly data"}
+          </button>
+          <input
+            ref={whoopFileRef}
+            type="file"
+            accept=".csv,text/csv,.txt"
+            multiple
+            hidden
+            onChange={(e) => void onWhoopFiles(e.target.files)}
+          />
         </div>
-      </section>
+      </footer>
     </div>
   );
 }
 
-// Today's logged usuals → macros (saved in this browser)
-const USUAL_LOG_KEY = "dr-melani-meals-usuals";
-
+// Single food ledger = nutritionStore (item rows). Legacy key is mirrored for twin/brief.
 type MacroBag = {
   calories: number;
   protein_g: number;
@@ -437,9 +1122,7 @@ type MacroBag = {
 };
 
 type UsualDayLog = {
-  // which usual ids were logged today (can log more than once? keep once each)
   loggedIds: string[];
-  // sum of macros from logged usuals
   totals: MacroBag;
 };
 
@@ -447,21 +1130,28 @@ function emptyMacros(): MacroBag {
   return { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 };
 }
 
+/** Read day from nutrition item ledger (source of truth). */
 function loadUsualDay(day: string): UsualDayLog {
   try {
-    const raw = localStorage.getItem(`${USUAL_LOG_KEY}:${day}`);
-    if (raw) return JSON.parse(raw) as UsualDayLog;
+    const entries = loadNutriDay(day);
+    const t = nutriTotalsFor(day);
+    const loggedIds = [
+      ...new Set(
+        entries.map((e) => e.presetId || e.id).filter(Boolean) as string[]
+      ),
+    ];
+    return {
+      loggedIds,
+      totals: {
+        calories: Math.round(t.calories),
+        protein_g: Math.round(t.protein_g * 10) / 10,
+        carbs_g: Math.round(t.carbs_g * 10) / 10,
+        fat_g: Math.round(t.fat_g * 10) / 10,
+        fiber_g: Math.round(t.fiber_g * 10) / 10,
+      },
+    };
   } catch {
-    /* ignore */
-  }
-  return { loggedIds: [], totals: emptyMacros() };
-}
-
-function saveUsualDay(day: string, data: UsualDayLog) {
-  try {
-    localStorage.setItem(`${USUAL_LOG_KEY}:${day}`, JSON.stringify(data));
-  } catch {
-    /* ignore */
+    return { loggedIds: [], totals: emptyMacros() };
   }
 }
 
@@ -469,12 +1159,27 @@ function MealsPanel() {
   // Track calendar day so midnight clears "logged today" and starts a fresh log
   const [day, setDay] = useState(() => todayKey());
   const g = MACRO_GOALS;
+  const week = useMemo(() => {
+    const [y, m, d] = day.split("-").map(Number);
+    return sleepWeekDays(new Date(y, m - 1, d));
+  }, [day]);
 
-  // One-tap usual log (breakfast etc.) — this is the main logging UI
+  // One-tap usual log — nutritionStore is the single ledger (Mel writes here too)
   const [usualDay, setUsualDay] = useState<UsualDayLog>(() =>
     loadUsualDay(todayKey())
   );
   const [flash, setFlash] = useState("");
+
+  // Mel / NL / snack seed → same rings
+  useEffect(() => {
+    const refresh = () => setUsualDay(loadUsualDay(day));
+    window.addEventListener(NUTRITION_EVENT, refresh);
+    window.addEventListener(MEL_DATA_EVENT, refresh);
+    return () => {
+      window.removeEventListener(NUTRITION_EVENT, refresh);
+      window.removeEventListener(MEL_DATA_EVENT, refresh);
+    };
+  }, [day]);
   // Open "What's in it" when linked with ?details=breakfast (or leave closed)
   const [openDetails, setOpenDetails] = useState<string | null>(() => {
     try {
@@ -486,6 +1191,80 @@ function MealsPanel() {
     return null;
   });
 
+  // Bowel movement (moved from Sleep — body log next to food)
+  const [bowelDetail, setBowelDetail] = useState<Record<string, BowelDayLog>>(
+    () => {
+      // One-shot: apply explicit missed-day corrections (e.g. Sunday = No)
+      applyPendingBowelCorrections();
+      const map = loadBowelDetailMap();
+      seedBowelDetailUndoBaseline(map);
+      seedBowelUndoBaseline(loadBowelMap());
+      return map;
+    }
+  );
+  const [bowelTypesOpen, setBowelTypesOpen] = useState(() => {
+    const log = loadBowelDetailMap()[todayKey()];
+    return log?.had === true && log.look == null;
+  });
+  /** Lifetime Bristol 1–7 pie (same toggle pattern as brain fog) */
+  const [bowelPieOpen, setBowelPieOpen] = useState(false);
+  const todayLog = bowelDetail[day];
+  const todayBowel = todayLog?.had === true;
+  const todayBowelNo = todayLog?.had === false;
+  // Lifetime type tallies + cumulative multi-line series (one line per type)
+  const bristolLife = useMemo(() => {
+    const counts: Record<BristolType, number> = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+      6: 0,
+      7: 0,
+    };
+    const days = Object.entries(bowelDetail)
+      .filter(
+        ([, log]) =>
+          log?.had === true &&
+          log.look != null &&
+          log.look >= 1 &&
+          log.look <= 7
+      )
+      .map(([day, log]) => ({ day, look: log!.look as BristolType }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+
+    const series: { day: string; byType: Record<BristolType, number> }[] = [];
+    for (const { day, look } of days) {
+      counts[look] += 1;
+      series.push({
+        day,
+        byType: {
+          1: counts[1],
+          2: counts[2],
+          3: counts[3],
+          4: counts[4],
+          5: counts[5],
+          6: counts[6],
+          7: counts[7],
+        },
+      });
+    }
+    const n = days.length;
+    return { counts, n, series };
+  }, [bowelDetail]);
+
+  function patchBowel(patch: Partial<BowelDayLog> & { had: boolean }) {
+    const next = upsertBowelDay(day, patch, "ui");
+    setBowelDetail((m) => ({ ...m, [day]: next }));
+    if (patch.had === false) setBowelTypesOpen(false);
+    else if (patch.look != null) setBowelTypesOpen(false);
+    else if (patch.had === true) setBowelTypesOpen(true);
+  }
+
+  function setTodayBowel(had: boolean) {
+    patchBowel({ had });
+  }
+
   // New day → load that day's meals (empty if nothing logged yet)
   useEffect(() => {
     function roll() {
@@ -493,6 +1272,8 @@ function MealsPanel() {
       if (now === day) return;
       setDay(now);
       setUsualDay(loadUsualDay(now));
+      const log = loadBowelDetailMap()[now];
+      setBowelTypesOpen(log?.had === true && log.look == null);
     }
     roll();
     const id = window.setInterval(roll, 20_000);
@@ -505,14 +1286,50 @@ function MealsPanel() {
     };
   }, [day]);
 
+  // One-shot: log Pocky / pomegranate / cherries into nutrition + meals totals
+  useEffect(() => {
+    void applyPendingSnackSeed().then((next) => {
+      if (next) {
+        setUsualDay(loadUsualDay(todayKey()));
+        setFlash("Logged snacks: 2× Pocky · pomegranate · cherries (~998 cal)");
+        window.setTimeout(() => setFlash(""), 4000);
+      }
+    });
+  }, []);
+
   useEffect(() => {
     const refresh = (event: Event) => {
       const domain = (event as CustomEvent<{ domain?: string }>).detail?.domain;
       if (domain === "meals") setUsualDay(loadUsualDay(day));
+      if (domain === "bowel") setBowelDetail(loadBowelDetailMap());
     };
     window.addEventListener(MEL_DATA_EVENT, refresh);
     return () => window.removeEventListener(MEL_DATA_EVENT, refresh);
   }, [day]);
+
+  useEffect(() => {
+    const onYn = () => {
+      setBowelDetail(loadBowelDetailMap());
+      seedBowelUndoBaseline(loadBowelMap());
+    };
+    const onDetail = (event: Event) => {
+      const detail = (event as CustomEvent<Record<string, BowelDayLog>>).detail;
+      if (detail && typeof detail === "object") {
+        setBowelDetail(detail);
+        seedBowelDetailUndoBaseline(detail);
+      } else {
+        const map = loadBowelDetailMap();
+        setBowelDetail(map);
+        seedBowelDetailUndoBaseline(map);
+      }
+    };
+    window.addEventListener(BOWEL_EXTERNAL_RESTORE_EVENT, onYn);
+    window.addEventListener(BOWEL_DETAIL_RESTORE_EVENT, onDetail);
+    return () => {
+      window.removeEventListener(BOWEL_EXTERNAL_RESTORE_EVENT, onYn);
+      window.removeEventListener(BOWEL_DETAIL_RESTORE_EVENT, onDetail);
+    };
+  }, []);
 
   const c = usualDay.totals;
   const p = {
@@ -538,32 +1355,47 @@ function MealsPanel() {
     });
   }
 
-  /** Log a usual meal once for today → rings update */
+  /** Log a usual meal once → nutritionStore (Mel uses the same path) */
   function logUsual(presetId: string) {
     const preset = MEAL_PRESETS.find((m) => m.id === presetId);
     if (!preset) return;
-    if (usualDay.loggedIds.includes(presetId)) {
+    if (loadNutriDay(day).some((e) => e.presetId === presetId)) {
       setFlash("Already logged today");
       window.setTimeout(() => setFlash(""), 1600);
       return;
     }
-    const next: UsualDayLog = {
-      loggedIds: [...usualDay.loggedIds, presetId],
-      totals: {
-        calories: usualDay.totals.calories + preset.calories,
-        protein_g: usualDay.totals.protein_g + preset.protein_g,
-        carbs_g: usualDay.totals.carbs_g + preset.carbs_g,
-        fat_g: usualDay.totals.fat_g + preset.fat_g,
-        fiber_g: usualDay.totals.fiber_g + preset.fiber_g,
+    const slot =
+      /breakfast/i.test(preset.id) || /breakfast/i.test(preset.title)
+        ? "breakfast"
+        : /lunch/i.test(preset.id)
+          ? "lunch"
+          : /dinner/i.test(preset.id)
+            ? "dinner"
+            : "snack";
+    addEntry(
+      {
+        slot,
+        name: preset.title,
+        grams: 0,
+        qtyLabel: "Usual meal",
+        macros: {
+          calories: preset.calories,
+          protein_g: preset.protein_g,
+          carbs_g: preset.carbs_g,
+          fat_g: preset.fat_g,
+          fiber_g: preset.fiber_g,
+        },
+        presetId: preset.id,
+        source: "preset",
       },
-    };
-    setUsualDay(next);
-    saveUsualDay(day, next);
-    // also tick the consume checklist row for that meal
+      day
+    );
+    setUsualDay(loadUsualDay(day));
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, "0");
     const mm = String(now.getMinutes()).padStart(2, "0");
     patch(`meal-${presetId}`, { done: true, time: `${hh}:${mm}` });
+    notifyHabitAutoSync(day);
     setFlash(`Logged ${preset.title.toLowerCase()} — macros updated`);
     window.setTimeout(() => setFlash(""), 2200);
   }
@@ -571,45 +1403,15 @@ function MealsPanel() {
   /** Undo a usual so you can log again */
   function undoUsual(presetId: string) {
     const preset = MEAL_PRESETS.find((m) => m.id === presetId);
-    if (!preset || !usualDay.loggedIds.includes(presetId)) return;
-    const next: UsualDayLog = {
-      loggedIds: usualDay.loggedIds.filter((id) => id !== presetId),
-      totals: {
-        calories: Math.max(0, usualDay.totals.calories - preset.calories),
-        protein_g: Math.max(0, usualDay.totals.protein_g - preset.protein_g),
-        carbs_g: Math.max(0, usualDay.totals.carbs_g - preset.carbs_g),
-        fat_g: Math.max(0, usualDay.totals.fat_g - preset.fat_g),
-        fiber_g: Math.max(0, usualDay.totals.fiber_g - preset.fiber_g),
-      },
-    };
-    setUsualDay(next);
-    saveUsualDay(day, next);
+    if (!preset) return;
+    const hit = loadNutriDay(day).find((e) => e.presetId === presetId);
+    if (!hit) return;
+    removeEntry(hit.id, day);
+    setUsualDay(loadUsualDay(day));
     patch(`meal-${presetId}`, { done: false });
+    notifyHabitAutoSync(day);
     setFlash("Undone");
     window.setTimeout(() => setFlash(""), 1400);
-  }
-
-  function logSmartMeal(meal: SmartMealDraft) {
-    const id = `smart-${Date.now()}`;
-    const next: UsualDayLog = {
-      loggedIds: [...usualDay.loggedIds, id],
-      totals: {
-        calories: Math.round(usualDay.totals.calories + meal.totals.calories),
-        protein_g: Math.round(usualDay.totals.protein_g + meal.totals.protein_g),
-        carbs_g: Math.round(usualDay.totals.carbs_g + meal.totals.carbs_g),
-        fat_g: Math.round(usualDay.totals.fat_g + meal.totals.fat_g),
-        fiber_g: Math.round(usualDay.totals.fiber_g + meal.totals.fiber_g),
-      },
-    };
-    setUsualDay(next);
-    saveUsualDay(day, next);
-    try {
-      const key = `dr-melani-smart-meals:${day}`;
-      const prior = JSON.parse(localStorage.getItem(key) || "[]");
-      localStorage.setItem(key, JSON.stringify([...prior, { ...meal, id, loggedAt: new Date().toISOString() }]));
-    } catch { /* the macro record is already saved */ }
-    setFlash(`Logged ${meal.title.toLowerCase()} · verified macros added`);
-    window.setTimeout(() => setFlash(""), 2400);
   }
 
   return (
@@ -698,9 +1500,7 @@ function MealsPanel() {
         </ul>
       </section>
 
-      <SmartMealCamera onLog={logSmartMeal} />
-
-      {/* One-tap meal log — no worthless MY USUALS header */}
+      {/* Breakfast only — no lunch / dinner / snack clutter for now */}
       <section className="fx-section usuals-section">
         {flash ? <p className="usual-flash">{flash}</p> : null}
 
@@ -710,14 +1510,8 @@ function MealsPanel() {
           return (
             <div
               key={u.id}
-              className={`usual-card${u.slot === "breakfast" ? " is-breakfast" : ""}${
-                logged ? " is-logged" : ""
-              }`}
+              className={`usual-card is-breakfast${logged ? " is-logged" : ""}`}
             >
-              {/* Skip slot label when title already says it (e.g. Breakfast) */}
-              {u.title.toLowerCase() !== u.slot.toLowerCase() ? (
-                <p className="usual-slot">{u.slot}</p>
-              ) : null}
               <h3 className="usual-title">{u.title}</h3>
               <p className="usual-macro-line">
                 {u.calories} cal · {u.protein_g}g protein · {u.carbs_g}g C ·{" "}
@@ -741,7 +1535,7 @@ function MealsPanel() {
                   className="usual-log-btn"
                   onClick={() => logUsual(u.id)}
                 >
-                  Log {u.title.toLowerCase()} today
+                  Log breakfast today
                 </button>
               )}
 
@@ -757,7 +1551,6 @@ function MealsPanel() {
               </button>
               {open && (
                 <div className="usual-details">
-                  {/* Notes line under "What's in it" — same style as before */}
                   {u.notes ? <p className="usual-notes">{u.notes}</p> : null}
                   {u.sections && u.sections.length > 0 ? (
                     u.sections.map((sec, si) => (
@@ -788,11 +1581,204 @@ function MealsPanel() {
 
       <WaterTracker day={day} />
       <SupplementsList day={day} />
+
+      {/*
+        BOWEL — on Meals (body/digestion next to food).
+        Only *today* is writable; week strip is history.
+      */}
+      <section className="fx-section fx-bowel">
+        <h2 className="fx-h2">BOWEL MOVEMENT</h2>
+
+        <div className="fx-bf-btns" role="group" aria-label="Bowel movement today only">
+          <button
+            type="button"
+            className={`fx-bf-tap fx-bm-yes${todayBowel ? " is-on" : ""}`}
+            aria-pressed={todayBowel}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setTodayBowel(true);
+            }}
+          >
+            Yes
+          </button>
+          <button
+            type="button"
+            className={`fx-bf-tap fx-bm-no${todayBowelNo ? " is-on" : ""}`}
+            aria-pressed={todayBowelNo}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setTodayBowel(false);
+            }}
+          >
+            No
+          </button>
+        </div>
+
+        <div
+          className="fx-bf-week fx-bm-week-ro"
+          role="list"
+          aria-label="Bowel this week (history only)"
+        >
+          {week.map((d) => {
+            const log = bowelDetail[d.iso];
+            const isYes = log?.had === true;
+            const isNo = log?.had === false;
+            const isToday = d.iso === day;
+            const isFuture = d.iso > day;
+            const title = isFuture
+              ? `${d.label}: not open yet`
+              : isYes
+                ? `${d.label}: Type ${log?.look ?? "yes"} (locked)`
+                : isNo
+                  ? `${d.label}: No (locked)`
+                  : isToday
+                    ? `${d.label}: today — use Yes / No above`
+                    : `${d.label}: not logged`;
+            return (
+              <span
+                key={d.iso}
+                role="listitem"
+                className={`fx-bf-day fx-bm-day-ro${isYes ? " is-bm" : ""}${
+                  isNo ? " is-bm-no" : ""
+                }${isToday ? " is-today" : ""}${isFuture ? " is-future" : ""}`}
+                title={title}
+              >
+                {d.short[0]}
+                {isYes && log?.look != null ? (
+                  <span className="fx-bm-week-type">{log.look}</span>
+                ) : null}
+              </span>
+            );
+          })}
+        </div>
+        {/* Lifetime Bristol 1–7 — sits where the “Went x of 7” line was */}
+        <button
+          type="button"
+          className="fx-bf-life-toggle"
+          aria-expanded={bowelPieOpen}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setBowelPieOpen((o) => !o);
+          }}
+        >
+          Lifetime types · n = {bristolLife.n}
+          {bristolLife.n > 0
+            ? ` · ${([1, 2, 3, 4, 5, 6, 7] as const)
+                .filter((t) => bristolLife.counts[t] > 0)
+                .map((t) => `${t}×${bristolLife.counts[t]}`)
+                .join(" · ")}`
+            : ""}
+        </button>
+        {bowelPieOpen ? (
+          <BowelBristolLifetimeGraph
+            series={bristolLife.series}
+            counts={bristolLife.counts}
+            n={bristolLife.n}
+          />
+        ) : null}
+
+        {todayBowel ? (
+          <div className="fx-bm-details">
+            {!bowelTypesOpen ? (
+              <div className="fx-bm-closed-row">
+                <p className="fx-bm-type-hint" aria-live="polite">
+                  {todayLog?.look != null
+                    ? `Type ${todayLog.look} saved`
+                    : "Yes logged"}
+                </p>
+                <button
+                  type="button"
+                  className="fx-bm-toggle"
+                  onClick={() => setBowelTypesOpen(true)}
+                >
+                  {todayLog?.look != null ? "Change type" : "Pick type"}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="fx-bm-closed-row">
+                  <p className="fx-bm-type-hint" aria-live="polite">
+                    {todayLog?.look != null
+                      ? `Type ${todayLog.look} — tap to change`
+                      : "Tap a type (1–7)"}
+                  </p>
+                  <button
+                    type="button"
+                    className="fx-bm-toggle"
+                    onClick={() => setBowelTypesOpen(false)}
+                  >
+                    Done
+                  </button>
+                </div>
+                <div
+                  className="fx-bm-pills"
+                  role="listbox"
+                  aria-label="Bristol type for today"
+                >
+                  {BOWEL_LOOK_GUIDE.map((g) => {
+                    const tip = BOWEL_TYPE_POPUP[g.look];
+                    const isLogged = todayLog?.look === g.look;
+                    return (
+                      <div
+                        key={g.look}
+                        className={`fx-bm-chip${isLogged ? " is-on" : ""}`}
+                      >
+                        <button
+                          type="button"
+                          className="fx-bm-chip-btn"
+                          role="option"
+                          aria-selected={isLogged}
+                          onClick={() =>
+                            patchBowel({
+                              had: true,
+                              look: g.look as BowelLook,
+                            })
+                          }
+                        >
+                          <span className="fx-bm-pill-n">{g.look}</span>
+                          <span className="fx-bm-pill-art" aria-hidden>
+                            <BowelLookIcon look={g.look} />
+                          </span>
+                        </button>
+                        <div className="fx-bm-tip" role="tooltip">
+                          <p className="fx-bm-tip-title">
+                            Type {g.look}
+                            <span> · {g.bandLabel}</span>
+                          </p>
+                          <p>
+                            <strong>How it looks</strong>
+                            {tip.looks}
+                          </p>
+                          <p>
+                            <strong>What happened</strong>
+                            {tip.stool}
+                          </p>
+                          <p>
+                            <strong>What’s off</strong>
+                            {tip.wrong}
+                          </p>
+                          <p>
+                            <strong>How it feels</strong>
+                            {tip.feels}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
+      </section>
     </>
   );
 }
 
-const WATER_GOAL_ML = 4000; // 4 L
+// Goal matches Habits “3.5L water + Diet” (shared with habitAutoSync)
 const WATER_ADDS = [
   { ml: 250, label: "+250 ml" },
   { ml: 500, label: "+500 ml" },
@@ -815,6 +1801,15 @@ function loadWater(day: string): number {
 function saveWater(day: string, ml: number) {
   try {
     localStorage.setItem(`${WATER_KEY}:${day}`, String(ml));
+  } catch {
+    /* ignore */
+  }
+  // Habits ↔ water: bar at 3.5 L checks “3.5L water + Diet”; habit check fills bar
+  notifyHabitAutoSync(day);
+  try {
+    window.dispatchEvent(
+      new CustomEvent(MEL_DATA_EVENT, { detail: { domain: "water", day } })
+    );
   } catch {
     /* ignore */
   }
@@ -842,10 +1837,15 @@ function saveWaterHist(day: string, hist: number[]) {
 function WaterTracker({ day }: { day: string }) {
   const [ml, setMl] = useState(() => loadWater(day));
   const [hist, setHist] = useState<number[]>(() => loadWaterHist(day));
-  const goal = WATER_GOAL_ML;
+  const goal = WATER_GOAL_ML; // 3.5 L — same as Habits water goal
   const liters = (ml / 1000).toFixed(1);
-  const goalL = goal / 1000;
+  const goalL = (goal / 1000).toFixed(1); // 3.5
   const pctFill = Math.min(100, Math.round((ml / goal) * 100));
+
+  useEffect(() => {
+    setMl(loadWater(day));
+    setHist(loadWaterHist(day));
+  }, [day]);
 
   useEffect(() => {
     const refresh = (event: Event) => {
@@ -854,8 +1854,13 @@ function WaterTracker({ day }: { day: string }) {
       setMl(loadWater(day));
       setHist(loadWaterHist(day));
     };
+    // Habit check fills water → same event; also re-sync if habits grid changes
     window.addEventListener(MEL_DATA_EVENT, refresh);
-    return () => window.removeEventListener(MEL_DATA_EVENT, refresh);
+    window.addEventListener("wonder-habits-update", refresh);
+    return () => {
+      window.removeEventListener(MEL_DATA_EVENT, refresh);
+      window.removeEventListener("wonder-habits-update", refresh);
+    };
   }, [day]);
 
   function add(amount: number) {
@@ -1017,6 +2022,11 @@ function GymPanel() {
   return <GymExact />;
 }
 
+function FocusPanel() {
+  // Mac/app focus hours — mental load, not "mental health" branding
+  return <ScreenTime />;
+}
+
 type Props = {
   pageId: string;
   onGo: (id: string) => void;
@@ -1026,42 +2036,61 @@ const TAB_TO_PAGE: Record<FitnessTab, string> = {
   sleep: "pg-sleep",
   meals: "pg-meals",
   gym: "pg-gym",
+  focus: "pg-focus",
 };
 
 export function FitnessExact({ pageId, onGo }: Props) {
   const tab = useMemo(() => tabFromPageId(pageId), [pageId]);
 
-  // Fitness hub opens Sleep (like the real app)
+  // Legacy routes → canonical Fitness tabs
   useEffect(() => {
-    if (pageId === "pg-fitness") {
-      // stay showing sleep content; optional redirect
+    if (pageId === "pg-whoop" || pageId === "pg-body") {
+      onGo("pg-sleep");
     }
-  }, [pageId]);
+    if (pageId === "pg-screentime" || pageId === "pg-screen-time") {
+      onGo("pg-focus");
+    }
+  }, [pageId, onGo]);
 
   function selectTab(t: FitnessTab) {
     onGo(TAB_TO_PAGE[t]);
   }
 
+  // Private 6h rotation — no timer chrome in the UI, only the line + name
+  const [quote, setQuote] = useState(() => todayQuote());
+  useEffect(() => {
+    let timer: number | undefined;
+    const arm = () => {
+      setQuote(todayQuote());
+      // Wake a few seconds after the private slot flips
+      const wait = Math.min(msUntilNextQuoteSlot() + 1500, 6 * 60 * 60 * 1000);
+      timer = window.setTimeout(arm, Math.max(30_000, wait));
+    };
+    arm();
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, []);
+
   return (
     <div className="fx-page">
       <div className="fx-inner">
-        {/* Quote — plain, no bubble */}
         <div className="fx-quote">
-          <p className="fx-quote-text">“{QUOTE.text}”</p>
-          <p className="fx-quote-author">{QUOTE.source}</p>
+          <p className="fx-quote-text">“{quote.text}”</p>
+          <p className="fx-quote-author">{quote.source}</p>
         </div>
 
-        {/* Sleep · Meals · Gym (Body weight is under Gym → Warm-up) */}
+        {/* Sleep · Meals · Gym · Focus */}
         <nav className="fx-subnav" aria-label="Fitness pages">
           {(
             [
               ["sleep", "Sleep"],
               ["meals", "Meals"],
               ["gym", "Gym"],
+              ["focus", "Focus"],
             ] as const
-          ).map(([id, label], i) => (
+          ).map(([id, label]) => (
             <span key={id} className="fx-subnav-item">
-              {i > 0 && <span className="fx-dot">·</span>}
               <button
                 type="button"
                 className={`fx-subnav-link${tab === id ? " is-active" : ""}`}
@@ -1076,13 +2105,22 @@ export function FitnessExact({ pageId, onGo }: Props) {
         {tab === "sleep" && <SleepPanel />}
         {tab === "meals" && <MealsPanel />}
         {tab === "gym" && <GymPanel />}
+        {tab === "focus" && <FocusPanel />}
       </div>
     </div>
   );
 }
 
 export function isFitnessPage(pageId: string): boolean {
-  return ["pg-fitness", "pg-sleep", "pg-meals", "pg-gym", "pg-body"].includes(
-    pageId
-  );
+  return [
+    "pg-fitness",
+    "pg-sleep",
+    "pg-meals",
+    "pg-gym",
+    "pg-focus",
+    "pg-screentime", // legacy name → Focus
+    "pg-screen-time",
+    "pg-body",
+    "pg-whoop", // legacy route → redirects to Sleep
+  ].includes(pageId);
 }

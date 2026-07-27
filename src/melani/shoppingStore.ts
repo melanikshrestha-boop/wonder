@@ -1,3 +1,8 @@
+import {
+  buildGroceryRun,
+  saveGroceryRun,
+} from "./groceryEngine";
+
 export type StockState = "out" | "low" | "stocked";
 export type HomeItem = { id: string; name: string; area: string; state: StockState; preferredStore: "costco" | "walmart" | "either"; updatedAt: string };
 export type CostcoPlanItem = {
@@ -128,6 +133,33 @@ export function storeSearchUrl(store: "costco" | "walmart", query: string) {
 export function applyShoppingCommand(text: string): string | null {
   const low = text.trim().toLowerCase();
   let items = loadInventory();
+
+  // groceri.es-style: fixed menu → grocery run (Mel: "build grocery list")
+  const buildRun = low.match(
+    /^(?:build|make|generate|create|start)\s+(?:my\s+)?(?:a\s+)?(?:grocery|groceries|shopping)\s+(?:list|run)(?:\s+for\s+(\d+)\s*days?)?[.!]?$/i
+  ) || low.match(
+    /^(?:grocery|groceries)\s+(?:list|run)(?:\s+for\s+(\d+)\s*days?)?[.!]?$/i
+  ) || /^(?:build|make)\s+(?:my\s+)?(?:weekly\s+)?(?:food\s+)?(?:shop|run)[.!]?$/i.test(low)
+    ? (["", "7"] as unknown as RegExpMatchArray)
+    : null;
+  if (buildRun) {
+    const days = Math.min(21, Math.max(1, Number(buildRun[1]) || 7));
+    const run = buildGroceryRun(days);
+    saveGroceryRun(run);
+    stageCostcoPlan(
+      run.items.map((item) => ({
+        name: item.name,
+        quantity: Math.max(1, Math.ceil(item.quantity)),
+      }))
+    );
+    window.dispatchEvent(
+      new CustomEvent("wonder-mel-navigate", {
+        detail: { pageId: "pg-agent-shopping" },
+      })
+    );
+    return `Built a ${days}-day grocery run from your fixed menu (${run.items.length} buy lines, pantry skipped). Open Shopping and clear the aisle path.`;
+  }
+
   const openCostco = low.match(/^(?:please\s+)?(?:open|connect|sign\s+(?:me\s+)?in(?:to)?|go\s+to)\s+(?:my\s+)?costco(?:\s+(?:account|same[ -]?day|shopping))?[.!]?$/i);
   if (openCostco) {
     window.open(COSTCO_LOGIN_URL, "_blank", "noopener,noreferrer");

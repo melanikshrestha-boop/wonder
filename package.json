@@ -11,6 +11,7 @@
     "typecheck": "tsc -b",
     "lint": "oxlint",
     "test:mel": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-mel-workspace.mts",
+    "test:mel-protocol": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-mel-protocol.mts",
     "test:wardrobe": "node scripts/test-wardrobe-intelligence.mjs",
     "test:wardrobe-agent": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-wardrobe-agent.mts",
     "test:weather": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-weather-agent.mts",
@@ -21,7 +22,11 @@
     "test:nutrition": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-nutrition.mts",
     "test:models": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-finance-models.mts",
     "test:trading": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-trading.mts",
-    "test:care-agent": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-care-agent.mts"
+    "test:care-agent": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-care-agent.mts",
+    "screen": "python3 scripts/screentime.py",
+    "screen:watch": "python3 scripts/screentime.py --watch --disk --save --phone",
+    "screen:week": "python3 scripts/screentime.py --days 7 --disk",
+    "screen:export": "python3 scripts/screentime.py --export --days 30"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",
@@ -41,6 +46,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "oxlint": "^1.71.0",
+    "playwright": "^1.62.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"
   },

@@ -18,14 +18,23 @@
  * $87,000" is meaningless without the rate that produced it, and a copilot
  * that hides its assumptions is just a confident guess.
  */
+import {
+  searchBookshelfKnowledge,
+} from "./bookKnowledge";
 import { money } from "./financeStore";
 import { renderFormula } from "./mathml";
-import type { CopilotAnswer } from "./financeCopilot";
+import type { CopilotAnswer } from "./financeCopilotEngine";
 import {
   findConcept,
   relevantConcepts,
   type ConceptContext,
 } from "./financeConcepts";
+import {
+  econSuggestions,
+  explainEconFramework,
+  findEconFramework,
+} from "./econCanon";
+import { searchHighlights } from "./highlightIndex";
 import {
   aprToApy,
   debtStrategy,
@@ -109,26 +118,84 @@ export function explainConcept(question: string, ctx: ConceptContext): CopilotAn
     return null;
   }
 
+  // Finance personal concepts first (APR, compounding with her numbers)
   const concept = findConcept(q);
-  if (!concept) return null;
+  if (concept) {
+    const parts: string[] = [concept.oneLine, "", concept.plain];
 
-  const parts: string[] = [concept.oneLine, "", concept.plain];
+    const worked = concept.worked?.(ctx) ?? null;
+    if (worked) parts.push("", `Your numbers: ${worked.text}`);
+    if (concept.gotcha) parts.push("", `Where this breaks: ${concept.gotcha}`);
 
-  const worked = concept.worked?.(ctx) ?? null;
-  if (worked) parts.push("", `Your numbers: ${worked.text}`);
-  if (concept.gotcha) parts.push("", `Where this breaks: ${concept.gotcha}`);
+    // If she owns a related book, point at her shelf (metadata only)
+    const shelfHits = searchBookshelfKnowledge(
+      `${concept.name} ${concept.reading || ""}`,
+      3
+    ).filter((h) => h.isEcon || h.score >= 30);
+    if (shelfHits[0]) {
+      parts.push(
+        "",
+        `On your shelf: ${shelfHits[0].title} — ${shelfHits[0].author}` +
+          (shelfHits[0].noteSnippet
+            ? `. Your note: ${shelfHits[0].noteSnippet}`
+            : ".")
+      );
+    }
 
-  const sources = [`concept: ${concept.name}`, concept.source];
-  if (concept.reading) sources.push(`further reading: ${concept.reading}`);
+    const sources = [`concept: ${concept.name}`, concept.source];
+    if (concept.reading) sources.push(`further reading: ${concept.reading}`);
+    if (shelfHits[0]) sources.push(`shelf: ${shelfHits[0].title}`);
+
+    return {
+      text: parts.join("\n"),
+      sources,
+      data: worked?.data,
+      formula: concept.formula ? renderFormula(concept.formula) : undefined,
+      formulaNote: concept.formulaNote,
+    };
+  }
+
+  // Economics canon (opportunity cost, incentives, elasticity, …)
+  const econ = findEconFramework(q);
+  if (!econ) return null;
+
+  const parts: string[] = [explainEconFramework(econ)];
+  const shelfHits = searchBookshelfKnowledge(
+    `${econ.name} ${econ.aliases.join(" ")} ${econ.reading || ""}`,
+    4
+  );
+  // V2: retrieve across ALL shelf highlights, not only nested on one book hit
+  const hlHits = searchHighlights(`${econ.name} ${econ.aliases.join(" ")} ${q}`, 3);
+  if (shelfHits[0]) {
+    parts.push(
+      "",
+      `On your shelf: ${shelfHits
+        .slice(0, 2)
+        .map((h) => `${h.title} — ${h.author}`)
+        .join(" · ")}`
+    );
+  }
+  if (hlHits[0]) {
+    parts.push("");
+    parts.push("Your highlights:");
+    for (const h of hlHits.slice(0, 2)) {
+      parts.push(
+        `• “${h.text.slice(0, 200)}” — ${h.title}` +
+          (h.interpretation ? ` (${h.interpretation.slice(0, 80)})` : "")
+      );
+    }
+  }
+
+  const sources = [`econ: ${econ.name}`, econ.source];
+  if (econ.reading) sources.push(`further reading: ${econ.reading}`);
+  for (const h of shelfHits.slice(0, 2)) sources.push(`shelf: ${h.title}`);
+  for (const h of hlHits.slice(0, 2)) sources.push(`highlight: ${h.title}`);
 
   return {
     text: parts.join("\n"),
     sources,
-    data: worked?.data,
-    // Typeset separately rather than inlined into the prose, so it renders
-    // as mathematics instead of as a line of ASCII.
-    formula: concept.formula ? renderFormula(concept.formula) : undefined,
-    formulaNote: concept.formulaNote,
+    formula: econ.formula ? renderFormula(econ.formula) : undefined,
+    formulaNote: econ.formulaNote,
   };
 }
 
@@ -429,5 +496,9 @@ function inflationScenario(q: string): CopilotAnswer | null {
 
 /** Teaching prompts tuned to the state of someone's finances. */
 export function conceptSuggestions(ctx: ConceptContext): string[] {
-  return relevantConcepts(ctx, 3).map((c) => `Explain ${c.name.toLowerCase()}`);
+  const personal = relevantConcepts(ctx, 2).map(
+    (c) => `Explain ${c.name.toLowerCase()}`
+  );
+  // Mix personal finance + economics canon so the desk feels smarter
+  return [...personal, ...econSuggestions().slice(0, 3)];
 }

@@ -31,6 +31,9 @@ const {
   addDays,
   monthDays,
   ymd,
+  ensureUniqueHabitColors,
+  nextUniqueHabitColor,
+  normalizeHabitColor,
 } = await import("../src/melani/habitStore.ts");
 
 let passed = 0;
@@ -102,6 +105,57 @@ const patched = updateHabit(added, added[added.length - 1].id, { name: "Renamed"
 assert("updateHabit renames", patched[patched.length - 1].name === "Renamed");
 const removed = removeHabit(patched, patched[patched.length - 1].id);
 assert("removeHabit drops", removed.length === habits.length);
+
+// Unique colors forever — never reuse a swatch across habits
+{
+  const seedColors = new Set(habits.map((h) => normalizeHabitColor(h.color)));
+  assert("seed colors all unique", seedColors.size === habits.length);
+
+  let many = habits;
+  for (let i = 0; i < 40; i++) {
+    many = addHabit(many, { name: `Bulk ${i}` });
+  }
+  const manyColors = many.map((h) => normalizeHabitColor(h.color));
+  assert("50 habits → 50 unique colors", new Set(manyColors).size === many.length);
+
+  // Forced collision on add: request a color already taken → reassign free
+  const taken = many[0].color;
+  many = addHabit(many, { name: "Collide", color: taken });
+  const last = many[many.length - 1];
+  assert("add with taken color gets different color", normalizeHabitColor(last.color) !== normalizeHabitColor(taken));
+  assert(
+    "still all unique after collide add",
+    new Set(many.map((h) => normalizeHabitColor(h.color))).size === many.length
+  );
+
+  // updateHabit cannot steal another habit's color
+  const victim = many[1];
+  const stealerId = many[2].id;
+  const afterSteal = updateHabit(many, stealerId, { color: victim.color });
+  const stealer = afterSteal.find((h) => h.id === stealerId)!;
+  assert(
+    "update cannot take victim color",
+    normalizeHabitColor(stealer.color) !== normalizeHabitColor(victim.color)
+  );
+
+  // Migration: two habits same orange → dedupe
+  const duped = [
+    { ...habits[0], color: "#f97316" },
+    { ...habits[1], color: "#f97316" },
+    { ...habits[2], color: "#10b981" },
+  ];
+  const { habits: fixed, changed } = ensureUniqueHabitColors(duped as typeof habits);
+  assert("ensureUnique marks changed", changed === true);
+  assert(
+    "ensureUnique dedupes",
+    new Set(fixed.map((h) => normalizeHabitColor(h.color))).size === 3
+  );
+  assert("first keeper keeps orange", normalizeHabitColor(fixed[0].color) === "#f97316");
+  assert("second gets a free color", normalizeHabitColor(fixed[1].color) !== "#f97316");
+
+  const free = nextUniqueHabitColor(many);
+  assert("nextUnique not in used set", !many.some((h) => normalizeHabitColor(h.color) === free));
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

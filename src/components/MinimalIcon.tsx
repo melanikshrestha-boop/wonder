@@ -406,15 +406,7 @@ export function iconForPage(page: Pick<Page, "id" | "title" | "kind" | "icon">):
   if (id.includes("gym") || t.includes("gym")) return "gym";
   if (id.includes("body") || t === "body") return "body";
   if (id.includes("work") || t === "work") return "work";
-  if (
-    id === "pg-world-monitor" ||
-    id.includes("world-monitor") ||
-    t.includes("world monitor") ||
-    t.includes("markets desk") ||
-    (t.includes("monitor") && t.includes("world"))
-  ) {
-    return "monitor";
-  }
+
   // Hygiene family — each page gets its own creative icon (not one shared glass)
   if (id === "pg-shower-daily" || (t.includes("daily") && t.includes("shower")))
     return "shower-daily";
@@ -431,6 +423,15 @@ export function iconForPage(page: Pick<Page, "id" | "title" | "kind" | "icon">):
   if (t.includes("shower")) return "shower-daily";
   if (t.includes("skin")) return "am-skin";
   if (t.includes("hair")) return "hair";
+  if (
+    id === "pg-focus" ||
+    id === "pg-screentime" ||
+    id === "pg-screen-time" ||
+    t === "focus" ||
+    t === "screen time" ||
+    t.includes("screen time")
+  )
+    return "monitor";
   if (id === "pg-data" || id === "pg-my-data" || t === "data" || t === "my data")
     return "data";
   if (id.includes("lab") || t.includes("lab")) return "labs";

@@ -1,51 +1,87 @@
-/* Habit Tracker — audacious dark dashboard, dense KPIs, month grid. */
+/**
+ * Habit Tracker — Claude’s CSS, forced light, Source Serif.
+ * Aligned with Melani: no KPI strip, rings + %, soft cells, quiet ×.
+ */
+
 .hab {
-  --hab-bg: #0b0d12;
-  --hab-panel: #14171f;
-  --hab-panel-2: #1a1e28;
-  --hab-line: rgba(255, 255, 255, 0.08);
-  --hab-text: #e8e9ec;
-  --hab-sub: rgba(232, 233, 236, 0.55);
+  /* Claude light palette (always — never dark “Habit Engine”) */
+  --hab-bg: #f7f7fa;
+  --hab-panel: #ffffff;
+  --hab-panel-2: #f0f2f6;
+  --hab-line: rgba(0, 0, 0, 0.08);
+  --hab-text: #1a1c22;
+  --hab-sub: rgba(26, 28, 34, 0.55);
   --hab-accent: #22d3ee;
+  --hab-font: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif;
+
   color: var(--hab-text);
   background: var(--hab-bg);
-  min-height: 100vh;
+  min-height: 100%;
   padding: 22px 26px 60px;
-  font-family: inherit;
-  line-height: 1.35;
+  font-family: var(--hab-font) !important;
+  line-height: 1;
+  isolation: isolate;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Modern serif everywhere — beat notion Arial / system sans */
+html body .hab,
+html body .hab button,
+html body .hab input,
+html body .hab select,
+html body .hab textarea,
+html body .hab span,
+html body .hab b,
+html body .hab th,
+html body .hab td,
+html body .hab li,
+html body .hab p,
+html body .hab div {
+  font-family: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif !important;
+}
+
+.notion-melani-body > .hab {
+  margin: -4px -8px 0;
+  min-height: calc(100vh - 72px);
+}
+
+/* ── Header — no subtitle, no divider line ── */
 .hab-head {
   display: grid;
   grid-template-columns: 40px 1fr 40px;
-  align-items: end;
+  align-items: center;
   gap: 12px;
-  padding: 6px 0 22px;
-  border-bottom: 1px solid var(--hab-line);
-  margin-bottom: 22px;
+  padding: 4px 0 0;
+  border-bottom: none;
+  margin-bottom: 0;
 }
+
 .hab-title {
   text-align: center;
 }
+
 .hab-title-year {
   font-size: 12px;
   letter-spacing: 0.28em;
   color: var(--hab-sub);
   text-transform: uppercase;
 }
+
 .hab-title h1 {
   font-size: 46px;
   font-weight: 700;
-  margin: 4px 0 6px;
+  margin: 2px 0 0;
   letter-spacing: -0.02em;
   text-wrap: balance;
+  color: var(--hab-text);
+  line-height: 1;
 }
-.hab-title p {
-  margin: 0;
-  color: var(--hab-sub);
-  font-size: 12.5px;
-  letter-spacing: 0.02em;
+
+/* Double blank line between July and the rings card */
+.hab-head + .hab-rings {
+  margin-top: 2.5em;
 }
+
 .hab-nav {
   height: 40px;
   width: 40px;
@@ -55,68 +91,72 @@
   color: var(--hab-text);
   font-size: 20px;
   cursor: pointer;
+  box-shadow: none;
 }
-.hab-nav:hover {
+
+.hab-nav:hover:not(:disabled) {
   border-color: var(--hab-accent);
   color: var(--hab-accent);
 }
 
-/* KPI row */
-.hab-kpi-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
-  align-items: stretch;
-  margin-bottom: 18px;
-}
-.hab-kpi-block {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-  background: var(--hab-panel);
-  border: 1px solid var(--hab-line);
-  border-radius: 14px;
-  padding: 14px 16px;
-}
-.hab-kpi {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-.hab-kpi span {
-  font-size: 9.5px;
-  color: var(--hab-sub);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.hab-kpi b {
-  font-size: 16px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.hab-kpi-done b {
-  color: #22d3ee;
+.hab-nav:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
 }
 
+/*
+ * Rings only (KPI strip deleted — habits are forever).
+ * Claude panel chrome + % in the middle.
+ */
 .hab-rings {
   display: flex;
   gap: 12px;
   align-items: center;
-  padding: 10px 18px;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  padding: 14px 18px;
   background: var(--hab-panel);
   border: 1px solid var(--hab-line);
   border-radius: 14px;
+  margin-top: 0;
+  margin-bottom: 14px;
+  box-shadow: none;
 }
+
 .hab-ring {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  min-width: 80px;
+  flex: 1 1 80px;
 }
+
+.hab-ring-dial {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.hab-ring-dial svg {
+  display: block;
+  filter: none;
+}
+
+.hab-ring-pct {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--hab-text);
+  letter-spacing: -0.02em;
+  pointer-events: none;
+  line-height: 1;
+}
+
 .hab-ring-lbl {
   font-size: 10.5px;
   color: var(--hab-sub);
@@ -124,29 +164,38 @@
   text-transform: uppercase;
 }
 
-/* Panel */
+/* ── Panel (Claude) ── */
 .hab-panel {
   background: var(--hab-panel);
   border: 1px solid var(--hab-line);
   border-radius: 14px;
   padding: 14px 16px 12px;
   margin-bottom: 18px;
+  box-shadow: none !important;
 }
+
+.hab-panel-chart {
+  padding-bottom: 10px;
+}
+
 .hab-panel-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
   font-size: 11.5px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--hab-sub);
   margin-bottom: 8px;
 }
+
 .hab-chart {
   width: 100%;
   height: auto;
   display: block;
+  min-height: 140px;
 }
 
 .hab-two {
@@ -155,7 +204,11 @@
   gap: 18px;
   margin-bottom: 18px;
 }
-.hab-two .hab-panel { margin-bottom: 0; }
+
+.hab-two .hab-panel {
+  margin-bottom: 0;
+  min-width: 0;
+}
 
 .hab-bar-list {
   list-style: none;
@@ -165,97 +218,170 @@
   flex-direction: column;
   gap: 8px;
 }
+
 .hab-bar-list li {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 2fr) auto;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
+
 .hab-bar-lbl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12.5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
+
 .hab-bar-track {
   height: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.05);
   border-radius: 999px;
   overflow: hidden;
+  min-width: 40px;
 }
+
 .hab-bar-fill {
   height: 100%;
   border-radius: 999px;
   transition: width 0.24s ease;
 }
+
 .hab-bar-val {
   font-variant-numeric: tabular-nums;
   font-size: 12.5px;
   color: var(--hab-text);
 }
+
 .hab-empty {
   color: var(--hab-sub);
   font-size: 12.5px;
   display: block;
   padding: 6px 0;
+  grid-column: 1 / -1;
+  line-height: 1;
 }
 
-/* Grid */
+/* ── Grid — no title bar; table is the only chrome ── */
 .hab-grid-wrap {
   background: var(--hab-panel);
   border: 1px solid var(--hab-line);
   border-radius: 14px;
-  padding: 14px 16px 16px;
+  padding: 16px 18px 18px;
+  box-shadow: none !important;
+  min-width: 0;
 }
-.hab-add-inline {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  text-transform: none;
-  letter-spacing: 0;
-}
-.hab-add-inline input {
-  background: var(--hab-panel-2);
-  border: 1px solid var(--hab-line);
-  border-radius: 8px;
-  padding: 5px 10px;
-  color: var(--hab-text);
-  font-size: 12px;
-  width: 180px;
-}
-.hab-add-inline input:focus {
-  outline: none;
-  border-color: var(--hab-accent);
-}
-.hab-add-inline button {
-  background: var(--hab-accent);
-  color: #0b0d12;
+
+/*
+ * Ghost + under last habit’s color swatch.
+ * Invisible until you hover the row below Sleep by 10:30 (last habit).
+ */
+.hab-add-row td {
+  height: 28px;
+  background: transparent !important;
   border: 0;
-  border-radius: 8px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 600;
+}
+
+.hab-add-row .hab-cell-spacer {
+  background: transparent !important;
+  cursor: default;
+  pointer-events: none;
+}
+
+.hab-add-ghost {
+  display: flex;
+  align-items: center;
+  /* Align + under the color swatch (matches .hab-grid-name-btn gap start) */
+  padding: 2px 0 2px 0;
+  min-height: 26px;
+}
+
+.hab-add-plus {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  margin-left: 0; /* sits where swatches sit */
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(26, 28, 34, 0.28);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
   cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit !important;
+}
+
+/* Reveal only when hovering the add row (or keyboard-focusing the +) */
+.hab-add-row:hover .hab-add-plus,
+.hab-add-row:focus-within .hab-add-plus,
+.hab-add-plus:focus-visible {
+  opacity: 1;
+}
+
+.hab-add-plus:hover,
+.hab-add-plus:focus-visible {
+  color: rgba(26, 28, 34, 0.55);
+  background: rgba(0, 0, 0, 0.04);
+  outline: none;
+}
+
+.hab-add-row.is-open .hab-add-ghost {
+  width: 100%;
+}
+
+.hab-add-input {
+  width: min(220px, 100%);
 }
 
 .hab-grid-scroll {
   overflow-x: auto;
+  overflow-y: hidden;
   border-radius: 10px;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
 }
+
+/* Short strip: no fake scroll runway; keep table snug */
+.hab-grid-scroll.is-short {
+  overflow-x: auto;
+}
+
 .hab-grid {
   border-collapse: separate;
   border-spacing: 2px;
-  width: 100%;
-  min-width: 900px;
+  /* Shrink-wrap to real day columns only — never fill empty month tail */
+  width: max-content !important;
+  max-width: none;
+  min-width: 0 !important;
+  table-layout: auto;
   font-size: 11.5px;
+  margin: 0;
 }
+
 .hab-grid th,
 .hab-grid td {
   padding: 0;
   text-align: center;
-  height: 26px;
+  height: 24px;
   color: var(--hab-text);
+  border: 0;
+  box-shadow: none;
+  box-sizing: border-box;
 }
+
 .hab-grid thead th {
   position: sticky;
   top: 0;
@@ -264,6 +390,7 @@
   font-weight: 500;
   border-radius: 4px;
 }
+
 .hab-grid-name {
   text-align: left !important;
   padding: 4px 8px !important;
@@ -272,127 +399,296 @@
   position: sticky;
   left: 0;
   background: var(--hab-panel);
-  z-index: 1;
+  z-index: 4;
+  vertical-align: middle;
+  overflow: visible;
 }
+
 .hab-grid thead .hab-grid-name {
   background: var(--hab-panel-2);
   z-index: 2;
 }
+
+/* Name row — keep long titles + quiet remove */
+.hab-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+  position: relative;
+}
+
 .hab-grid-name-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: 0;
+  gap: 10px;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
   color: var(--hab-text);
-  font-size: 12.5px;
-  cursor: pointer;
-  padding: 0;
+  font-size: 13px;
+  padding: 2px 0;
   text-align: left;
-  max-width: 170px;
+  min-width: 0;
+  min-height: 0 !important;
+  flex: 1 1 auto;
+  overflow: hidden;
+  font-family: inherit !important;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.hab-grid-name-btn:hover .hab-name-text {
+  color: #0c0e12;
+}
+
+.hab-name-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .hab-swatch {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
   flex: 0 0 auto;
 }
-.hab-emoji {
-  font-size: 13px;
-}
-.hab-grid-name input {
+
+.hab-name-input {
+  flex: 1 1 auto;
+  min-width: 0;
   background: var(--hab-panel-2);
   border: 1px solid var(--hab-accent);
   border-radius: 6px;
   padding: 3px 6px;
   color: var(--hab-text);
   font-size: 12.5px;
-  width: 170px;
+  font-family: inherit !important;
+  box-shadow: none;
 }
-.hab-x {
-  float: right;
-  background: transparent;
-  border: 0;
-  color: rgba(255, 255, 255, 0.25);
-  font-size: 16px;
-  line-height: 1;
+
+.hab-name-input:focus {
+  outline: none;
+}
+
+/*
+ * Quiet remove — Claude had float + red hover; that was disgusting.
+ * Hidden until row hover, tiny, never red brick.
+ */
+.hab button.hab-x,
+.hab .hab-x {
+  flex: 0 0 auto;
+  float: none;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  display: inline-grid !important;
+  place-items: center;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 4px;
+  box-shadow: none !important;
+  color: rgba(26, 28, 34, 0.28) !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 0 !important;
+  margin: 0 !important;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, color 0.12s ease;
+  -webkit-appearance: none;
+  appearance: none;
 }
-.hab-x:hover {
-  color: #ef4444;
+
+.hab .hab-x svg {
+  display: block;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
 }
+
+.hab .hab-name-row:hover .hab-x,
+.hab .hab-name-row:focus-within .hab-x {
+  opacity: 0.85;
+  visibility: visible;
+}
+
+.hab button.hab-x:hover,
+.hab .hab-x:hover {
+  color: rgba(26, 28, 34, 0.45) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+  opacity: 1 !important;
+  visibility: visible;
+}
+
+.hab button.hab-x:focus-visible {
+  opacity: 1 !important;
+  visibility: visible;
+  outline: 1px solid rgba(0, 0, 0, 0.15);
+  outline-offset: 1px;
+}
+
 .hab-grid-goal {
   width: 46px;
   min-width: 46px;
   color: var(--hab-sub);
 }
+
+.hab-grid thead .hab-grid-goal {
+  background: var(--hab-panel-2);
+}
+
 .hab-grid-day {
-  width: 22px;
-  min-width: 22px;
+  width: 22px !important;
+  min-width: 22px !important;
+  max-width: 22px !important;
   padding: 3px 0 !important;
 }
+
+/* Highlight the date header only — not every cell in the column */
 .hab-grid-day.is-today {
   color: var(--hab-accent);
 }
-.hab-grid-wd, .hab-grid-dn {
+
+.hab-grid-day.is-today .hab-grid-dn {
+  color: var(--hab-accent);
+  font-weight: 700;
+}
+
+.hab-grid-wd,
+.hab-grid-dn {
   display: block;
-  line-height: 1.1;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.hab-grid-wd { font-size: 9.5px; color: var(--hab-sub); }
-.hab-grid-dn { font-size: 11.5px; font-weight: 600; }
+
+.hab-grid-wd {
+  font-size: 9.5px;
+  color: var(--hab-sub);
+}
+
+.hab-grid-dn {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
 .hab-grid-tot {
   width: 54px;
   min-width: 54px;
   font-variant-numeric: tabular-nums;
   color: var(--hab-sub);
+  font-size: 11.5px;
 }
+
 .hab-grid-tot b {
   color: var(--hab-text);
 }
 
+/* Soft cells — Claude narrow squares, no column stretch, no today outline */
+.hab td.hab-cell,
 .hab-cell {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(0, 0, 0, 0.05);
   border-radius: 4px;
   cursor: pointer;
-  color: #0b0d12;
-  font-size: 10.5px;
+  color: transparent;
+  font-size: 10px;
   font-weight: 700;
-  transition: transform 0.08s ease;
-}
-.hab-cell:hover:not(.future) {
-  background: rgba(255, 255, 255, 0.12);
-}
-.hab-cell.on {
-  transform: scale(1.02);
-}
-.hab-cell.future {
-  background: rgba(255, 255, 255, 0.015);
-  cursor: not-allowed;
-}
-.hab-cell.today:not(.on) {
-  outline: 1px solid var(--hab-accent);
+  transition: background 0.08s ease, color 0.08s ease;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: none !important;
+  transform: none !important;
+  width: 22px !important;
+  min-width: 22px !important;
+  max-width: 22px !important;
+  height: 24px !important;
+  user-select: none;
+  vertical-align: middle;
+  filter: none;
+  box-sizing: border-box;
 }
 
-/* Light theme */
-@media (prefers-color-scheme: light) {
+.hab td.hab-cell:hover:not(.future):not(.on):not(.missed),
+.hab-cell:hover:not(.future):not(.on):not(.missed) {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.hab td.hab-cell.on,
+.hab-cell.on {
+  color: #fff !important;
+  transform: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/*
+ * Missed: day is over and you never checked it.
+ * White × on solid red — wins over the empty-cell gray.
+ */
+.hab td.hab-cell.missed,
+.hab .hab-grid td.hab-cell.missed,
+.hab-cell.missed {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  outline: none !important;
+  opacity: 1 !important;
+}
+
+.hab td.hab-cell.missed:hover,
+.hab-cell.missed:hover {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  filter: none;
+}
+
+.hab td.hab-cell.future,
+.hab-cell.future {
+  background: rgba(0, 0, 0, 0.03);
+  cursor: not-allowed;
+  opacity: 0.55;
+  outline: none !important;
+}
+
+.hab td.hab-cell-spacer,
+.hab-cell-spacer {
+  width: 22px !important;
+  min-width: 22px !important;
+  max-width: 22px !important;
+  height: 24px !important;
+  background: transparent !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 720px) {
+  .hab-two {
+    grid-template-columns: 1fr;
+  }
+
+  .hab-title h1 {
+    font-size: 36px;
+  }
+}
+
+@media (max-width: 480px) {
   .hab {
-    --hab-bg: #f7f7fa;
-    --hab-panel: #ffffff;
-    --hab-panel-2: #f0f2f6;
-    --hab-line: rgba(0, 0, 0, 0.08);
-    --hab-text: #1a1c22;
-    --hab-sub: rgba(26, 28, 34, 0.55);
+    padding: 14px 12px 56px;
   }
-  .hab-cell {
-    background: rgba(0, 0, 0, 0.05);
-    color: #fff;
+
+  .notion-melani-body > .hab {
+    margin: 0;
   }
-  .hab-cell:hover:not(.future) {
-    background: rgba(0, 0, 0, 0.1);
+
+  .hab-nav {
+    width: 36px;
+    height: 36px;
   }
 }

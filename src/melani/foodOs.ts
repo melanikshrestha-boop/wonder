@@ -1,10 +1,15 @@
+/**
+ * Food OS — fixed daily plate. No rotation. No "what meat today".
+ * Decision fatigue kills consistency; the menu is already decided.
+ */
 import { loadGoals } from "./melContext";
-import { MEAL_PRESETS, todayKey } from "./data";
-import { deriveCycle, loadCycle } from "./cycleEngine";
-import { loadLabs } from "./labEngine";
-import { decideMeat } from "./core/policyEngine";
+import {
+  FIXED_DAY_MEAL_IDS,
+  MEAL_PRESETS,
+  fixedDayMenuSummary,
+  todayKey,
+} from "./data";
 import { wonderEmit } from "./core/eventBus";
-import type { MeatId, PolicyContext } from "./core/types";
 
 export type FoodOsMeat = "beef" | "salmon";
 
@@ -27,10 +32,24 @@ export type FoodOsPlan = {
   proteinRemaining_g: number;
   caloriesRemaining: number;
   note: string;
+  /** Fixed day menu lines for Mel / UI */
+  menu: Array<{
+    id: string;
+    slot: string;
+    title: string;
+    protein_g: number;
+    calories: number;
+    logged: boolean;
+  }>;
+  loggedCount: number;
+  totalMeals: number;
 };
 
 export const FOOD_OS_KEY = "dr-melani-food-os-v1";
 export const FOOD_OS_EVENT = "dr-melani-food-os-update";
+
+/** Dinner protein is always salmon — never re-pick. */
+export const FIXED_DINNER_MEAT: FoodOsMeat = "salmon";
 
 type MealDay = {
   loggedIds: string[];
@@ -59,60 +78,6 @@ function saveStore(store: FoodOsStore): void {
   wonderEmit("data.changed", "foodOs", { key: FOOD_OS_KEY });
 }
 
-function lipidPressure(): boolean {
-  try {
-    return loadLabs().some((l) => {
-      const name = `${l.displayName || ""} ${l.id || ""} ${l.short || ""}`.toLowerCase();
-      return /ldl|non-hdl|triglyceride|total cholesterol/.test(name) && l.status === "high";
-    });
-  } catch {
-    return false;
-  }
-}
-
-function yesterdayIso(day: string): string {
-  const d = new Date(`${day}T12:00:00`);
-  d.setDate(d.getDate() - 1);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-}
-
-function gymTodayLabel(day: string): string {
-  try {
-    const week = JSON.parse(localStorage.getItem("dr-melani-gym-week-plan") || "{}") as Record<string, string>;
-    const key = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][
-      new Date(`${day}T12:00:00`).getDay()
-    ];
-    return week[key] || "-";
-  } catch {
-    return "-";
-  }
-}
-
-/** Policy-driven meat pick (rules as data) */
-function rotationFor(day: string): FoodOsMeat {
-  const store = loadStore();
-  const y = yesterdayIso(day);
-  const yesterdayMeat = (store.days[y]?.meat as MeatId | undefined) || null;
-  const cycle = loadCycle();
-  const derived = deriveCycle(cycle, new Date(`${day}T12:00:00`));
-  const ctx: PolicyContext = {
-    day,
-    phaseId: (derived.phase as PolicyContext["phaseId"]) || "unknown",
-    lipidPressure: lipidPressure(),
-    yesterdayMeat,
-    beefStreak: yesterdayMeat === "beef" ? 1 : 0,
-    salmonStreak: yesterdayMeat === "salmon" ? 1 : 0,
-    rain: false,
-    temperatureF: null,
-    gymToday: gymTodayLabel(day),
-  };
-  const decision = decideMeat(ctx);
-  return decision.value;
-}
-
 function loadMealDay(day: string): MealDay {
   try {
     const parsed = JSON.parse(localStorage.getItem(`dr-melani-meals-usuals:${day}`) || "null") as MealDay | null;
@@ -126,11 +91,13 @@ function loadMealDay(day: string): MealDay {
   };
 }
 
+/** Always the same dinner meat. Override only if she explicitly locks beef. */
 export function ensureTodayMeat(day: string = todayKey()): FoodOsDay {
   const store = loadStore();
   const current = store.days[day];
   if (current) return current;
-  const next: FoodOsDay = { meat: rotationFor(day), locked: false };
+  // Default: fixed salmon, already "locked" so nothing re-decides
+  const next: FoodOsDay = { meat: FIXED_DINNER_MEAT, locked: true };
   saveStore({ ...store, days: { ...store.days, [day]: next } });
   wonderEmit("meat.locked", "foodOs", { day, meat: next.meat, auto: true });
   return next;
@@ -172,47 +139,36 @@ export function buildFoodOsPlan(day: string = todayKey()): FoodOsPlan {
   const goals = loadGoals();
   const proteinRemaining = Math.max(0, Math.round(goals.protein_g - meals.totals.protein_g));
   const caloriesRemaining = Math.max(0, Math.round(goals.calories - meals.totals.calories));
-  const plate = selection.meat === "beef"
-    ? "Lean beef with rice or potatoes and a full serving of vegetables"
-    : "Salmon with rice or potatoes and a full serving of vegetables";
-  const breakfast = MEAL_PRESETS.find((meal) => meal.id === "breakfast_usual");
-  // Policy reasons for Mel (why this meat)
-  const policyNote = (() => {
-    try {
-      const store = loadStore();
-      const y = yesterdayIso(day);
-      const ctx: PolicyContext = {
-        day,
-        phaseId: (deriveCycle(loadCycle(), new Date(`${day}T12:00:00`)).phase as PolicyContext["phaseId"]) || "unknown",
-        lipidPressure: lipidPressure(),
-        yesterdayMeat: (store.days[y]?.meat as MeatId | undefined) || null,
-        beefStreak: 0,
-        salmonStreak: 0,
-        rain: false,
-        temperatureF: null,
-        gymToday: gymTodayLabel(day),
-      };
-      return decideMeat(ctx).reasons.slice(0, 2).join(" ");
-    } catch {
-      return "";
-    }
-  })();
+
+  const menu = MEAL_PRESETS.map((m) => ({
+    id: m.id,
+    slot: m.slot,
+    title: m.title,
+    protein_g: m.protein_g,
+    calories: m.calories,
+    logged: meals.loggedIds.includes(m.id),
+  }));
+  const loggedCount = menu.filter((m) => m.logged).length;
+
+  const breakfastLogged = meals.loggedIds.includes("breakfast_usual");
+  const plate =
+    "Breakfast only for now (yogurt bowl). No lunch / dinner / snack in the app yet.";
+
+  const note = breakfastLogged
+    ? "Breakfast is logged."
+    : "Log breakfast when you eat it. Same bowl every morning.";
 
   return {
     day,
     meat: selection.meat,
-    locked: selection.locked,
-    eaten: Boolean(selection.eatenAt),
+    locked: true,
+    eaten: Boolean(selection.eatenAt) || breakfastLogged,
     plate,
     proteinRemaining_g: proteinRemaining,
     caloriesRemaining,
-    note: [
-      meals.loggedIds.includes("breakfast_usual")
-        ? "Breakfast is logged. Build the next plate around the remaining protein."
-        : `Breakfast is not logged${breakfast ? ` (${breakfast.protein_g}g protein preset)` : ""}.`,
-      policyNote,
-    ]
-      .filter(Boolean)
-      .join(" "),
+    note: `${note} ${fixedDayMenuSummary()}`,
+    menu,
+    loggedCount,
+    totalMeals: FIXED_DAY_MEAL_IDS.length,
   };
 }

@@ -122,6 +122,19 @@ const PURGE_PAGE_IDS = new Set([
   "pg-life", // removed — Bookshelf lives under Learn
   "pg-my-tasks", // removed for now
   "pg-books", // use pg-library Bookshelf
+  "pg-nutrition", // Claude nutrition tab — removed from sidebar (hideous)
+  "pg-macros",
+  "pg-calories",
+  // Operator + paper trading desks — permanently deleted
+  "pg-operator",
+  "pg-empire",
+  "pg-paper-trading",
+  "pg-trading",
+  "pg-day-trade",
+  "pg-daytrade",
+  "pg-day-trading",
+  // World Monitor — permanently deleted
+  "pg-world-monitor",
 ]);
 
 /** Exact titles to kill (user-made dupes under Data, etc.) */
@@ -136,6 +149,11 @@ const PURGE_PAGE_TITLES = new Set([
   "weather",
   "life",
   "my tasks",
+  "operator",
+  "paper trading",
+  "day trade",
+  "day trading",
+  "world monitor",
 ]);
 
 function shouldPurgePage(p: {
@@ -233,10 +251,9 @@ function cleanWorkPageBlocks(blocks: Block[]): Block[] {
 /**
  * Sidebar layout (enforced so it can’t get stuck broken):
  * Health → Fitness, Hygiene, My Data
- * Learn → Bookshelf + World Monitor (stocks / tech — NO Work section)
+ * Learn → Bookshelf + Finances (NO Work section, NO World Monitor)
  *
  * Work hub is hidden. Bookshelf is ALWAYS top-level under Learn.
- * World Monitor (stock/trade desk) is ALWAYS kept and top-level under Learn.
  */
 function ensureLifePages(ws: Workspace): Workspace {
   const now = Date.now();
@@ -272,14 +289,10 @@ function ensureLifePages(ws: Workspace): Workspace {
             ...p,
             parentId, // pin known homes so Learn never goes empty
             title: p.title || title,
-            // Force line icons for system pages (emoji “🌍” was showing as empty page)
+            // Force line icons for system pages
             icon:
-              id === "pg-world-monitor" ||
-              id === "pg-library" ||
-              id === "pg-finance"
-                ? icon
-                : p.icon || icon,
-            trashedAt: null, // never leave Bookshelf / stocks in trash by accident
+              id === "pg-library" || id === "pg-finance" ? icon : p.icon || icon,
+            trashedAt: null, // never leave Bookshelf / Finances in trash by accident
             updatedAt: p.updatedAt || now,
           }
         : p
@@ -288,27 +301,59 @@ function ensureLifePages(ws: Workspace): Workspace {
 
   // Health
   ensurePage("pg-fitness", "Fitness", "fitness", null);
+  ensurePage("pg-sleep", "Sleep", "sleep", "pg-fitness");
+  ensurePage("pg-meals", "Meals", "meals", "pg-fitness");
+  ensurePage("pg-gym", "Gym", "gym", "pg-fitness");
+  // Focus (was Screen Time) — app hours under Fitness, next to Gym
+  ensurePage("pg-focus", "Focus", "focus", "pg-fitness", [
+    newBlock(
+      "paragraph",
+      "Where your hours go: Mac apps, Safari sites, phone log. Sleep · Meals · Gym · Focus."
+    ),
+  ]);
+  // Whoop tab removed — band data feeds Sleep / Meals / Gym. Trash legacy page.
+  pages = pages.map((p) =>
+    p.id === "pg-whoop" && !p.trashedAt
+      ? { ...p, trashedAt: now, parentId: null, updatedAt: now }
+      : p
+  );
+  // Migrate old Screen Time root → Focus under Fitness
+  pages = pages.map((p) => {
+    if (p.id === "pg-screentime" || p.id === "pg-screen-time") {
+      return {
+        ...p,
+        title: "Focus",
+        icon: "focus",
+        parentId: "pg-fitness",
+        trashedAt: p.trashedAt || now,
+        updatedAt: now,
+      };
+    }
+    return p;
+  });
   ensurePage("pg-hygiene", "Hygiene", "hygiene", null);
+  // Hygiene sub-routines — Mel can open these by name; must exist in workspace
+  ensurePage("pg-shower-daily", "Daily shower", "shower", "pg-hygiene", [
+    newBlock("paragraph", ""),
+  ]);
+  ensurePage("pg-shower-everything", "Everything shower", "shower", "pg-hygiene", [
+    newBlock("paragraph", ""),
+  ]);
+  ensurePage("pg-hair", "Hair care", "hair", "pg-hygiene", [
+    newBlock("paragraph", ""),
+  ]);
+  ensurePage("pg-am-skin", "AM skincare", "skin", "pg-hygiene", [
+    newBlock("paragraph", ""),
+  ]);
+  ensurePage("pg-pm-skin", "PM skincare", "skin", "pg-hygiene", [
+    newBlock("paragraph", ""),
+  ]);
   ensurePage("pg-data", "My Data", "data", null);
 
   // Learn — Bookshelf ALWAYS sits here (top-level), never buried under Work
   ensurePage("pg-library", "Bookshelf", "books", null, [
     newBlock("paragraph", "Books, notes, and saved references."),
   ]);
-
-  // Learn — World Monitor = stocks / markets / tech (NOT under Work)
-  ensurePage(
-    "pg-world-monitor",
-    "World Monitor",
-    "monitor", // line icon (not empty emoji page)
-    null,
-    [
-      newBlock(
-        "paragraph",
-        "Tech + markets intelligence. Live stocks, news, charts, and crypto — free sources, no API keys."
-      ),
-    ]
-  );
 
   // Learn — personal Finances desk (accounts + budget + spending)
   ensurePage(
@@ -324,6 +369,44 @@ function ensureLifePages(ws: Workspace): Workspace {
     ]
   );
 
+  // Learn — Content Empire (YouTube research OS; Sleep-page UI)
+  ensurePage("pg-math", "Content", "brain", null, [
+    newBlock(
+      "paragraph",
+      "YouTube research backbone: views, second-level retention, findings, capital runway. Mel runs models behind the scenes."
+    ),
+  ]);
+  // Force rename old Math Lab / Mel Science / Mel labels → Content
+  pages = pages.map((p) =>
+    p.id === "pg-math" &&
+    (p.title === "Math Lab" ||
+      p.title === "Mel Science" ||
+      p.title === "Mel")
+      ? { ...p, title: "Content", updatedAt: now }
+      : p
+  );
+
+  // Learn — Failures desk (own success metrics from failure log)
+  ensurePage("pg-failures", "Failures", "journal", null, [
+    newBlock(
+      "paragraph",
+      "Log misses. Mark recoveries. Success score is computed from your failure loop — not fake perfection."
+    ),
+  ]);
+
+  // Permanently remove Operator + paper trading + World Monitor (no re-create)
+  const PERMANENTLY_DELETED = new Set([
+    "pg-operator",
+    "pg-empire",
+    "pg-paper-trading",
+    "pg-trading",
+    "pg-day-trading",
+    "pg-day-trade",
+    "pg-daytrade",
+    "pg-world-monitor",
+  ]);
+  pages = pages.filter((p) => !PERMANENTLY_DELETED.has(p.id));
+
   // Health — Habit Tracker (top-level so it's always one click away)
   ensurePage(
     "pg-habits",
@@ -338,33 +421,8 @@ function ensureLifePages(ws: Workspace): Workspace {
     ]
   );
 
-  // Learn — Paper trading desk (simulated market, fake money)
-  ensurePage(
-    "pg-paper-trading",
-    "Paper Desk",
-    "trading",
-    null,
-    [
-      newBlock(
-        "paragraph",
-        "Day trading simulator. Simulated market, fake money, real spreads and slippage."
-      ),
-    ]
-  );
-
-  // Health — Nutrition (calories + macros, item-level)
-  ensurePage(
-    "pg-nutrition",
-    "Nutrition",
-    "nutrition",
-    null,
-    [
-      newBlock(
-        "paragraph",
-        "Calories and macros, logged in plain English. Every item, every gram, with the coaching math behind it."
-      ),
-    ]
-  );
+  // Nutrition page is purged (see PURGE_PAGE_IDS) — do not re-seed it.
+  // Paper trading / Operator permanently purged — do not re-seed.
 
   // Wardrobe stays under Agents
   ensurePage("pg-fashion-os", "Wardrobe", "fashion", "pg-agents", [
@@ -379,7 +437,7 @@ function ensureLifePages(ws: Workspace): Workspace {
     p.parentId === "pg-work" ? { ...p, parentId: null, updatedAt: now } : p
   );
 
-  // Soft-delete the old Work hub — section is gone; stocks live on World Monitor
+  // Soft-delete the old Work hub — section is gone
   pages = pages.map((p) =>
     p.id === "pg-work"
       ? { ...p, trashedAt: p.trashedAt || now, parentId: null, updatedAt: now }
@@ -389,7 +447,7 @@ function ensureLifePages(ws: Workspace): Workspace {
   // Fitness / Hygiene children only when still orphaned
   pages = pages.map((p) => {
     if (p.parentId != null) return p;
-    if (["pg-sleep", "pg-meals", "pg-gym"].includes(p.id)) {
+    if (["pg-sleep", "pg-meals", "pg-gym", "pg-focus"].includes(p.id)) {
       return { ...p, parentId: "pg-fitness" };
     }
     if (
@@ -402,9 +460,11 @@ function ensureLifePages(ws: Workspace): Workspace {
     return p;
   });
 
-  // If you were sitting on the deleted Work page, open Bookshelf
+  // If you were on deleted Work / World Monitor, open Bookshelf
   let activePageId = ws.activePageId;
-  if (activePageId === "pg-work") activePageId = "pg-library";
+  if (activePageId === "pg-work" || activePageId === "pg-world-monitor") {
+    activePageId = "pg-library";
+  }
 
   return { ...ws, pages, activePageId };
 }

@@ -60,6 +60,26 @@ function normalizeFolder(value: Partial<BookFolder>): BookFolder | null {
   };
 }
 
+/**
+ * Nic Muñoz Top 50 Biographies — exact section labels from
+ * https://www.nicmunoz.com/p/top50list (stable ids so Want books group cleanly).
+ */
+export const NIC_MUNOZ_FOLDERS: Array<{
+  id: `custom:${string}`;
+  label: string;
+  accent: string;
+}> = [
+  { id: "custom:nic-entrepreneur", label: "Entrepreneur", accent: "#d6b367" },
+  { id: "custom:nic-conqueror", label: "Conqueror", accent: "#e08ca4" },
+  { id: "custom:nic-genius", label: "Genius", accent: "#72b9d6" },
+  { id: "custom:nic-must-read-stories", label: "Must-Read Stories", accent: "#65c5a6" },
+  {
+    id: "custom:nic-historical-narratives",
+    label: "Historical Narratives",
+    accent: "#ad94db",
+  },
+];
+
 export function loadBookFolders(): BookFolder[] {
   let saved: BookFolder[] = [];
   try {
@@ -78,8 +98,32 @@ export function loadBookFolders(): BookFolder[] {
     id: folder.id,
     builtIn: true,
   }));
-  const custom = saved.filter((folder) => folder.id.startsWith("custom:"));
-  return [...builtIns, ...custom];
+
+  // Nic’s Top 50 sections first among customs, then any other user folders
+  const nicIds = new Set(NIC_MUNOZ_FOLDERS.map((f) => f.id));
+  const nicFolders: BookFolder[] = NIC_MUNOZ_FOLDERS.map((folder, index) => {
+    const prior = savedById.get(folder.id);
+    return {
+      id: folder.id,
+      label: prior?.label || folder.label,
+      accent: prior?.accent || folder.accent,
+      builtIn: false,
+      createdAt: prior?.createdAt || index + 1,
+    };
+  });
+  const otherCustom = saved.filter(
+    (folder) => folder.id.startsWith("custom:") && !nicIds.has(folder.id as `custom:${string}`)
+  );
+
+  const merged = [...builtIns, ...nicFolders, ...otherCustom];
+  // Persist Nic folders so they survive even before Want books load
+  try {
+    const hadAllNic = NIC_MUNOZ_FOLDERS.every((f) => savedById.has(f.id));
+    if (!hadAllNic) saveBookFolders(merged);
+  } catch {
+    /* ignore */
+  }
+  return merged;
 }
 
 export function saveBookFolders(folders: BookFolder[]): void {

@@ -31,6 +31,7 @@ const OPERATORS: Record<string, string> = {
   "−": "−",
   "*": "×",
   "×": "×",
+  "·": "·", // middle-dot product (common in WHOOP / science notation)
   "÷": "÷",
   "=": "=",
   "≈": "≈",
@@ -56,14 +57,29 @@ function tokenize(input: string): Token[] {
       i = j;
       continue;
     }
-    // Identifiers may be multi-letter (FV, APR, CF) and may carry a %.
-    if (/[A-Za-zΣ√]/.test(ch)) {
+    // Identifiers may be multi-letter (FV, APR, CF), Greek (Δ, μ, σ), and may carry a %.
+    if (/[A-Za-zΣ√Δδμσραλβε]/.test(ch)) {
       let j = i;
       while (j < input.length && /[A-Za-z]/.test(input[j])) j += 1;
-      // Σ and √ are single-character symbols, not names.
-      if (j === i) j = i + 1;
+      // Σ and √ stay single-character operators; other Greek may glue to letters (ΔT).
+      if (j === i) {
+        j = i + 1;
+        if (ch !== "Σ" && ch !== "√") {
+          while (j < input.length && /[A-Za-z]/.test(input[j])) j += 1;
+        }
+      }
       let text = input.slice(i, j);
       if (input[j] === "%") { text += "%"; j += 1; }
+      // SpO2-style trailing digits stay on the name (before a real subscript _).
+      if (/[A-Za-z%]/.test(text[text.length - 1] || "") === false) {
+        /* ends with digit already or symbol */
+      } else if (/[0-9]/.test(input[j] || "")) {
+        let k = j;
+        while (k < input.length && /[0-9]/.test(input[k])) k += 1;
+        text += input.slice(j, k);
+        j = k;
+        if (input[j] === "%") { text += "%"; j += 1; }
+      }
       out.push({ kind: "ident", text });
       i = j;
       continue;
@@ -97,7 +113,7 @@ function esc(text: string): string {
 function precedenceOf(op: string): number {
   if (op === "=" || op === "≈" || op === "<" || op === ">" || op === "≤" || op === "≥") return 1;
   if (op === "+" || op === "-" || op === "−") return 2;
-  if (op === "*" || op === "×" || op === "÷" || op === "/") return 3;
+  if (op === "*" || op === "×" || op === "·" || op === "÷" || op === "/") return 3;
   return 0;
 }
 
@@ -133,13 +149,23 @@ class Parser {
       const t = this.peek();
       if (!t) break;
 
+      // Function argument lists: min(100, x) — comma is lower than every math op.
+      if (t.kind === "comma") {
+        if (minPrec > 0) break;
+        this.next();
+        const right = this.parseExpr(0);
+        left = `${left}<mo>,</mo>${right}`;
+        continue;
+      }
+
       if (t.kind === "op") {
         const prec = precedenceOf(t.text);
         if (prec === 0 || prec < minPrec) break;
         this.next();
         if (t.text === "/") {
           // A fraction stacks its operands, so the right side binds tightly.
-          const right = this.parseUnary();
+          // parseExpr(4) keeps chained × / · on the numerator/denominator out of the bar.
+          const right = this.parseExpr(4);
           left = `<mfrac>${wrap(stripGroupingParens(left))}${wrap(stripGroupingParens(right))}</mfrac>`;
           continue;
         }
@@ -182,6 +208,12 @@ class Parser {
       const t = this.peek();
       if (t?.kind === "under") {
         this.next();
+        // Chained subscripts: sleep_need_min → ((sleep)_need)_min
+        // (plain overwrite would drop earlier levels and look broken).
+        if (sub !== null) {
+          base = `<msub>${wrap(base)}${wrap(sub)}</msub>`;
+          sub = null;
+        }
         sub = stripGroupingParens(this.parseAtom());
         continue;
       }

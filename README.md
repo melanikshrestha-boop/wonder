@@ -38,7 +38,7 @@ That URL is Wonder: Fitness, Finances, Bookshelf, Mel, Wardrobe, Hygiene, Labs, 
 - **Gmail** · **Shopping**
 
 ### Life
-- Bookshelf, Finances, World Monitor, Tasks
+- Bookshelf, Finances, Tasks
 - **+ New page** anytime in the sidebar
 
 ## Write like Notion

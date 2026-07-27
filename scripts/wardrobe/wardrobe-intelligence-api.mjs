@@ -3,17 +3,27 @@ import path from "node:path";
 import {
   analyzePurchaseCandidate,
   auditWardrobeIntegrity,
+  buildCapsuleGaps,
+  buildFabricAudit,
   buildLaundryPlan,
   buildPackingPlan,
   buildResaleCandidates,
   buildRotationPlan,
+  buildTailorBrief,
   buildWardrobeGraph,
   buildWardrobeOverview,
   findItem,
   generateOutfits,
+  mergeStylePolicy,
+  parseFabricText,
   searchWardrobe,
 } from "./wardrobe-intelligence.mjs";
 import { createWardrobeStore } from "./wardrobe-store.mjs";
+import {
+  createInspoEngine,
+  decodeImagePayload,
+  fetchPinterestInspo,
+} from "./inspo-engine.mjs";
 
 const ROOT = "/api/wardrobe";
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -64,6 +74,35 @@ function cleanItemPatch(input = {}) {
   if ("forSale" in input) patch.forSale = Boolean(input.forSale);
   if ("askingPrice" in input) patch.askingPrice = cleanString(input.askingPrice, 30);
   if ("condition" in input) patch.condition = cleanString(input.condition, 40) || "Excellent";
+  if ("brand" in input) patch.brand = cleanString(input.brand, 60) || null;
+  if ("productRef" in input) patch.productRef = cleanString(input.productRef, 80) || null;
+  if ("fit" in input) {
+    const fit = cleanString(input.fit, 20).toLowerCase();
+    patch.fit = ["baggy", "relaxed", "regular", "slim", "tight", "unknown"].includes(fit) ? fit : "unknown";
+  }
+  if ("size" in input) patch.size = cleanString(input.size, 40) || null;
+  if ("qualityNotes" in input) patch.qualityNotes = cleanString(input.qualityNotes, 240) || null;
+  if ("frontImage" in input) patch.frontImage = cleanString(input.frontImage, 240) || null;
+  if ("backImage" in input) patch.backImage = cleanString(input.backImage, 240) || null;
+  if ("backSynthetic" in input) patch.backSynthetic = Boolean(input.backSynthetic);
+  if ("displayMode" in input) patch.displayMode = cleanString(input.displayMode, 40) || "product";
+  if ("fabric" in input || "composition" in input) {
+    const raw = input.fabric ?? input.composition;
+    if (typeof raw === "string") {
+      const parsed = parseFabricText(raw);
+      patch.fabric = { ...parsed, text: cleanString(raw, 200) };
+      patch.composition = cleanString(raw, 200);
+    } else if (raw && typeof raw === "object") {
+      const parsed = parseFabricText(raw);
+      patch.fabric = parsed;
+      if (parsed.fibers?.length) {
+        patch.composition = parsed.fibers.map((f) => (f.percent != null ? `${f.percent}% ${f.name}` : f.name)).join(" ");
+      }
+    } else if (raw == null) {
+      patch.fabric = null;
+      patch.composition = null;
+    }
+  }
   return patch;
 }
 
@@ -81,6 +120,7 @@ export function wardrobeIntelligenceApi(options = {}) {
   let root = process.cwd();
   let libraryFile;
   let store;
+  let inspo;
 
   async function loadLibrary() {
     try {
@@ -105,6 +145,105 @@ export function wardrobeIntelligenceApi(options = {}) {
       const library = await loadLibrary();
       const state = await store.load(library);
 
+      // —— Daily generator inspo (drop + Pinterest) ——
+      if (url.pathname === `${ROOT}/inspo` && req.method === "GET") {
+        return json(res, 200, await inspo.listInspo());
+      }
+      if (url.pathname === `${ROOT}/inspo` && req.method === "POST") {
+        const body = await requestBody(req, 14 * 1024 * 1024);
+        const decoded = decodeImagePayload(body);
+        if (!decoded?.buffer) {
+          throw Object.assign(new Error("Send a data URL / base64 image in { dataUrl } or { image }"), { status: 400 });
+        }
+        const result = await inspo.addImage({
+          buffer: decoded.buffer,
+          mime: decoded.mime,
+          title: body.title || body.name || "Dropped inspo",
+          source: body.source || "upload",
+          sourceUrl: body.sourceUrl || null,
+        });
+        return json(res, result.duplicate ? 200 : 201, result);
+      }
+      if (url.pathname === `${ROOT}/inspo/pinterest` && req.method === "POST") {
+        const body = await requestBody(req);
+        const pin = await fetchPinterestInspo(body.url || body.boardUrl || body.pinUrl);
+        if (!pin.images?.length) {
+          throw Object.assign(new Error("Pinterest returned no real outfit photos for that link."), { status: 502 });
+        }
+        const libraryInspo = await inspo.loadLibrary();
+        let boardId = pin.boardId;
+        // Reconnect: drop prior chrome/placeholder pins from this board so we don't keep gradients
+        if (boardId) {
+          const stale = libraryInspo.items.filter((row) => row.boardId === boardId);
+          for (const row of stale) {
+            await inspo.removeInspo(row.id).catch(() => undefined);
+          }
+          const freshLib = await inspo.loadLibrary();
+          const existing = freshLib.boards.find((b) => b.id === boardId);
+          if (!existing) {
+            freshLib.boards = [
+              {
+                id: boardId,
+                url: pin.sourceUrl,
+                title: pin.title,
+                connectedAt: new Date().toISOString(),
+                pinCount: pin.images.length,
+              },
+              ...freshLib.boards,
+            ].slice(0, 24);
+          } else {
+            existing.title = pin.title || existing.title;
+            existing.pinCount = pin.images.length;
+            existing.connectedAt = new Date().toISOString();
+          }
+          await inspo.saveLibrary(freshLib);
+        }
+        const added = [];
+        for (const image of pin.images.slice(0, 16)) {
+          const row = await inspo.addImage({
+            buffer: image.buffer,
+            mime: image.mime,
+            title: image.title || pin.title,
+            source: "pinterest",
+            sourceUrl: pin.sourceUrl,
+            boardId,
+          });
+          added.push(row.item);
+        }
+        if (!added.length) {
+          throw Object.assign(new Error("Images downloaded but none passed validation (too small / branding)."), {
+            status: 502,
+          });
+        }
+        return json(res, 200, {
+          kind: pin.kind,
+          title: pin.title,
+          sourceUrl: pin.sourceUrl,
+          boardId,
+          imported: added.length,
+          items: added,
+        });
+      }
+      const inspoImageMatch = url.pathname.match(new RegExp(`^${ROOT}/inspo/([^/]+)/image$`));
+      if (inspoImageMatch && req.method === "GET") {
+        const file = await inspo.readImage(decodeURIComponent(inspoImageMatch[1]));
+        res.statusCode = 200;
+        res.setHeader("Content-Type", file.mime || "image/webp");
+        res.setHeader("Cache-Control", "public, max-age=86400");
+        res.end(file.bytes);
+        return;
+      }
+      const inspoItemMatch = url.pathname.match(new RegExp(`^${ROOT}/inspo/([^/]+)$`));
+      if (inspoItemMatch && req.method === "DELETE") {
+        return json(res, 200, await inspo.removeInspo(decodeURIComponent(inspoItemMatch[1])));
+      }
+      if (inspoItemMatch && req.method === "PATCH") {
+        const body = await requestBody(req);
+        const id = decodeURIComponent(inspoItemMatch[1]);
+        if ("active" in body) return json(res, 200, { item: await inspo.setActive(id, body.active) });
+        throw Object.assign(new Error("Nothing to update"), { status: 400 });
+      }
+
       if (url.pathname === `${ROOT}/overview` && req.method === "GET") {
         return json(res, 200, {
           ...buildWardrobeOverview(library, state),
@@ -115,9 +254,25 @@ export function wardrobeIntelligenceApi(options = {}) {
         return json(res, 200, auditWardrobeIntegrity(library, state, await store.readEvents(1000)));
       }
       if (url.pathname === `${ROOT}/recommend` && req.method === "POST") {
-        const output = generateOutfits(library, state, await requestBody(req));
+        const body = await requestBody(req);
+        const inspoPalettes = await inspo.activePalettes();
+        const activeInspo = (await inspo.listInspo()).items.filter((i) => i.active !== false);
+        const inspoTitles = activeInspo.map((i) => i.title || i.sourceUrl || "").filter(Boolean);
+        const output = generateOutfits(library, state, {
+          ...body,
+          inspoPalettes,
+          inspoTitles,
+          scoreAgainstInspo: (items, palettes) => inspo.scoreAgainstInspo(items, palettes),
+        });
         const recorded = await store.recordDecision(library, { type: "recommendation", payload: output, actor: "mel" });
-        return json(res, 200, { ...output, decisionId: recorded.event.id });
+        return json(res, 200, {
+          ...output,
+          decisionId: recorded.event.id,
+          inspo: {
+            ...(output.inspo || {}),
+            items: activeInspo,
+          },
+        });
       }
       if (url.pathname === `${ROOT}/pack` && req.method === "POST") {
         const output = buildPackingPlan(library, state, await requestBody(req));
@@ -130,6 +285,58 @@ export function wardrobeIntelligenceApi(options = {}) {
       if (url.pathname === `${ROOT}/purchase-check` && req.method === "POST") {
         return json(res, 200, analyzePurchaseCandidate(library, state, await requestBody(req)));
       }
+      if (url.pathname === `${ROOT}/capsule` && req.method === "GET") {
+        return json(res, 200, buildCapsuleGaps(library, state));
+      }
+      if (url.pathname === `${ROOT}/fabric-audit` && req.method === "GET") {
+        return json(res, 200, buildFabricAudit(library, state));
+      }
+      if (url.pathname === `${ROOT}/style-policy` && req.method === "GET") {
+        return json(res, 200, { stylePolicy: mergeStylePolicy(state.stylePolicy), sizeProfile: state.sizeProfile, tailors: state.tailors });
+      }
+      if (url.pathname === `${ROOT}/style-policy` && req.method === "POST") {
+        const input = await requestBody(req);
+        const nextPolicy = mergeStylePolicy({ ...state.stylePolicy, ...(input.stylePolicy || input) });
+        const recorded = await store.recordMeta(library, {
+          type: "style-policy",
+          value: nextPolicy,
+          actor: input.actor || "mel",
+        });
+        return json(res, 200, { stylePolicy: recorded.state.stylePolicy, eventId: recorded.event.id });
+      }
+      if (url.pathname === `${ROOT}/size-profile` && req.method === "POST") {
+        const input = await requestBody(req);
+        const recorded = await store.recordMeta(library, {
+          type: "size-profile",
+          value: { ...(state.sizeProfile || {}), ...(input.sizeProfile || input) },
+          actor: input.actor || "mel",
+        });
+        return json(res, 200, { sizeProfile: recorded.state.sizeProfile, eventId: recorded.event.id });
+      }
+      if (url.pathname === `${ROOT}/tailor-brief` && req.method === "POST") {
+        const input = await requestBody(req);
+        const match = await resolveItem(library, input.query || input.itemId || "");
+        return json(res, 200, buildTailorBrief(match.item, state, state.sizeProfile));
+      }
+      if (url.pathname === `${ROOT}/tailors` && req.method === "POST") {
+        const input = await requestBody(req);
+        const city = cleanString(input.city || "los-angeles", 40).toLowerCase().replace(/\s+/g, "-");
+        const entry = {
+          id: cleanString(input.id || `tailor-${Date.now()}`, 40),
+          name: cleanString(input.name, 80) || "Tailor",
+          phone: cleanString(input.phone, 40) || null,
+          address: cleanString(input.address, 160) || null,
+          notes: cleanString(input.notes, 240) || null,
+        };
+        const cityList = [...(state.tailors?.[city] || []), entry].slice(-12);
+        const recorded = await store.recordMeta(library, {
+          type: "tailors",
+          value: { [city]: cityList },
+          actor: input.actor || "mel",
+        });
+        return json(res, 200, { city, tailors: recorded.state.tailors, eventId: recorded.event.id });
+      }
+
       if (url.pathname === `${ROOT}/laundry` && req.method === "GET") {
         return json(res, 200, buildLaundryPlan(library, state));
       }
@@ -224,7 +431,7 @@ export function wardrobeIntelligenceApi(options = {}) {
         const index = library.findIndex((item) => item.id === itemMatch[1]);
         if (index < 0) return json(res, 404, { error: "Wardrobe item not found" });
         const patch = cleanItemPatch(await requestBody(req));
-        const updated = { ...library[index], ...patch, updatedAt: new Date().toISOString(), schemaVersion: 3 };
+        const updated = { ...library[index], ...patch, updatedAt: new Date().toISOString(), schemaVersion: 4 };
         if (updated.intelligence) {
           updated.intelligence = { ...updated.intelligence, color: updated.color, part: updated.part };
         }
@@ -248,6 +455,7 @@ export function wardrobeIntelligenceApi(options = {}) {
       const dataDir = path.resolve(root, options.dataDir || process.env.WARDROBE_DATA_DIR || "data");
       libraryFile = path.join(dataDir, "library.json");
       store = createWardrobeStore({ root, dataDir });
+      inspo = createInspoEngine({ root, dataDir });
     },
     configureServer(server) {
       server.middlewares.use(handler);

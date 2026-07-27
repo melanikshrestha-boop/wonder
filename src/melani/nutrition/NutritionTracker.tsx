@@ -22,6 +22,7 @@ import { parseFoodText, type ParsedItem } from "./parseFood";
 import {
   addEntries,
   addWater,
+  applyPendingSnackSeed,
   entriesBySlot,
   history,
   loadDay,
@@ -222,6 +223,12 @@ export function NutritionTracker() {
 
   useEffect(() => refresh(), [refresh]);
   useEffect(() => onNutritionChange(refresh), [refresh]);
+  // One-shot: apply snack seed (Pocky / pomegranate / cherries) if pending
+  useEffect(() => {
+    void applyPendingSnackSeed().then((next) => {
+      if (next) refresh();
+    });
+  }, [refresh]);
 
   function say(message: string) {
     setFlash(message);

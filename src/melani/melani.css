@@ -137,7 +137,7 @@
   margin: 0 0 12px;
   font-size: 13px;
   color: var(--m-muted);
-  line-height: 1.35;
+  line-height: 1;
 }
 
 /* No cards — plain section of text on the black page */
@@ -242,7 +242,7 @@
   font-size: 1.58rem;
   font-weight: 750;
   letter-spacing: -0.015em;
-  line-height: 1.05;
+  line-height: 1;
 }
 
 .macro-ring-num small {
@@ -259,7 +259,7 @@
   letter-spacing: 0.08em;
   color: rgba(255, 255, 255, 0.55);
   margin-top: 2px;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .macro-stats {
@@ -340,7 +340,7 @@
   padding-left: 18px;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.78);
-  line-height: 1.45;
+  line-height: 1;
 }
 
 /* ── Period tracker / cycle calendar ── */
@@ -655,7 +655,7 @@
 .lab-drop-hint {
   margin: 0 0 8px;
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1;
   color: rgba(255, 255, 255, 0.4);
 }
 
@@ -700,7 +700,7 @@
   color: #fff;
   font-family: "Times New Roman", Times, serif;
   font-size: 13px;
-  line-height: 1.35;
+  line-height: 1;
   resize: vertical;
 }
 
@@ -741,7 +741,7 @@
   flex: 1;
   min-width: 0;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1;
   color: rgba(255, 255, 255, 0.72);
   font-family: "Times New Roman", Times, serif;
 }
@@ -754,7 +754,7 @@
 .lab-expand-text {
   margin: 0;
   font-size: inherit;
-  line-height: 1.4;
+  line-height: 1;
   color: inherit;
   font-family: inherit;
   word-break: break-word;
@@ -777,28 +777,29 @@
   font-weight: 650;
   letter-spacing: 0.06em;
   cursor: pointer;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .lab-expand-more:hover {
   color: #9ccfff;
 }
 
+/* Inherit from parent blurb so light mode can recolor the whole block */
 .lab-section-blurb .lab-expand-text {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.72);
+  color: inherit;
   font-family: "Times New Roman", Times, serif;
 }
 
 .lab-popup-oneliner .lab-expand-text {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.55);
+  color: inherit;
 }
 
 .lab-popup-block .lab-expand-text {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.88);
-  line-height: 1.45;
+  color: inherit;
+  line-height: 1;
 }
 
 .lab-section-date {
@@ -892,7 +893,7 @@
     0 0 30px rgba(80, 120, 200, 0.12);
   color: rgba(255, 255, 255, 0.9);
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1;
   font-family: "Times New Roman", Times, serif;
 }
 
@@ -939,7 +940,7 @@
 .lab-popup-oneliner {
   margin: 0 0 12px;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1;
   color: rgba(255, 255, 255, 0.75);
   white-space: normal;
   overflow: visible;
@@ -967,7 +968,7 @@
   margin: 0;
   color: rgba(255, 255, 255, 0.9);
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1;
   white-space: normal;
   overflow: visible;
   text-overflow: unset;
@@ -993,7 +994,7 @@
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1;
   text-align: center;
   white-space: nowrap; /* always one line — no wrapped pep talk */
   overflow: hidden;
@@ -1156,4 +1157,270 @@
 
 .main.is-melani .breadcrumb-link:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+/* ═══════════════════════════════════════════
+   Light mode — My Data / melani-shell / labs
+   ═══════════════════════════════════════════ */
+html.theme-light .melani-shell {
+  --m-bg: #f7f7fa;
+  --m-surface: #ffffff;
+  --m-text: #1a1c22;
+  --m-muted: rgba(26, 28, 34, 0.52);
+  --m-border: rgba(0, 0, 0, 0.08);
+  --m-green: #16a34a;
+  --m-yellow: #ca8a04;
+  --m-orange: #ea580c;
+  --m-blue: #2563eb;
+  --m-pink: #e11d48;
+  --m-accent: #2563eb;
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+
+html.theme-light .melani-toggle-head:hover .melani-h2 {
+  color: #1a1c22;
+}
+
+html.theme-light .lab-h2 {
+  color: rgba(26, 28, 34, 0.55) !important;
+}
+html.theme-light .lab-h2-muted {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+
+html.theme-light .lab-status-card {
+  color: #1a1c22 !important;
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.theme-light .lab-status-card:hover {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .lab-status-card.lab-status-high,
+html.theme-light .lab-status-card.lab-status-low,
+html.theme-light .lab-status-card.lab-status-ok {
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.theme-light .lab-status-name {
+  color: rgba(26, 28, 34, 0.55) !important;
+}
+
+html.theme-light .lab-status-date {
+  color: #1a1c22 !important;
+}
+
+html.theme-light .lab-pill-ok {
+  color: #15803d !important;
+}
+html.theme-light .lab-pill-high {
+  color: #be123c !important;
+}
+html.theme-light .lab-pill-low {
+  color: #1d4ed8 !important;
+}
+
+html.theme-light .lab-drop {
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.theme-light .lab-drop-title {
+  color: #1a1c22 !important;
+}
+html.theme-light .lab-drop-hint {
+  color: rgba(26, 28, 34, 0.45) !important;
+}
+html.theme-light .lab-drop-btn {
+  color: #2563eb !important;
+}
+html.theme-light .lab-drop-btn:hover {
+  color: #1d4ed8 !important;
+}
+
+html.theme-light .lab-paste-area {
+  background: #fff !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #1a1c22 !important;
+}
+
+html.theme-light .lab-section-label,
+html.theme-light .lab-table-name,
+html.theme-light .lab-table-val {
+  color: #1a1c22 !important;
+}
+
+/* Section body copy — dark on white (was ghost white / blue wash) */
+html.theme-light .lab-section-blurb,
+html.theme-light .lab-section-blurb .lab-expand,
+html.theme-light .lab-section-blurb .lab-expand-text,
+html.theme-light .lab-section-blurb p,
+html.theme-light .lab-section-text,
+html.theme-light .lab-section-text * {
+  color: rgba(26, 28, 34, 0.78) !important;
+  -webkit-text-fill-color: rgba(26, 28, 34, 0.78);
+  background: transparent !important;
+}
+
+html.theme-light .lab-section-date,
+html.theme-light .lab-table-head {
+  color: rgba(26, 28, 34, 0.48) !important;
+}
+
+html.theme-light .lab-expand-more {
+  color: #2563eb !important;
+}
+html.theme-light .lab-expand-more:hover {
+  color: #1d4ed8 !important;
+}
+
+html.theme-light .lab-section-blurb ::selection,
+html.theme-light .lab-expand-text ::selection {
+  background: rgba(37, 99, 235, 0.18) !important;
+  color: #1a1c22 !important;
+  -webkit-text-fill-color: #1a1c22;
+}
+
+html.theme-light .lab-table-row {
+  border-color: rgba(0, 0, 0, 0.06) !important;
+  color: #1a1c22 !important;
+}
+
+html.theme-light .lab-table-row:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Status HIGH/LOW/OK stay semantic; names readable */
+html.theme-light .lab-table-status .lab-pill,
+html.theme-light .lab-section .lab-pill {
+  -webkit-text-fill-color: unset;
+}
+
+html.theme-light .lab-popup-backdrop {
+  background: rgba(15, 18, 28, 0.4) !important;
+}
+html.theme-light .lab-popup {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  color: #1a1c22 !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.14) !important;
+}
+/* Kill every leftover white-on-white popup text rule */
+html.theme-light .lab-popup,
+html.theme-light .lab-popup * {
+  color: #1a1c22;
+}
+html.theme-light .lab-popup-title {
+  color: #0f1115 !important;
+}
+html.theme-light .lab-popup-top-val {
+  color: rgba(26, 28, 34, 0.62) !important;
+}
+html.theme-light .lab-popup-close {
+  color: rgba(26, 28, 34, 0.5) !important;
+}
+html.theme-light .lab-popup-close:hover {
+  color: #1a1c22 !important;
+}
+html.theme-light .lab-popup-oneliner,
+html.theme-light .lab-popup-oneliner .lab-expand-text,
+html.theme-light .lab-popup-block p,
+html.theme-light .lab-popup-block .lab-expand-text,
+html.theme-light .lab-popup-result {
+  color: #1a1c22 !important;
+}
+html.theme-light .lab-popup-label {
+  color: rgba(26, 28, 34, 0.48) !important;
+  background: transparent !important;
+}
+html.theme-light .lab-popup .lab-val-ok,
+html.theme-light .lab-popup .lab-pill-ok {
+  color: #15803d !important;
+}
+html.theme-light .lab-popup .lab-val-high,
+html.theme-light .lab-popup .lab-val-low,
+html.theme-light .lab-popup .lab-pill-high,
+html.theme-light .lab-popup .lab-pill-low {
+  color: #be123c !important;
+}
+html.theme-light .lab-popup-footer-ok {
+  color: #166534 !important;
+  background: rgba(22, 163, 74, 0.12) !important;
+  box-shadow: none !important;
+}
+html.theme-light .lab-popup-footer-high {
+  color: #9f1239 !important;
+  background: rgba(225, 29, 72, 0.1) !important;
+  box-shadow: none !important;
+}
+html.theme-light .lab-popup-footer-low {
+  color: #1e40af !important;
+  background: rgba(37, 99, 235, 0.1) !important;
+  box-shadow: none !important;
+}
+html.theme-light .lab-popup .lab-expand-more {
+  color: #2563eb !important;
+}
+/* Selection / highlight on light popup — dark text, soft blue wash */
+html.theme-light .lab-popup ::selection {
+  background: rgba(37, 99, 235, 0.18);
+  color: #1a1c22;
+}
+
+/* Data page canvas follows shell */
+html.theme-light .notion-melani-page,
+html.theme-light .notion-melani-body {
+  background: #f7f7fa !important;
+  color: #1a1c22 !important;
+}
+html.theme-light .notion-melani-title {
+  color: #1a1c22 !important;
+}
+html.theme-light .notion-melani-child {
+  color: rgba(26, 28, 34, 0.88) !important;
+}
+html.theme-light .notion-melani-child:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ── Shell-wide light text: kill leftover dark-theme white inks ── */
+html.theme-light .melani-shell,
+html.theme-light .melani-shell p,
+html.theme-light .melani-shell span,
+html.theme-light .melani-shell li,
+html.theme-light .melani-shell td,
+html.theme-light .melani-shell th,
+html.theme-light .melani-shell label,
+html.theme-light .melani-shell h1,
+html.theme-light .melani-shell h2,
+html.theme-light .melani-shell h3,
+html.theme-light .melani-shell .melani-h2,
+html.theme-light .melani-shell .melani-muted,
+html.theme-light .melani-shell .melani-note,
+html.theme-light .melani-shell .melani-sub {
+  color: #1a1c22;
+}
+
+html.theme-light .melani-shell .melani-muted,
+html.theme-light .melani-shell .melani-note,
+html.theme-light .melani-shell .melani-sub {
+  color: rgba(26, 28, 34, 0.55) !important;
+}
+
+/* Re-assert status colors after shell-wide pass */
+html.theme-light .melani-shell .lab-pill-ok,
+html.theme-light .melani-shell .lab-val-ok {
+  color: #15803d !important;
+}
+html.theme-light .melani-shell .lab-pill-high,
+html.theme-light .melani-shell .lab-val-high {
+  color: #be123c !important;
+}
+html.theme-light .melani-shell .lab-pill-low,
+html.theme-light .melani-shell .lab-val-low {
+  color: #1d4ed8 !important;
+}
+html.theme-light .melani-shell a {
+  color: #2563eb !important;
 }

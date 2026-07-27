@@ -3,8 +3,14 @@ import { createPortal } from "react-dom";
 import { isBriefHour, loadBodyBrief } from "./bodyBrief";
 import { todayKey } from "./data";
 import { checkMelCloud, checkMelLocalModel, runMelAgent } from "./melAgent";
-import { MEL_PROMPT_EVENT, type MelPromptRequest } from "./melActions";
+import {
+  MEL_OPEN_SCIENCE_EVENT,
+  MEL_PROMPT_EVENT,
+  type MelPromptRequest,
+} from "./melActions";
 import { ensureDefaultWeatherLocation } from "./weather/weatherCore";
+import { rewardEpisode } from "./rlAgent";
+import { markAwaitingRetrain } from "./melLearn";
 import "./melani-ai.css";
 
 type Role = "user" | "assistant";
@@ -13,6 +19,10 @@ type Msg = {
   id: string;
   role: Role;
   content: string;
+  /** RL episode for trial-and-error scoring */
+  rlEpisodeId?: string;
+  /** User already scored this reply */
+  feedback?: "up" | "down";
 };
 
 type Props = {
@@ -56,7 +66,7 @@ function loadTextSize(): TextSize {
   } catch {
     /* ignore */
   }
-  return "l"; // bigger default so messages are easy to read
+  return "m"; // default matches Habits body size
 }
 
 function saveTextSize(size: TextSize) {
@@ -187,6 +197,14 @@ export function MelaniAI({ pageId, pageTitle }: Props) {
     if (open) window.setTimeout(() => inputRef.current?.focus(), 60);
   }, [open]);
 
+
+  // Legacy “science page” just opens Mel chat — engines stay backend-only
+  useEffect(() => {
+    const openMel = () => setOpen(true);
+    window.addEventListener(MEL_OPEN_SCIENCE_EVENT, openMel);
+    return () => window.removeEventListener(MEL_OPEN_SCIENCE_EVENT, openMel);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     // Weather is Mel-only — default city NYC, no Weather page
@@ -255,7 +273,15 @@ export function MelaniAI({ pageId, pageTitle }: Props) {
           cloudAvailable: cloudConnected,
           localModelAvailable: localModelConnected,
         });
-        setMsgs((prev) => [...prev, { id: uid(), role: "assistant", content: noEmDash(result.reply) }]);
+        setMsgs((prev) => [
+          ...prev,
+          {
+            id: uid(),
+            role: "assistant",
+            content: noEmDash(result.reply),
+            rlEpisodeId: result.rlEpisodeId,
+          },
+        ]);
       } catch {
         setMsgs((prev) => [...prev, {
           id: uid(),
@@ -268,6 +294,50 @@ export function MelaniAI({ pageId, pageTitle }: Props) {
     },
     [busy, cloudConnected, localModelConnected, msgs, pageId, pageTitle]
   );
+
+  /**
+   * Thumbs → real RL write (localStorage key wonder-rl-agent-v1).
+   * UI only says "logged" if rewardEpisode returns ok — no fake success.
+   */
+  function scoreMessage(msgId: string, episodeId: string | undefined, dir: "up" | "down") {
+    const reward = dir === "up" ? 1 : -1;
+    let r = episodeId
+      ? rewardEpisode(episodeId, reward, `thumb_${dir}`)
+      : rewardEpisode("pending", reward, `thumb_${dir}`);
+    // Stale message id after reload — score the open pending episode if any
+    if (!r.ok && episodeId) {
+      r = rewardEpisode("pending", reward, `thumb_${dir}`);
+    }
+    if (!r.ok) {
+      // Honest: don't paint "penalty logged" if nothing hit the brain
+      setMsgs((prev) =>
+        prev.map((m) =>
+          m.id === msgId
+            ? {
+                ...m,
+                content:
+                  m.content +
+                  (m.content.includes("[RL]")
+                    ? ""
+                    : `\n\n[RL] ${r.tip}`),
+              }
+            : m
+        )
+      );
+      return;
+    }
+    // 👎 → next user message can retrain exact preferred reply
+    if (dir === "down") {
+      try {
+        markAwaitingRetrain({ episodeId: r.episode?.id || episodeId, pageId });
+      } catch {
+        /* ignore */
+      }
+    }
+    setMsgs((prev) =>
+      prev.map((m) => (m.id === msgId ? { ...m, feedback: dir } : m))
+    );
+  }
 
   useEffect(() => {
     const onPrompt = (event: Event) => {
@@ -302,7 +372,7 @@ export function MelaniAI({ pageId, pageTitle }: Props) {
           id: uid(),
           role: "assistant",
           content:
-            "Evening. Tap Brief for your nightly body report, or type brief.",
+            "Evening. Ask for status or what matters if you want a body check.",
         },
       ];
     });
@@ -352,7 +422,6 @@ export function MelaniAI({ pageId, pageTitle }: Props) {
           aria-label="Mel"
           style={{ width: `min(${panelWidth}px, calc(100vw - 24px))` }}
         >
-          {/* Left edge drag handle — extend Mel as wide as you want */}
           <div
             className="mai-resize"
             role="separator"
@@ -365,10 +434,7 @@ export function MelaniAI({ pageId, pageTitle }: Props) {
             onPointerCancel={onResizePointerUp}
           />
           <header className="mai-head">
-            <p className="mai-title">
-              Mel
-            </p>
-            {/* − smaller · + bigger (saved) — plain signs only */}
+            <p className="mai-title">Mel</p>
             <button
               type="button"
               className="mai-head-btn mai-size-btn"
@@ -402,20 +468,10 @@ export function MelaniAI({ pageId, pageTitle }: Props) {
             </button>
           </header>
 
-          {/* Only Brief — Food / Status / Explain / Overview removed */}
-          <nav className="mai-quick" aria-label="Mel quick actions">
-            <button
-              type="button"
-              onClick={() => void send("brief")}
-              disabled={busy}
-            >
-              Brief
-            </button>
-          </nav>
           <div ref={msgsRef} className="mai-msgs">
             {msgs.length === 0 && (
               <p className="mai-welcome">
-                Tell me what you need done.
+                Hey. Body, money, YouTube, focus — ask in plain English.
               </p>
             )}
             {msgs.map((m) => (
@@ -426,6 +482,37 @@ export function MelaniAI({ pageId, pageTitle }: Props) {
                 }`}
               >
                 {renderMessage(m.content)}
+                {m.role === "assistant" ? (
+                  <div className="mai-rl" role="group" aria-label="Score this reply for RL">
+                    <button
+                      type="button"
+                      className={`mai-rl-btn${m.feedback === "up" ? " is-on" : ""}`}
+                      disabled={!!m.feedback}
+                      title="Reward — this action was good"
+                      aria-label="Reward this reply"
+                      onClick={() => scoreMessage(m.id, m.rlEpisodeId, "up")}
+                    >
+                      👍
+                    </button>
+                    <button
+                      type="button"
+                      className={`mai-rl-btn${m.feedback === "down" ? " is-on is-down" : ""}`}
+                      disabled={!!m.feedback}
+                      title="Penalty — this action was bad"
+                      aria-label="Penalize this reply"
+                      onClick={() => scoreMessage(m.id, m.rlEpisodeId, "down")}
+                    >
+                      👎
+                    </button>
+                    {m.feedback ? (
+                      <span className="mai-rl-note">
+                        {m.feedback === "up" ? "reward logged" : "penalty logged"}
+                      </span>
+                    ) : (
+                      <span className="mai-rl-note">train Mel</span>
+                    )}
+                  </div>
+                ) : null}
               </div>
             ))}
             {busy && <p className="mai-typing">…</p>}
@@ -455,7 +542,7 @@ export function MelaniAI({ pageId, pageTitle }: Props) {
               disabled={busy || !input.trim()}
               aria-label="Send"
             >
-              →
+              Send
             </button>
           </form>
         </div>

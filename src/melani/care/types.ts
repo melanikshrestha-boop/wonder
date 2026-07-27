@@ -105,13 +105,12 @@ export type CareReceipt = {
 /**
  * Everything a receptionist asks for before they will give you a slot.
  *
- * All fields are optional beyond the original six so existing saved profiles
- * keep loading. The composer reports which of these are missing rather than
- * sending an incomplete request, because an email that omits the member ID
- * just produces a phone call asking for it.
+ * Booking is phone-first (or patient portal) — not cold email. These fields
+ * are the answers you read off on a call so the front desk doesn't bounce
+ * you for "what's your date of birth / member ID?"
  *
- * This is stored in the browser's localStorage and never transmitted except
- * inside a message the owner has authorised.
+ * Stored in the browser's localStorage. Never leaves the device except inside
+ * a pack you explicitly act on (call, portal paste, rare email).
  */
 export type CareProfile = {
   firstName: string;
@@ -176,11 +175,11 @@ export type CareState = {
     disabled: string[];
     intervalOverride: Record<string, number>;
   };
-  /** Standing send authorisation and its audit log. */
+  /** Standing call-prep grant and its audit log (not auto-email). */
   grant?: {
     enabled: boolean;
     grantedAt: string | null;
-    channels: ("email" | "phone" | "portal")[];
+    channels: ("phone" | "portal" | "email")[];
     allowCancellations: boolean;
     dailyLimit: number;
     log: { at: string; to: string; subject: string; channel: string }[];

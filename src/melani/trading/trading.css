@@ -28,7 +28,7 @@
   padding: 12px 14px 40px;
   font-family: var(--tr-mono);
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
@@ -166,13 +166,13 @@
 }
 .tr-link:hover { border-bottom-color: var(--tr-accent); }
 .tr-cached { font-size: 10.5px; color: var(--tr-sub); }
-.tr-data-note { margin: 0 0 8px; font-size: 11px; color: var(--tr-sub); line-height: 1.5; }
+.tr-data-note { margin: 0 0 8px; font-size: 11px; color: var(--tr-sub); line-height: 1; }
 .tr-data-note.good { color: var(--tr-up); }
 .tr-data-note.bad { color: var(--tr-down); }
 .tr-data-fineprint {
   margin: 8px 0 0; padding-top: 8px;
   border-top: 1px solid var(--tr-line);
-  font-size: 10.5px; color: var(--tr-sub); line-height: 1.55;
+  font-size: 10.5px; color: var(--tr-sub); line-height: 1;
 }
 .tr-live-tag {
   font-style: normal;
@@ -430,7 +430,7 @@
   padding: 7px 11px;
 }
 .tr-verdict b { font-size: 12px; font-weight: 600; }
-.tr-verdict span { font-size: 11px; color: var(--tr-sub); line-height: 1.45; }
+.tr-verdict span { font-size: 11px; color: var(--tr-sub); line-height: 1; }
 .tr-verdict li.is-good { border-left-color: var(--tr-up); }
 .tr-verdict li.is-warn { border-left-color: var(--tr-accent); }
 .tr-verdict li.is-bad { border-left-color: var(--tr-down); }

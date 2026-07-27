@@ -1,34 +1,36 @@
 /**
- * Composer — turns a request plus a profile into something an office can act
- * on in one pass.
+ * Composer — turns a due item + profile into a booking *prep pack*.
  *
- * The measure of a good booking message is that nobody has to call you back
- * to ask a question. Offices need: who you are, date of birth, insurance
- * carrier and member ID, what you want, why, when you can come, and how to
- * reach you. Omit the member ID and you have not saved yourself a phone call,
- * you have scheduled one.
+ * Reality check: almost nobody books via cold email to a clinic.
+ * Front desks answer the phone, patient portals take form requests, and
+ * some offices have a "book online" link. Email is a rare last resort.
  *
- * So the composer refuses to pretend. `missing` lists every field an office
- * will ask for that is not on file, and `readyToSend` is false while any
- * required one is absent. Auto-send checks that flag: standing authorisation
- * means "send without asking me", not "send something incomplete".
+ * Channel priority (unless overridden):
+ *   1. phone  — call script + tel: link (default for nearly every office)
+ *   2. portal — patient-portal / website book flow (MyChart-style, Zocdoc, etc.)
+ *   3. email  — only if the office has no phone and no web booking path
  *
- * Three output shapes because offices differ: email for those that publish an
- * address, a phone script for the majority that only take calls, and a portal
- * message for MyChart-style systems.
+ * The measure of a good pack: you can call (or open the portal) with every
+ * answer the front desk will ask, without scrambling for your insurance card.
  */
 import type { CareProfile, CareProvider, CareRequest } from "./types";
 
+export type BookingChannel = "phone" | "portal" | "email";
+
 export type ComposedMessage = {
-  channel: "email" | "phone" | "portal";
+  channel: BookingChannel;
+  /** Short label for the action the human takes. */
   subject: string;
+  /** Call script, portal paste, or (rare) email body. */
   body: string;
-  /** Empty for phone and portal. */
+  /** Phone number, portal URL, or email address — empty if unknown. */
   to: string;
   /** Fields an office will ask for that are not on file. */
   missing: string[];
-  /** False while a required field is missing. Auto-send honours this. */
+  /** False while a required identity field is missing. */
   readyToSend: boolean;
+  /** Human instruction shown above the pack. */
+  howToBook: string;
 };
 
 /** Fields no office will book without. */
@@ -39,9 +41,8 @@ const REQUIRED: { key: keyof CareProfile; label: string }[] = [
   { key: "phone", label: "Phone number" },
 ];
 
-/** Asked for at nearly every booking, but a request can go without them. */
+/** Asked at nearly every booking; request can still proceed without them. */
 const EXPECTED: { key: keyof CareProfile; label: string }[] = [
-  { key: "email", label: "Email" },
   { key: "insuranceCarrier", label: "Insurance carrier" },
   { key: "insuranceMemberId", label: "Insurance member ID" },
 ];
@@ -60,7 +61,6 @@ export function missingFields(profile: CareProfile): { required: string[]; expec
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-/** Human availability line from the window and the profile's standing hours. */
 function availabilityLine(request: CareRequest, profile: CareProfile): string {
   const parts: string[] = [];
   const w = request.dateWindow;
@@ -87,8 +87,8 @@ function patientBlock(profile: CareProfile): string[] {
   const name = [profile.firstName, profile.lastName].filter(Boolean).join(" ");
   if (name) lines.push(`Patient: ${name}`);
   if (profile.dateOfBirth) lines.push(`Date of birth: ${profile.dateOfBirth}`);
-  if (profile.phone) lines.push(`Phone: ${profile.phone}`);
-  if (profile.email) lines.push(`Email: ${profile.email}`);
+  if (profile.phone) lines.push(`Callback phone: ${profile.phone}`);
+  if (profile.email) lines.push(`Email on file: ${profile.email}`);
 
   if (profile.insuranceCarrier) {
     const insurance = [
@@ -96,14 +96,22 @@ function patientBlock(profile: CareProfile): string[] {
       profile.insurancePlanName && `(${profile.insurancePlanName})`,
       profile.insuranceMemberId && `· Member ID ${profile.insuranceMemberId}`,
       profile.insuranceGroupNumber && `· Group ${profile.insuranceGroupNumber}`,
-    ].filter(Boolean).join(" ");
+    ]
+      .filter(Boolean)
+      .join(" ");
     lines.push(`Insurance: ${insurance}`);
   }
-  if (profile.policyHolderName && profile.policyHolderRelation && profile.policyHolderRelation !== "self") {
+  if (
+    profile.policyHolderName &&
+    profile.policyHolderRelation &&
+    profile.policyHolderRelation !== "self"
+  ) {
     lines.push(`Policy holder: ${profile.policyHolderName} (${profile.policyHolderRelation})`);
   }
   if (profile.primaryCareName) {
-    lines.push(`Primary care: ${profile.primaryCareName}${profile.primaryCarePhone ? ` · ${profile.primaryCarePhone}` : ""}`);
+    lines.push(
+      `Primary care: ${profile.primaryCareName}${profile.primaryCarePhone ? ` · ${profile.primaryCarePhone}` : ""}`
+    );
   }
   return lines;
 }
@@ -116,70 +124,113 @@ function clinicalBlock(profile: CareProfile): string[] {
   return lines;
 }
 
+function providerEmail(provider: CareProvider | null): string {
+  return ((provider as { email?: string } | null)?.email || "").trim();
+}
+
 /**
- * Compose a booking message.
- *
- * `channel` is chosen from what the provider actually publishes rather than
- * assumed: an email address means email, otherwise a phone script, because a
- * beautifully written email to an office that does not read email books
- * nothing.
+ * Pick how this office is actually bookable.
+ * Phone wins. Portal/website second. Email only if nothing else exists.
  */
-export function compose(
+export function pickChannel(
+  provider: CareProvider | null,
+  channelOverride?: BookingChannel
+): BookingChannel {
+  if (channelOverride) return channelOverride;
+  if (provider?.phone?.trim()) return "phone";
+  if (provider?.website?.trim()) return "portal";
+  if (providerEmail(provider)) return "email";
+  // No office contact yet — still give a phone script shape so the user
+  // knows what to say once they have a number.
+  return "phone";
+}
+
+function phoneScript(
   request: CareRequest,
   provider: CareProvider | null,
   profile: CareProfile,
-  channelOverride?: ComposedMessage["channel"]
-): ComposedMessage {
-  const { required, expected } = missingFields(profile);
-  const providerEmail = (provider as { email?: string } | null)?.email?.trim() || "";
-  const channel: ComposedMessage["channel"] =
-    channelOverride || (providerEmail ? "email" : provider?.phone ? "phone" : "portal");
+  what: string,
+  availability: string,
+  office: string
+): string {
+  return [
+    `CALL SCRIPT — ${what}`,
+    provider?.phone ? `Number: ${provider.phone}` : "Number: (add office phone under Care team / providers)",
+    office !== "the office" ? `Office: ${office}` : "",
+    "",
+    "── Open with ──",
+    `"Hi, I'd like to book ${what.toLowerCase()}."`,
+    request.action === "reschedule" ? `"I need to reschedule an existing appointment."` : "",
+    request.action === "cancel" ? `"I need to cancel an appointment."` : "",
+    "",
+    "── They will ask (have these ready) ──",
+    ...patientBlock(profile).map((l) => `  · ${l}`),
+    "",
+    `Reason for visit: ${request.reason || what}`,
+    `Availability: ${availability}`,
+    request.visitMode !== "either" ? `Visit type: ${request.visitMode}` : "",
+    ...clinicalBlock(profile).map((l) => `  · ${l}`),
+    request.notes ? `Notes: ${request.notes}` : "",
+    "",
+    "── Before you hang up, get ──",
+    "  · Date and time of the appointment",
+    "  · Provider / hygienist name",
+    "  · Arrival time and what to bring (ID, insurance card)",
+    "  · Prep (fasting, forms, records, referral)",
+    "  · Cancellation policy if you might need to move it",
+    "",
+    "── After the call ──",
+    "  · Tap “Booked — log it” in Care and enter the date",
+    "  · Optional: save the .ics calendar file from the appointment card",
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+}
 
+function portalCopy(
+  request: CareRequest,
+  provider: CareProvider | null,
+  profile: CareProfile,
+  what: string,
+  availability: string
+): string {
+  const name = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || "Patient";
+  return [
+    "PORTAL / BOOK-ONLINE PASTE",
+    provider?.website ? `Open: ${provider.website}` : "Open the office patient portal or “Book” page.",
+    "",
+    "Copy into the reason / notes field:",
+    "─".repeat(28),
+    `Request: ${what}`,
+    request.reason ? `Reason: ${request.reason}` : "",
+    `Patient: ${name}`,
+    profile.dateOfBirth ? `DOB: ${profile.dateOfBirth}` : "",
+    profile.phone ? `Phone: ${profile.phone}` : "",
+    profile.insuranceCarrier
+      ? `Insurance: ${profile.insuranceCarrier}${profile.insuranceMemberId ? ` · ID ${profile.insuranceMemberId}` : ""}`
+      : "",
+    `Availability: ${availability}`,
+    request.visitMode !== "either" ? `Visit: ${request.visitMode}` : "",
+    ...clinicalBlock(profile),
+    request.notes ? `Notes: ${request.notes}` : "",
+    "─".repeat(28),
+    "",
+    "If the portal only offers a callback request, paste the block above and",
+    "keep your phone free — they usually call back the same day or next.",
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+}
+
+function emailBody(
+  request: CareRequest,
+  provider: CareProvider | null,
+  profile: CareProfile,
+  what: string,
+  availability: string,
+  office: string
+): string {
   const name = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || "the patient";
-  const what = request.title || request.reason || "an appointment";
-  const availability = availabilityLine(request, profile);
-  const office = provider?.name || request.providerName || "the office";
-
-  const subject =
-    request.action === "reschedule"
-      ? `Reschedule request — ${name}`
-      : request.action === "cancel"
-        ? `Cancellation — ${name}`
-        : `Appointment request — ${what} — ${name}`;
-
-  if (channel === "phone") {
-    // Written to be read aloud: the answers come in the order they are asked.
-    const script = [
-      `Call ${office}${provider?.phone ? ` at ${provider.phone}` : ""}.`,
-      "",
-      `"Hi, I'd like to book ${what.toLowerCase()}."`,
-      "",
-      "They will ask, in roughly this order:",
-      ...patientBlock(profile).map((l) => `  · ${l}`),
-      "",
-      `Reason for visit: ${request.reason || what}`,
-      `Availability: ${availability}`,
-      request.visitMode !== "either" ? `Visit type: ${request.visitMode}` : "",
-      ...clinicalBlock(profile).map((l) => `  · ${l}`),
-      "",
-      "Before hanging up, get:",
-      "  · Date and time",
-      "  · Provider name",
-      "  · Arrival time and what to bring",
-      "  · Whether anything needs doing beforehand (fasting, forms, records)",
-    ].filter(Boolean).join("\n");
-
-    return {
-      channel,
-      subject,
-      body: script,
-      to: provider?.phone || "",
-      missing: [...required, ...expected],
-      readyToSend: required.length === 0,
-    };
-  }
-
-  const greeting = channel === "portal" ? "Hello," : `Hello ${office},`;
   const ask =
     request.action === "cancel"
       ? `I need to cancel ${what.toLowerCase()}.`
@@ -187,8 +238,8 @@ export function compose(
         ? `I need to reschedule ${what.toLowerCase()}.`
         : `I'd like to request ${what.toLowerCase()}.`;
 
-  const body = [
-    greeting,
+  return [
+    `Hello ${office},`,
     "",
     ask,
     request.reason ? `Reason: ${request.reason}` : "",
@@ -197,40 +248,89 @@ export function compose(
     "",
     `Availability: ${availability}`,
     request.visitMode !== "either" ? `Preferred visit type: ${request.visitMode}` : "",
-    profile.needsInterpreter ? `Interpreter needed: ${profile.needsInterpreter}` : "",
     ...clinicalBlock(profile),
     request.notes ? `\nNotes: ${request.notes}` : "",
     "",
-    "Please reply with a date and time, anything I should bring, and whether I need to arrive early. If nothing on my list works, send your next available and I'll take it.",
+    "Please reply with a date and time, anything I should bring, and whether I need to arrive early.",
     "",
     "Thank you,",
     name,
     profile.phone || "",
-  ].filter((line) => line !== "").join("\n");
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
+}
 
+/**
+ * Build a booking prep pack for this request + office.
+ */
+export function compose(
+  request: CareRequest,
+  provider: CareProvider | null,
+  profile: CareProfile,
+  channelOverride?: BookingChannel
+): ComposedMessage {
+  const { required, expected } = missingFields(profile);
+  const channel = pickChannel(provider, channelOverride);
+  const name = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || "the patient";
+  const what = request.title || request.reason || "an appointment";
+  const availability = availabilityLine(request, profile);
+  const office = provider?.name || request.providerName || "the office";
+  const missing = [...required, ...expected];
+  const readyToSend = required.length === 0;
+
+  if (channel === "phone") {
+    return {
+      channel,
+      subject: `Call to book — ${what}`,
+      body: phoneScript(request, provider, profile, what, availability, office),
+      to: provider?.phone?.trim() || "",
+      missing,
+      readyToSend,
+      howToBook: provider?.phone
+        ? "Most offices book by phone. Tap Call, read the script, log the slot when you’re done."
+        : "Add the office phone number, then call with this script. Email is almost never how slots are booked.",
+    };
+  }
+
+  if (channel === "portal") {
+    return {
+      channel,
+      subject: `Book online — ${what}`,
+      body: portalCopy(request, provider, profile, what, availability),
+      to: provider?.website?.trim() || "",
+      missing,
+      readyToSend,
+      howToBook: "Use the office website or patient portal. Paste the block into notes / reason for visit.",
+    };
+  }
+
+  // Email — last resort only
   return {
-    channel,
-    subject,
-    body,
-    to: channel === "email" ? providerEmail : "",
-    missing: [...required, ...expected],
-    readyToSend: required.length === 0 && (channel !== "email" || Boolean(providerEmail)),
+    channel: "email",
+    subject: `Appointment request — ${what} — ${name}`,
+    body: emailBody(request, provider, profile, what, availability, office),
+    to: providerEmail(provider),
+    missing,
+    readyToSend: readyToSend && Boolean(providerEmail(provider)),
+    howToBook:
+      "No phone or portal on file — email is a weak path for clinics. Prefer adding a phone number and calling.",
   };
 }
 
-// ─── Standing authorisation ──────────────────────────────────────────────────
+// ─── Standing prep grant (not “auto-email the world”) ──────────────────────
 
 export type AutoSendGrant = {
   enabled: boolean;
   /** ISO timestamp the grant was given. */
   grantedAt: string | null;
-  /** Only these channels may go without a per-message prompt. */
-  channels: ComposedMessage["channel"][];
-  /** Never auto-send a cancellation — that one is hard to undo. */
+  /** Channels Care may auto-prep without an extra prompt. */
+  channels: BookingChannel[];
+  /** Never auto-prep a cancellation without confirmation. */
   allowCancellations: boolean;
-  /** Upper bound on messages per day, so a loop cannot mail an office 40 times. */
+  /** Cap on prep packs “actioned” per day (call logs / portal opens). */
   dailyLimit: number;
-  /** Audit: what went out, when, to whom. */
+  /** Audit: what was prepped/logged, when, where. */
   log: { at: string; to: string; subject: string; channel: string }[];
 };
 
@@ -238,7 +338,8 @@ export function emptyGrant(): AutoSendGrant {
   return {
     enabled: false,
     grantedAt: null,
-    channels: ["email"],
+    // Phone is the real booking path. Portal second. Email off by default.
+    channels: ["phone", "portal"],
     allowCancellations: false,
     dailyLimit: 6,
     log: [],
@@ -250,10 +351,8 @@ function sameDay(iso: string, today: string): boolean {
 }
 
 /**
- * Whether this specific message may go without asking.
- *
- * Returns a reason on refusal rather than a bare false, because "it silently
- * did nothing" is the worst behaviour an agent with send authority can have.
+ * Whether this pack may be treated as “standing prep” without asking again.
+ * Name kept as canAutoSend for store compatibility — it means auto-prep, not mail blast.
  */
 export function canAutoSend(
   grant: AutoSendGrant,
@@ -261,46 +360,58 @@ export function canAutoSend(
   request: CareRequest,
   now = new Date().toISOString()
 ): { allowed: boolean; reason: string } {
-  if (!grant.enabled) return { allowed: false, reason: "Auto-send is off" };
+  if (!grant.enabled) return { allowed: false, reason: "Standing prep is off — open the pack yourself" };
   if (!message.readyToSend) {
     return { allowed: false, reason: `Missing required detail: ${message.missing.join(", ")}` };
   }
   if (!grant.channels.includes(message.channel)) {
-    return { allowed: false, reason: `Auto-send is not enabled for ${message.channel}` };
+    return { allowed: false, reason: `Standing prep is not enabled for ${message.channel}` };
+  }
+  if (message.channel === "phone" && !message.to) {
+    return { allowed: false, reason: "No office phone on file — add it under providers" };
+  }
+  if (message.channel === "portal" && !message.to) {
+    return { allowed: false, reason: "No portal / website on file for this office" };
   }
   if (message.channel === "email" && !message.to) {
-    return { allowed: false, reason: "No email address on file for this office" };
+    return { allowed: false, reason: "No email on file (and email is a last resort anyway)" };
   }
   if (request.action === "cancel" && !grant.allowCancellations) {
     return { allowed: false, reason: "Cancellations always need a confirmation" };
   }
   const todayCount = grant.log.filter((entry) => sameDay(entry.at, now)).length;
   if (todayCount >= grant.dailyLimit) {
-    return { allowed: false, reason: `Daily limit of ${grant.dailyLimit} messages reached` };
+    return { allowed: false, reason: `Daily prep cap of ${grant.dailyLimit} reached` };
   }
-  return { allowed: true, reason: "Covered by standing authorisation" };
+  return { allowed: true, reason: "Covered by standing prep" };
 }
 
-export function recordSend(grant: AutoSendGrant, message: ComposedMessage, at = new Date().toISOString()): AutoSendGrant {
+export function recordSend(
+  grant: AutoSendGrant,
+  message: ComposedMessage,
+  at = new Date().toISOString()
+): AutoSendGrant {
   return {
     ...grant,
     log: [
       ...grant.log.slice(-199),
-      { at, to: message.to || "phone", subject: message.subject, channel: message.channel },
+      {
+        at,
+        to: message.to || message.channel,
+        subject: message.subject,
+        channel: message.channel,
+      },
     ],
   };
 }
 
 /**
- * Everything needed to actually execute a send, in one object.
- *
- * The app cannot send email itself — it is a static page with no credential.
- * This is the payload handed to whatever does have one.
+ * Everything needed to book: script/copy + office contact + whether standing prep covers it.
  */
 export type HandoffPacket = {
   requestId: string;
   message: ComposedMessage;
-  provider: { name: string; phone: string; address: string } | null;
+  provider: { name: string; phone: string; address: string; website: string } | null;
   authorised: boolean;
   authorisationReason: string;
   createdAt: string;
@@ -319,10 +430,26 @@ export function buildHandoff(
     requestId: request.id,
     message,
     provider: provider
-      ? { name: provider.name, phone: provider.phone, address: provider.address }
+      ? {
+          name: provider.name,
+          phone: provider.phone,
+          address: provider.address,
+          website: provider.website,
+        }
       : null,
     authorised: check.allowed,
     authorisationReason: check.reason,
     createdAt: now,
   };
+}
+
+export function telHref(phone: string): string {
+  return `tel:${phone.replace(/[^+\d]/g, "")}`;
+}
+
+export function portalHref(url: string): string {
+  const t = url.trim();
+  if (!t) return "";
+  if (/^https?:\/\//i.test(t)) return t;
+  return `https://${t}`;
 }

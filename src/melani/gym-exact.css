@@ -26,7 +26,7 @@
   margin: 0 0 6px;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.45);
-  line-height: 1.35;
+  line-height: 1;
 }
 
 .gx-err {
@@ -71,7 +71,7 @@
 }
 
 .gx-section {
-  margin: 0 0 18px;
+  margin: 0 0 12px; /* tighter stack — was 18px empty air */
 }
 
 .gx-sec-title {
@@ -81,62 +81,82 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
-/* Today link — blue like Melani */
+/* Today — same line: TODAY'S WORKOUT: Sunday (Leg day) → */
+.gx-today-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.35em;
+  margin-bottom: 12px;
+}
+
+.gx-today-kicker {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
 .gx-today-link {
-  display: inline-block;
+  display: inline;
   border: none;
   background: none;
   padding: 0;
+  margin: 0;
   color: #6eb4ff;
   font-family: inherit;
   font-size: 15px;
+  line-height: 1;
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+  text-align: left;
 }
 
 .gx-today-link:hover {
   color: #9ccfff;
 }
 
-/* Week plan */
+.gx-today-empty {
+  margin: 0;
+  display: inline;
+}
+
+/* Week plan — strip always visible; type×day matrix in a toggle */
+.gx-section.gx-week {
+  margin-bottom: 10px;
+}
+
+.gx-section.gx-week .gx-h2 {
+  margin: 0 0 2px;
+}
+
 .gx-week-range {
-  margin-bottom: 4px;
+  margin: 0 0 4px;
 }
 
-.gx-plan-heading {
-  margin: 4px 0 2px;
-  font-size: 13px;
-  font-weight: 650;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* 7-col week strip — same idea as Hygiene (day + date + icon under) */
+/* Always-on date strip (7 equal columns, no dead height) */
 .gx-week-strip {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
-  margin: 8px 0 10px;
+  gap: 2px;
+  margin: 0 0 4px;
   width: 100%;
 }
 
 .gx-week-cell {
   min-width: 0;
   text-align: center;
-  padding: 2px 0;
-  border-radius: 0;
+  padding: 0;
+  margin: 0;
   background: transparent;
-}
-
-.gx-week-cell.is-today {
-  background: transparent; /* no box — only text underline */
+  line-height: 1;
 }
 
 .gx-week-day {
   display: block;
-  font-size: 12px;
+  font-size: 15px; /* match body type — not micro labels */
   font-weight: 650;
-  color: rgba(255, 255, 255, 0.85);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .gx-week-cell.is-today .gx-week-day {
@@ -147,21 +167,21 @@
 
 .gx-week-date {
   display: block;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
-  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 1px 0 0;
 }
 
-/* Same gym icons under the day (cardio / lower / upper / rest) */
+/* Only rendered when a day has a type — never reserves blank height */
 .gx-week-icon-slot {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 16px;
-  margin-top: 3px;
+  margin-top: 1px;
+  line-height: 0;
 }
 
-/* Same gym SVG icons, tinted per type (currentColor via mask) */
 .gx-type-icon {
   display: inline-block;
   flex-shrink: 0;
@@ -175,41 +195,84 @@
   vertical-align: middle;
 }
 
+/* Same pattern as Hygiene “Choose routines for this week” */
+.gx-choose-toggle {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0 0 4px;
+  color: rgba(255, 255, 255, 0.42);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  line-height: 1;
+}
+
+.gx-choose-toggle:hover,
+.gx-choose-toggle[aria-expanded="true"] {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.gx-choose {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+/* Inside toggle: label | Sat…Fri — one row per type, zero air */
+.gx-week-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  margin: 0;
+}
+
+.gx-week-matrix-row {
+  display: grid;
+  grid-template-columns: minmax(8.5rem, 11rem) repeat(7, minmax(0, 1fr));
+  column-gap: 2px;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  line-height: 1;
+}
+
 .gx-plan-type {
-  margin: 0 0 8px;
+  margin: 0;
+  padding: 1px 0;
 }
 
 .gx-plan-type-label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 0 0 3px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.88); /* writing stays white — only icons are tinted */
+  gap: 5px;
+  margin: 0;
+  padding: 0 4px 0 0;
+  font-size: 12px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.88);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.gx-plan-type-icon {
-  /* legacy img class — prefer .gx-type-icon */
-  opacity: 0.9;
-}
-
-/* Align under week strip — 7 equal columns */
-.gx-plan-day-picks {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
-  width: 100%;
-}
-
-/* Thin day chips (not fat pills) — like Hygiene */
 .gx-day-pick {
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.32);
   border-radius: 0;
-  padding: 2px 0;
+  padding: 0;
+  margin: 0;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 1;
+  min-height: 0;
+  height: auto;
   cursor: pointer;
   width: 100%;
   text-align: center;
@@ -227,11 +290,10 @@
   color: #93c5fd;
   font-weight: 650;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 2px;
   text-decoration-thickness: 1px;
 }
 
-/* Lower body blocked on consecutive days — grayed out, not clickable */
 .gx-day-pick.is-blocked,
 .gx-day-pick:disabled {
   color: rgba(255, 255, 255, 0.18);
@@ -258,6 +320,8 @@
   cursor: pointer;
 }
 
+/* Light mode overrides are consolidated at the end of this file */
+
 .gx-save-flash {
   margin-left: 12px;
   font-size: 13px;
@@ -275,12 +339,12 @@
 .gx-nav-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   border: none;
   border-radius: 0;
   background: transparent;
-  padding: 8px 0;
+  padding: 4px 0; /* was 8px — same rows, less air */
   cursor: pointer;
   color: #fff;
   font-family: inherit;
@@ -390,16 +454,20 @@ img.gx-nav-icon {
   color: rgba(255, 255, 255, 0.35);
 }
 
-/* Body weight: blank underscore line + LB tight next to it */
+/* Weight — simple inline: Weight: 129 lb · Show trend (no white box on the number) */
+.gx-weight-top {
+  margin-bottom: 10px;
+}
+
 .gx-body-line {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px; /* Weight: ___ LB — close, not stretched */
+  gap: 0 0.35em;
   margin: 0;
   padding: 0;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1;
 }
 
 .gx-body-key {
@@ -409,20 +477,24 @@ img.gx-nav-icon {
 
 .gx-body-input {
   display: inline-block;
-  width: 3.25em; /* short blank line for number */
-  min-width: 2.5em;
-  max-width: 4.5em;
+  width: auto;
+  min-width: 2ch;
+  max-width: 7ch;
   margin: 0;
-  padding: 0 2px 1px;
-  border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.55); /* underscore line */
-  border-radius: 0;
-  background: transparent;
+  padding: 0 1px 1px 0;
+  border: none !important;
+  border-radius: 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.45) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-appearance: none;
+  appearance: none;
   color: #fff;
   font-family: inherit;
   font-size: 14px;
-  line-height: 1.4;
-  text-align: center;
+  line-height: 1;
+  text-align: left;
   outline: none;
   flex: 0 0 auto;
 }
@@ -430,7 +502,9 @@ img.gx-nav-icon {
 .gx-body-input:focus {
   outline: none;
   color: #9ccfff;
-  border-bottom-color: rgba(156, 207, 255, 0.75);
+  border-bottom-color: rgba(156, 207, 255, 0.75) !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .gx-body-input::placeholder {
@@ -439,12 +513,106 @@ img.gx-nav-icon {
 }
 
 .gx-body-unit {
-  color: #fff;
+  color: rgba(255, 255, 255, 0.88);
   font-size: 14px;
   flex: 0 0 auto;
-  margin-left: 0; /* right next to the line */
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  margin-left: 0.1em;
 }
+
+.gx-weight-top .gx-weight-chart-toggle {
+  margin-left: 0.65em;
+}
+
+.gx-weight-chart-toggle,
+.gx .gx-weight-chart-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 0 0 4px;
+  color: rgba(255, 255, 255, 0.38) !important;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 400;
+  text-decoration: none !important;
+  cursor: pointer;
+  display: inline;
+}
+
+.gx-weight-chart-toggle:hover,
+.gx .gx-weight-chart-toggle:hover {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+
+
+.gx-weight-empty {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.gx-weight-chart-wrap {
+  margin-top: 8px;
+  width: 100%;
+  max-width: 36rem;
+}
+/* Weight uses Whoop Recovery panel chrome */
+.gx-weight-metric {
+  margin-top: 10px;
+  max-width: 40rem;
+}
+.gx-weight-metric .wx-panel {
+  margin: 0;
+  padding: 0;
+}
+
+.gx-weight-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 140px;
+}
+
+.gx-weight-grid {
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 1;
+}
+
+.gx-weight-tick {
+  fill: rgba(255, 255, 255, 0.38);
+  font-size: 10px;
+  font-family: inherit;
+}
+
+.gx-weight-line {
+  stroke: #93c5fd;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.gx-weight-dot {
+  fill: #93c5fd;
+}
+
+.gx-weight-goal-line {
+  stroke: rgba(251, 191, 36, 0.85); /* gold goal */
+  stroke-width: 1.5;
+}
+
+.gx-weight-goal-label {
+  fill: rgba(251, 191, 36, 0.9);
+  font-size: 10px;
+  font-family: inherit;
+}
+
+
 
 /* Warm-up list — gray when done, NO strikethrough (user preference) */
 .gx-warmup {
@@ -470,7 +638,7 @@ img.gx-nav-icon {
   padding: 0; /* single-spaced list: no extra gap between rows */
   margin: 0;
   cursor: pointer;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .gx-warmup-item.is-done {
@@ -540,29 +708,36 @@ img.gx-nav-icon {
   gap: 6px;
 }
 
+/* Set rows — real square checkboxes (not collapsed / not system buttons) */
 .gx-set {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
   color: #6eb4ff;
   font-family: inherit;
   font-size: 14px;
-  padding: 8px 4px;
+  line-height: 1;
+  padding: 6px 0;
+  margin: 0;
   cursor: pointer;
   text-align: left;
+  min-height: 0;
 }
 
 .gx-set:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent !important;
+  opacity: 0.9;
 }
 
 /* Done sets: dim gray only — NEVER strikethrough */
 .gx-set.is-done {
-  border-color: transparent;
   color: rgba(255, 255, 255, 0.4);
   text-decoration: none;
 }
@@ -575,27 +750,42 @@ img.gx-nav-icon {
   color: rgba(255, 255, 255, 0.35);
 }
 
+/* Square checkbox — forced dimensions so it never flattens into “()” */
 .gx-set-box {
-  width: 18px;
-  height: 18px;
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
-  border-radius: 4px;
-  display: inline-flex;
+  box-sizing: border-box;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  max-width: 18px;
+  max-height: 18px;
+  margin: 0;
+  padding: 0;
+  /* All four sides explicit — survive global hairline strippers */
+  border-top: 1.5px solid rgba(255, 255, 255, 0.55) !important;
+  border-right: 1.5px solid rgba(255, 255, 255, 0.55) !important;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.55) !important;
+  border-left: 1.5px solid rgba(255, 255, 255, 0.55) !important;
+  border-radius: 3px !important;
+  background: transparent !important;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  font-size: 11px;
+  flex: 0 0 18px !important;
+  font-size: 12px;
+  line-height: 1;
   color: #fff;
+  overflow: hidden;
 }
 
 .gx-set.is-done .gx-set-box {
-  border-color: #22c55e;
-  background: #22c55e;
-  color: #fff;
+  border-color: #22c55e !important;
+  background: #22c55e !important;
+  color: #fff !important;
 }
 
 .gx-set.is-fail .gx-set-box {
-  border-color: rgba(249, 168, 212, 0.55);
+  border-color: rgba(249, 168, 212, 0.65) !important;
 }
 
 /* Rest timer overlay */
@@ -625,7 +815,7 @@ img.gx-nav-icon {
   font-size: 18px;
   font-weight: 600;
   color: #fff;
-  line-height: 1.35;
+  line-height: 1;
 }
 
 .gx-timer-label {
@@ -655,4 +845,319 @@ img.gx-nav-icon {
   display: flex;
   gap: 8px;
   justify-content: center;
+}
+
+/* Whoop training graphs at end of Gym home */
+.gx-whoop-train {
+  margin-top: 20px;
+}
+
+.gx-whoop-train .wx-panel-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 1100px) {
+  .gx-whoop-train .wx-panel-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT MODE — every gym text/chrome color (dark ink on cream).
+   Same structure as dark: uppercase exercise names + blue set checklist.
+   Do not leave any white-on-light ghosts.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html.theme-light .fx-page .gx {
+  color: #1a1c22;
+}
+
+html.theme-light .fx-page .gx-h2,
+html.theme-light .fx-page .gx-title {
+  color: #111318;
+}
+
+html.theme-light .fx-page .gx-sub {
+  color: rgba(26, 28, 34, 0.55);
+}
+
+html.theme-light .fx-page .gx-back {
+  color: rgba(26, 28, 34, 0.65);
+}
+
+html.theme-light .fx-page .gx-back:hover {
+  color: #111318;
+}
+
+html.theme-light .fx-page .gx-btn {
+  border-color: rgba(26, 28, 34, 0.18);
+  background: rgba(26, 28, 34, 0.04);
+  color: #1a1c22;
+}
+
+html.theme-light .fx-page .gx-btn:hover {
+  background: rgba(26, 28, 34, 0.08);
+}
+
+html.theme-light .fx-page .gx-sec-title {
+  color: #1a1c22;
+}
+
+/* Today link stays blue accent */
+html.theme-light .fx-page .gx-today-link {
+  color: #2563eb;
+}
+
+html.theme-light .fx-page .gx-today-link:hover {
+  color: #1d4ed8;
+}
+
+/* Week strip + plan matrix */
+html.theme-light .fx-page .gx-week-day {
+  color: #1a1c22;
+}
+
+html.theme-light .fx-page .gx-week-cell.is-today .gx-week-day {
+  color: #2563eb;
+}
+
+html.theme-light .fx-page .gx-week-date {
+  color: rgba(26, 28, 34, 0.5);
+}
+
+html.theme-light .fx-page .gx-choose-toggle {
+  color: rgba(26, 28, 34, 0.45);
+}
+
+html.theme-light .fx-page .gx-choose-toggle:hover,
+html.theme-light .fx-page .gx-choose-toggle[aria-expanded="true"] {
+  color: rgba(26, 28, 34, 0.7);
+}
+
+html.theme-light .fx-page .gx-plan-type-label {
+  color: #1a1c22;
+}
+
+html.theme-light .fx-page .gx-day-pick {
+  color: rgba(26, 28, 34, 0.35);
+}
+
+html.theme-light .fx-page .gx-day-pick.is-today {
+  color: rgba(26, 28, 34, 0.55);
+}
+
+html.theme-light .fx-page .gx-day-pick.is-on {
+  color: #2563eb;
+}
+
+html.theme-light .fx-page .gx-day-pick.is-blocked,
+html.theme-light .fx-page .gx-day-pick:disabled {
+  color: rgba(26, 28, 34, 0.2);
+}
+
+html.theme-light .fx-page .gx-day-pick:hover:not(:disabled):not(.is-blocked) {
+  color: rgba(26, 28, 34, 0.75);
+}
+
+html.theme-light .fx-page .gx-save-week {
+  color: #2563eb;
+}
+
+html.theme-light .fx-page .gx-save-flash {
+  color: #15803d;
+}
+
+/* Workout nav rows */
+html.theme-light .fx-page .gx-nav-row {
+  color: #1a1c22;
+}
+
+html.theme-light .fx-page .gx-nav-text small {
+  color: rgba(26, 28, 34, 0.5);
+}
+
+html.theme-light .fx-page .gx-chev {
+  color: rgba(26, 28, 34, 0.4);
+}
+
+/* PNG icons were inverted for dark bg — turn invert off in light */
+html.theme-light .fx-page img.gx-nav-icon {
+  filter: none;
+  opacity: 0.9;
+}
+
+/* Track hub */
+html.theme-light .fx-page .gx-track-card {
+  color: #1a1c22;
+}
+
+html.theme-light .fx-page .gx-track-num {
+  background: #5c4a6e;
+  color: #fff;
+}
+
+html.theme-light .fx-page .gx-track-body small {
+  color: rgba(26, 28, 34, 0.5);
+}
+
+html.theme-light .fx-page .gx-track-prog {
+  color: #2563eb;
+}
+
+html.theme-light .fx-page .gx-track-prog-empty {
+  color: rgba(26, 28, 34, 0.4);
+}
+
+/* Weight line */
+html.theme-light .fx-page .gx-body-key,
+html.theme-light .fx-page .gx-body-unit {
+  color: #1a1c22;
+}
+
+html.theme-light .fx-page .gx-body-input,
+html.theme-light .fx-page .gx-body-input:focus,
+html.theme-light .fx-page .gx-body-input:-webkit-autofill {
+  color: #1a1c22 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(26, 28, 34, 0.4) !important;
+  border-radius: 0 !important;
+}
+
+html.theme-light .fx-page .gx-body-input:focus {
+  border-bottom-color: rgba(37, 99, 235, 0.55) !important;
+  color: #1e3a8a !important;
+}
+
+html.theme-light .fx-page .gx-body-input::placeholder {
+  color: rgba(26, 28, 34, 0.35);
+}
+
+html.theme-light .fx-page .gx-weight-chart-toggle,
+html.theme-light .fx-page .gx .gx-weight-chart-toggle {
+  color: rgba(26, 28, 34, 0.4) !important;
+}
+
+html.theme-light .fx-page .gx-weight-chart-toggle:hover,
+html.theme-light .fx-page .gx .gx-weight-chart-toggle:hover {
+  color: rgba(26, 28, 34, 0.65) !important;
+}
+
+html.theme-light .fx-page .gx-weight-empty {
+  color: rgba(26, 28, 34, 0.5);
+}
+
+html.theme-light .fx-page .gx-weight-tick {
+  fill: rgba(26, 28, 34, 0.45);
+}
+
+html.theme-light .fx-page .gx-weight-grid {
+  stroke: rgba(26, 28, 34, 0.08);
+}
+
+html.theme-light .fx-page .gx-weight-line {
+  stroke: #2563eb;
+}
+
+html.theme-light .fx-page .gx-weight-dot {
+  fill: #2563eb;
+}
+
+/* Warm-up — dark ink, dim gray when done (still no strikethrough) */
+html.theme-light .fx-page .gx-warmup-item {
+  color: #1a1c22;
+}
+
+html.theme-light .fx-page .gx-warmup-item.is-done {
+  color: rgba(26, 28, 34, 0.38);
+}
+
+/* Session exercise headers + meta — the main “I cannot see” fix */
+html.theme-light .fx-page .gx-ex-name {
+  color: #111318;
+}
+
+html.theme-light .fx-page .gx-ex-sub {
+  color: rgba(26, 28, 34, 0.55);
+}
+
+html.theme-light .fx-page .gx-ex-meta {
+  color: rgba(26, 28, 34, 0.5);
+}
+
+html.theme-light .fx-page .gx-notes {
+  color: rgba(26, 28, 34, 0.75);
+}
+
+html.theme-light .fx-page .gx-notes summary {
+  color: #2563eb;
+}
+
+/* Set rows — blue labels like dark mode, readable on light */
+html.theme-light .fx-page .gx-set {
+  color: #2563eb;
+}
+
+html.theme-light .fx-page .gx-set.is-done {
+  color: rgba(26, 28, 34, 0.4);
+  text-decoration: none;
+}
+
+html.theme-light .fx-page .gx-set.is-fail {
+  color: #db2777;
+}
+
+html.theme-light .fx-page .gx-set.is-fail.is-done {
+  color: rgba(26, 28, 34, 0.38);
+}
+
+html.theme-light .fx-page .gx-set-box {
+  border-color: rgba(26, 28, 34, 0.45) !important;
+  background: transparent !important;
+  color: #1a1c22;
+}
+
+html.theme-light .fx-page .gx-set.is-done .gx-set-box {
+  border-color: #16a34a !important;
+  background: #16a34a !important;
+  color: #fff !important;
+}
+
+html.theme-light .fx-page .gx-set.is-fail .gx-set-box {
+  border-color: rgba(219, 39, 119, 0.55) !important;
+}
+
+/* Timer overlay stays dark card on dim backdrop — keep white text there */
+html.theme-light .fx-page .gx-timer-overlay {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+html.theme-light .fx-page .gx-timer-card {
+  background: #0a0a0a;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+html.theme-light .fx-page .gx-timer-msg,
+html.theme-light .fx-page .gx-timer-count {
+  color: #fff;
+}
+
+html.theme-light .fx-page .gx-timer-label,
+html.theme-light .fx-page .gx-timer-hint {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+html.theme-light .fx-page .gx-timer-card .gx-btn {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+html.theme-light .fx-page .gx-err {
+  color: #dc2626;
 }

@@ -3,7 +3,7 @@
  * a ruthless personal money operating system.
  *
  * Not vibes. Not "budget aesthetics." Concrete rules, drills, and targets
- * so a medical student / builder stops bleeding cash and climbs credit.
+ * so a founder / builder stops bleeding cash and climbs credit.
  */
 
 import {

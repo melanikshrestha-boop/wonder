@@ -5,6 +5,7 @@
  */
 
 import { pushUndo } from "../undoStack";
+import { normalizeCategory } from "./financeCategorize";
 
 export type AccountKind =
   | "cash"
@@ -50,7 +51,7 @@ export type FinanceAccount = {
 };
 
 export type TxKind = "expense" | "income";
-export type TxSource = "manual" | "csv" | "plaid" | "import";
+export type TxSource = "manual" | "csv" | "plaid" | "import" | "mel";
 
 export type FinanceTx = {
   id: string;
@@ -154,23 +155,17 @@ export type FinanceState = {
 const KEY = "wonder-finance-v2";
 const KEY_V1 = "wonder-finance-v1";
 
+/** Budget lines for categories you actually use */
 const DEFAULT_BUDGET: BudgetLine[] = [
-  { category: "Utilities", planned: 0 },
-  { category: "Food / groceries", planned: 0 },
-  { category: "Restaurants / coffee", planned: 0 },
-  { category: "Transport", planned: 0 },
-  { category: "Health", planned: 0 },
-  { category: "Shopping", planned: 0 },
-  { category: "Subscriptions", planned: 0 },
-  { category: "Build / tools", planned: 0 },
-  { category: "Travel", planned: 0 },
-  { category: "Education / school", planned: 0 },
-  { category: "Fun", planned: 0 },
-  { category: "Credit card payment", planned: 0 },
+  { category: "Zelle", planned: 0 },
   { category: "Transfers", planned: 0 },
-  { category: "Fees", planned: 0 },
+  { category: "Groceries", planned: 0 },
+  { category: "Restaurants", planned: 0 },
+  { category: "Subscriptions", planned: 0 },
+  { category: "Clothing", planned: 0 },
+  { category: "Transport", planned: 0 },
+  { category: "Credit card payment", planned: 0 },
   { category: "Other", planned: 0 },
-  { category: "Uncategorized", planned: 0 },
 ];
 
 const DEFAULT_ACCOUNTS: FinanceAccount[] = [
@@ -212,18 +207,22 @@ function defaultState(): FinanceState {
 }
 
 function migrateTx(raw: Partial<FinanceTx>): FinanceTx {
+  const note = raw.note || "";
+  const merchant = raw.merchant || raw.note || "";
   return {
     id: raw.id || uid("tx"),
     date: raw.date || new Date().toISOString().slice(0, 10),
     kind: raw.kind === "income" ? "income" : "expense",
     amount: Math.abs(Number(raw.amount) || 0),
-    category: raw.category || "Uncategorized",
-    note: raw.note || "",
-    merchant: raw.merchant || raw.note || "",
+    // Fold legacy labels + pull Zelle out of Transfers
+    category: normalizeCategory(raw.category, `${merchant} ${note}`),
+    note,
+    merchant,
     accountId: raw.accountId ?? null,
     source: raw.source || "manual",
     externalId: raw.externalId ?? null,
     pending: !!raw.pending,
+    txType: raw.txType ?? null,
   };
 }
 
@@ -259,7 +258,32 @@ export function loadFinance(): FinanceState {
       return defaultState();
     }
     const parsed = JSON.parse(raw) as Partial<FinanceState>;
-    return {
+    const rawTxs = Array.isArray(parsed.txs) ? parsed.txs : [];
+    // Drop demo/seed "manual" rows. Keep bank imports + Mel-logged hands.
+    const txs = rawTxs
+      .map(migrateTx)
+      .filter((t) => t.source !== "manual" || t.source === "mel");
+
+    // Collapse budget lines onto the short category list
+    const budgetRaw =
+      Array.isArray(parsed.budget) && parsed.budget.length
+        ? parsed.budget
+        : DEFAULT_BUDGET;
+    const budgetMap = new Map<string, number>();
+    for (const b of budgetRaw) {
+      const cat = normalizeCategory(b.category);
+      if (cat === "Income") continue;
+      budgetMap.set(cat, (budgetMap.get(cat) || 0) + (Number(b.planned) || 0));
+    }
+    const budget: BudgetLine[] =
+      budgetMap.size > 0
+        ? Array.from(budgetMap.entries()).map(([category, planned]) => ({
+            category,
+            planned,
+          }))
+        : DEFAULT_BUDGET;
+
+    const next: FinanceState = {
       version: 2,
       accounts:
         Array.isArray(parsed.accounts) && parsed.accounts.length
@@ -268,15 +292,8 @@ export function loadFinance(): FinanceState {
               creditLimit: a.creditLimit ?? null,
             }))
           : DEFAULT_ACCOUNTS,
-      // Only real imported data lives on the books. Any leftover demo/seed
-      // rows (source "manual") are dropped — the desk reflects your CSV only.
-      txs: Array.isArray(parsed.txs)
-        ? parsed.txs.map(migrateTx).filter((t) => t.source !== "manual")
-        : [],
-      budget:
-        Array.isArray(parsed.budget) && parsed.budget.length
-          ? parsed.budget
-          : DEFAULT_BUDGET,
+      txs,
+      budget,
       watchlist:
         Array.isArray(parsed.watchlist) && parsed.watchlist.length
           ? parsed.watchlist
@@ -298,6 +315,26 @@ export function loadFinance(): FinanceState {
         };
       })(),
     };
+
+    // Persist category renames (e.g. Zelle out of Transfers) so every month stays fixed
+    const catsChanged = rawTxs.some((t) => {
+      if (t.source === "manual") return false;
+      const nextCat = normalizeCategory(
+        t.category,
+        `${t.merchant || ""} ${t.note || ""}`
+      );
+      return (t.category || "") !== nextCat;
+    });
+    if (catsChanged) {
+      try {
+        // Quiet write — don't push undo for a silent schema migrate
+        localStorage.setItem(KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return next;
   } catch {
     return defaultState();
   }
@@ -587,19 +624,41 @@ export function newAccount(partial?: Partial<FinanceAccount>): FinanceAccount {
 
 export function newTx(partial?: Partial<FinanceTx>): FinanceTx {
   const today = new Date().toISOString().slice(0, 10);
+  const note = partial?.note || "";
+  const merchant = partial?.merchant || partial?.note || "";
   return {
     id: uid("tx"),
     date: partial?.date || today,
     kind: partial?.kind || "expense",
     amount: partial?.amount ?? 0,
-    category: partial?.category || "Uncategorized",
-    note: partial?.note || "",
-    merchant: partial?.merchant || partial?.note || "",
+    category: normalizeCategory(partial?.category || "Other", `${merchant} ${note}`),
+    note,
+    merchant,
     accountId: partial?.accountId ?? null,
     source: partial?.source || "manual",
     externalId: partial?.externalId ?? null,
     pending: !!partial?.pending,
   };
+}
+
+/**
+ * Display-only date: ISO "2026-08-25" → "8/25/26" (M/D/YY, no leading zeros).
+ * Storage stays YYYY-MM-DD. Never show raw ISO in the UI.
+ */
+export function formatDateMDY(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const m = String(iso).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) {
+    // Already short? pass through carefully
+    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(String(iso).trim())) return String(iso).trim();
+    return String(iso);
+  }
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!y || !mo || !d) return String(iso);
+  const yy = String(y).slice(-2);
+  return `${mo}/${d}/${yy}`;
 }
 
 export function money(n: number): string {
@@ -626,7 +685,7 @@ export function moneyExact(n: number): string {
 
 /** Always show cents — bookkeeper precision (never round away pennies). */
 export function moneyCents(n: number): string {
-  const sign = n < 0 ? "−" : n > 0 ? "" : "";
+  const sign = n < 0 ? "-" : n > 0 ? "" : "";
   return (
     sign +
     Math.abs(n).toLocaleString("en-US", {
@@ -641,14 +700,20 @@ export function moneyCents(n: number): string {
 /**
  * Running balance through time (oldest → newest).
  * Income adds, expense subtracts. Map is tx id → balance after that row.
+ *
+ * @param opening Starting balance so the series ends on real net worth / cash —
+ * never invent a fake −$8k just because history started at 0.
  */
-export function runningBalanceMap(txs: FinanceTx[]): Map<string, number> {
+export function runningBalanceMap(
+  txs: FinanceTx[],
+  opening = 0
+): Map<string, number> {
   const sorted = [...txs].sort((a, b) => {
     const d = a.date.localeCompare(b.date);
     if (d !== 0) return d;
     return a.id.localeCompare(b.id);
   });
-  let bal = 0;
+  let bal = Math.round(opening * 100) / 100;
   const map = new Map<string, number>();
   for (const t of sorted) {
     bal += t.kind === "income" ? t.amount : -t.amount;
@@ -657,6 +722,22 @@ export function runningBalanceMap(txs: FinanceTx[]): Map<string, number> {
     map.set(t.id, bal);
   }
   return map;
+}
+
+/**
+ * Opening balance so that after every signed tx, running balance = current net worth.
+ * Opening + Σ(income − expense) = netWorth(accounts).
+ */
+export function ledgerOpeningBalance(
+  accounts: FinanceAccount[],
+  txs: FinanceTx[]
+): number {
+  const current = netWorth(accounts);
+  const signed = txs.reduce(
+    (s, t) => s + (t.kind === "income" ? t.amount : -t.amount),
+    0
+  );
+  return Math.round((current - signed) * 100) / 100;
 }
 
 /** Rows a meticulous bookkeeper still needs to finish */
@@ -670,13 +751,13 @@ export function bookkeeperGaps(state: FinanceState, ym: string): {
   disciplineScore: number; // 0–100
 } {
   const monthTxs = txsInMonth(state.txs, ym);
-  const uncategorized = monthTxs.filter(
-    (t) =>
-      !t.category ||
-      t.category === "Uncategorized" ||
-      t.category === "Other" ||
-      t.category.trim() === ""
-  ).length;
+  const uncategorized = monthTxs.filter((t) => {
+    const cat = normalizeCategory(
+      t.category,
+      `${t.merchant || ""} ${t.note || ""}`
+    );
+    return !cat || cat === "Other";
+  }).length;
   const blankMerchant = monthTxs.filter(
     (t) => !(t.merchant || t.note || "").trim()
   ).length;

@@ -9,3 +9,7 @@ data/
 src/melani/*.xlsx
 *.xlsx
 dist-single
+.gstack/
+
+# Personal WHOOP exports (local only)
+public/whoop/

@@ -12,13 +12,17 @@ import {
   type ClipboardEvent,
 } from "react";
 import "./finance.css";
+import "./whoop-lab.css"; // Recovery-panel graph chrome (wx-panel)
 import {
   buildCreditReport,
   DEFAULT_CREDIT_PROFILE,
   REAL_CREDIT_SCORE,
   type CreditProfile,
 } from "./financeCredit";
-import { FINANCE_CATEGORIES } from "./financeCategorize";
+import {
+  FINANCE_CATEGORIES,
+  normalizeCategory,
+} from "./financeCategorize";
 import { exportLedgerCsv, parseBankCsv } from "./financeCsv";
 import { importOfx, looksLikeOfx } from "./financeOfx";
 import {
@@ -60,10 +64,19 @@ import { annualBookCsv, buildAnnualBook } from "./annualBooks";
 import {
   detectSubscriptions,
   CADENCE_LABEL,
+  applySubPrefs,
+  dismissSubscription,
+  setSubscriptionCadence,
+  TOGGLE_CADENCES,
+  type SubCadence,
 } from "./subscriptions";
-import { MonthBookCharts, LabeledLineChart } from "./FinCharts";
+import {
+  MonthBookCharts,
+  LabeledLineChart,
+  InteractivePieChart,
+} from "./FinCharts";
 import { FinanceCopilot } from "./FinanceCopilot";
-import type { CopilotContext } from "./financeCopilot";
+import type { CopilotContext } from "./financeCopilotEngine";
 import { FinanceSqlEditor } from "./FinanceSqlEditor";
 import { Spend3D } from "./Spend3D";
 import {
@@ -80,6 +93,7 @@ import {
   money,
   moneyExact,
   moneyCents,
+  formatDateMDY,
   monthExpense,
   monthIncome,
   monthKey,
@@ -89,6 +103,7 @@ import {
   newGoal,
   newTx,
   runningBalanceMap,
+  ledgerOpeningBalance,
   txTypeOf,
   saveFinance,
   seedFinanceUndoBaseline,
@@ -173,21 +188,6 @@ type TabId =
 type SortKey = "date" | "merchant" | "category" | "amount" | "kind";
 
 /** Bookkeeper desk — ledger is home, not a marketing dashboard */
-/**
- * Is the payment type already obvious from the payee text? If the payee
- * says "Zelle to Mom" we don't tack on "(Zelle debit)" — only label when
- * the method isn't already written in the line (e.g. "Zutobi.com" → purchase).
- */
-function typeInPayee(payee: string, type: string): boolean {
-  const p = payee.toLowerCase();
-  const t = type.toLowerCase();
-  const words = [
-    "zelle", "transfer", "card", "atm", "ach", "check", "deposit",
-    "purchase", "venmo", "paypal", "cash app", "interest", "fee",
-    "refund", "bill", "wire", "payment",
-  ];
-  return words.some((w) => t.includes(w) && p.includes(w));
-}
 
 const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "transactions", label: "Ledger", icon: "☰" },
@@ -210,29 +210,22 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   {
     id: "essentials",
     label: "Essentials",
-    cats: ["Utilities", "Food / groceries", "Transport", "Health"],
+    cats: ["Groceries", "Transport"],
   },
   {
     id: "lifestyle",
     label: "Lifestyle",
-    cats: [
-      "Restaurants / coffee",
-      "Shopping",
-      "Fun",
-      "Travel",
-      "Subscriptions",
-      "Build / tools",
-    ],
+    cats: ["Restaurants", "Clothing", "Subscriptions"],
   },
   {
-    id: "goals",
-    label: "Goals",
-    cats: ["Transfers"],
+    id: "moves",
+    label: "Money moves",
+    cats: ["Zelle", "Transfers", "Credit card payment"],
   },
   {
     id: "buffer",
     label: "Buffer",
-    cats: ["Fees", "Other", "Uncategorized"],
+    cats: ["Other"],
   },
 ];
 
@@ -316,12 +309,30 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     },
     []
   );
-  // Ledger first — a meticulous bookkeeper opens the daybook, not a dashboard
-  const [tab, setTab] = useState<TabId>("transactions");
-  // Deleted tabs (worth/credit/goals/accounts) can never display — a stray
-  // navigation to one falls back to the Ledger.
+  // Books (capital command) is the default desk — deep-link: ?tab=transactions|plan|…
+  const [tab, setTab] = useState<TabId>(() => {
+    if (typeof window === "undefined") return "overview";
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t && NAV.some((n) => n.id === t)) return t as TabId;
+    return "overview";
+  });
+  // Open quant desk from URL (?desk=1 or ?copilot=1)
+  const [copilotOpen, setCopilotOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const p = new URLSearchParams(window.location.search);
+    return p.get("desk") === "1" || p.get("copilot") === "1";
+  });
+  // Deleted tabs fall back to Books (capital)
   useEffect(() => {
-    if (!NAV.some((n) => n.id === tab)) setTab("transactions");
+    if (!NAV.some((n) => n.id === tab)) setTab("overview");
+  }, [tab]);
+  // Keep ?tab= in the URL when switching sections (shareable / refresh-safe)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (tab === "overview") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", tab);
+    window.history.replaceState({}, "", url.toString());
   }, [tab]);
   const [filterQ, setFilterQ] = useState("");
   const [filterCat, setFilterCat] = useState("all");
@@ -366,7 +377,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const [sortDir] = useState<"asc" | "desc">("desc");
   const [askQ, setAskQ] = useState("");
   const [askA, setAskA] = useState<string | null>(null);
-  const [copilotOpen, setCopilotOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const idleTimer = useRef<number | null>(null);
   // Filing cabinet next to the ledger (payables, receipts, closed months)
@@ -606,14 +616,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const bars = useMemo(() => dailyBars(txs, ym), [txs, ym]);
 
   const budget = state?.budget || [];
-  const categories = useMemo(() => {
-    const set = new Set<string>([
-      ...FINANCE_CATEGORIES,
-      ...budget.map((b) => b.category),
-      ...txs.map((t) => t.category),
-    ]);
-    return Array.from(set);
-  }, [budget, txs]);
+  /** Short picker list only — not every legacy junk label ever seen */
+  const categories = useMemo(() => [...FINANCE_CATEGORIES], []);
 
   const txTypes = useMemo(() => {
     const types = new Set<string>();
@@ -621,11 +625,17 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     return Array.from(types).sort();
   }, [txs]);
 
-  /** Only categories that actually appear in your books — no unused options */
+  /** Filter chips: only categories that appear after normalize */
   const usedCategories = useMemo(() => {
     const set = new Set<string>();
-    for (const t of txs) if (t.category) set.add(t.category);
-    return Array.from(set).sort();
+    for (const t of txs) {
+      if (!t.category) continue;
+      set.add(
+        normalizeCategory(t.category, `${t.merchant || ""} ${t.note || ""}`)
+      );
+    }
+    // Keep the short list order; only show ones present in books
+    return FINANCE_CATEGORIES.filter((c) => set.has(c));
   }, [txs]);
 
   /** Owner's hard monthly spending limit */
@@ -659,7 +669,17 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     [txs, filterYear]
   );
 
-  const subscriptionScan = useMemo(() => detectSubscriptions(txs), [txs]);
+  const [subTick, setSubTick] = useState(0);
+  const subscriptionScan = useMemo(() => {
+    void subTick;
+    return applySubPrefs(detectSubscriptions(txs));
+  }, [txs, subTick]);
+
+  useEffect(() => {
+    const on = () => setSubTick((n) => n + 1);
+    window.addEventListener("wonder-subs-changed", on);
+    return () => window.removeEventListener("wonder-subs-changed", on);
+  }, []);
 
   const planRows = useMemo(() => {
     return PLAN_GROUPS.map((g) => {
@@ -975,8 +995,15 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       });
   }, [ledger]);
 
-  /** Running balance after each tx (full books, not just filter) */
-  const balanceById = useMemo(() => runningBalanceMap(txs), [txs]);
+  /**
+   * Running balance after each tx — seeded so the series ends on real net worth
+   * (assets − credit debt), not a fake −$8k from starting at $0 with no income history.
+   */
+  const balanceById = useMemo(() => {
+    if (!state) return new Map<string, number>();
+    const opening = ledgerOpeningBalance(state.accounts, txs);
+    return runningBalanceMap(txs, opening);
+  }, [state, txs]);
 
   const maxBar = useMemo(() => {
     const m = Math.max(1, ...bars.map((b) => Math.abs(b.net)));
@@ -1158,7 +1185,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
           merchant: merchant || "Pasted",
           note: merchant || "Pasted",
           amount,
-          category: (cols[3] || "Uncategorized").trim() || "Uncategorized",
+          category: normalizeCategory(
+            (cols[3] || "Other").trim() || "Other",
+            `${cols[1] || ""} ${cols[2] || ""}`
+          ),
           kind: isNeg ? "expense" : "expense",
           source: "import",
         })
@@ -1475,7 +1505,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             date: t.date,
             kind: t.kind,
             amount: t.amount,
-            category: t.category || "Uncategorized",
+            category: normalizeCategory(
+              t.category,
+              `${t.merchant || ""} ${t.note || ""}`
+            ),
             note: t.note || t.merchant,
             merchant: t.merchant,
             accountId: acc?.id || null,
@@ -1507,9 +1540,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       setPlaidBusy(false);
     }
   }
-
-  const tabTitle =
-    NAV.find((n) => n.id === tab)?.label || "Ledger";
 
   // Only if user already set up a vault earlier — otherwise skip straight to ledger
   if (vaultGate === "unlock" || !state) {
@@ -1574,59 +1604,59 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     <div className="wd">
       {/* Single column — no second sidebar. Tabs live in the page like Fitness. */}
       <div className="wd-main">
-        <header className="wd-top">
-          <div className="wd-top-titles">
-            <h1>{tabTitle}</h1>
+        {/* One row: section tabs left · actions right (no big duplicate Ledger title) */}
+        <nav className="wd-subnav wd-subnav-bar" aria-label="Finance sections">
+          <div className="wd-subnav-left">
+            {NAV.map((n) => (
+              <button
+                key={n.id}
+                type="button"
+                className={`wd-subnav-link${tab === n.id ? " is-active" : ""}`}
+                onClick={() => setTab(n.id)}
+              >
+                {n.label}
+              </button>
+            ))}
           </div>
-          <div className="wd-top-actions">
+          <div className="wd-subnav-right">
             <button
               type="button"
-              className="wd-copilot-btn"
+              className={`wd-subnav-link wd-quant-open${copilotOpen ? " is-active" : ""}`}
               onClick={() => setCopilotOpen(true)}
-              title="Ask the AI copilot about your ledger"
+              title="Open quant desk — ledger math + Mel"
             >
-              <span aria-hidden>✦</span> Copilot
+              Quant desk
+            </button>
+            <button
+              type="button"
+              className="wd-subnav-link"
+              onClick={() => fileRef.current?.click()}
+            >
+              Import
+            </button>
+            <button
+              type="button"
+              className="wd-subnav-link"
+              onClick={downloadCsv}
+            >
+              Export books
             </button>
             {hasEncryptedVault() && isVaultUnlocked() ? (
               <button
                 type="button"
-                className="wd-btn"
+                className="wd-subnav-link"
                 onClick={onLockNow}
                 title="Lock vault"
               >
                 Lock
               </button>
             ) : null}
-            <button
-              type="button"
-              className="wd-btn"
-              onClick={() => fileRef.current?.click()}
-            >
-              Import
-            </button>
-            <button type="button" className="wd-btn" onClick={downloadCsv}>
-              Export books
-            </button>
           </div>
-          {importNote ? <p className="wd-note wd-top-note">{importNote}</p> : null}
-          {saveErr ? (
-            <p className="wd-note wd-top-note wd-vault-err">{saveErr}</p>
-          ) : null}
-        </header>
-
-        {/* Section tabs */}
-        <nav className="wd-subnav wd-subnav-plain" aria-label="Finance sections">
-          {NAV.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              className={`wd-subnav-link${tab === n.id ? " is-active" : ""}`}
-              onClick={() => setTab(n.id)}
-            >
-              {n.label}
-            </button>
-          ))}
         </nav>
+        {importNote ? <p className="wd-note wd-top-note">{importNote}</p> : null}
+        {saveErr ? (
+          <p className="wd-note wd-top-note wd-vault-err">{saveErr}</p>
+        ) : null}
 
         <input
           ref={fileRef}
@@ -1636,9 +1666,255 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
           onChange={(e) => onCsvFile(e.target.files?.[0] || null)}
         />
 
-        {/* ════════ BOOKS (period summary) ════════ */}
+        {/* ════════ BOOKS — capital command (not budget theater) ════════ */}
         {tab === "overview" ? (
           <div className="wd-overview">
+            {/* Capital first: deploy / keep / runway / invest — reinvest doctrine */}
+            <section
+              className="wd-panel wd-smart-core wd-capital-cmd"
+              aria-label="Capital command"
+            >
+              <div className="wd-panel-head">
+                <h2>Capital</h2>
+                <span className="wd-chip">
+                  {brief.smart.capital.label} · {brief.smart.capital.score}/100
+                </span>
+              </div>
+
+              {/* Hero order — what to do with money before lifestyle */}
+              <p className="wd-capital-order">
+                {brief.reinvest.order || brief.headline}
+              </p>
+              <p className="wd-muted wd-capital-sub">
+                {brief.sub}
+                {brief.reinvest.actualRate != null
+                  ? ` · Target keep ${Math.round(brief.reinvest.targetRate * 100)}%`
+                  : ""}
+              </p>
+
+              {/* Deploy now is the founder metric */}
+              <div className="wd-capital-hero">
+                <div className="wd-capital-hero-main">
+                  <span>Deploy to invest</span>
+                  <strong
+                    className={
+                      brief.reinvest.deployNow > 0 ? "is-neg" : "is-pos"
+                    }
+                  >
+                    {money(brief.reinvest.deployNow)}
+                  </strong>
+                  <em>
+                    {brief.reinvest.deployNow > 0
+                      ? "Still to move before fun money"
+                      : "Reinvest target met this month"}
+                  </em>
+                </div>
+                <div className="wd-capital-hero-side">
+                  <div>
+                    <span>Keep rate</span>
+                    <strong>
+                      {brief.reinvest.actualRate == null
+                        ? "—"
+                        : `${Math.round(brief.reinvest.actualRate * 100)}%`}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Invest book</span>
+                    <strong className="is-pos">
+                      {money(brief.reinvest.investedBalance)}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Fun after capital</span>
+                    <strong>{money(safeToSpend)}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="wd-smart-metrics wd-capital-metrics">
+                <div className="wd-smart-metric">
+                  <span>Cash</span>
+                  <strong>{money(cash)}</strong>
+                </div>
+                <div className="wd-smart-metric">
+                  <span>True runway</span>
+                  <strong>
+                    {brief.smart.velocity.runwayMonthsTrue > 24
+                      ? "24+"
+                      : brief.smart.velocity.runwayMonthsTrue.toFixed(1)}
+                    <small> mo</small>
+                  </strong>
+                </div>
+                <div className="wd-smart-metric">
+                  <span>Days of cash</span>
+                  <strong>
+                    {brief.smart.velocity.daysOfCash > 200
+                      ? "200+"
+                      : brief.smart.velocity.daysOfCash}
+                  </strong>
+                </div>
+                <div className="wd-smart-metric">
+                  <span>True flow · {ym}</span>
+                  <strong
+                    className={
+                      brief.smart.trueFlow.trueFlow < 0 ? "is-neg" : "is-pos"
+                    }
+                  >
+                    {moneyCents(brief.smart.trueFlow.trueFlow)}
+                  </strong>
+                </div>
+                <div className="wd-smart-metric">
+                  <span>True income</span>
+                  <strong className="is-pos">
+                    {moneyCents(brief.smart.trueFlow.trueIncome)}
+                  </strong>
+                </div>
+                <div className="wd-smart-metric">
+                  <span>True spend</span>
+                  <strong className="is-neg">
+                    {moneyCents(brief.smart.trueFlow.trueSpend)}
+                  </strong>
+                </div>
+                <div className="wd-smart-metric">
+                  <span>Net worth</span>
+                  <strong className={worth < 0 ? "is-neg" : ""}>
+                    {money(worth)}
+                  </strong>
+                </div>
+                <div className="wd-smart-metric">
+                  <span>Interest drag</span>
+                  <strong
+                    className={
+                      brief.smart.debt.monthlyInterestDrag > 0 ? "is-neg" : ""
+                    }
+                  >
+                    {moneyCents(brief.smart.debt.monthlyInterestDrag)}
+                    <small>/mo</small>
+                  </strong>
+                </div>
+              </div>
+
+              {/* Ranked capital moves — engine already built these */}
+              {brief.actions.length ? (
+                <div className="wd-capital-moves">
+                  <h3>Next capital moves</h3>
+                  <ul className="wd-alerts wd-smart-signals">
+                    {brief.actions.slice(0, 5).map((a) => (
+                      <li key={a.id} className={`wd-sev-${a.severity}`}>
+                        <div>
+                          <strong>{a.title}</strong>
+                          <p>{a.detail}</p>
+                          <button
+                            type="button"
+                            className="wd-link"
+                            onClick={() =>
+                              runSmartAction(a.id, a.tab as TabId | undefined)
+                            }
+                          >
+                            {a.cta} →
+                          </button>
+                        </div>
+                        {a.amount != null ? (
+                          <em
+                            className={
+                              a.severity === "good" ? "is-pos" : "is-neg"
+                            }
+                          >
+                            {money(a.amount)}
+                          </em>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {brief.smart.signals.length ? (
+                <div className="wd-capital-signals">
+                  <h3>Signals</h3>
+                  <ul className="wd-alerts wd-smart-signals">
+                    {brief.smart.signals.slice(0, 4).map((s) => (
+                      <li key={s.id} className={`wd-sev-${s.severity}`}>
+                        <div>
+                          <strong>{s.title}</strong>
+                          <p>{s.detail}</p>
+                        </div>
+                        {s.metric ? <em>{s.metric}</em> : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {brief.smart.anomalies.length ? (
+                <div className="wd-smart-anomalies">
+                  <h3>Anomalies this month</h3>
+                  <ul className="wd-acct-list">
+                    {brief.smart.anomalies.map((a) => (
+                      <li key={a.id}>
+                        {formatDateMDY(a.date)} · <strong>{a.merchant}</strong> ·{" "}
+                        {moneyCents(a.amount)}
+                        <div className="wd-muted">{a.why}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {/* Transfer fix loop — one tap, true books stay honest */}
+              {transferPairs.length ? (
+                <div className="wd-capital-transfers">
+                  <h3>Fix transfers · {transferPairs.length}</h3>
+                  <p className="wd-muted" style={{ margin: "0 0 8px" }}>
+                    Same dollars out and in — mark so they stop inflating spend.
+                    Mel: “fix top transfer” or “list transfers”.
+                  </p>
+                  <ul className="wd-acct-list">
+                    {transferPairs.slice(0, 5).map((pr) => (
+                      <li key={`${pr.outTx.id}-${pr.inTx.id}`}>
+                        {formatDateMDY(pr.outTx.date)} ·{" "}
+                        {pr.outTx.merchant || pr.outTx.note} →{" "}
+                        {pr.inTx.merchant || pr.inTx.note} ·{" "}
+                        <strong>{moneyCents(pr.outTx.amount)}</strong>
+                        <span className="wd-muted">
+                          {" "}
+                          · {Math.round(pr.confidence * 100)}%
+                        </span>{" "}
+                        <button
+                          type="button"
+                          className="wd-btn"
+                          onClick={() => applyPair(pr)}
+                        >
+                          Mark as transfer
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {transferPairs.length > 1 ? (
+                    <button
+                      type="button"
+                      className="wd-btn wd-btn-primary"
+                      style={{ marginTop: 8 }}
+                      onClick={() => {
+                        patchState((s) => {
+                          let txs = s.txs;
+                          for (const p of transferPairs.slice(0, 5)) {
+                            txs = applyTransferPair(txs, p);
+                          }
+                          return { ...s, txs };
+                        });
+                        setImportNote(
+                          `Marked ${Math.min(5, transferPairs.length)} transfer pair(s) — excluded from true income & spend.`
+                        );
+                      }}
+                    >
+                      Mark top {Math.min(5, transferPairs.length)} as transfers
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+
             {/* ═══ 14 accounting modules — work first, no chrome ═══ */}
             <section className="wd-panel wd-acct-modules">
               <div className="wd-panel-head">
@@ -1873,7 +2149,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   <ul className="wd-acct-list">
                     {accounting.payables.open.map((p) => (
                       <li key={p.id}>
-                        {p.what} · {moneyCents(p.amount)} · due {p.dueDate}{" "}
+                        {p.what} · {moneyCents(p.amount)} · due{" "}
+                        {formatDateMDY(p.dueDate)}{" "}
                         <button
                           type="button"
                           className="wd-link"
@@ -1918,7 +2195,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   <ul className="wd-acct-list">
                     {accounting.receivables.open.map((r) => (
                       <li key={r.id}>
-                        {r.who} · {moneyCents(r.amount)} · due {r.dueDate}{" "}
+                        {r.who} · {moneyCents(r.amount)} · due{" "}
+                        {formatDateMDY(r.dueDate)}{" "}
                         <button
                           type="button"
                           className="wd-link"
@@ -1953,63 +2231,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   </ul>
                 </div>
               </div>
-            </section>
-
-            {/* Snapshot row */}
-            <section className="wd-panel">
-              <div className="wd-panel-head">
-                <h2>Financial snapshot</h2>
-                <span className="wd-chip">
-                  {brief.dataQuality.score >= 70 ? "Live" : "Partial"}
-                </span>
-              </div>
-              <div className="wd-snap">
-                <div className="wd-metric">
-                  <span>Net worth</span>
-                  <strong className={worth < 0 ? "is-neg" : ""}>
-                    {money(worth)}
-                  </strong>
-                  <em>
-                    Cash {money(cash)} · Invested {money(inv)}
-                  </em>
-                </div>
-                <div className="wd-metric">
-                  <span>Fun after reinvest</span>
-                  <strong title="After essentials, debt floor, and reinvest target">
-                    {money(safeToSpend)}
-                  </strong>
-                  <em>cash − essentials left − debt floor − burn buffer</em>
-                </div>
-                <div className="wd-metric">
-                  <span>Monthly cash flow</span>
-                  <strong className={cashFlow < 0 ? "is-neg" : "is-pos"}>
-                    {cashFlow >= 0 ? "+" : ""}
-                    {money(cashFlow)}
-                  </strong>
-                  <em>
-                    In {money(income)} · Out {money(expense)}
-                  </em>
-                </div>
-                <div className="wd-metric">
-                  <span>Runway</span>
-                  <strong>
-                    {runwayMonths > 24
-                      ? "24+"
-                      : runwayMonths.toFixed(1)}{" "}
-                    <small>months</small>
-                  </strong>
-                  <em>
-                    burn {money(brief.projection.burnPerDay)}/day
-                  </em>
-                </div>
-              </div>
-            </section>
-
-            <section className="wd-panel" aria-label="3D spend by category">
-              <div className="wd-panel-head">
-                <h2>Spend by category · 3D</h2>
-              </div>
-              <Spend3D txs={state.txs} />
             </section>
 
             <div className="wd-grid-2">
@@ -2053,40 +2274,11 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 </div>
               </section>
 
-              {/* Ranked next actions from the engine */}
-              <section className="wd-panel">
+              <section className="wd-panel" aria-label="3D spend by category">
                 <div className="wd-panel-head">
-                  <h2>Next moves</h2>
-                  <span className="wd-muted">ranked by impact</span>
+                  <h2>Spend by category · 3D</h2>
                 </div>
-                <ul className="wd-alerts">
-                  {brief.actions.map((a) => (
-                    <li key={a.id} className={`wd-sev-${a.severity}`}>
-                      <div>
-                        <strong>{a.title}</strong>
-                        <p>{a.detail}</p>
-                        <button
-                          type="button"
-                          className="wd-link"
-                          onClick={() =>
-                            runSmartAction(a.id, a.tab as TabId | undefined)
-                          }
-                        >
-                          {a.cta} →
-                        </button>
-                      </div>
-                      {a.amount != null ? (
-                        <em
-                          className={
-                            a.severity === "good" ? "is-pos" : "is-neg"
-                          }
-                        >
-                          {money(a.amount)}
-                        </em>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
+                <Spend3D txs={state.txs} />
               </section>
             </div>
 
@@ -2288,7 +2480,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                       <tr key={t.id}>
                         <td>{t.merchant || t.note || "—"}</td>
                         <td>{t.category}</td>
-                        <td>{t.date}</td>
+                        <td className="wd-date">{formatDateMDY(t.date)}</td>
                         <td
                           className={`num ${
                             t.kind === "income" ? "is-pos" : "is-neg"
@@ -2336,9 +2528,12 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               {askA ? <p className="wd-ask-a">{askA}</p> : null}
               <div className="wd-ask-chips">
                 {[
-                  "Can I afford a trip?",
-                  "How is my credit?",
+                  "What's my true cash flow?",
+                  "Any spend anomalies?",
                   "What's my runway?",
+                  "How is my capital score?",
+                  "Subscription drag?",
+                  "How is my credit?",
                 ].map((q) => (
                   <button
                     key={q}
@@ -2368,7 +2563,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 <ul className="wd-acct-list">
                   {transferPairs.slice(0, 6).map((pr) => (
                     <li key={`${pr.outTx.id}-${pr.inTx.id}`}>
-                      {pr.outTx.date} · {pr.outTx.merchant || pr.outTx.note}{" "}
+                      {formatDateMDY(pr.outTx.date)} · {pr.outTx.merchant || pr.outTx.note}{" "}
                       → {pr.inTx.merchant || pr.inTx.note} ·{" "}
                       <strong>{moneyCents(pr.outTx.amount)}</strong>
                       <span className="wd-muted">
@@ -2402,33 +2597,33 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                     setFilterKind(e.target.value as "all" | TxKind)
                   }
                 >
-                  <option value="all">All in/out</option>
                   <option value="expense">Money out</option>
                   <option value="income">Money in</option>
+                  <option value="all">All in/out</option>
                 </select>
                 {txTypes.length > 0 ? (
                   <select
                     value={filterTxType}
                     onChange={(e) => setFilterTxType(e.target.value)}
                   >
-                    <option value="all">All types</option>
                     {txTypes.map((type) => (
                       <option key={type} value={type}>
                         {type}
                       </option>
                     ))}
+                    <option value="all">All types</option>
                   </select>
                 ) : null}
                 <select
                   value={filterCat}
                   onChange={(e) => setFilterCat(e.target.value)}
                 >
-                  <option value="all">All categories</option>
                   {usedCategories.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>
                   ))}
+                  <option value="all">All categories</option>
                 </select>
                 <select
                   value={filterYear}
@@ -2483,20 +2678,15 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                               {yearOnly}
                             </span>
                           </h3>
-                          <p className="wd-muted">
-                            {book.count} line{book.count === 1 ? "" : "s"} · in{" "}
+                          <p className="wd-month-io">
+                            <span className="wd-io-label">IN</span>
                             <strong className="is-pos">
                               {moneyCents(book.moneyIn)}
-                            </strong>{" "}
-                            · out{" "}
+                            </strong>
+                            <span className="wd-io-gap" />
+                            <span className="wd-io-label">OUT</span>
                             <strong className="is-neg">
                               {moneyCents(book.moneyOut)}
-                            </strong>{" "}
-                            · net{" "}
-                            <strong
-                              className={book.net >= 0 ? "is-pos" : "is-neg"}
-                            >
-                              {moneyCents(book.net)}
                             </strong>
                           </p>
                         </div>
@@ -2515,13 +2705,17 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                             </tr>
                           </thead>
                           <tbody>
-                            {book.rows.map((t) => (
+                            {book.rows.map((t) => {
+                              const cat = normalizeCategory(
+                                t.category,
+                                `${t.merchant || ""} ${t.note || ""}`
+                              );
+                              return (
                               <tr
                                 key={t.id}
                                 className={
-                                  !t.category ||
-                                  t.category === "Uncategorized" ||
-                                  t.category === "Other" ||
+                                  !cat ||
+                                  cat === "Other" ||
                                   !(t.merchant || t.note || "").trim()
                                     ? "is-gap"
                                     : undefined
@@ -2537,27 +2731,35 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                   />
                                 </td>
                                 <td className="wd-payee-cell">
-                                  {(() => {
-                                    const payee = t.merchant || t.note || "";
-                                    const type = txTypeOf(t);
-                                    const show = !typeInPayee(payee, type);
-                                    return (
-                                      <span className="wd-payee-text" title={payee}>
-                                        {payee || "—"}
-                                        {show ? (
-                                          <span
-                                            className={`wd-txt wd-txt-${t.kind === "income" ? "in" : "out"}`}
-                                          >
-                                            {" "}({type})
-                                          </span>
-                                        ) : null}
-                                      </span>
-                                    );
-                                  })()}
+                                  <input
+                                    type="text"
+                                    className="wd-payee-input"
+                                    value={t.merchant || t.note || ""}
+                                    placeholder="Payee"
+                                    title={
+                                      (() => {
+                                        const type = txTypeOf(t);
+                                        return type ? `${type} · edit payee` : "Edit payee";
+                                      })()
+                                    }
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      // Merchant is the payee line; note stays for bank memo if any
+                                      patchTx(t.id, {
+                                        merchant: v,
+                                        ...(t.merchant ? {} : { note: v }),
+                                      });
+                                    }}
+                                  />
                                 </td>
                                 <td>
                                   <select
-                                    value={t.category}
+                                    className="wd-cat-select"
+                                    value={cat}
+                                    autoComplete="off"
+                                    data-lpignore="true"
+                                    data-1p-ignore="true"
+                                    data-form-type="other"
                                     onChange={(e) =>
                                       patchTx(t.id, {
                                         category: e.target.value,
@@ -2571,30 +2773,45 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                     ))}
                                   </select>
                                 </td>
-                                <td className="num">
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    title={
-                                      t.kind === "income"
-                                        ? "Money in — green"
-                                        : "Money out — red"
-                                    }
-                                    className={
-                                      t.kind === "income" ? "is-pos" : "is-neg"
-                                    }
-                                    value={t.amount || ""}
-                                    onChange={(e) =>
-                                      patchTx(t.id, {
-                                        amount: Math.max(
-                                          0,
-                                          Math.round(
-                                            (Number(e.target.value) || 0) * 100
-                                          ) / 100
-                                        ),
-                                      })
-                                    }
-                                  />
+                                <td className="num wd-amt-cell">
+                                  <div className="wd-amt-inner">
+                                    <span className="wd-amt-prefix" aria-hidden>
+                                      $
+                                    </span>
+                                    <input
+                                      type="text"
+                                      inputMode="decimal"
+                                      title={
+                                        t.kind === "income"
+                                          ? "Money in — green"
+                                          : "Money out — red"
+                                      }
+                                      className={
+                                        t.kind === "income"
+                                          ? "wd-amt-input is-pos"
+                                          : "wd-amt-input is-neg"
+                                      }
+                                      value={t.amount ? String(t.amount) : ""}
+                                      onChange={(e) => {
+                                        // Keep typing fluid — strip $ / commas only
+                                        const raw = e.target.value
+                                          .replace(/[$,\s]/g, "")
+                                          .replace(/[^0-9.]/g, "");
+                                        if (raw === "" || raw === ".") {
+                                          patchTx(t.id, { amount: 0 });
+                                          return;
+                                        }
+                                        const n = Number(raw);
+                                        if (!Number.isFinite(n)) return;
+                                        patchTx(t.id, {
+                                          amount: Math.max(
+                                            0,
+                                            Math.round(n * 100) / 100
+                                          ),
+                                        });
+                                      }}
+                                    />
+                                  </div>
                                 </td>
                                 <td
                                   className={`num wd-balance ${
@@ -2615,7 +2832,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                   </button>
                                 </td>
                               </tr>
-                            ))}
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -2805,58 +3023,39 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                     );
                   })()}
                 </svg>
-                <svg width={160} height={160} viewBox="-1.2 -1.2 2.4 2.4">
-                  {(() => {
-                    const parts = [
-                      { v: annualBook.split.income, color: "#1f6f8b" },
-                      { v: annualBook.split.expenses, color: "#e8743b" },
-                      { v: annualBook.split.saved, color: "#2e7d32" },
-                    ].filter((p) => p.v > 0);
-                    const total = parts.reduce((s, p) => s + p.v, 0) || 1;
-                    let angle = -Math.PI / 2;
-                    return parts.map((p, i) => {
-                      const frac = p.v / total;
-                      const a2 = angle + frac * Math.PI * 2;
-                      const large = frac > 0.5 ? 1 : 0;
-                      const x1 = Math.cos(angle);
-                      const y1 = Math.sin(angle);
-                      const x2 = Math.cos(a2);
-                      const y2 = Math.sin(a2);
-                      angle = a2;
-                      if (frac >= 0.999) {
-                        return <circle key={i} r={1} fill={p.color} />;
-                      }
-                      return (
-                        <path
-                          key={i}
-                          d={`M0,0 L${x1},${y1} A1,1 0 ${large} 1 ${x2},${y2} Z`}
-                          fill={p.color}
-                        />
-                      );
-                    });
-                  })()}
-                  <circle r={0.45} fill="var(--wd-bg, #000)" />
-                </svg>
-                <div className="wd-annual-legend">
-                  <div>
-                    <span style={{ color: "#1f6f8b" }}>■</span> Income{" "}
-                    {money(annualBook.income.annualTotal)}
-                  </div>
-                  <div>
-                    <span style={{ color: "#e8743b" }}>■</span> Expenses{" "}
-                    {money(annualBook.expenses.annualTotal)}
-                  </div>
-                  <div>
-                    <span style={{ color: "#2e7d32" }}>■</span> Potential to save{" "}
-                    <strong
-                      className={
-                        annualBook.potentialToSave >= 0 ? "is-pos" : "is-neg"
-                      }
-                    >
-                      {money(annualBook.potentialToSave)}
-                    </strong>
-                  </div>
-                </div>
+                <InteractivePieChart
+                  size={168}
+                  holeRatio={0.48}
+                  showLegend
+                  centerPrimary={
+                    annualBook.potentialToSave >= 0
+                      ? money(annualBook.potentialToSave)
+                      : money(annualBook.expenses.annualTotal)
+                  }
+                  centerSecondary={
+                    annualBook.potentialToSave >= 0 ? "potential" : "expenses"
+                  }
+                  formatValue={(v, frac) =>
+                    `${money(v)} · ${(frac * 100).toFixed(0)}%`
+                  }
+                  slices={[
+                    {
+                      name: "Income",
+                      value: annualBook.split.income,
+                      color: "#1f6f8b",
+                    },
+                    {
+                      name: "Expenses",
+                      value: annualBook.split.expenses,
+                      color: "#e8743b",
+                    },
+                    {
+                      name: "Potential to save",
+                      value: Math.max(0, annualBook.split.saved),
+                      color: "#2e7d32",
+                    },
+                  ].filter((s) => s.value > 0)}
+                />
               </div>
 
               {/* The grid itself */}
@@ -3067,68 +3266,37 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                     </div>
                   </div>
 
-                  {/* Donut — share of monthly subscription spend */}
+                  {/* Donut — hover each sub to see name + $ (black border + pop) */}
                   <div className="wd-sub-chart">
-                    {(() => {
-                      const R = 70;
-                      const C = 2 * Math.PI * R;
-                      const total = subscriptionScan.monthlyTotal || 1;
-                      const palette = [
-                        "#1f6f8b", "#e8743b", "#4b8f6b", "#b5651d", "#7d5ba6",
-                        "#c94f7c", "#3a7d99", "#d1a13a", "#5c8d5c", "#a0522d",
-                      ];
-                      let offset = 0;
-                      const segs = subscriptionScan.subs.map((s, i) => {
-                        const frac = s.monthlyCost / total;
-                        const len = frac * C;
-                        const seg = (
-                          <circle
-                            key={s.key}
-                            cx={90}
-                            cy={90}
-                            r={R}
-                            fill="none"
-                            stroke={palette[i % palette.length]}
-                            strokeWidth={26}
-                            strokeDasharray={`${len} ${C - len}`}
-                            strokeDashoffset={-offset}
-                            transform="rotate(-90 90 90)"
-                          />
-                        );
-                        offset += len;
-                        return seg;
-                      });
-                      return (
-                        <svg width={180} height={180} viewBox="0 0 180 180" className="wd-donut">
-                          <circle cx={90} cy={90} r={R} fill="none" stroke="var(--wd-line, #2a2a2a)" strokeWidth={26} opacity={0.25} />
-                          {segs}
-                          <text x={90} y={84} textAnchor="middle" className="wd-donut-big">
-                            {money(subscriptionScan.monthlyTotal)}
-                          </text>
-                          <text x={90} y={104} textAnchor="middle" className="wd-donut-sub">
-                            /mo
-                          </text>
-                        </svg>
-                      );
-                    })()}
-                    <ul className="wd-sub-legend">
-                      {subscriptionScan.subs.slice(0, 8).map((s, i) => {
+                    <InteractivePieChart
+                      size={188}
+                      holeRatio={0.58}
+                      showLegend
+                      centerPrimary={money(subscriptionScan.monthlyTotal)}
+                      centerSecondary="/mo"
+                      formatValue={(v, frac) =>
+                        `${money(v)} · ${(frac * 100).toFixed(0)}%`
+                      }
+                      slices={subscriptionScan.subs.map((s, i) => {
                         const palette = [
-                          "#1f6f8b", "#e8743b", "#4b8f6b", "#b5651d", "#7d5ba6",
-                          "#c94f7c", "#3a7d99", "#d1a13a", "#5c8d5c", "#a0522d",
+                          "#1f6f8b",
+                          "#e8743b",
+                          "#4b8f6b",
+                          "#b5651d",
+                          "#7d5ba6",
+                          "#c94f7c",
+                          "#3a7d99",
+                          "#d1a13a",
+                          "#5c8d5c",
+                          "#a0522d",
                         ];
-                        return (
-                          <li key={s.key}>
-                            <span
-                              className="wd-sub-dot"
-                              style={{ background: palette[i % palette.length] }}
-                            />
-                            <span className="wd-sub-legend-name">{s.merchant}</span>
-                            <span className="wd-sub-legend-val">{money(s.monthlyCost)}</span>
-                          </li>
-                        );
+                        return {
+                          name: s.merchant,
+                          value: s.monthlyCost,
+                          color: palette[i % palette.length],
+                        };
                       })}
-                    </ul>
+                    />
                   </div>
                 </section>
 
@@ -3139,14 +3307,15 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                         <th>Name</th>
                         <th>Cadence</th>
                         <th className="wd-num">Charge</th>
-                        <th className="wd-num">Monthly</th>
-                        <th className="wd-num">Yearly</th>
+                        <th className="wd-num">/mo</th>
+                        <th className="wd-num">/yr</th>
                         <th>Next</th>
+                        <th className="wd-sub-x-col" aria-label="Remove" />
                       </tr>
                     </thead>
                     <tbody>
                       {subscriptionScan.subs.map((s) => (
-                        <tr key={s.key}>
+                        <tr key={s.key} className="wd-sub-row">
                           <td>
                             {s.merchant}
                             {s.count > 1 ? (
@@ -3154,18 +3323,57 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                             ) : null}
                           </td>
                           <td>
-                            <span className={`wd-cad wd-cad-${s.cadence}`}>
-                              {CADENCE_LABEL[s.cadence]}
-                            </span>
+                            {/* Hover/focus: Monthly | Yearly — no ugly pill stack */}
+                            <div className="wd-cad-toggle" tabIndex={0}>
+                              <span className="wd-cad-current">
+                                {CADENCE_LABEL[s.cadence] || s.cadence}
+                              </span>
+                              <div className="wd-cad-menu" role="group" aria-label="Billing cadence">
+                                {TOGGLE_CADENCES.map((c) => (
+                                  <button
+                                    key={c}
+                                    type="button"
+                                    className={`wd-cad-opt${s.cadence === c ? " on" : ""}`}
+                                    onClick={() => {
+                                      setSubscriptionCadence(
+                                        s.key,
+                                        c as SubCadence
+                                      );
+                                      setSubTick((n) => n + 1);
+                                    }}
+                                  >
+                                    {CADENCE_LABEL[c]}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           </td>
                           <td className="wd-num">{money(s.amount)}</td>
                           <td className="wd-num">{money(s.monthlyCost)}</td>
                           <td className="wd-num">{money(s.yearlyCost)}</td>
-                          <td className="wd-muted">{s.nextDate}</td>
+                          <td className="wd-date wd-muted">{formatDateMDY(s.nextDate)}</td>
+                          <td className="wd-sub-x-col">
+                            <button
+                              type="button"
+                              className="wd-sub-x"
+                              title={`Remove ${s.merchant} from list & pie`}
+                              aria-label={`Delete ${s.merchant}`}
+                              onClick={() => {
+                                dismissSubscription(s.key);
+                                setSubTick((n) => n + 1);
+                              }}
+                            >
+                              ×
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  <p className="wd-sub-hint">
+                    Hover cadence to switch Monthly / Yearly. × removes it from
+                    the list and pie — totals update automatically.
+                  </p>
                 </section>
               </>
             )}
@@ -3793,7 +4001,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                         {latest.score}
                       </div>
                       <div className="wd-stat-sub">
-                        {latest.date}
+                        {formatDateMDY(latest.date)}
                         {latest.trend === "up" && " ↑"}
                         {latest.trend === "down" && " ↓"}
                       </div>
@@ -3839,7 +4047,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                         >
                           <div style={{ fontWeight: 600 }}>{r.accountName}</div>
                           <div className="wd-muted" style={{ fontSize: 12, marginTop: 4 }}>
-                            Due {r.dueDate} ({r.daysUntilDue} day
+                            Due {formatDateMDY(r.dueDate)} ({r.daysUntilDue} day
                             {r.daysUntilDue === 1 ? "" : "s"})
                             {r.minimumAmount && ` · min ${moneyCents(r.minimumAmount)}`}
                           </div>
@@ -3952,7 +4160,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   points={worthSeries.map((sn) => ({
                     x: sn.date.slice(0, 7),
                     y: sn.total,
-                    label: `${sn.date}: ${moneyCents(sn.total)} (bank ${moneyCents(sn.bankNet)}${sn.valuationNet ? ` + assets ${moneyCents(sn.valuationNet)}` : ""})`,
+                    label: `${formatDateMDY(sn.date)}: ${moneyCents(sn.total)} (bank ${moneyCents(sn.bankNet)}${sn.valuationNet ? ` + assets ${moneyCents(sn.valuationNet)}` : ""})`,
                   }))}
                 />
               ) : null}
@@ -3983,7 +4191,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   <tbody>
                     {worthSeries.map((sn) => (
                       <tr key={sn.date}>
-                        <td>{sn.date}</td>
+                        <td className="wd-date">{formatDateMDY(sn.date)}</td>
                         <td>{moneyCents(sn.bankNet)}</td>
                         <td>{moneyCents(sn.valuationNet)}</td>
                         <td>
@@ -4169,7 +4377,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                         <>
                           {" "}· {moneyCents(latest.value)}{" "}
                           <span className="wd-muted">
-                            as of {latest.point.date} (
+                            as of {formatDateMDY(latest.point.date)} (
                             {latest.point.source || "no source"},{" "}
                             {latest.point.confidence} confidence
                             {latest.carriedForward ? ", carried forward" : ""})

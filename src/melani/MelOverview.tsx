@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { writeTonightBrief } from "./bodyBrief";
 import { todayKey } from "./data";
+import { buildOperatingBrain } from "./operatingBrain";
 import { writeTwin, type TwinState } from "./twin";
 import { gatherTwinInputs } from "./twin/gather";
 
@@ -20,6 +21,7 @@ function explanation(name: ScoreName, state: TwinState): string {
 
 export function MelOverview({ onClose }: { onClose: () => void }) {
   const [state, setState] = useState(() => writeTwin(todayKey()));
+  const [brain, setBrain] = useState(() => buildOperatingBrain(todayKey()));
   const [selected, setSelected] = useState<ScoreName>("overall");
   const brief = writeTonightBrief(todayKey());
   const scores: Array<[ScoreName, string, number]> = [
@@ -30,14 +32,36 @@ export function MelOverview({ onClose }: { onClose: () => void }) {
     ["stress", "Stress", state.scores.stress],
   ];
 
+  function refresh() {
+    const day = todayKey();
+    setState(writeTwin(day));
+    setBrain(buildOperatingBrain(day));
+  }
+
   return <div className="mai-overview">
-    <div className="mai-overview-top"><div><p>Today</p><h2>Your body, in one view</h2></div><button onClick={onClose}>Chat</button></div>
-    <div className="mai-overview-scores">{scores.map(([id, label, value]) => <button key={id} className={selected === id ? "is-selected" : ""} onClick={() => setSelected(id)}><span>{label}</span><strong>{value}</strong></button>)}</div>
+    <div className="mai-overview-top"><div><p>Today</p><h2>Your body, in one view</h2></div><button type="button" onClick={onClose}>Chat</button></div>
+    <div className="mai-overview-scores">{scores.map(([id, label, value]) => <button type="button" key={id} className={selected === id ? "is-selected" : ""} onClick={() => setSelected(id)}><span>{label}</span><strong>{value}</strong></button>)}</div>
     <div className="mai-score-why"><p>Why {selected}</p><span>{explanation(selected, state)}</span></div>
     <div className="mai-overview-inputs"><p><span>Sleep</span><strong>{state.sleepHours == null ? "Not logged" : `${state.sleepHours}h`}</strong></p><p><span>Protein</span><strong>{Math.round(state.protein_g)}/{state.proteinGoal}g</strong></p><p><span>Water</span><strong>{state.water_ml}/{state.waterGoal} ml</strong></p><p><span>Cycle</span><strong>{state.phaseLabel}, day {state.cycleDay}</strong></p></div>
+    <section className="mai-overview-lever">
+      <p className="mai-overview-label">Operating brain · top move</p>
+      <strong>{brain.topMove}</strong>
+      <span>{brain.buildReadiness}</span>
+    </section>
+    {brain.insights.length > 0 && (
+      <section>
+        <p className="mai-overview-label">From your logs</p>
+        {brain.insights.slice(0, 4).map((item) => (
+          <article key={item.id}>
+            <strong>{item.title} · {item.severity}</strong>
+            <span>{item.evidence}</span>
+          </article>
+        ))}
+      </section>
+    )}
     {state.radar.length > 0 && <section><p className="mai-overview-label">Needs attention</p>{state.radar.map((item) => <article key={item.id}><strong>{item.title}</strong><span>{item.why}</span></article>)}</section>}
-    <section className="mai-overview-lever"><p className="mai-overview-label">Do this next</p><strong>{state.lever.title}</strong><span>{state.lever.detail}</span></section>
+    <section className="mai-overview-lever"><p className="mai-overview-label">Twin lever</p><strong>{state.lever.title}</strong><span>{state.lever.detail}</span></section>
     <section><p className="mai-overview-label">Body brief</p><article><strong>{brief.summaryLines[0] || "Today at a glance"}</strong><span>{brief.tomorrowMove}</span></article></section>
-    <button className="mai-overview-refresh" onClick={() => setState(writeTwin(todayKey()))}>Refresh from my logs</button>
+    <button type="button" className="mai-overview-refresh" onClick={refresh}>Refresh from my logs</button>
   </div>;
 }

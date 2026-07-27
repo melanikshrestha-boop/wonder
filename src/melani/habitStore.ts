@@ -26,31 +26,186 @@ const HABITS_KEY = "wonder-habits-v1";
 const CHECKS_KEY = "wonder-habit-checks-v1";
 const EVENT = "wonder-habits-update";
 
-const SEED_PALETTE = [
+/**
+ * Curated swatch palette — every entry is distinct. Used first when
+ * assigning colors; never recycle a hex already owned by another habit.
+ * Beyond this list we synthesize unique HSL colors forever.
+ */
+const HABIT_PALETTE = [
   "#f472b6", // pink
   "#f59e0b", // amber
   "#10b981", // emerald
   "#6366f1", // indigo
   "#22d3ee", // cyan
-  "#ef4444", // red
+  "#fb7185", // soft rose
   "#a78bfa", // violet
   "#84cc16", // lime
   "#f97316", // orange
   "#38bdf8", // sky
+  "#e11d48", // rose-700
+  "#0d9488", // teal
+  "#7c3aed", // violet-600
+  "#ea580c", // orange-600
+  "#059669", // emerald-600
+  "#2563eb", // blue-600
+  "#db2777", // pink-600
+  "#ca8a04", // yellow-600
+  "#4f46e5", // indigo-600
+  "#0891b2", // cyan-600
+  "#be123c", // rose-700 deep
+  "#65a30d", // lime-600
+  "#9333ea", // purple-600
+  "#dc2626", // red-600 (deeper than pure brick)
+  "#0ea5e9", // sky-500
+  "#c026d3", // fuchsia
+  "#16a34a", // green-600
+  "#d97706", // amber-600
+  "#8b5cf6", // violet-500
+  "#14b8a6", // teal-500
+  "#f43f5e", // rose-500
+  "#3b82f6", // blue-500
+  "#a3e635", // lime-400
+  "#e879f9", // fuchsia-400
+  "#2dd4bf", // teal-400
+  "#fb923c", // orange-400
+  "#818cf8", // indigo-400
+  "#4ade80", // green-400
+  "#fbbf24", // amber-400
+  "#f9a8d4", // pink-300
+  "#67e8f9", // cyan-300
+  "#c084fc", // purple-400
+  "#fdba74", // orange-300
+  "#86efac", // green-300
+  "#93c5fd", // blue-300
+  "#fcd34d", // amber-300
+  "#fda4af", // rose-300
+  "#5eead4", // teal-300
 ];
 
 const SEED_HABITS: Omit<Habit, "createdAt" | "archivedAt">[] = [
-  { id: "hb-1",  name: "Wake at 5:30",           emoji: "⏰", color: SEED_PALETTE[0], cadence: "daily", weeklyTarget: 7 },
-  { id: "hb-2",  name: "Gym — hard hour",        emoji: "🏋", color: SEED_PALETTE[1], cadence: "daily", weeklyTarget: 6 },
-  { id: "hb-3",  name: "3L water",               emoji: "💧", color: SEED_PALETTE[2], cadence: "daily", weeklyTarget: 7 },
-  { id: "hb-4",  name: "Deep work — 4h",         emoji: "🧠", color: SEED_PALETTE[3], cadence: "daily", weeklyTarget: 6 },
-  { id: "hb-5",  name: "Read 30 min",            emoji: "📖", color: SEED_PALETTE[4], cadence: "daily", weeklyTarget: 7 },
-  { id: "hb-6",  name: "Skin routine (AM + PM)", emoji: "✨", color: SEED_PALETTE[5], cadence: "daily", weeklyTarget: 7 },
-  { id: "hb-7",  name: "Track every dollar",     emoji: "💸", color: SEED_PALETTE[6], cadence: "daily", weeklyTarget: 7 },
-  { id: "hb-8",  name: "No sugar",               emoji: "🚫", color: SEED_PALETTE[7], cadence: "daily", weeklyTarget: 6 },
-  { id: "hb-9",  name: "Journal — 10 min",       emoji: "📓", color: SEED_PALETTE[8], cadence: "daily", weeklyTarget: 7 },
-  { id: "hb-10", name: "Sleep by 10:30",         emoji: "🌙", color: SEED_PALETTE[9], cadence: "daily", weeklyTarget: 7 },
+  { id: "hb-1",  name: "Wake at 5:30",           emoji: "⏰", color: HABIT_PALETTE[0], cadence: "daily", weeklyTarget: 7 },
+  { id: "hb-2",  name: "Gym — hard hour",        emoji: "🏋", color: HABIT_PALETTE[1], cadence: "daily", weeklyTarget: 6 },
+  { id: "hb-3",  name: "3.5L water + Diet",      emoji: "💧", color: HABIT_PALETTE[2], cadence: "daily", weeklyTarget: 7 },
+  { id: "hb-4",  name: "Deep work — 4h",         emoji: "🧠", color: HABIT_PALETTE[3], cadence: "daily", weeklyTarget: 6 },
+  { id: "hb-5",  name: "Read 30 min",            emoji: "📖", color: HABIT_PALETTE[4], cadence: "daily", weeklyTarget: 7 },
+  { id: "hb-6",  name: "Skin routine (AM + PM)", emoji: "✨", color: HABIT_PALETTE[5], cadence: "daily", weeklyTarget: 7 },
+  { id: "hb-7",  name: "Track every dollar",     emoji: "💸", color: HABIT_PALETTE[6], cadence: "daily", weeklyTarget: 7 },
+  { id: "hb-8",  name: "No sugar",               emoji: "🚫", color: HABIT_PALETTE[7], cadence: "daily", weeklyTarget: 6 },
+  { id: "hb-9",  name: "Journal — 10 min",       emoji: "📓", color: HABIT_PALETTE[8], cadence: "daily", weeklyTarget: 7 },
+  { id: "hb-10", name: "Sleep by 10:30",         emoji: "🌙", color: HABIT_PALETTE[9], cadence: "daily", weeklyTarget: 7 },
 ];
+
+/** Normalize hex to lowercase #rrggbb so comparisons never miss case/format. */
+export function normalizeHabitColor(hex: string | null | undefined): string {
+  if (!hex || typeof hex !== "string") return "";
+  let s = hex.trim().toLowerCase();
+  if (!s.startsWith("#")) s = `#${s}`;
+  // #rgb → #rrggbb
+  if (/^#[0-9a-f]{3}$/.test(s)) {
+    s = `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`;
+  }
+  if (!/^#[0-9a-f]{6}$/.test(s)) return "";
+  return s;
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  // h 0–360, s/l 0–100 → #rrggbb
+  const sat = Math.max(0, Math.min(100, s)) / 100;
+  const light = Math.max(0, Math.min(100, l)) / 100;
+  const c = (1 - Math.abs(2 * light - 1)) * sat;
+  const hp = ((h % 360) + 360) % 360 / 60;
+  const x = c * (1 - Math.abs((hp % 2) - 1));
+  let r = 0, g = 0, b = 0;
+  if (hp < 1) { r = c; g = x; }
+  else if (hp < 2) { r = x; g = c; }
+  else if (hp < 3) { g = c; b = x; }
+  else if (hp < 4) { g = x; b = c; }
+  else if (hp < 5) { r = x; b = c; }
+  else { r = c; b = x; }
+  const m = light - c / 2;
+  const to = (v: number) => Math.round((v + m) * 255).toString(16).padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
+/**
+ * Synthesize a unique-looking color by index when the curated palette is
+ * exhausted. Golden-angle hue steps keep neighbors far apart on the wheel.
+ */
+function syntheticColor(index: number): string {
+  const hue = (index * 137.508) % 360;
+  const sat = 58 + (index % 4) * 7;   // 58–79
+  const light = 46 + (index % 3) * 6; // 46–58 — solid on white/dark
+  return hslToHex(hue, sat, light);
+}
+
+/** Every color currently owned by a habit (normalized). */
+export function usedHabitColors(habits: Habit[], exceptId?: string): Set<string> {
+  const set = new Set<string>();
+  for (const h of habits) {
+    if (exceptId && h.id === exceptId) continue;
+    const c = normalizeHabitColor(h.color);
+    if (c) set.add(c);
+  }
+  return set;
+}
+
+/**
+ * Next free color that no other habit uses. Never reuses a taken hex.
+ * Prefer curated palette, then infinite synthetic hues.
+ */
+export function nextUniqueHabitColor(habits: Habit[], exceptId?: string): string {
+  const used = usedHabitColors(habits, exceptId);
+  for (const p of HABIT_PALETTE) {
+    const n = normalizeHabitColor(p);
+    if (n && !used.has(n)) return n;
+  }
+  // Palette full — walk synthetic forever until free
+  for (let i = 0; i < 10_000; i++) {
+    const n = normalizeHabitColor(syntheticColor(i));
+    if (n && !used.has(n)) return n;
+  }
+  // Astronomically unreachable; still unique-ish
+  return syntheticColor(Date.now() % 10_000);
+}
+
+/** First free color not in `seen` (palette, then synthetic forever). */
+function firstFreeColor(seen: Set<string>): string {
+  for (const p of HABIT_PALETTE) {
+    const n = normalizeHabitColor(p);
+    if (n && !seen.has(n)) return n;
+  }
+  for (let i = 0; i < 10_000; i++) {
+    const n = normalizeHabitColor(syntheticColor(i));
+    if (n && !seen.has(n)) return n;
+  }
+  return syntheticColor(Date.now() % 10_000);
+}
+
+/**
+ * Ensure every habit has a distinct color. First-seen keeps its color;
+ * later duplicates get the next free unique. Also maps legacy pure-red.
+ */
+export function ensureUniqueHabitColors(habits: Habit[]): { habits: Habit[]; changed: boolean } {
+  const seen = new Set<string>();
+  let changed = false;
+  const out = habits.map((h) => {
+    let color = normalizeHabitColor(h.color);
+    // Legacy pure-red → soft rose (uniqueness may reassign if already taken)
+    if (h.color === "#ef4444" || h.color === "#EF4444") {
+      color = "#fb7185";
+    }
+    if (!color || seen.has(color)) {
+      color = firstFreeColor(seen);
+    }
+    seen.add(color);
+    if (color !== h.color) {
+      changed = true;
+      return { ...h, color };
+    }
+    return h;
+  });
+  return { habits: out, changed };
+}
 
 function emitChange() {
   if (typeof window === "undefined") return;
@@ -70,7 +225,16 @@ export function loadHabits(): Habit[] {
       : null;
     if (raw) {
       const parsed = JSON.parse(raw) as Habit[];
-      if (Array.isArray(parsed) && parsed.length) return parsed;
+      if (Array.isArray(parsed) && parsed.length) {
+        // Never allow two habits to share a swatch — migrate on read
+        const { habits: fixed, changed } = ensureUniqueHabitColors(parsed);
+        if (changed) {
+          try {
+            localStorage.setItem(HABITS_KEY, JSON.stringify(fixed));
+          } catch { /* ignore */ }
+        }
+        return fixed;
+      }
     }
   } catch { /* ignore */ }
   const now = Date.now();
@@ -121,6 +285,36 @@ export function toggleCheck(map: CheckMap, iso: string, habitId: string): CheckM
   const next: CheckMap = { ...map };
   if (list.size) next[iso] = Array.from(list);
   else delete next[iso];
+  return next;
+}
+
+/** Force a habit on or off for a day (Mel + fitness auto-sync). */
+export function setCheck(
+  map: CheckMap,
+  iso: string,
+  habitId: string,
+  checked: boolean
+): CheckMap {
+  const list = new Set(map[iso] || []);
+  if (checked) list.add(habitId);
+  else list.delete(habitId);
+  const next: CheckMap = { ...map };
+  if (list.size) next[iso] = Array.from(list);
+  else delete next[iso];
+  return next;
+}
+
+/** Check or uncheck every active habit for one day. */
+export function setAllChecks(
+  map: CheckMap,
+  iso: string,
+  habitIds: string[],
+  checked: boolean
+): CheckMap {
+  let next = map;
+  for (const id of habitIds) {
+    next = setCheck(next, iso, id, checked);
+  }
   return next;
 }
 
@@ -291,14 +485,23 @@ export function activeStreaks(
     .sort((a, b) => b.streak - a.streak);
 }
 
+const ADD_EMOJIS = ["✅", "💪", "🔥", "⭐", "🎯", "🌿", "💎", "🚀", "✨", "📌"];
+
 export function addHabit(habits: Habit[], partial: Partial<Habit> & { name: string }): Habit[] {
   const now = Date.now();
   const id = partial.id || `hb-${now.toString(36)}`;
-  const color = partial.color || SEED_PALETTE[habits.length % SEED_PALETTE.length];
+  const n = habits.length;
+  // Never reuse a color already on another habit
+  const requested = normalizeHabitColor(partial.color);
+  const used = usedHabitColors(habits);
+  const color =
+    requested && !used.has(requested)
+      ? requested
+      : nextUniqueHabitColor(habits);
   const habit: Habit = {
     id,
     name: partial.name,
-    emoji: partial.emoji || "✅",
+    emoji: partial.emoji || ADD_EMOJIS[n % ADD_EMOJIS.length],
     color,
     cadence: partial.cadence || "daily",
     weeklyTarget: partial.weeklyTarget ?? 7,
@@ -309,7 +512,20 @@ export function addHabit(habits: Habit[], partial: Partial<Habit> & { name: stri
 }
 
 export function updateHabit(habits: Habit[], id: string, patch: Partial<Habit>): Habit[] {
-  return habits.map((h) => (h.id === id ? { ...h, ...patch } : h));
+  return habits.map((h) => {
+    if (h.id !== id) return h;
+    const next = { ...h, ...patch };
+    // If color was set/changed, force uniqueness vs every other habit
+    if (patch.color != null) {
+      const requested = normalizeHabitColor(patch.color);
+      const used = usedHabitColors(habits, id);
+      next.color =
+        requested && !used.has(requested)
+          ? requested
+          : nextUniqueHabitColor(habits, id);
+    }
+    return next;
+  });
 }
 
 export function removeHabit(habits: Habit[], id: string): Habit[] {

@@ -1,0 +1,51 @@
+{
+  "id": "seed-snacks-2026-07-25",
+  "day": "2026-07-25",
+  "entries": [
+    {
+      "slot": "snack",
+      "name": "Pocky, chocolate",
+      "grams": 140,
+      "qtyLabel": "2 packs",
+      "macros": {
+        "calories": 720,
+        "protein_g": 8,
+        "carbs_g": 102.1,
+        "fat_g": 32.1,
+        "fiber_g": 2
+      },
+      "foodId": "pocky-chocolate",
+      "source": "manual"
+    },
+    {
+      "slot": "snack",
+      "name": "Pomegranate seeds",
+      "grams": 160,
+      "qtyLabel": "1 whole (arils)",
+      "macros": {
+        "calories": 133,
+        "protein_g": 2.7,
+        "carbs_g": 29.9,
+        "fat_g": 1.9,
+        "fiber_g": 6.4
+      },
+      "foodId": "pomegranate-seeds",
+      "source": "manual"
+    },
+    {
+      "slot": "snack",
+      "name": "Cherries",
+      "grams": 230,
+      "qtyLabel": "1 bowl",
+      "macros": {
+        "calories": 145,
+        "protein_g": 2.5,
+        "carbs_g": 36.8,
+        "fat_g": 0.5,
+        "fiber_g": 4.8
+      },
+      "foodId": "cherries",
+      "source": "manual"
+    }
+  ]
+}

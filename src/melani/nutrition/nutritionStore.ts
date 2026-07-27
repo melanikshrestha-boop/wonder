@@ -270,6 +270,42 @@ export function addEntry(input: NewEntry, day: string = todayKey()): NutriEntry[
   return commit(day, next);
 }
 
+/**
+ * One-shot snack seed (Pocky / pomegranate / cherries) from public JSON.
+ * Idempotent via seed id in localStorage.
+ */
+export async function applyPendingSnackSeed(): Promise<NutriEntry[] | null> {
+  if (typeof window === "undefined") return null;
+  const flagKey = "wonder-nutrition-seed-applied-v1";
+  try {
+    const applied = JSON.parse(localStorage.getItem(flagKey) || "{}") as Record<
+      string,
+      boolean
+    >;
+    const res = await fetch("/seed-snacks-today.json", { cache: "no-store" });
+    if (!res.ok) return null;
+    const seed = (await res.json()) as {
+      id: string;
+      day: string;
+      entries: NewEntry[];
+    };
+    if (!seed?.id || !seed.entries?.length) return null;
+    if (applied[seed.id]) return null;
+
+    // Always attach to *today* so a stale seed day still lands on the open log
+    const day = todayKey();
+    const next = addEntries(
+      seed.entries.map((e) => ({ ...e, source: e.source || "manual" })),
+      day
+    );
+    applied[seed.id] = true;
+    localStorage.setItem(flagKey, JSON.stringify(applied));
+    return next;
+  } catch {
+    return null;
+  }
+}
+
 export function addEntries(inputs: NewEntry[], day: string = todayKey()): NutriEntry[] {
   const now = new Date().toISOString();
   const created = inputs.map((input, index) => ({

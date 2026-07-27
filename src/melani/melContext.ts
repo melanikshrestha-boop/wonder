@@ -16,9 +16,30 @@ import {
   PROFILE,
   todayKey,
 } from "./data";
+import { bookshelfStats } from "./bookKnowledge";
+import { buildBaselineEvidencePack } from "./evidencePack";
 import { loadCycle, type CycleStore } from "./cycleEngine";
 import { loadLabs } from "./labEngine";
 import { labDisplayName, type LabItem } from "./labData";
+import { buildWhoopMelPack } from "./whoopMelPack";
+import { buildOperatingBrain } from "./operatingBrain";
+
+/** Avoid re-running Operating Brain + finance scan on every Mel keystroke. */
+let operatingPackCache: { day: string; at: number; text: string } | null = null;
+
+function getCachedOperatingPack(day: string): string {
+  const now = Date.now();
+  if (
+    operatingPackCache &&
+    operatingPackCache.day === day &&
+    now - operatingPackCache.at < 45_000
+  ) {
+    return operatingPackCache.text;
+  }
+  const text = buildOperatingBrain(day, 14).packText;
+  operatingPackCache = { day, at: now, text };
+  return text;
+}
 
 const LIFE_LOG_KEY = "dr-melani-life-log-v1";
 const GOALS_KEY = "dr-melani-goals-v1";
@@ -73,7 +94,7 @@ function defaultGoals(): MelGoals {
     carbs_g: MACRO_GOALS.carbs_g,
     fat_g: MACRO_GOALS.fat_g,
     fiber_g: MACRO_GOALS.fiber_g,
-    water_ml: PROFILE.waterGoalMl,
+    water_ml: PROFILE.waterGoalMl, // 3.5 L
     sleep_hours: 8,
     migraine_max_per_week: 2,
     notes: [],
@@ -771,6 +792,23 @@ export function buildLiveContext(pageId?: string, pageTitle?: string): string {
     return `${have}/${want}${unit} (${pct}%)`;
   };
 
+  // V2: retrieve ranked evidence early (not a full shelf dump)
+  const shelfStats = bookshelfStats();
+  const evidence = buildBaselineEvidencePack(pageId, pageTitle);
+  // L4: multi-day correlations + ranked moves (cached ~45s — was re-scanning ledger every Mel msg)
+  let operatingPack = "";
+  try {
+    operatingPack = getCachedOperatingPack(day);
+  } catch {
+    operatingPack = "(operating brain unavailable this tick)";
+  }
+
+  // Whoop pack is fat — full size only on body pages; slim elsewhere so Mel opens fast
+  const bodyPage =
+    /sleep|gym|fitness|meal|whoop|body|habit/i.test(pageId || "") ||
+    /sleep|gym|fitness|meal|whoop|body/i.test(pageTitle || "");
+  const whoopPack = buildWhoopMelPack(bodyPage ? 18_000 : 6_000);
+
   return `
 LIVE BUILD SNAPSHOT (auto-synced from her app. Trust these numbers over guesses.)
 Date today: ${day}
@@ -778,22 +816,27 @@ Looking at page: ${pageTitle || "unknown"} (${pageId || "?"})
 
 ${pageAwareHints(pageId, pageTitle)}
 
+${operatingPack}
+
 PROFILE
 ${PROFILE.name} · age display ${PROFILE.ageDisplay} · ${PROFILE.sex} · ${PROFILE.height}
-Conditions: ${PROFILE.conditions}
-Provider on file: ${PROFILE.provider} (always frame serious issues for her, not as your diagnosis)
-
-GOALS MEL TRACKS (she can change with: goal protein 130 | goal water 4000 | goal sleep 8 | goal migraine 2 | goal note ...)
-Calories ${goals.calories} · protein ${goals.protein_g}g · carbs ${goals.carbs_g}g · fat ${goals.fat_g}g · fiber ${goals.fiber_g}g
-Water ${goals.water_ml} ml · sleep ${goals.sleep_hours}h · max migraine/headache log hits per week ${goals.migraine_max_per_week}
-Goal notes:
-  ${goalNotes}
+Identity: technology founder path · computer/software engineer for her own company · quantum + systems interest · NOT premed, NOT becoming a doctor.
+Conditions on file: ${PROFILE.conditions}
+Provider on file: ${PROFILE.provider} (serious medical issues → frame for her clinician; never diagnose)
 
 PINNED FACTS (always true about her. pin <text> / unpin <text> / pins)
   ${pinLines}
 
 SESSION MEMORY (this browser tab)
 ${sessionLine}
+
+${evidence}
+
+GOALS MEL TRACKS (she can change with: goal protein 130 | goal water 4000 | goal sleep 8 | goal migraine 2 | goal note ...)
+Calories ${goals.calories} · protein ${goals.protein_g}g · carbs ${goals.carbs_g}g · fat ${goals.fat_g}g · fiber ${goals.fiber_g}g
+Water ${goals.water_ml} ml · sleep ${goals.sleep_hours}h · max migraine/headache log hits per week ${goals.migraine_max_per_week}
+Goal notes:
+  ${goalNotes}
 
 TODAY vs GOALS
 Water: ${vs(water, goals.water_ml, " ml")}
@@ -842,11 +885,17 @@ ${doctorQs.map((q, i) => `${i + 1}. ${q}`).join("\n")}
 LIFE LOG last 30 (log <note>. tags auto: pain, migraine, sleep, food, mood, gym)
   ${logLines}
 
-TIER 1+2 RULES
+${whoopPack}
+
+TIER 1–4 RULES
+- OPERATING BRAIN first when she asks what to do / status / how am I / priorities. Cite evidence lines, not vibes.
 - TODAY + WEEKLY ROLLUP + GOALS + PINNED FACTS + SESSION MEMORY.
+- WHOOP PACK: full metric literacy + day table + workouts + entire raw CSVs. Prefer those numbers for sleep, recovery, HRV, RHR, strain, training, body signals. Never invent band numbers.
+- EVIDENCE PACK (V2): retrieved highlights + shelf hits + frameworks. Shelf has ${shelfStats.total} titles (${shelfStats.econ} econ/money). Cite only highlights present in the pack. Never invent quotes.
 - PAGE MODE for depth.
 - RED FLAGS early when relevant.
-- Doctor pack when she asks visit prep.
-- Never invent diagnoses. No em dashes.
+- Clinic-prep questions when she asks visit prep (still not a diagnosis).
+- Founder framing: ship systems, protect recovery as infrastructure, money as runway.
+- Never invent diagnoses. No em dashes. No medical-school default.
 `.trim();
 }

@@ -30,7 +30,7 @@
   margin: 0 0 12px;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.45);
-  line-height: 1.45;
+  line-height: 1;
 }
 
 .gc-steps {
@@ -38,7 +38,7 @@
   padding-left: 18px;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.75);
-  line-height: 1.55;
+  line-height: 1;
 }
 
 .gc-link {
@@ -109,7 +109,7 @@
   margin: 10px 0 0;
   font-size: 13px;
   color: #fb7185;
-  line-height: 1.4;
+  line-height: 1;
 }
 
 .gc-flash {
@@ -314,7 +314,7 @@
   word-break: break-word;
   font-family: inherit;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1;
   color: rgba(255, 255, 255, 0.88);
 }
 

@@ -172,14 +172,6 @@ export function buildWonderWorkspace(): Workspace {
       b("todo", "Post ideas / LinkedIn"),
       b("todo", "Video / photography project"),
     ]),
-    // World Monitor under Work — tech + markets intel
-    page("pg-world-monitor", "World Monitor", "🌍", WORK, [
-      b(
-        "paragraph",
-        "Live tech news + markets (World Monitor). Tech, Finance, full globe, local HN pulse."
-      ),
-    ]),
-
     // ── Hygiene hub ──
     page(HYGIENE, "Hygiene", "✨", null, [
       b("heading1", "Hygiene"),

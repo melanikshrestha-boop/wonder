@@ -62,9 +62,10 @@ const KNOWN: { match: RegExp; name: string }[] = [
   { match: /dropbox/i, name: "Dropbox" },
   { match: /notion/i, name: "Notion" },
   // AI / dev tools
-  { match: /claude|anthropic/i, name: "Claude" },
-  { match: /cursor/i, name: "Cursor" },
-  { match: /openai|chatgpt/i, name: "ChatGPT" },
+  { match: /claude\s*code|anthropic|claude\.ai|\bclaude\b/i, name: "Claude Code" },
+  { match: /cursor\.?sh|\bcursor\b/i, name: "Cursor" },
+  { match: /openai|chatgpt|chat\s*gpt/i, name: "ChatGPT" },
+  { match: /\bgrok\b|x\.?ai|xai\b|supergrok/i, name: "Grok" },
   { match: /perplexity/i, name: "Perplexity" },
   { match: /midjourney/i, name: "Midjourney" },
   { match: /github|copilot/i, name: "GitHub" },
@@ -82,7 +83,7 @@ const KNOWN: { match: RegExp; name: string }[] = [
   { match: /canva/i, name: "Canva" },
   { match: /figma/i, name: "Figma" },
   { match: /grammarly/i, name: "Grammarly" },
-  { match: /squarespace/i, name: "Squarespace" },
+  // Squarespace removed — user ended it (also filtered in applySubPrefs)
   { match: /shopify/i, name: "Shopify" },
   { match: /wix\.com|\bwix\b/i, name: "Wix" },
   { match: /1password|lastpass|dashlane/i, name: "Password manager" },
@@ -305,6 +306,9 @@ export function detectSubscriptions(txs: FinanceTx[]): SubscriptionScan {
     });
   }
 
+  // Always include Melani's AI tools even if the bank CSV hasn't landed yet
+  mergeDeclaredAiSubs(subs);
+
   subs.sort((a, b) => b.monthlyCost - a.monthlyCost);
 
   const monthlyTotal = Math.round(subs.reduce((s, x) => s + x.monthlyCost, 0) * 100) / 100;
@@ -323,3 +327,177 @@ export const CADENCE_LABEL: Record<SubCadence, string> = {
   yearly: "Yearly",
   irregular: "Irregular",
 };
+
+/** Cadences you can flip in the UI (monthly ↔ yearly) */
+export const TOGGLE_CADENCES: SubCadence[] = ["monthly", "yearly"];
+
+const SUB_PREFS_KEY = "wonder-sub-prefs-v1";
+
+export type SubPrefs = {
+  /** Keys user deleted / cancelled — hidden from pie + table */
+  dismissed: string[];
+  /** Override detected cadence per key */
+  cadence: Record<string, SubCadence>;
+};
+
+export function loadSubPrefs(): SubPrefs {
+  try {
+    const raw = localStorage.getItem(SUB_PREFS_KEY);
+    if (!raw) return { dismissed: ["squarespace"], cadence: {} };
+    const p = JSON.parse(raw) as Partial<SubPrefs>;
+    const dismissed = Array.isArray(p.dismissed) ? [...p.dismissed] : [];
+    // Always keep Squarespace out after cancel
+    if (!dismissed.some((k) => /squarespace/i.test(k))) {
+      dismissed.push("squarespace");
+    }
+    return {
+      dismissed,
+      cadence: p.cadence && typeof p.cadence === "object" ? p.cadence : {},
+    };
+  } catch {
+    return { dismissed: ["squarespace"], cadence: {} };
+  }
+}
+
+function saveSubPrefs(prefs: SubPrefs) {
+  try {
+    localStorage.setItem(SUB_PREFS_KEY, JSON.stringify(prefs));
+    window.dispatchEvent(new CustomEvent("wonder-subs-changed"));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function dismissSubscription(key: string) {
+  const prefs = loadSubPrefs();
+  const k = key.toLowerCase();
+  if (!prefs.dismissed.includes(k)) prefs.dismissed.push(k);
+  // also match merchant slug
+  saveSubPrefs(prefs);
+}
+
+export function setSubscriptionCadence(key: string, cadence: SubCadence) {
+  const prefs = loadSubPrefs();
+  prefs.cadence[key.toLowerCase()] = cadence;
+  saveSubPrefs(prefs);
+}
+
+/** Recompute monthly/yearly from charge amount + cadence. */
+export function costsForCadence(
+  amount: number,
+  cadence: SubCadence
+): { monthlyCost: number; yearlyCost: number } {
+  const a = Math.abs(amount);
+  switch (cadence) {
+    case "weekly":
+      return {
+        monthlyCost: Math.round(a * 4.345 * 100) / 100,
+        yearlyCost: Math.round(a * 52 * 100) / 100,
+      };
+    case "yearly":
+      return {
+        monthlyCost: Math.round((a / 12) * 100) / 100,
+        yearlyCost: Math.round(a * 100) / 100,
+      };
+    case "quarterly":
+      return {
+        monthlyCost: Math.round((a / 3) * 100) / 100,
+        yearlyCost: Math.round(a * 4 * 100) / 100,
+      };
+    case "monthly":
+    case "irregular":
+    default:
+      return {
+        monthlyCost: Math.round(a * 100) / 100,
+        yearlyCost: Math.round(a * 12 * 100) / 100,
+      };
+  }
+}
+
+/**
+ * Apply dismissals + cadence overrides, drop Squarespace, recompute totals.
+ */
+export function applySubPrefs(scan: SubscriptionScan): SubscriptionScan {
+  const prefs = loadSubPrefs();
+  const dismissed = new Set(prefs.dismissed.map((k) => k.toLowerCase()));
+
+  const subs = scan.subs
+    .filter((s) => {
+      const k = s.key.toLowerCase();
+      const m = s.merchant.toLowerCase();
+      if (/squarespace/i.test(k) || /squarespace/i.test(m)) return false;
+      if (dismissed.has(k) || dismissed.has(m)) return false;
+      for (const d of dismissed) {
+        if (k.includes(d) || m.includes(d)) return false;
+      }
+      return true;
+    })
+    .map((s) => {
+      const override = prefs.cadence[s.key.toLowerCase()];
+      const cadence = override || s.cadence;
+      const { monthlyCost, yearlyCost } = costsForCadence(s.amount, cadence);
+      return { ...s, cadence, monthlyCost, yearlyCost };
+    })
+    .sort((a, b) => b.monthlyCost - a.monthlyCost);
+
+  const monthlyTotal =
+    Math.round(subs.reduce((sum, x) => sum + x.monthlyCost, 0) * 100) / 100;
+
+  return {
+    subs,
+    monthlyTotal,
+    yearlyTotal: Math.round(monthlyTotal * 12 * 100) / 100,
+    count: subs.length,
+  };
+}
+
+/**
+ * AI tools you pay for — same shape as ledger-detected subs so they
+ * show in the original table / donut (no separate Keep/Cut UI).
+ */
+const DECLARED_AI_SUBS: { name: string; key: string; monthly: number }[] = [
+  { name: "Claude Code", key: "claude code", monthly: 20 },
+  { name: "Cursor", key: "cursor", monthly: 20 },
+  { name: "ChatGPT", key: "chatgpt", monthly: 20 },
+  { name: "Grok", key: "grok", monthly: 30 },
+];
+
+/** Append declared AI rows when not already found in the ledger. */
+function mergeDeclaredAiSubs(subs: Subscription[]) {
+  const today = new Date().toISOString().slice(0, 10);
+  const next = addDays(today, 30);
+  for (const d of DECLARED_AI_SUBS) {
+    // Already in list from bank detection? keep ledger amount, skip double-count
+    const hit = subs.find(
+      (s) =>
+        s.key === d.key ||
+        s.merchant.toLowerCase() === d.name.toLowerCase() ||
+        s.merchant.toLowerCase().includes(d.name.toLowerCase().split(" ")[0])
+    );
+    if (hit) {
+      // Prefer declared monthly if ledger amount is wildly off / partial
+      if (hit.monthlyCost < d.monthly * 0.5 || hit.monthlyCost > d.monthly * 1.5) {
+        hit.amount = d.monthly;
+        hit.monthlyCost = d.monthly;
+        hit.yearlyCost = d.monthly * 12;
+        hit.cadence = "monthly";
+      }
+      hit.merchant = d.name;
+      hit.known = true;
+      continue;
+    }
+    subs.push({
+      merchant: d.name,
+      key: d.key,
+      cadence: "monthly",
+      amount: d.monthly,
+      monthlyCost: d.monthly,
+      yearlyCost: d.monthly * 12,
+      count: 1,
+      lastDate: today,
+      nextDate: next,
+      category: "Software",
+      known: true,
+    });
+  }
+}

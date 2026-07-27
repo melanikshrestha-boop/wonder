@@ -58,7 +58,7 @@
   color: #e6edf3;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: 13.5px;
-  line-height: 1.6;
+  line-height: 1;
   tab-size: 2;
 }
 .fsql-editor textarea:focus {

@@ -118,6 +118,35 @@ export function createWardrobeStore(options = {}) {
     });
   }
 
+
+  async function recordMeta(library, input) {
+    return serial(async () => {
+      const state = await load(library);
+      const type = input.type;
+      if (!["style-policy", "size-profile", "tailors"].includes(type)) {
+        throw Object.assign(new Error(`Unknown meta event: ${type}`), { status: 400 });
+      }
+      const event = {
+        id: randomUUID(),
+        sequence: Number(state.revision || 0) + 1,
+        previousEventId: state.lastEventId || null,
+        type,
+        itemId: null,
+        value: input.value,
+        actor: input.actor || "mel",
+        at: input.at || new Date().toISOString(),
+        before: {
+          stylePolicy: structuredClone(state.stylePolicy),
+          sizeProfile: structuredClone(state.sizeProfile),
+          tailors: structuredClone(state.tailors),
+        },
+      };
+      const next = reduceWardrobeEvent(state, event);
+      await save(next, event);
+      return { state: next, event };
+    });
+  }
+
   async function actOnLook(library, input) {
     return serial(async () => {
       const state = await load(library);
@@ -247,5 +276,5 @@ export function createWardrobeStore(options = {}) {
     }
   }
 
-  return { load, mutate, recordDecision, actOnLook, recordFeedback, undo, readEvents, paths: { dataDir, stateFile, eventFile } };
+  return { load, mutate, recordDecision, recordMeta, actOnLook, recordFeedback, undo, readEvents, paths: { dataDir, stateFile, eventFile } };
 }

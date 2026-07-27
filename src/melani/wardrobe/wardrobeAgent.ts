@@ -1,5 +1,6 @@
 import type { MelToolResult } from "../melTools";
 import { getFreshSavedWeather, weatherWardrobeContext } from "../weather/weatherCore";
+import { askShopper, type ClosetPiece } from "./styleShopperEngine";
 
 const API = "/api/wardrobe";
 const WARDROBE_PAGE_ID = "pg-fashion-os";
@@ -41,6 +42,10 @@ async function recommendationRequest(text: string, useSavedWeather = true): Prom
     ? await getFreshSavedWeather()
     : null;
   const liveWeather = liveSnapshot ? weatherWardrobeContext(liveSnapshot) : null;
+  let city: string | undefined;
+  if (/\b(?:san francisco|sf)\b/i.test(text)) city = "san-francisco";
+  else if (/\b(?:new york|nyc|manhattan)\b/i.test(text)) city = "new-york";
+  else if (/\b(?:los angeles|la)\b/i.test(text)) city = "los-angeles";
   return {
     mode: modeFrom(text),
     temperatureF: temperature ? Number(temperature[1]) : liveWeather?.temperatureF,
@@ -48,6 +53,7 @@ async function recommendationRequest(text: string, useSavedWeather = true): Prom
     count: count ? Number(count[1]) : 3,
     weatherLocation: liveWeather?.location,
     weatherCondition: liveWeather?.condition,
+    city,
   };
 }
 
@@ -63,7 +69,7 @@ function formatLooks(payload: JsonRecord): string {
     return [
       `${index + 1}. ${names}`,
       `Fit score ${look.score}/100 · confidence ${Math.round(Number(look.confidence || 0) * 100)}%`,
-      `Color ${breakdown.color ?? "-"} · context ${breakdown.mode ?? "-"} · weather ${breakdown.weather ?? "-"} · rotation ${breakdown.rotation ?? "-"}`,
+      `Color ${breakdown.color ?? "-"} · quality ${breakdown.quality ?? "-"} · minimal ${breakdown.minimal ?? "-"} · weather ${breakdown.weather ?? "-"}`,
       ...reasons.map((reason) => `Why: ${reason}`),
     ].join("\n");
   });
@@ -76,9 +82,15 @@ function formatOverview(payload: JsonRecord): string {
   const counts = (payload.counts || {}) as JsonRecord;
   const categories = (payload.byCategory || {}) as JsonRecord;
   const gaps = Array.isArray(payload.gaps) ? payload.gaps.map(String) : [];
+  const fabric = (payload.fabric || {}) as JsonRecord;
+  const next = (payload.nextPurchase || {}) as JsonRecord;
+  const style = (payload.stylePolicy || {}) as JsonRecord;
   return [
     `${counts.total || 0} pieces · ${counts.available || 0} ready · ${counts.laundry || 0} laundry · ${counts.repair || 0} repair`,
     `Catalog: ${Object.entries(categories).map(([name, value]) => `${name} ${value}`).join(" · ") || "empty"}`,
+    `Quality: ${fabric.qualityReady || 0} ready · ${fabric.unknown || 0} fabric unknown · ${fabric.polyVeto || 0} poly veto`,
+    `Fit policy: ${style.topsFit || "baggy"} tops · tight ${style.tightAllowed ? "allowed" : "off"}`,
+    next.title ? `Next buy: ${next.title}` : "",
     `Metadata confidence ${Math.round(Number(payload.metadataConfidence || 0) * 100)}% · ${payload.totalWearEvents || 0} logged wears`,
     ...gaps.map((gap) => `Gap: ${gap}`),
     String(payload.learning || ""),
@@ -149,13 +161,44 @@ function formatPurchase(payload: JsonRecord): string {
   const candidate = (payload.candidate || {}) as JsonRecord;
   const nearest = (payload.nearestOwnedPiece || {}) as JsonRecord;
   const nearestItem = (nearest.item || {}) as JsonRecord;
+  const material = (payload.material || {}) as JsonRecord;
   const reasons = Array.isArray(payload.reasons) ? payload.reasons.map(String) : [];
+  const verdict = String(payload.verdict || "consider").replace(/-/g, " ").toUpperCase();
   return [
-    `${String(payload.verdict || "consider").replace("-", " ").toUpperCase()} · leverage ${payload.score}/100`,
-    `${candidate.name || "Candidate"}: ${payload.compatibleOwnedPieces ? (payload.compatibleOwnedPieces as unknown[]).length : 0} compatible owned pieces · versatility ${payload.versatility}%`,
+    `${verdict} · score ${payload.score}/100`,
+    `${candidate.name || "Candidate"}: material ${material.grade || candidate.materialGrade || "?"} (${material.category || candidate.fabricCategory || "—"}) · ${payload.compatibleOwnedPieces ? (payload.compatibleOwnedPieces as unknown[]).length : 0} compatible owned pieces`,
     nearestItem.name ? `Closest owned piece: ${nearestItem.name} (${nearest.similarity}% similar in category/color).` : "No same-category owned piece is close enough to flag.",
     ...reasons.map((reason) => `Why: ${reason}`),
   ].join("\n");
+}
+
+function formatCapsule(payload: JsonRecord): string {
+  const next = (payload.nextPurchase || null) as JsonRecord | null;
+  const gaps = Array.isArray(payload.gaps) ? payload.gaps as Array<JsonRecord> : [];
+  if (!next && !gaps.length) return "No Tier-A gaps — catalog what you own and keep wearing heroes.";
+  const lines = [];
+  if (next) {
+    lines.push(`Next buy (one thing): ${next.title}`);
+    lines.push(`Spec: ${next.spec}`);
+    lines.push(`Why: ${next.why}`);
+  }
+  const rest = gaps.filter((gap) => gap.id !== next?.id).slice(0, 4);
+  if (rest.length) {
+    lines.push("", "Other gaps:");
+    rest.forEach((gap) => lines.push(`• [${gap.tier}] ${gap.title}`));
+  }
+  return lines.join("\n");
+}
+
+function formatFabricAudit(payload: JsonRecord): string {
+  const unknown = Array.isArray(payload.unknown) ? payload.unknown as Array<JsonRecord> : [];
+  const poly = Array.isArray(payload.polyFlags) ? payload.polyFlags as Array<JsonRecord> : [];
+  return [
+    `Fabric audit: ${payload.total || 0} pieces · ${payload.unknownCount || 0} unknown · ${payload.qualityReadyCount || 0} quality-ready · ${payload.polyVetoCount || 0} poly veto flags`,
+    String(payload.tip || ""),
+    unknown.length ? `Unknown fabric: ${unknown.map((row) => row.name).join(" · ")}` : "",
+    poly.length ? `Poly/rule flags: ${poly.map((row) => row.name).join(" · ")}` : "",
+  ].filter(Boolean).join("\n");
 }
 
 function statusValue(text: string): string | null {
@@ -180,7 +223,20 @@ function stripActionWords(text: string): string {
 function isWardrobeContext(text: string, pageId?: string): boolean {
   return pageId === WARDROBE_PAGE_ID
     || /\b(wardrobe|closet|clothes?|outfit|wear|wore|worn|dress|gown|hoodie|sweater|jacket|coat|blazer|cardigan|shirt|tee|top|pants|trousers|jeans|skirt|shorts|shoes?|sneakers?|boots?|heels?|loafers?|bag|belt|scarf|laundry|resale|depop)\b/i.test(text)
-    || /\bpack me (?:for|to)\b/i.test(text);
+    || /\bpack me (?:for|to)\b/i.test(text)
+    || /\b(fabric audit|what should i buy next|tailor brief|baggy only|allow tight)\b/i.test(text)
+    || /\b(style shopper|shop for me|what should i buy|uniqlo|edikted|stussy|scuffers)\b/i.test(text);
+}
+
+async function loadClosetPieces(): Promise<ClosetPiece[]> {
+  try {
+    const res = await fetch("/api/import/wardrobe", { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? (data as ClosetPiece[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function runWardrobeCommand(text: string, pageId?: string): Promise<MelToolResult | null> {
@@ -189,6 +245,25 @@ export async function runWardrobeCommand(text: string, pageId?: string): Promise
   if (!q || !isWardrobeContext(q, pageId)) return null;
 
   try {
+    // Style Shopper — Melani DNA (Edikted / Uniqlo cotton / Stussy / Scuffers)
+    if (
+      /\b(?:what should i buy|shop for me|style shopper|buy next|closet gaps?|where (?:can|should) i (?:shop|buy)|recommend (?:a |me )?(?:hoodie|jean|sweat|uniqlo|edikted|stussy|scuffers))\b/i.test(low)
+      || /\b(?:uniqlo|edikted|stussy|scuffers)\b.+\b(?:buy|shop|want|hoodie|jean|sweat)\b/i.test(low)
+      || /\b(?:cotton sweat|baggy jean|comfort sweat)\b/i.test(low)
+    ) {
+      const pieces = await loadClosetPieces();
+      const reply = askShopper(q, pieces);
+      const links = reply.finds
+        .slice(0, 5)
+        .map((f, i) => `${i + 1}. ${f.name} — ${f.url}`)
+        .join("\n");
+      return result(
+        "style_shopper",
+        `${reply.text}\n\nLinks:\n${links}\n\nOpen Wardrobe → Shop for the full desk.`,
+        reply
+      );
+    }
+
     if (/\b(?:wear|log|choose|pick)\s+(?:the\s+)?(?:first|second|third|\d+(?:st|nd|rd|th)?)?\s*(?:outfit|look)\b/i.test(low)) {
       const index = ordinalIndex(q);
       const payload = await request("/outfit/wear", {
@@ -255,11 +330,80 @@ export async function runWardrobeCommand(text: string, pageId?: string): Promise
     if (/\b(?:should i buy|purchase check|buying)\b/i.test(low)) {
       const price = q.match(/\$(\d+(?:\.\d{1,2})?)/);
       const name = q.replace(/^.*?\b(?:buy|buying)\b/i, "").replace(/\bfor\s+\$\d+(?:\.\d{1,2})?.*$/i, "").trim() || "Candidate piece";
+      const fabricMatch = q.match(/(\d{1,3}\s*%\s*[a-z][a-z\s/-]+(?:\s+\d{1,3}\s*%\s*[a-z][a-z\s/-]+)*)/i);
       const payload = await request("/purchase-check", {
         method: "POST",
-        body: JSON.stringify({ name, part: purchasePart(q), color: namedColor(q), price: price ? Number(price[1]) : null }),
+        body: JSON.stringify({
+          name,
+          part: purchasePart(q),
+          color: namedColor(q),
+          price: price ? Number(price[1]) : null,
+          fabric: fabricMatch ? fabricMatch[1] : name,
+        }),
       });
       return result("wardrobe_purchase_check", formatPurchase(payload), payload);
+    }
+
+    if (/\bwhat should i buy next\b|\bnext (?:buy|purchase)\b|\bcapsule (?:gap|gaps|check)\b/i.test(low)) {
+      const payload = await request("/capsule");
+      return result("wardrobe_capsule", formatCapsule(payload), payload);
+    }
+
+    if (/\bfabric audit\b|\bquality check (?:my )?(?:closet|wardrobe)\b|\baudit (?:my )?fabric/i.test(low)) {
+      const payload = await request("/fabric-audit");
+      return result("wardrobe_fabric_audit", formatFabricAudit(payload), payload);
+    }
+
+    if (/\bbaggy only\b|\bbaggy tops?\b|\bno tight tops?\b/i.test(low)) {
+      const payload = await request("/style-policy", {
+        method: "POST",
+        body: JSON.stringify({ fitPreference: { tops: "baggy", bottoms: "comfort", tightAllowed: false } }),
+      });
+      return result("wardrobe_style_policy", "Fit rule locked: baggy tops, comfort bottoms, tight off.", payload);
+    }
+
+    if (/\ballow tight tops?\b|\btight (?:tops? )?ok\b|\btight allowed\b/i.test(low)) {
+      const payload = await request("/style-policy", {
+        method: "POST",
+        body: JSON.stringify({ fitPreference: { tops: "baggy", bottoms: "comfort", tightAllowed: true } }),
+      });
+      return result("wardrobe_style_policy", "Tight tops allowed now (you opted in).", payload);
+    }
+
+    if (/\bbans? polyester\b|\bno polyester\b/i.test(low) && !/hoodie/i.test(low)) {
+      const payload = await request("/style-policy", {
+        method: "POST",
+        body: JSON.stringify({
+          polyesterByCategory: {
+            jeans: { maxPercent: 0, allowElastanePercent: 3 },
+            trousers: { maxPercent: 0, allowElastanePercent: 3 },
+            tops: { maxPercent: 0 },
+          },
+        }),
+      });
+      return result("wardrobe_style_policy", "Polyester banned on jeans/trousers/tops. Hoodies still allow soft blends.", payload);
+    }
+
+    if (/\btailor brief\b|\bbrief (?:for )?(?:the )?tailor\b/i.test(low)) {
+      const query = q
+        .replace(/.*\b(?:tailor brief|brief for the tailor|brief the tailor)\b\s*(?:for\s+)?/i, "")
+        .replace(/[.!]+$/, "")
+        .trim() || "jeans";
+      const payload = await request("/tailor-brief", { method: "POST", body: JSON.stringify({ query }) });
+      return result("wardrobe_tailor_brief", String(payload.brief || "Could not build tailor brief."), payload);
+    }
+
+    if (/\bwhat needs (?:a )?tailor\b|\btailor queue\b|\bneeds tailor\b/i.test(low)) {
+      const payload = await request("/overview");
+      const repair = Number(((payload.counts || {}) as JsonRecord).repair || 0);
+      const next = (payload.nextPurchase || {}) as JsonRecord;
+      return result(
+        "wardrobe_tailor_queue",
+        repair
+          ? `${repair} piece(s) in repair. Say 'tailor brief for [item]' for a copyable shop brief. Next life gap: ${next.title || "none"}.`
+          : `Nothing marked repair. Next life gap: ${next.title || "none"}. Mark items with 'mark [item] repair' after bad hems.`,
+        payload,
+      );
     }
 
     if (/\b(?:capsule|connectivity|wardrobe graph|closet graph|orphan pieces|most versatile)\b/i.test(low)) {

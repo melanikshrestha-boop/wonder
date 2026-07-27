@@ -6,16 +6,21 @@ import sharp from "sharp";
 import {
   analyzePurchaseCandidate,
   auditWardrobeIntegrity,
+  buildCapsuleGaps,
+  buildFabricAudit,
   buildLaundryPlan,
   buildPackingPlan,
   buildResaleCandidates,
   buildRotationPlan,
+  buildTailorBrief,
   buildWardrobeGraph,
   buildWardrobeOverview,
   createVisualDescriptor,
   defaultWardrobeState,
   duplicateScore,
   generateOutfits,
+  parseFabricText,
+  scoreMaterialQuality,
   searchWardrobe,
 } from "./wardrobe/wardrobe-intelligence.mjs";
 import { createWardrobeStore } from "./wardrobe/wardrobe-store.mjs";
@@ -128,3 +133,60 @@ try {
 }
 
 console.log("WARDROBE_INTELLIGENCE_TEST_OK");
+
+
+// --- quality-first capsule ---
+const fabricParsed = parseFabricText("98% cotton 2% elastane");
+assert.equal(fabricParsed.fibers[0].name, "cotton");
+assert.equal(fabricParsed.fibers[0].percent, 98);
+
+const cottonJeans = scoreMaterialQuality("100% cotton", { name: "Rigid jeans", part: "lowerbody" });
+assert.ok(cottonJeans.score >= 80, "100% cotton jeans should score high");
+assert.equal(cottonJeans.veto, false);
+
+const polyJeans = scoreMaterialQuality("60% polyester 40% cotton", { name: "Stretch poly jeans", part: "lowerbody" });
+assert.equal(polyJeans.veto, true, "poly jeans must veto");
+
+const hoodieBlend = scoreMaterialQuality("55% cotton 45% polyester", { name: "Soft hoodie", part: "upperbody", tags: ["hoodie"] });
+assert.equal(hoodieBlend.veto, false, "hoodie blend allowed");
+assert.ok(hoodieBlend.flags.includes("hoodie-blend-preferred") || hoodieBlend.score >= 70);
+
+const allCottonHoodie = scoreMaterialQuality("100% cotton", { name: "Stiff cotton hoodie", tags: ["hoodie"] });
+const blendScore = hoodieBlend.score;
+assert.ok(blendScore >= allCottonHoodie.score - 2, "blend should not lose badly to 100% cotton hoodie");
+
+const heroLib = [
+  { id: "ug", name: "Uniqlo Gray Sweatpants", part: "lowerbody", color: "#777777", tags: ["uniqlo", "gray"], fabric: "60% cotton 40% polyester" },
+  { id: "ub", name: "Uniqlo Black Sweatpants", part: "lowerbody", color: "#111111", tags: ["uniqlo", "black"], fabric: "60% cotton 40% polyester" },
+  { id: "tee", name: "Baggy Black Tee", part: "upperbody", color: "#151515", tags: ["baggy"], fabric: "100% cotton" },
+];
+const heroState = defaultWardrobeState();
+heroState.items = Object.fromEntries(heroLib.map((item) => [item.id, { status: "clean", wearCount: 1, lastWornAt: null }]));
+
+const moreGray = analyzePurchaseCandidate(heroLib, heroState, { name: "Uniqlo gray sweatpants", part: "lowerbody", fabric: "60% cotton 40% polyester" });
+assert.ok(["consider", "skip-redundant"].includes(moreGray.verdict), `second gray should be consider/skip not auto-buy, got ${moreGray.verdict}`);
+
+const polyBuy = analyzePurchaseCandidate(heroLib, heroState, { name: "polyester blend jeans", part: "lowerbody", fabric: "70% polyester 30% cotton" });
+assert.equal(polyBuy.verdict, "reject-material");
+
+const shortsBuy = analyzePurchaseCandidate(heroLib, heroState, { name: "comfy relaxed shorts", part: "lowerbody", fabric: "80% cotton 20% polyester" });
+assert.equal(shortsBuy.verdict, "buy", "comfort shorts fill Tier-A gap");
+
+const tightBuy = analyzePurchaseCandidate(heroLib, heroState, { name: "tight fitted tee", part: "upperbody", fabric: "100% cotton", fit: "tight" });
+assert.equal(tightBuy.verdict, "reject-material", "tight tops blocked");
+
+const capsule = buildCapsuleGaps(heroLib, heroState);
+assert.equal(capsule.nextPurchase?.id, "comfy-shorts");
+
+const audit = buildFabricAudit(heroLib, heroState);
+assert.equal(audit.total, heroLib.length);
+
+const brief = buildTailorBrief(heroLib[0], heroState, { bottomsLabel: "M", measurements: { waistIn: 28 } });
+assert.ok(String(brief.brief).includes("TAILOR BRIEF"));
+
+const qualityLook = generateOutfits(heroLib, heroState, { mode: "everyday", count: 2 });
+assert.ok(qualityLook.looks[0].score >= 50, "quality looks should not collapse");
+assert.ok(qualityLook.looks[0].breakdown.quality != null);
+assert.ok(qualityLook.looks[0].breakdown.minimal != null);
+
+console.log("quality-first wardrobe checks passed");

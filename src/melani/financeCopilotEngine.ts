@@ -20,6 +20,7 @@ import type { CreditReport } from "./financeCredit";
 import type { SubscriptionScan } from "./subscriptions";
 import { conceptSuggestions, explainConcept, runScenario } from "./financeExplain";
 import type { ConceptContext } from "./financeConcepts";
+import { answerMathEngine } from "./financeMathEngine";
 
 export type CopilotContext = {
   state: FinanceState;
@@ -72,6 +73,25 @@ const MONTH_ABBR = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep
 function monthLabel(ym: string): string {
   const [y, m] = ym.split("-").map(Number);
   return `${MONTHS[m - 1][0].toUpperCase()}${MONTHS[m - 1].slice(1)} ${y}`;
+}
+
+/** "2026-07-15" → "July 15, 2026" (never weak ISO in prose) */
+function humanDate(iso: string): string {
+  const m = (iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return iso;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!y || !mo || !d) return iso;
+  try {
+    return new Date(y, mo - 1, d).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return `${mo}.${d}.${String(y).slice(2)}`;
+  }
 }
 
 /** Resolve a month reference in the question to an actual ym present in data. */
@@ -169,7 +189,8 @@ function categoryBreakdown(txs: FinanceTx[], ym?: string): { name: string; value
   for (const t of txs) {
     if (t.kind !== "expense" || isTransferLike(t)) continue;
     if (ym && !t.date.startsWith(ym)) continue;
-    map.set(t.category || "Uncategorized", (map.get(t.category || "Uncategorized") || 0) + t.amount);
+    const cat = t.category || "Other";
+    map.set(cat, (map.get(cat) || 0) + t.amount);
   }
   return [...map.entries()]
     .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
@@ -206,19 +227,16 @@ export function answerCopilot(
   const txs = ctx.state.txs;
 
   if (!q) {
-    return { text: "Ask me anything about your ledger — spend by category, a month total, your subscriptions, top merchants, or whether you can afford something.", sources: [] };
-  }
-  if (!txs.length) {
     return {
-      text: "Your ledger is empty. Import a bank CSV and I'll answer every question with real numbers from your rows.",
+      text: "Quant + ledger desk. Try: spend by category · NPV/IRR · amortize a loan · avalanche vs snowball · FI years · Monte Carlo · Black-Scholes · sensitivity table · ledger σ.",
       sources: [],
     };
   }
 
-  // ── Small talk — answer like a person, never dump a report ───────
+  // ── Small talk ───────────────────────────────────────────────────
   if (/^(hi|hey|hello|yo|sup|hiya|howdy|good (morning|afternoon|evening))[.!\s]*$/.test(q)) {
     return {
-      text: "Hey. Ask me anything about your money — totals, a merchant, a month, subscriptions — or ask for a chart.",
+      text: "Hey. Ledger queries, charts, or real math: NPV, amortisation, FI, Monte Carlo, σ of your spend. Ask precisely.",
       sources: [],
     };
   }
@@ -226,7 +244,7 @@ export function answerCopilot(
     return { text: "Anytime.", sources: [] };
   }
 
-  // ── Follow-ups ("which one", "the biggest one") use the last answer ──
+  // ── Follow-ups ───────────────────────────────────────────────────
   if (/^(which( one)?|who|what one|the (biggest|top|largest)( one)?|biggest one|top one)\??$/.test(q)) {
     const list = prev?.answer.data;
     if (list && list.length) {
@@ -238,6 +256,17 @@ export function answerCopilot(
     }
     return {
       text: "Which one of what? Ask me about a category, merchant, or month first and I'll rank them.",
+      sources: [],
+    };
+  }
+
+  // ── Quant desk FIRST (works with empty ledger for pure models) ───
+  const quant = answerMathEngine(question, ctx);
+  if (quant) return quant;
+
+  if (!txs.length) {
+    return {
+      text: "Your ledger is empty. Import a bank CSV for spend questions. Pure math still works: e.g. \"FV of 10000 at 7% for 10 years\" or \"NPV at 10% of -1000, 400, 400, 400\".",
       sources: [],
     };
   }
@@ -350,7 +379,7 @@ export function answerCopilot(
     }
     if (count > 0) {
       return {
-        text: `You spent ${money(total)} at ${merchant} ${month ? `in ${scopeLabel}` : "across your ledger"} — ${count} charge${count === 1 ? "" : "s"}${last ? `, last on ${last}` : ""}.`,
+        text: `You spent ${money(total)} at ${merchant} ${month ? `in ${scopeLabel}` : "across your ledger"} — ${count} charge${count === 1 ? "" : "s"}${last ? `, last on ${humanDate(last)}` : ""}.`,
         sources: [`${merchant}`, month ? scopeLabel : "all transactions", `${count} rows`],
       };
     }
@@ -534,7 +563,7 @@ export function copilotSuggestions(ctx: CopilotContext): string[] {
   out.push("Chart my spending by month");
   if (ctx.subs.count) out.push("What subscriptions am I paying for?");
   out.push("What if I save $500 a month for 10 years?");
-  // Teaching prompts, picked from whatever the ledger says matters right now.
+  // Keep Ask suggestions ledger-native; Quant mode has its own prompt list in the UI.
   out.push(
     ...conceptSuggestions({
       cash: ctx.cash,
@@ -545,7 +574,7 @@ export function copilotSuggestions(ctx: CopilotContext): string[] {
       cashFlow: ctx.cashFlow,
       utilization: ctx.credit.utilization ?? null,
       apr: null,
-    })
+    }).filter((s) => !/\b(npv|amortize|monte|black)\b/i.test(s))
   );
   return out.slice(0, 6);
 }

@@ -36,6 +36,30 @@ const HIGHLIGHT_PINK = {
 
 const HIGHLIGHT_CLASS = "reader-quote-highlight";
 
+/**
+ * Hard caps so “Opening book…” never hangs on a bad CFI / slow TOC.
+ * Keep these low — first paint matters more than perfect landing.
+ */
+const DISPLAY_TIMEOUT_MS = 1_600; // one display() attempt
+const FALLBACK_DISPLAY_MS = 2_200; // bare display()
+const NAV_TIMEOUT_MS = 3_000; // TOC parse after first page is already showing
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label = "timeout"): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(label)), ms);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        window.clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 type ReaderContents = {
   document: Document;
   window: Window;
@@ -641,7 +665,7 @@ export function BookReader({ book, startCfi, onClose, onProgress, onBookmark, on
         color: "#e9e7e2 !important",
         background: "#080808 !important",
         "font-family": 'Georgia, "Times New Roman", serif !important',
-        "line-height": "1.7 !important",
+        "line-height": "1 !important",
         padding: "0 3% !important",
       },
       p: { color: "#e9e7e2 !important" },
@@ -729,40 +753,87 @@ export function BookReader({ book, startCfi, onClose, onProgress, onBookmark, on
 
     void (async () => {
       try {
-        const navigation = await epub.loaded.navigation;
-        if (disposed) return;
-        const nextChapters = flattenToc(navigation.toc || []).filter(
-          (chapter) => Boolean(chapter.href && chapter.label?.trim())
-        );
-        chaptersRef.current = nextChapters;
-        setChapters(nextChapters);
-
-        const contentsLandmark = navigation.landmarks?.find(
-          (item) => item.type?.toLowerCase() === "toc"
-        )?.href;
-        const contentsItem = nextChapters.find((item) =>
-          /^(?:table\s+of\s+)?contents$/i.test(item.label.trim())
-        )?.href;
-        const targets = [
-          initialCfi.current,
-          contentsLandmark,
-          contentsItem,
-          nextChapters[0]?.href,
-        ].filter((target, index, all): target is string => Boolean(target) && all.indexOf(target) === index);
-
+        // ── FAST PATH: paint a page before waiting on full TOC ──────────
+        // Old flow awaited navigation first → long “Opening book…” on big EPUBs.
         let opened = false;
-        for (const target of targets) {
+        const resume = initialCfi.current;
+        if (resume) {
           try {
-            await rendition.display(target);
+            await withTimeout(rendition.display(resume), DISPLAY_TIMEOUT_MS, "display-cfi");
             opened = true;
-            break;
           } catch {
-            /* try the next valid navigation target */
+            /* bad/slow CFI — fall through */
           }
         }
-        if (!opened) await rendition.display();
+        if (!opened) {
+          try {
+            await withTimeout(rendition.display(), FALLBACK_DISPLAY_MS, "display-default");
+            opened = true;
+          } catch {
+            /* still try TOC targets below */
+          }
+        }
+        // Clear spinner as soon as anything painted (don't block on TOC)
+        if (opened && !disposed) setMessage("");
+
+        // ── TOC + optional better landing (parallel after first paint) ──
+        try {
+          const navigation = await withTimeout(
+            epub.loaded.navigation as Promise<{
+              toc?: NavItem[];
+              landmarks?: Array<{ type?: string; href?: string }>;
+            }>,
+            NAV_TIMEOUT_MS,
+            "nav-timeout"
+          );
+          if (disposed) return;
+          const nextChapters = flattenToc(navigation.toc || []).filter(
+            (chapter) => Boolean(chapter.href && chapter.label?.trim())
+          );
+          chaptersRef.current = nextChapters;
+          setChapters(nextChapters);
+
+          // Only re-navigate if we never painted (or CFI failed earlier)
+          if (!opened) {
+            const contentsLandmark = navigation.landmarks?.find(
+              (item) => item.type?.toLowerCase() === "toc"
+            )?.href;
+            const contentsItem = nextChapters.find((item) =>
+              /^(?:table\s+of\s+)?contents$/i.test(item.label.trim())
+            )?.href;
+            const targets = [
+              contentsLandmark,
+              contentsItem,
+              nextChapters[0]?.href,
+            ].filter(
+              (target, index, all): target is string =>
+                Boolean(target) && all.indexOf(target) === index
+            );
+            for (const target of targets) {
+              try {
+                await withTimeout(
+                  rendition.display(target),
+                  DISPLAY_TIMEOUT_MS,
+                  "display-target"
+                );
+                opened = true;
+                break;
+              } catch {
+                /* next target */
+              }
+            }
+          }
+        } catch {
+          /* TOC optional — book can still be readable without chapter list */
+        }
+
         if (disposed) return;
+        if (!opened) {
+          setMessage("This book could not be opened.");
+          return;
+        }
         setMessage("");
+
         for (const quote of initialQuotes.current) {
           if (!quote.location) continue;
           try {
@@ -958,42 +1029,55 @@ export function BookReader({ book, startCfi, onClose, onProgress, onBookmark, on
   return (
     <div className={`bl-reader ${isNarrow ? "is-scroll-reader" : "is-page-reader"}`}>
       <header className="bl-reader-head">
-        <button type="button" className="bl-icon-btn" onClick={requestClose} title="Back to bookshelf">
+        <button
+          type="button"
+          className="bl-icon-btn bl-reader-back"
+          onClick={requestClose}
+          title="Back to bookshelf"
+        >
           <ArrowLeft size={18} aria-hidden />
         </button>
         <div className="bl-reader-title">
           <strong>{book.title}</strong>
           <span>{book.author || "Wonder Bookshelf"}</span>
         </div>
-        <div className="bl-reader-progress" aria-label={`${progressLabel} complete`}>
+        <div
+          className="bl-reader-progress"
+          aria-label={`${progressLabel} complete`}
+        >
           <i style={{ width: progressLabel }} />
         </div>
         <span className="bl-reader-percent">{progressLabel}</span>
       </header>
 
-      <div className="bl-reader-tools">
-        <select
-          className="bl-reader-chapters"
-          value={showContents ? "__contents__" : chapterHref}
-          onChange={(event) => {
-            const href = event.target.value;
-            if (href === "__contents__") {
-              setShowContents(true);
-              return;
-            }
-            openChapter(href);
-          }}
-          aria-label="Book chapter"
-        >
-          <option value="__contents__">Table of Contents</option>
-          {!showContents && !chapterHref ? <option value="">Current page</option> : null}
-          {chapters.map((chapter) => (
-            <option key={`${chapter.id}-${chapter.href}`} value={chapter.href}>
-              {`${"  ".repeat(chapter.depth)}${chapter.label.trim()}`}
-            </option>
-          ))}
-        </select>
-        {/* Simple Prev / Next — also Arrow keys work */}
+      <div className="bl-reader-tools" role="toolbar" aria-label="Reading controls">
+        <label className="bl-reader-chapters-wrap">
+          <span className="bl-reader-chapters-label">Chapters</span>
+          <select
+            className="bl-reader-chapters"
+            value={showContents ? "__contents__" : chapterHref}
+            onChange={(event) => {
+              const href = event.target.value;
+              if (href === "__contents__") {
+                setShowContents(true);
+                return;
+              }
+              openChapter(href);
+            }}
+            aria-label="Book chapter"
+          >
+            <option value="__contents__">Table of Contents</option>
+            {!showContents && !chapterHref ? (
+              <option value="">Current page</option>
+            ) : null}
+            {chapters.map((chapter) => (
+              <option key={`${chapter.id}-${chapter.href}`} value={chapter.href}>
+                {`${"  ".repeat(chapter.depth)}${chapter.label.trim()}`}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="bl-page-nav" aria-label="Turn page">
           <button
             type="button"
@@ -1001,47 +1085,54 @@ export function BookReader({ book, startCfi, onClose, onProgress, onBookmark, on
             title="Previous page (←)"
             aria-label="Previous page"
           >
-            <CaretLeft size={14} aria-hidden />
-            Prev
+            <CaretLeft size={15} weight="bold" aria-hidden />
+            <span>Prev</span>
           </button>
           <button
             type="button"
+            className="bl-page-nav-next"
             onClick={() => turnPage("next")}
             title="Next page (→)"
             aria-label="Next page"
           >
-            Next
-            <CaretRight size={14} aria-hidden />
+            <span>Next</span>
+            <CaretRight size={15} weight="bold" aria-hidden />
           </button>
         </div>
+
         <div className="bl-reader-size" aria-label="Text size">
           <button
             type="button"
-            className="bl-icon-btn"
+            className="bl-size-btn"
             onClick={() => setFontSize((value) => Math.max(80, value - 10))}
             title="Smaller text"
+            aria-label="Smaller text"
           >
-            <Minus size={16} aria-hidden />
+            <Minus size={14} weight="bold" aria-hidden />
           </button>
-          <span>Text</span>
+          <span className="bl-size-label" aria-hidden>
+            Aa
+          </span>
           <button
             type="button"
-            className="bl-icon-btn"
+            className="bl-size-btn"
             onClick={() => setFontSize((value) => Math.min(150, value + 10))}
             title="Larger text"
+            aria-label="Larger text"
           >
-            <Plus size={16} aria-hidden />
-          </button>
-          <button
-            type="button"
-            className="bl-imprint-btn"
-            disabled={imprintBusy || showContents}
-            onClick={() => void openChapterImprint(false)}
-            title="Animated chapter summary + quiz"
-          >
-            {imprintBusy ? "…" : "Imprint"}
+            <Plus size={14} weight="bold" aria-hidden />
           </button>
         </div>
+
+        <button
+          type="button"
+          className="bl-imprint-btn"
+          disabled={imprintBusy || showContents}
+          onClick={() => void openChapterImprint(false)}
+          title="Animated chapter summary + quiz"
+        >
+          {imprintBusy ? "…" : "Imprint"}
+        </button>
       </div>
       {imprintError ? <p className="bl-imprint-error">{imprintError}</p> : null}
 
@@ -1052,17 +1143,21 @@ export function BookReader({ book, startCfi, onClose, onProgress, onBookmark, on
       >
         {showContents ? (
           <section className="bl-reader-toc" aria-label="Table of Contents">
-            {/* Wide centered column — list expands, chevrons stay with each row */}
+            <div className="bl-reader-toc-glow" aria-hidden />
             <div className="bl-reader-toc-inner">
               <header>
                 <div>
-                  <span>Book navigation</span>
+                  <span>Open a chapter</span>
                   <h2>Table of Contents</h2>
+                  <p className="bl-reader-toc-sub">
+                    {book.title}
+                    {book.author ? ` · ${book.author}` : ""}
+                  </p>
                 </div>
                 {resumableCfi ? (
                   <button
                     type="button"
-                    className="bl-icon-btn"
+                    className="bl-icon-btn bl-toc-resume"
                     onClick={() => setShowContents(false)}
                     title="Return to saved place"
                     aria-label="Return to saved place"
@@ -1073,15 +1168,21 @@ export function BookReader({ book, startCfi, onClose, onProgress, onBookmark, on
               </header>
               {chapters.length ? (
                 <nav>
-                  {chapters.map((chapter) => (
+                  {chapters.map((chapter, index) => (
                     <button
                       key={`${chapter.id}-${chapter.href}`}
                       type="button"
-                      style={{ paddingLeft: `${14 + chapter.depth * 20}px` }}
+                      className={chapter.depth ? "is-nested" : ""}
+                      style={{
+                        paddingLeft: `${18 + chapter.depth * 22}px`,
+                      }}
                       onClick={() => openChapter(chapter.href)}
                     >
+                      <em className="bl-toc-num" aria-hidden>
+                        {String(index + 1).padStart(2, "0")}
+                      </em>
                       <span>{chapter.label.trim()}</span>
-                      <CaretRight size={16} aria-hidden />
+                      <CaretRight size={16} weight="bold" aria-hidden />
                     </button>
                   ))}
                 </nav>
@@ -1089,7 +1190,7 @@ export function BookReader({ book, startCfi, onClose, onProgress, onBookmark, on
                 <p>This EPUB does not include a chapter list.</p>
               )}
               <p className="bl-reader-toc-hint">
-                Tip: press → or click Next to turn pages · ← for previous
+                ← Prev · Next → · arrow keys turn pages
               </p>
             </div>
           </section>
