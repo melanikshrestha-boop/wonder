@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowLeft,
-  CaretLeft,
   CaretRight,
   Minus,
   Plus,
   BookmarkSimple,
   HighlighterCircle,
   Moon,
+  Notebook,
   NotePencil,
   X,
   Sun,
@@ -72,6 +72,22 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label = "timeout"): Pro
 type ReaderContents = {
   document: Document;
   window: Window;
+};
+
+type ReaderSelection = {
+  cfi: string;
+  text: string;
+  x: number;
+  y: number;
+  above: boolean;
+};
+
+type ReaderNotePopover = {
+  quote: BookQuote;
+  x: number;
+  y: number;
+  above: boolean;
+  pinned: boolean;
 };
 
 type FlipDir = "next" | "prev";
@@ -254,11 +270,14 @@ export function BookReader({
   const [fontSize, setFontSize] = useState(100);
   const [progress, setProgress] = useState(book.readerProgress || 0);
   const [message, setMessage] = useState("Opening book...");
-  const [selection, setSelection] = useState<{ cfi: string; text: string } | null>(null);
+  const [selection, setSelection] = useState<ReaderSelection | null>(null);
   const [addingThought, setAddingThought] = useState(false);
   const [thoughtDraft, setThoughtDraft] = useState("");
   const [closePrompt, setClosePrompt] = useState(false);
   const [bookmark, setBookmark] = useState(book.smartBookmark);
+  const [readerQuotes, setReaderQuotes] = useState(book.quotes);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notePopover, setNotePopover] = useState<ReaderNotePopover | null>(null);
   /**
    * Free page leaf: move anywhere (x/y), spin (rotZ for circles), tilt (rotX/rotY).
    * Not locked to right-to-left — you steer it.
@@ -464,7 +483,7 @@ export function BookReader({
     flipBusy.current = false;
   }
 
-  /** Turn page — keyboard, on-screen Next/Prev, wheel all use this */
+  /** Change section from the keyboard or a completed edge gesture. */
   function turnPage(direction: FlipDir, throttle = false) {
     // If the table of contents is open, first close it so the page is visible
     if (showContentsRef.current) {
@@ -619,24 +638,94 @@ export function BookReader({
     (doc.head || doc.documentElement).appendChild(style);
   }
 
-  function addPinkHighlight(cfi: string, quoteId?: string) {
-    renditionRef.current?.annotations.add(
+  function showQuotePopover(
+    quote: BookQuote,
+    target: EventTarget | null,
+    pinned: boolean
+  ) {
+    const element =
+      target && typeof (target as Element).getBoundingClientRect === "function"
+        ? (target as Element)
+        : null;
+    const rect = element?.getBoundingClientRect();
+    const rawX = rect ? rect.left + rect.width / 2 : window.innerWidth - 210;
+    const x = Math.max(188, Math.min(window.innerWidth - 188, rawX));
+    const roomBelow = rect ? window.innerHeight - rect.bottom : 0;
+    const above = Boolean(rect && roomBelow < 170);
+    const y = rect
+      ? above
+        ? rect.top - 10
+        : rect.bottom + 10
+      : Math.min(window.innerHeight - 170, 220);
+    setNotePopover({ quote, x, y, above, pinned });
+  }
+
+  function bindHighlightHover(
+    annotation: unknown,
+    quote: BookQuote
+  ) {
+    type HighlightMark = { element?: Element };
+    type AnnotationHandle = {
+      mark?: HighlightMark;
+      on?: (event: string, listener: (mark: HighlightMark) => void) => void;
+    };
+    const handle = annotation as AnnotationHandle | undefined;
+    const bind = (mark?: HighlightMark) => {
+      const element = mark?.element;
+      if (!element || element.getAttribute("data-wonder-note") === quote.id) return;
+      element.setAttribute("data-wonder-note", quote.id);
+      element.setAttribute("role", "button");
+      element.setAttribute("tabindex", "0");
+      element.setAttribute(
+        "aria-label",
+        quote.interpretation || quote.note
+          ? `Annotated highlight: ${quote.text}`
+          : `Highlight: ${quote.text}`
+      );
+      element.addEventListener("mouseenter", (event) =>
+        showQuotePopover(quote, event.currentTarget, false)
+      );
+      element.addEventListener("mouseleave", () =>
+        setNotePopover((current) =>
+          current?.quote.id === quote.id && !current.pinned ? null : current
+        )
+      );
+      element.addEventListener("focus", (event) =>
+        showQuotePopover(quote, event.currentTarget, false)
+      );
+      element.addEventListener("blur", () =>
+        setNotePopover((current) =>
+          current?.quote.id === quote.id && !current.pinned ? null : current
+        )
+      );
+    };
+    bind(handle?.mark);
+    handle?.on?.("attach", bind);
+  }
+
+  function addPinkHighlight(quote: BookQuote) {
+    if (!quote.location) return;
+    const annotation = renditionRef.current?.annotations.add(
       "highlight",
-      cfi,
-      quoteId ? { quoteId } : {},
-      undefined,
+      quote.location,
+      { quoteId: quote.id },
+      (event: Event) => showQuotePopover(quote, event.currentTarget, true),
       HIGHLIGHT_CLASS,
       { ...HIGHLIGHT_PINK }
     );
+    bindHighlightHover(annotation, quote);
   }
 
   function isEditableTarget(target: EventTarget | null): boolean {
-    // Only block real typing — select/buttons must NOT steal Next/Prev keys
-    const element = target instanceof Element ? target : null;
+    const element =
+      target && (target as Node).nodeType === Node.ELEMENT_NODE
+        ? (target as Element)
+        : null;
     if (!element) return false;
     if (element.closest("[contenteditable='true']")) return true;
     const tag = element.tagName;
-    if (tag === "TEXTAREA") return true;
+    if (["BUTTON", "SELECT", "A", "TEXTAREA"].includes(tag)) return true;
+    if (element.closest("[role='button']")) return true;
     if (tag === "INPUT") {
       const type = (element as HTMLInputElement).type || "text";
       return !["button", "submit", "checkbox", "radio", "range"].includes(type);
@@ -653,8 +742,16 @@ export function BookReader({
   }
 
   function handleReaderKey(event: KeyboardEvent) {
-    if (event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) return;
     const key = event.key;
+    if (key === "Escape" && !isEditableTarget(event.target)) {
+      setSelection(null);
+      setAddingThought(false);
+      setThoughtDraft("");
+      setNotePopover(null);
+      setNotesOpen(false);
+      return;
+    }
+    if (event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) return;
     if (readingModeRef.current === "scroll") {
       const container = readerScrollContainer();
       const page = (container?.clientHeight || window.innerHeight) * 0.82;
@@ -675,13 +772,25 @@ export function BookReader({
       if (scrollAmount !== null) {
         event.preventDefault();
         event.stopPropagation();
+        const atTop = !container || container.scrollTop <= 8;
+        const atBottom =
+          !container ||
+          container.scrollTop + container.clientHeight >= container.scrollHeight - 8;
+        if (scrollAmount > 0 && atBottom && !["End"].includes(key)) {
+          turnPage("next");
+          return;
+        }
+        if (scrollAmount < 0 && atTop && !["Home"].includes(key)) {
+          turnPage("prev");
+          return;
+        }
         scrollReaderBy(scrollAmount);
         return;
       }
     }
 
-    const next = key === "ArrowRight";
-    const prev = key === "ArrowLeft";
+    const next = key === "ArrowRight" || key === "Enter";
+    const prev = key === "ArrowLeft" || key === "Backspace";
     if (!next && !prev) return;
     event.preventDefault();
     event.stopPropagation();
@@ -701,6 +810,10 @@ export function BookReader({
       const primaryDelta =
         Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
       if (!primaryDelta) return;
+      setSelection(null);
+      setAddingThought(false);
+      setThoughtDraft("");
+      setNotePopover(null);
       event.preventDefault();
       container.scrollBy({ top: primaryDelta * factor, left: 0, behavior: "auto" });
       return;
@@ -742,6 +855,10 @@ export function BookReader({
   useEffect(() => {
     quoteCallback.current = onSaveQuote;
   }, [onSaveQuote]);
+
+  useEffect(() => {
+    setReaderQuotes(book.quotes);
+  }, [book.quotes]);
 
   useEffect(() => {
     const warnBeforeTabClose = (event: BeforeUnloadEvent) => {
@@ -794,9 +911,20 @@ export function BookReader({
         const fallbackY = freeDrag.current?.lastY ?? freeDrag.current?.startY ?? 0;
         endFreeDrag(t?.clientX ?? fallbackX, t?.clientY ?? fallbackY);
       };
+      const selectionChanged = () => {
+        window.setTimeout(() => {
+          const current = readerDocument.getSelection();
+          if (!current || current.isCollapsed || !current.toString().trim()) {
+            setSelection(null);
+            setAddingThought(false);
+            setThoughtDraft("");
+          }
+        }, 0);
+      };
 
       readerDocument.addEventListener("wheel", handleReaderWheel, { passive: false });
       readerDocument.addEventListener("keydown", handleReaderKey);
+      readerDocument.addEventListener("selectionchange", selectionChanged);
       readerDocument.addEventListener("touchstart", touchStarted, { passive: true });
       readerDocument.addEventListener("touchmove", touchMoved, { passive: false });
       readerDocument.addEventListener("touchend", touchEnded, { passive: false });
@@ -804,6 +932,7 @@ export function BookReader({
       contentCleanups.push(() => {
         readerDocument.removeEventListener("wheel", handleReaderWheel);
         readerDocument.removeEventListener("keydown", handleReaderKey);
+        readerDocument.removeEventListener("selectionchange", selectionChanged);
         readerDocument.removeEventListener("touchstart", touchStarted);
         readerDocument.removeEventListener("touchmove", touchMoved);
         readerDocument.removeEventListener("touchend", touchEnded);
@@ -836,9 +965,34 @@ export function BookReader({
     rendition.on("relocated", relocated);
 
     const selected = (cfi: string, contents: { window?: Window }) => {
-      const text = contents?.window?.getSelection?.()?.toString().trim() || "";
+      const nativeSelection = contents?.window?.getSelection?.();
+      const text = nativeSelection?.toString().trim() || "";
       if (text) {
-        setSelection({ cfi, text });
+        const rangeRect =
+          nativeSelection && nativeSelection.rangeCount
+            ? nativeSelection.getRangeAt(0).getBoundingClientRect()
+            : null;
+        const frameElement =
+          (contents?.window?.frameElement as HTMLElement | null | undefined) ||
+          Array.from(stageRef.current?.querySelectorAll("iframe") || []).find(
+            (frame) => frame.contentWindow === contents?.window
+          );
+        const frameRect = frameElement?.getBoundingClientRect();
+        const rawX =
+          (frameRect?.left || 0) +
+          (rangeRect ? rangeRect.left + rangeRect.width / 2 : window.innerWidth / 2);
+        const rawBottom =
+          (frameRect?.top || 0) + (rangeRect?.bottom || window.innerHeight / 2);
+        const rawTop =
+          (frameRect?.top || 0) + (rangeRect?.top || window.innerHeight / 2);
+        const above = rawBottom > window.innerHeight - 170;
+        setSelection({
+          cfi,
+          text,
+          x: Math.max(190, Math.min(window.innerWidth - 190, rawX)),
+          y: above ? rawTop - 10 : rawBottom + 10,
+          above,
+        });
         setAddingThought(false);
         setThoughtDraft("");
       }
@@ -929,9 +1083,8 @@ export function BookReader({
         setMessage("");
 
         for (const quote of initialQuotes.current) {
-          if (!quote.location) continue;
           try {
-            addPinkHighlight(quote.location, quote.id);
+            addPinkHighlight(quote);
           } catch {
             /* bad CFI — skip */
           }
@@ -998,7 +1151,11 @@ export function BookReader({
 
   function saveHighlight(note = "") {
     if (!selection) return;
-    const quote = newQuote(selection.text, undefined, note, selection.cfi);
+    const sectionLabel =
+      chaptersRef.current.find((chapter) =>
+        sameDocument(chapter.href, locationHrefRef.current || chapterHref)
+      )?.label?.trim() || "Current section";
+    const quote = newQuote(selection.text, sectionLabel, note, selection.cfi);
     try {
       // Remove any sloppy partial mark at this CFI first
       renditionRef.current?.annotations.remove(selection.cfi, "highlight");
@@ -1006,10 +1163,11 @@ export function BookReader({
       /* none yet */
     }
     try {
-      addPinkHighlight(selection.cfi, quote.id);
+      addPinkHighlight(quote);
     } catch {
       /* CFI may fail on some EPUBs — still save the quote */
     }
+    setReaderQuotes((current) => [quote, ...current]);
     quoteCallback.current(quote);
     // Clear native selection so UI feels clean
     try {
@@ -1110,6 +1268,27 @@ export function BookReader({
     renditionRef.current?.themes.default(readerThemeRules(theme, font));
   }, [theme, font]);
 
+  function openSavedQuote(quote: BookQuote) {
+    if (!quote.location || !renditionRef.current) return;
+    setShowContents(false);
+    setNotesOpen(false);
+    setNotePopover(null);
+    setMessage("Opening highlight...");
+    void renditionRef.current
+      .display(quote.location)
+      .then(() => setMessage(""))
+      .catch(() => setMessage("That highlight could not be opened."));
+  }
+
+  const quoteGroups = Array.from(
+    readerQuotes.reduce((groups, quote) => {
+      const label = quote.page?.trim() || "Saved passages";
+      const items = groups.get(label) || [];
+      items.push(quote);
+      groups.set(label, items);
+      return groups;
+    }, new Map<string, BookQuote[]>())
+  );
   const progressLabel = `${Math.round(progress * 100)}%`;
 
   return (
@@ -1167,28 +1346,6 @@ export function BookReader({
             ))}
           </select>
         </label>
-
-        <div className="bl-page-nav" aria-label="Change section">
-          <button
-            type="button"
-            onClick={() => turnPage("prev")}
-            title="Previous section (←)"
-            aria-label="Previous section"
-          >
-            <CaretLeft size={15} weight="bold" aria-hidden />
-            <span>Prev</span>
-          </button>
-          <button
-            type="button"
-            className="bl-page-nav-next"
-            onClick={() => turnPage("next")}
-            title="Next section (→)"
-            aria-label="Next section"
-          >
-            <span>Next</span>
-            <CaretRight size={15} weight="bold" aria-hidden />
-          </button>
-        </div>
 
         <div className="bl-reader-size" aria-label="Text size">
           <button
@@ -1322,7 +1479,7 @@ export function BookReader({
                 <p>This EPUB does not include a chapter list.</p>
               )}
               <p className="bl-reader-toc-hint">
-                Scroll or ↓ / Page Down to read · Prev / Next changes section
+                ↓ scroll · ← back · Enter or → next
               </p>
             </div>
           </section>
@@ -1356,14 +1513,134 @@ export function BookReader({
         </div>
       </div>
 
-      {selection ? (
-        <div className={`bl-smart-selection${addingThought ? " is-writing" : ""}`}>
-          <div className="bl-selection-copy">
-            <span>Selected</span>
-            <p>{selection.text}</p>
+      <aside className={`bl-notes-dock${notesOpen ? " is-open" : ""}`}>
+        <button
+          type="button"
+          className="bl-notes-edge"
+          aria-label={`${readerQuotes.length} saved book highlights and notes`}
+          aria-expanded={notesOpen}
+          aria-controls="bl-reader-notes"
+          onClick={() => setNotesOpen((open) => !open)}
+        >
+          <Notebook size={18} weight="fill" aria-hidden />
+          <span>Notes</span>
+          {readerQuotes.length ? <em>{readerQuotes.length}</em> : null}
+        </button>
+        {!notesOpen ? (
+          <div className="bl-notes-peek" aria-hidden>
+            <strong>Book notes</strong>
+            <span>
+              {readerQuotes.length
+                ? `${readerQuotes.length} saved passage${readerQuotes.length === 1 ? "" : "s"}`
+                : "Nothing saved yet"}
+            </span>
+            {readerQuotes.slice(0, 2).map((quote) => (
+              <q key={quote.id}>{quote.text}</q>
+            ))}
+            <small>Click once to open</small>
           </div>
+        ) : null}
+        {notesOpen ? (
+          <section id="bl-reader-notes" className="bl-notes-drawer" aria-label="Book notes">
+            <header>
+              <div>
+                <span>Book memory</span>
+                <h2>Highlights & notes</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotesOpen(false)}
+                aria-label="Close book notes"
+              >
+                <X size={16} aria-hidden />
+              </button>
+            </header>
+            <p className="bl-notes-intro">
+              Grouped section by section. Click any passage to return to it.
+            </p>
+            {quoteGroups.length ? (
+              <div className="bl-notes-groups">
+                {quoteGroups.map(([label, quotes]) => (
+                  <section key={label}>
+                    <h3>{label}</h3>
+                    {quotes.map((quote) => {
+                      const note = quote.interpretation || quote.note;
+                      return (
+                        <button
+                          key={quote.id}
+                          type="button"
+                          className={note ? "has-note" : ""}
+                          onClick={() => openSavedQuote(quote)}
+                          disabled={!quote.location}
+                        >
+                          <q>{quote.text}</q>
+                          {note ? <span>{note}</span> : <small>Highlight</small>}
+                        </button>
+                      );
+                    })}
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className="bl-notes-empty">
+                <HighlighterCircle size={24} aria-hidden />
+                <strong>Your margin is clear.</strong>
+                <span>Select a passage to highlight it or add a thought.</span>
+              </div>
+            )}
+          </section>
+        ) : null}
+      </aside>
+
+      {notePopover ? (
+        <aside
+          className={`bl-note-popover${notePopover.above ? " is-above" : ""}${
+            notePopover.pinned ? " is-pinned" : ""
+          }`}
+          style={
+            {
+              ["--note-x" as string]: `${notePopover.x}px`,
+              ["--note-y" as string]: `${notePopover.y}px`,
+            } as CSSProperties
+          }
+          aria-label="Saved annotation"
+        >
+          <span>
+            {notePopover.quote.interpretation || notePopover.quote.note
+              ? "Your note"
+              : "Highlighted"}
+          </span>
+          {notePopover.pinned ? (
+            <button
+              type="button"
+              onClick={() => setNotePopover(null)}
+              aria-label="Close annotation"
+            >
+              <X size={13} aria-hidden />
+            </button>
+          ) : null}
+          <q>{notePopover.quote.text}</q>
+          {notePopover.quote.interpretation || notePopover.quote.note ? (
+            <p>{notePopover.quote.interpretation || notePopover.quote.note}</p>
+          ) : null}
+        </aside>
+      ) : null}
+
+      {selection ? (
+        <div
+          className={`bl-smart-selection${addingThought ? " is-writing" : ""}${
+            selection.above ? " is-above" : ""
+          }`}
+          style={
+            {
+              ["--selection-x" as string]: `${selection.x}px`,
+              ["--selection-y" as string]: `${selection.y}px`,
+            } as CSSProperties
+          }
+        >
           {addingThought ? (
             <div className="bl-selection-thought">
+              <p>{selection.text}</p>
               <textarea
                 value={thoughtDraft}
                 placeholder="Your interpretation, connection, or question..."
