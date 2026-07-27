@@ -1662,56 +1662,121 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   text-decoration: none;
 }
 
-/* ── Water: thin bar + plain text (NO underlines, NO boxes) ── */
-.fx-water-title {
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-size: 12px;
-  margin: 0 0 4px;
+/* ── Water: compact, tactile daily control ── */
+.fx-water {
+  margin: 14px 0 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--fx-line);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(56, 189, 248, 0.12), transparent 38%),
+    rgba(255, 255, 255, 0.025);
+}
+
+.fx-water-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.fx-water-eyebrow {
+  margin: 0 0 5px;
   color: var(--fx-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
   line-height: 1;
+  text-transform: uppercase;
+}
+
+.fx-water-title {
+  margin: 0;
+  color: var(--fx-text);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  text-transform: none;
+}
+
+.fx-water-title span {
+  color: var(--fx-muted);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.fx-water-percent {
+  display: inline-grid;
+  min-width: 42px;
+  min-height: 28px;
+  place-items: center;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.09);
+  color: #7dd3fc;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .fx-water-bar {
-  height: 4px;
+  height: 9px;
   border-radius: 999px;
   background: var(--fx-water-track, rgba(255, 255, 255, 0.12));
   overflow: hidden;
-  margin: 0 0 6px;
+  margin: 0 0 14px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .fx-water-fill {
   height: 100%;
   border-radius: 999px;
-  /* green → blue fill like Melani */
-  background: linear-gradient(90deg, #4ade80 0%, #38bdf8 55%, #60a5fa 100%);
-  transition: width 0.2s ease;
+  background: linear-gradient(90deg, #22d3ee 0%, #38bdf8 52%, #818cf8 100%);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+  transition: width 0.28s ease;
+}
+
+.fx-water-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .fx-water-btns {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 16px;
-  margin: 0 0 4px;
+  gap: 7px;
+  margin: 0;
 }
 
 .fx-water-btn {
-  border: none;
-  background: none;
-  border-radius: 0;
-  padding: 0;
+  min-height: 30px;
+  border: 1px solid var(--fx-line);
+  background: rgba(255, 255, 255, 0.045);
+  border-radius: 999px;
+  padding: 0 11px;
   margin: 0;
   color: var(--fx-text);
   font-family: var(--fx-font);
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   text-decoration: none !important;
   line-height: 1;
+  transition: background 0.15s ease, border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .fx-water-btn:hover:not(:disabled) {
   color: var(--fx-strong);
-  background: none;
+  border-color: rgba(56, 189, 248, 0.32);
+  background: rgba(56, 189, 248, 0.1);
+  transform: translateY(-1px);
   text-decoration: none !important;
 }
 
@@ -1723,25 +1788,42 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
 .fx-water-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 16px;
+  gap: 4px;
 }
 
 .fx-water-action {
   border: none;
   background: none;
-  padding: 0;
+  padding: 5px 7px;
   margin: 0;
   color: var(--fx-muted);
   font-family: var(--fx-font);
-  font-size: 13px;
+  font-size: 11px;
   cursor: pointer;
   text-decoration: none !important;
   line-height: 1;
+  border-radius: 6px;
 }
 
 .fx-water-action:hover:not(:disabled) {
   color: var(--fx-strong);
+  background: rgba(255, 255, 255, 0.05);
   text-decoration: none !important;
+}
+
+html.theme-light .fx-page .fx-water {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(56, 189, 248, 0.1), transparent 38%),
+    rgba(255, 255, 255, 0.72);
+  box-shadow: 0 8px 28px rgba(37, 48, 62, 0.045);
+}
+
+html.theme-light .fx-page .fx-water-percent {
+  color: #0369a1;
+}
+
+html.theme-light .fx-page .fx-water-btn {
+  background: rgba(255, 255, 255, 0.78);
 }
 
 .fx-water-action:disabled {

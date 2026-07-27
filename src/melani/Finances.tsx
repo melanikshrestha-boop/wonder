@@ -3024,37 +3024,46 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   })()}
                 </svg>
                 <InteractivePieChart
-                  size={168}
-                  holeRatio={0.48}
+                  size={196}
+                  holeRatio={0.64}
                   showLegend
-                  centerPrimary={
-                    annualBook.potentialToSave >= 0
-                      ? money(annualBook.potentialToSave)
-                      : money(annualBook.expenses.annualTotal)
-                  }
+                  className="wd-annual-donut"
+                  centerPrimary={money(Math.abs(annualBook.potentialToSave))}
                   centerSecondary={
-                    annualBook.potentialToSave >= 0 ? "potential" : "expenses"
+                    annualBook.potentialToSave >= 0
+                      ? "available to save"
+                      : "over income"
                   }
                   formatValue={(v, frac) =>
                     `${money(v)} · ${(frac * 100).toFixed(0)}%`
                   }
-                  slices={[
-                    {
-                      name: "Income",
-                      value: annualBook.split.income,
-                      color: "#1f6f8b",
-                    },
-                    {
-                      name: "Expenses",
-                      value: annualBook.split.expenses,
-                      color: "#e8743b",
-                    },
-                    {
-                      name: "Potential to save",
-                      value: Math.max(0, annualBook.split.saved),
-                      color: "#2e7d32",
-                    },
-                  ].filter((s) => s.value > 0)}
+                  slices={
+                    annualBook.potentialToSave >= 0
+                      ? [
+                          {
+                            name: "Spent",
+                            value: annualBook.expenses.annualTotal,
+                            color: "#f59e7a",
+                          },
+                          {
+                            name: "Available to save",
+                            value: annualBook.potentialToSave,
+                            color: "#158f72",
+                          },
+                        ].filter((s) => s.value > 0)
+                      : [
+                          {
+                            name: "Income",
+                            value: annualBook.income.annualTotal,
+                            color: "#3b82a0",
+                          },
+                          {
+                            name: "Over income",
+                            value: Math.abs(annualBook.potentialToSave),
+                            color: "#dc5b50",
+                          },
+                        ].filter((s) => s.value > 0)
+                  }
                 />
               </div>
 
@@ -3134,7 +3143,9 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               <div className="wd-panel-head">
                 <h2>Monthly plan · {ym}</h2>
                 <span className="wd-muted">
-                  {money(planSpent)} of {money(planPlanned)} planned
+                  {planPlanned > 0
+                    ? `${money(planSpent)} of ${money(planPlanned)} planned`
+                    : `${money(planSpent)} spent · no plan yet`}
                 </span>
               </div>
 
@@ -3179,23 +3190,34 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 const pct =
                   b.planned > 0
                     ? Math.min(100, Math.round((spent / b.planned) * 100))
-                    : spent > 0
-                      ? 100
-                      : 0;
+                    : 0;
                 const over = b.planned > 0 && spent > b.planned;
+                const unplanned = b.planned <= 0;
                 return (
-                  <div key={b.category} className="wd-budget-row">
+                  <div
+                    key={b.category}
+                    className={`wd-budget-row${unplanned ? " is-unplanned" : ""}${over ? " is-over" : ""}`}
+                  >
                     <div className="wd-budget-main">
-                      <strong>{b.category}</strong>
+                      <div className="wd-budget-heading">
+                        <strong>{b.category}</strong>
+                        <span>
+                          {money(spent)} spent
+                          {b.planned > 0 ? ` of ${money(b.planned)}` : ""}
+                        </span>
+                      </div>
                       <div className="wd-progress">
                         <i
                           className={over ? "is-over" : ""}
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <em>
-                        Spent {money(spent)}
-                        {b.planned > 0 ? ` · Plan ${money(b.planned)}` : " · no plan yet"}
+                      <em className={unplanned ? "is-unplanned" : undefined}>
+                        {unplanned
+                          ? "No plan yet"
+                          : over
+                            ? `${money(spent - b.planned)} over plan`
+                            : `${Math.max(0, 100 - pct)}% remaining`}
                       </em>
                     </div>
                     <div className="wd-nudge">
@@ -4751,4 +4773,3 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     </div>
   );
 }
-

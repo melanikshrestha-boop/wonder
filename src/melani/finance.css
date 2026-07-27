@@ -1449,35 +1449,86 @@ html body .wd strong {
 .wd-budget-row {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 10px;
+  gap: 18px;
   align-items: center;
-  padding: 8px 2px;
-  border-bottom: 1px solid var(--wd-hairline);
+  padding: 14px 16px;
+  margin: 0 0 8px;
+  border: 1px solid rgba(26, 28, 34, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: 0 1px 2px rgba(28, 36, 48, 0.025);
+  transition: border-color 0.16s ease, background 0.16s ease,
+    transform 0.16s ease;
 }
 
 .wd-budget-row:last-child {
-  border-bottom: 0;
+  margin-bottom: 0;
+}
+
+.wd-budget-row:hover {
+  border-color: rgba(15, 118, 110, 0.17);
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+
+.wd-budget-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .wd-budget-main strong {
-  display: block;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  margin-bottom: 3px;
-  line-height: 1;
+  line-height: 1.2;
   color: var(--wd-text);
+}
+
+.wd-budget-heading > span {
+  color: var(--wd-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wd-budget-main .wd-progress {
+  height: 7px;
+  margin-top: 8px;
+  background: rgba(26, 28, 34, 0.07);
+}
+
+.wd-budget-row.is-unplanned .wd-progress {
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(26, 28, 34, 0.055) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+.wd-budget-row.is-unplanned .wd-progress i {
+  min-width: 0;
+  box-shadow: none;
 }
 
 .wd-budget-main em {
   display: block;
-  margin-top: 3px;
+  margin-top: 6px;
   font-style: normal;
   font-size: 11px;
   color: var(--wd-secondary);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   line-height: 1;
+}
+
+.wd-budget-main em.is-unplanned {
+  color: #9a6a23;
+}
+
+.wd-budget-row.is-over {
+  border-color: rgba(185, 28, 28, 0.16);
 }
 
 .wd-budget-row label {
@@ -3051,22 +3102,50 @@ html:not(.theme-light) .wd-pie-hover-val {
   opacity: 0.28;
 }
 .wd-pie-center-main {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 650;
   fill: var(--wd-text, #1a1c22);
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--wd-font);
 }
 .wd-pie-center-hot {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 650;
   fill: var(--wd-text, #1a1c22);
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--wd-font);
 }
 .wd-pie-center-sub {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   fill: var(--wd-secondary, rgba(26, 28, 34, 0.55));
-  font-family: "Source Serif 4", Georgia, serif;
+  font-family: var(--wd-font);
+}
+
+.wd-annual-donut {
+  max-width: 440px;
+}
+
+.wd-annual-donut .wd-pie-disk {
+  width: 196px;
+}
+
+.wd-annual-donut .wd-pie-svg {
+  cursor: default;
+}
+
+.wd-annual-donut .wd-pie-slice.is-hot {
+  stroke: rgba(26, 28, 34, 0.38) !important;
+  stroke-width: 1.4px;
+  filter: brightness(1.02);
+}
+
+.wd-annual-donut .wd-pie-legend {
+  max-width: 210px;
+}
+
+.wd-annual-donut .wd-pie-legend li {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  padding: 7px 8px;
 }
 html:not(.theme-light) .wd-pie-center-main,
 html:not(.theme-light) .wd-pie-center-hot {
