@@ -1903,57 +1903,42 @@ function WaterTracker({ day }: { day: string }) {
 
   return (
     <section className="fx-section fx-water">
-      <div className="fx-water-heading">
-        <div>
-          <p className="fx-water-eyebrow">Hydration</p>
-          <h2 className="fx-h2 fx-water-title">
-            {liters} L <span>of {goalL} L</span>
-          </h2>
-        </div>
-        <span className="fx-water-percent">{pctFill}%</span>
-      </div>
-      <div
-        className="fx-water-bar"
-        role="progressbar"
-        aria-label="Daily water"
-        aria-valuemin={0}
-        aria-valuemax={goal}
-        aria-valuenow={ml}
-      >
+      <h2 className="fx-h2 fx-water-title">
+        Water — {liters} / {goalL} L
+      </h2>
+      <div className="fx-water-bar" aria-hidden>
         <div className="fx-water-fill" style={{ width: `${pctFill}%` }} />
       </div>
-      <div className="fx-water-controls">
-        <div className="fx-water-btns">
-          {WATER_ADDS.map((b) => (
-            <button
-              key={b.ml}
-              type="button"
-              className="fx-water-btn"
-              onClick={() => add(b.ml)}
-              disabled={ml >= goal}
-            >
-              {b.label}
-            </button>
-          ))}
-        </div>
-        <div className="fx-water-actions">
+      <div className="fx-water-btns">
+        {WATER_ADDS.map((b) => (
           <button
+            key={b.ml}
             type="button"
-            className="fx-water-action"
-            onClick={undoLast}
-            disabled={!hist.length}
+            className="fx-water-btn"
+            onClick={() => add(b.ml)}
+            disabled={ml >= goal}
           >
-            Undo
+            {b.label}
           </button>
-          <button
-            type="button"
-            className="fx-water-action"
-            onClick={reset}
-            disabled={ml <= 0}
-          >
-            Reset
-          </button>
-        </div>
+        ))}
+      </div>
+      <div className="fx-water-actions">
+        <button
+          type="button"
+          className="fx-water-action"
+          onClick={undoLast}
+          disabled={!hist.length}
+        >
+          Undo last
+        </button>
+        <button
+          type="button"
+          className="fx-water-action"
+          onClick={reset}
+          disabled={ml <= 0}
+        >
+          Reset today
+        </button>
       </div>
     </section>
   );

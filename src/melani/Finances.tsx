@@ -197,6 +197,19 @@ const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "sql", label: "SQL", icon: "⌗" },
 ];
 
+const ALL_TAB_IDS: TabId[] = [
+  "overview",
+  "worth",
+  "transactions",
+  "credit",
+  "plan",
+  "subscriptions",
+  "goals",
+  "insights",
+  "accounts",
+  "sql",
+];
+
 const KINDS: { id: AccountKind; label: string }[] = [
   { id: "checking", label: "Checking" },
   { id: "savings", label: "Savings" },
@@ -228,6 +241,46 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
     cats: ["Other"],
   },
 ];
+
+function LedgerFilterMenu({
+  value,
+  options,
+  allLabel,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  allLabel: string;
+  onChange: (value: string) => void;
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const display = value === "all" ? allLabel : value;
+  return (
+    <details ref={detailsRef} className="wd-filter-menu">
+      <summary>{display}</summary>
+      <div className="wd-filter-popover" role="menu" aria-label={allLabel}>
+        {[...options, "all"].map((option) => {
+          const label = option === "all" ? allLabel : option;
+          return (
+            <button
+              key={option}
+              type="button"
+              role="menuitemradio"
+              aria-checked={value === option}
+              className={value === option ? "is-selected" : undefined}
+              onClick={() => {
+                onChange(option);
+                if (detailsRef.current) detailsRef.current.open = false;
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
 
 function mapQuote(raw: Record<string, unknown>): Quote {
   return {
@@ -309,12 +362,12 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     },
     []
   );
-  // Books (capital command) is the default desk — deep-link: ?tab=transactions|plan|…
+  // Ledger is the Finance home — deep-link: ?tab=overview|plan|…
   const [tab, setTab] = useState<TabId>(() => {
-    if (typeof window === "undefined") return "overview";
+    if (typeof window === "undefined") return "transactions";
     const t = new URLSearchParams(window.location.search).get("tab");
-    if (t && NAV.some((n) => n.id === t)) return t as TabId;
-    return "overview";
+    if (t && ALL_TAB_IDS.includes(t as TabId)) return t as TabId;
+    return "transactions";
   });
   // Open quant desk from URL (?desk=1 or ?copilot=1)
   const [copilotOpen, setCopilotOpen] = useState(() => {
@@ -322,15 +375,21 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     const p = new URLSearchParams(window.location.search);
     return p.get("desk") === "1" || p.get("copilot") === "1";
   });
-  // Deleted tabs fall back to Books (capital)
+  // Deleted tabs fall back to Ledger
   useEffect(() => {
-    if (!NAV.some((n) => n.id === tab)) setTab("overview");
+    if (!ALL_TAB_IDS.includes(tab)) setTab("transactions");
   }, [tab]);
+  useEffect(() => {
+    const openLedger = () => setTab("transactions");
+    window.addEventListener("wonder-finance-open-ledger", openLedger);
+    return () =>
+      window.removeEventListener("wonder-finance-open-ledger", openLedger);
+  }, []);
   // Keep ?tab= in the URL when switching sections (shareable / refresh-safe)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    if (tab === "overview") url.searchParams.delete("tab");
+    if (tab === "transactions") url.searchParams.delete("tab");
     else url.searchParams.set("tab", tab);
     window.history.replaceState({}, "", url.toString());
   }, [tab]);
@@ -1398,12 +1457,48 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   }
 
   function runSmartAction(actionId: string, tab?: TabId) {
-    if (actionId === "auto-plan" || actionId === "import" || actionId.startsWith("over-")) {
-      if (actionId === "auto-plan") autoBuildPlan();
-      else if (tab) setTab(tab);
+    if (actionId === "import" || actionId === "import-tx") {
+      fileRef.current?.click();
       return;
     }
-    if (tab) setTab(tab);
+    if (actionId === "auto-plan") {
+      autoBuildPlan();
+      return;
+    }
+    if (actionId === "reinvest-rate-low") {
+      planTighten();
+      setTab("plan");
+      return;
+    }
+    if (actionId === "need-invest-acct") {
+      const hasInvest = state?.accounts.some((a) => a.kind === "invest");
+      if (!hasInvest) {
+        patchState((s) => ({
+          ...s,
+          accounts: [
+            ...s.accounts,
+            newAccount({ name: "Invest", kind: "invest", balance: 0 }),
+          ],
+        }));
+        setImportNote("Added an Invest account. Set its current balance.");
+      }
+      setTab("accounts");
+      return;
+    }
+    if (
+      actionId.startsWith("tax-") ||
+      actionId.startsWith("adv-") ||
+      actionId === "runway" ||
+      actionId === "survival-floor"
+    ) {
+      setCopilotOpen(true);
+      return;
+    }
+    if (tab && tab !== "overview") {
+      setTab(tab);
+      return;
+    }
+    setTab("transactions");
   }
 
   async function plaidSandboxConnect() {
@@ -1669,6 +1764,64 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         {/* ════════ BOOKS — capital command (not budget theater) ════════ */}
         {tab === "overview" ? (
           <div className="wd-overview">
+            <section className="wd-panel wd-action-board" aria-label="Finance actions">
+              <div className="wd-action-board-head">
+                <div>
+                  <p className="wd-section-kicker">Books</p>
+                  <h2>Do next</h2>
+                  <p>
+                    The shortest route from today’s books to cleaner money.
+                  </p>
+                </div>
+                <span className="wd-chip">
+                  {accounting.modules.filter((m) => m.ok).length}/
+                  {accounting.modules.length} accounting checks passing
+                </span>
+              </div>
+              <ol className="wd-action-list">
+                {brief.actions.slice(0, 5).map((action, index) => (
+                  <li key={action.id} className={`wd-action-item wd-sev-${action.severity}`}>
+                    <span className="wd-action-index">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <div className="wd-action-copy">
+                      <strong>{action.title}</strong>
+                      <p>{action.detail}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="wd-btn wd-action-button"
+                      onClick={() => runSmartAction(action.id, action.tab)}
+                    >
+                      {action.cta.replace(/\s*→\s*$/, "")}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+              <div className="wd-action-footer">
+                <button
+                  type="button"
+                  className="wd-btn wd-btn-primary"
+                  onClick={() => setTab("transactions")}
+                >
+                  Open ledger
+                </button>
+                <button
+                  type="button"
+                  className="wd-btn"
+                  onClick={() => setTab("plan")}
+                >
+                  Review plan
+                </button>
+                <button
+                  type="button"
+                  className="wd-btn"
+                  onClick={() => setCopilotOpen(true)}
+                >
+                  Ask Mel
+                </button>
+              </div>
+            </section>
             {/* Capital first: deploy / keep / runway / invest — reinvest doctrine */}
             <section
               className="wd-panel wd-smart-core wd-capital-cmd"
@@ -2602,17 +2755,12 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   <option value="all">All in/out</option>
                 </select>
                 {txTypes.length > 0 ? (
-                  <select
+                  <LedgerFilterMenu
                     value={filterTxType}
-                    onChange={(e) => setFilterTxType(e.target.value)}
-                  >
-                    {txTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                    <option value="all">All types</option>
-                  </select>
+                    options={txTypes}
+                    allLabel="All types"
+                    onChange={setFilterTxType}
+                  />
                 ) : null}
                 <select
                   value={filterCat}

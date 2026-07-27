@@ -3844,6 +3844,255 @@ svg.wd-linechart {
   font-variant-numeric: tabular-nums;
 }
 
+/* ═══════════════ Finance rhythm + action-first Books ═══════════════ */
+.wd {
+  --wd-space-1: 4px;
+  --wd-space-2: 8px;
+  --wd-space-3: 12px;
+  --wd-space-4: 16px;
+  --wd-space-5: 24px;
+  --wd-space-6: 32px;
+}
+
+.wd-page,
+.wd-overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wd-space-5);
+}
+
+.wd-page > .wd-panel,
+.wd-overview > .wd-panel,
+.wd-stack > .wd-panel {
+  margin: 0;
+}
+
+.wd-panel-head {
+  gap: var(--wd-space-4);
+  margin-bottom: var(--wd-space-4);
+}
+
+.wd-subnav-bar {
+  margin-bottom: var(--wd-space-6) !important;
+}
+
+.wd-subnav-left,
+.wd-subnav-right {
+  gap: var(--wd-space-5);
+}
+
+.main.is-finances .wd-filters.wd-filters-ledger {
+  gap: var(--wd-space-3) !important;
+  margin-bottom: var(--wd-space-5) !important;
+}
+
+/* Books is an action surface. The engines still calculate everything behind it. */
+.wd-overview > :not(.wd-action-board) {
+  display: none !important;
+}
+
+.wd-action-board {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.wd-action-board-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--wd-space-5);
+  margin-bottom: var(--wd-space-5);
+}
+
+.wd-section-kicker {
+  margin: 0 0 var(--wd-space-2);
+  color: var(--wd-green);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.wd-action-board-head h2 {
+  margin: 0 0 var(--wd-space-2);
+  font-size: clamp(1.55rem, 3vw, 2.1rem);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.wd-action-board-head p:not(.wd-section-kicker) {
+  margin: 0;
+  color: var(--wd-secondary);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.wd-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wd-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wd-action-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--wd-space-4);
+  min-height: 72px;
+  padding: var(--wd-space-4);
+  border: 1px solid rgba(26, 28, 34, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.wd-action-index {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--wd-panel-2);
+  color: var(--wd-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wd-action-copy {
+  min-width: 0;
+}
+
+.wd-action-copy strong {
+  display: block;
+  margin-bottom: var(--wd-space-1);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.wd-action-copy p {
+  max-width: 68rem;
+  margin: 0;
+  color: var(--wd-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.wd-action-button {
+  min-width: 132px;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.wd-action-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--wd-space-2);
+  margin-top: var(--wd-space-5);
+}
+
+.wd-auto-bar {
+  gap: var(--wd-space-2);
+  margin-bottom: var(--wd-space-4);
+}
+
+.wd-budget-row {
+  gap: var(--wd-space-4);
+  padding: var(--wd-space-4);
+  margin-bottom: var(--wd-space-3);
+}
+
+@media (max-width: 720px) {
+  .wd-action-board-head {
+    flex-direction: column;
+  }
+
+  .wd-action-item {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .wd-action-button {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+/* Custom type menu: avoids the OS-native hard black option border. */
+.wd-filter-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.wd-filter-menu summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wd-text);
+  cursor: pointer;
+  font-size: 13px;
+  list-style: none;
+}
+
+.wd-filter-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.wd-filter-menu summary::after {
+  content: "⌄";
+  color: var(--wd-tertiary);
+  font-size: 10px;
+}
+
+.wd-filter-menu[open] summary,
+.wd-filter-menu summary:hover {
+  background: rgba(26, 28, 34, 0.05);
+}
+
+.wd-filter-popover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  min-width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid rgba(26, 28, 34, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 42px rgba(24, 32, 44, 0.14);
+}
+
+.wd-filter-popover button {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wd-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+
+.wd-filter-popover button:hover,
+.wd-filter-popover button.is-selected {
+  background: rgba(15, 118, 110, 0.09);
+  color: #0f766e;
+}
+
 /* Finance month charts — Whoop Recovery panel language */
 .wd-fin-metric.wx-panel {
   margin: 0;

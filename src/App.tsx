@@ -205,6 +205,16 @@ export default function App() {
 
   function openPage(id: string) {
     setWs((prev) => setActivePage(prev, id));
+    if (id === "pg-finance" || id === "pg-finances") {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("tab");
+        window.history.replaceState(window.history.state, "", url);
+      } catch {
+        /* Finance still opens even if URL history is unavailable. */
+      }
+      window.dispatchEvent(new Event("wonder-finance-open-ledger"));
+    }
     // Always dismiss mobile drawer + scrim when navigating
     setCompactSidebarOpen(false);
     setMoreOpen(false);
