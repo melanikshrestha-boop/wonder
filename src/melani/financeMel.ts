@@ -14,6 +14,7 @@ import {
 import { answerMathEngine } from "./financeMathEngine";
 import { money, type FinanceTx } from "./financeStore";
 import { isTransferLike } from "./financeTransfers";
+import { buildTaxEvidencePack } from "./taxKnowledge";
 
 /** Smartest flagship model on the xAI API (Mel bridge default). */
 export const FINANCE_MEL_MODEL = "grok-4.5";
@@ -130,7 +131,13 @@ Intelligence bar (non-negotiable):
 - When you compute, show: formula, inputs, intermediate step, result, assumption that breaks it.
 - Never invent ledger rows, balances, merchants, or APRs. If missing, say what input is missing.
 - HIGHLIGHTS in the evidence pack are hers only. Never invent a quote.
-- Not personalized financial advice: models, scenarios, and education only.
+- For tax questions, distinguish ledger facts, user-provided facts, assumptions, and IRS rules.
+- Cite IRS Publication 17 by printed page for every material tax claim.
+- Never call a rough scenario a return, filing result, or amount owed.
+- Before a personal tax conclusion, identify missing facts such as filing status, age, state,
+  dependents, residency, W-2/1099 forms, business status, basis, and prior payments.
+- Publication 17 is a tax-year-2025 source. Say when a different year or a newer IRS source is needed.
+- Do not hide behind a generic disclaimer. Give the exact rule, math, uncertainty, and next document needed.
 
 Math you must be ready to do precisely:
 TVM (FV/PV/annuity/growing annuity), APR↔APY, Fisher real returns, amortisation, payoff loops,
@@ -180,6 +187,7 @@ export async function askFinanceMel(
       pageTitle: "Finances",
       maxChars: 3200,
     });
+    const taxPack = await buildTaxEvidencePack(question);
     // Local quant always runs: exact arithmetic is not delegated to the LLM
     const grounded = answerCopilot(question, ctx, history[history.length - 1]);
     const quant = answerMathEngine(question, ctx);
@@ -212,7 +220,8 @@ export async function askFinanceMel(
         model: FINANCE_MEL_MODEL,
         live_context:
           buildFinanceLiveContext(ctx, question) +
-          (mathBlock ? `\n\n${mathBlock}` : ""),
+          (mathBlock ? `\n\n${mathBlock}` : "") +
+          (taxPack.text ? `\n\n${taxPack.text}` : ""),
         system_context: FINANCE_SYSTEM,
       }),
     });
@@ -249,6 +258,7 @@ export async function askFinanceMel(
           ...(quant ? ["local quant engine"] : []),
           ...(shelfSource ? [shelfSource] : []),
           ...pack.sources.slice(0, 4),
+          ...taxPack.sources,
         ],
         data: base.data,
         chart: base.chart,
