@@ -1700,7 +1700,8 @@ html.theme-light .bl .bl-greats-after-books {
   position: relative;
   height: auto;
   min-height: 0;
-  overflow: hidden; /* normal reading stays tidy */
+  overflow: hidden;
+  overflow-x: hidden;
   background: #080808;
   /* Keep the reading page column centered in the frame */
   display: flex;
@@ -1740,18 +1741,29 @@ html.theme-light .bl .bl-greats-after-books {
   height: 100%;
   min-height: inherit;
   transform-style: preserve-3d;
-  overflow: visible; /* let the page fly past the frame */
+  overflow: hidden;
 }
 
 .bl-reader-stage {
   position: relative;
   z-index: 1;
   width: 100%;
+  max-width: 100%;
   height: 100%;
+  overflow-x: hidden;
 }
 
 .bl-reader-stage iframe {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
   background: #080808 !important;
+}
+
+.bl-reader-stage .epub-container {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-x: none;
 }
 
 .bl-reader.is-page-reader .bl-reader-stage {

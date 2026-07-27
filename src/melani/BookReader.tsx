@@ -150,6 +150,10 @@ function readerThemeRules(theme: BooksTheme, font: ReadingFont) {
       color: `${ink} !important`,
       background: `${paper} !important`,
       "font-family": `${readingFontStack(font)} !important`,
+      width: "100% !important",
+      "max-width": "100% !important",
+      "overflow-x": "hidden !important",
+      "box-sizing": "border-box !important",
     },
     body: {
       color: `${ink} !important`,
@@ -166,6 +170,18 @@ function readerThemeRules(theme: BooksTheme, font: ReadingFont) {
       color: `${ink} !important`,
       "font-family": `${readingFontStack(font)} !important`,
       "line-height": "1.58 !important",
+      "overflow-wrap": "anywhere !important",
+      "word-break": "normal !important",
+      hyphens: "auto !important",
+    },
+    "img, svg, video, canvas": {
+      "max-width": "100% !important",
+      height: "auto !important",
+    },
+    pre: {
+      "max-width": "100% !important",
+      "white-space": "pre-wrap !important",
+      "overflow-wrap": "anywhere !important",
     },
     "h1, h2, h3, h4, h5, h6": {
       color: `${heading} !important`,
@@ -228,11 +244,7 @@ export function BookReader({
   } | null>(null);
   /** Live leaf pose while dragging / flying (ref stays fresh mid-gesture) */
   const leafRef = useRef<LeafPose>(IDLE_LEAF);
-  const [isNarrow, setIsNarrow] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches
-  );
-  const readingModeRef = useRef<"pages" | "scroll">(isNarrow ? "scroll" : "pages");
-  const appliedModeRef = useRef<"pages" | "scroll">(readingModeRef.current);
+  const readingModeRef = useRef<"pages" | "scroll">("scroll");
   const [chapters, setChapters] = useState<Array<NavItem & { depth: number }>>([]);
   const [chapterHref, setChapterHref] = useState("");
   const [showContents, setShowContents] = useState(() => !resumableCfi);
@@ -632,22 +644,44 @@ export function BookReader({
     return false;
   }
 
+  function readerScrollContainer(): HTMLElement | null {
+    return stageRef.current?.querySelector<HTMLElement>(".epub-container") ?? null;
+  }
+
+  function scrollReaderBy(amount: number, behavior: ScrollBehavior = "smooth") {
+    readerScrollContainer()?.scrollBy({ top: amount, left: 0, behavior });
+  }
+
   function handleReaderKey(event: KeyboardEvent) {
-    // Simple page turns: ← →, PageUp/PageDown, Space, j/k (works in pages + scroll)
     if (event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) return;
     const key = event.key;
-    const next =
-      key === "ArrowRight" ||
-      key === "PageDown" ||
-      key === "j" ||
-      key === "J" ||
-      (key === " " && !event.shiftKey);
-    const prev =
-      key === "ArrowLeft" ||
-      key === "PageUp" ||
-      key === "k" ||
-      key === "K" ||
-      (key === " " && event.shiftKey);
+    if (readingModeRef.current === "scroll") {
+      const container = readerScrollContainer();
+      const page = (container?.clientHeight || window.innerHeight) * 0.82;
+      const scrollAmount =
+        key === "PageDown" || (key === " " && !event.shiftKey)
+          ? page
+          : key === "PageUp" || (key === " " && event.shiftKey)
+            ? -page
+            : key === "ArrowDown" || key === "j" || key === "J"
+              ? 64
+              : key === "ArrowUp" || key === "k" || key === "K"
+                ? -64
+                : key === "Home"
+                  ? -(container?.scrollHeight || page)
+                  : key === "End"
+                    ? container?.scrollHeight || page
+                    : null;
+      if (scrollAmount !== null) {
+        event.preventDefault();
+        event.stopPropagation();
+        scrollReaderBy(scrollAmount);
+        return;
+      }
+    }
+
+    const next = key === "ArrowRight";
+    const prev = key === "ArrowLeft";
     if (!next && !prev) return;
     event.preventDefault();
     event.stopPropagation();
@@ -655,7 +689,23 @@ export function BookReader({
   }
 
   function handleReaderWheel(event: WheelEvent) {
-    if (readingModeRef.current !== "pages") return;
+    if (readingModeRef.current === "scroll") {
+      const container = readerScrollContainer();
+      if (!container) return;
+      const factor =
+        event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? 18
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? container.clientHeight
+            : 1;
+      const primaryDelta =
+        Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+      if (!primaryDelta) return;
+      event.preventDefault();
+      container.scrollBy({ top: primaryDelta * factor, left: 0, behavior: "auto" });
+      return;
+    }
+
     const horizontal = Math.abs(event.deltaX) > Math.max(10, Math.abs(event.deltaY) * 0.7) || event.shiftKey;
     if (!horizontal) return;
     event.preventDefault();
@@ -670,14 +720,6 @@ export function BookReader({
       wheelState.current.amount = 0;
     }
   }
-
-  useEffect(() => {
-    const query = window.matchMedia("(max-width: 760px)");
-    const update = () => setIsNarrow(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -718,7 +760,7 @@ export function BookReader({
     const rendition = epub.renderTo(stage, {
       width: "100%",
       height: "100%",
-      flow: readingModeRef.current === "scroll" ? "scrolled-doc" : "paginated",
+      flow: "scrolled-doc",
       spread: "none",
       manager: "default",
     });
@@ -922,18 +964,6 @@ export function BookReader({
     };
   }, [book.id, book.readerUrl]);
 
-  useEffect(() => {
-    const nextMode = isNarrow ? "scroll" : "pages";
-    readingModeRef.current = nextMode;
-    if (appliedModeRef.current === nextMode) return;
-    appliedModeRef.current = nextMode;
-    const rendition = renditionRef.current;
-    if (!rendition) return;
-    rendition.flow(nextMode === "scroll" ? "scrolled-doc" : "paginated");
-    wheelState.current.amount = 0;
-    if (lastCfi.current) void rendition.display(lastCfi.current);
-  }, [isNarrow]);
-
   function openChapter(href: string) {
     if (!href || !renditionRef.current) return;
     setShowContents(false);
@@ -1084,7 +1114,7 @@ export function BookReader({
 
   return (
     <div
-      className={`bl-reader ${isNarrow ? "is-scroll-reader" : "is-page-reader"}`}
+      className="bl-reader is-scroll-reader"
       data-reader-theme={theme}
       data-reader-font={font}
     >
@@ -1138,12 +1168,12 @@ export function BookReader({
           </select>
         </label>
 
-        <div className="bl-page-nav" aria-label="Turn page">
+        <div className="bl-page-nav" aria-label="Change section">
           <button
             type="button"
             onClick={() => turnPage("prev")}
-            title="Previous page (←)"
-            aria-label="Previous page"
+            title="Previous section (←)"
+            aria-label="Previous section"
           >
             <CaretLeft size={15} weight="bold" aria-hidden />
             <span>Prev</span>
@@ -1152,8 +1182,8 @@ export function BookReader({
             type="button"
             className="bl-page-nav-next"
             onClick={() => turnPage("next")}
-            title="Next page (→)"
-            aria-label="Next page"
+            title="Next section (→)"
+            aria-label="Next section"
           >
             <span>Next</span>
             <CaretRight size={15} weight="bold" aria-hidden />
@@ -1242,11 +1272,7 @@ export function BookReader({
       </div>
       {imprintError ? <p className="bl-imprint-error">{imprintError}</p> : null}
 
-      <div
-        className={`bl-reader-stage-wrap${leaf.active ? " is-free-leaf" : ""}${
-          !isNarrow ? " is-3d-pages" : ""
-        }`}
-      >
+      <div className={`bl-reader-stage-wrap${leaf.active ? " is-free-leaf" : ""}`}>
         {showContents ? (
           <section className="bl-reader-toc" aria-label="Table of Contents">
             <div className="bl-reader-toc-glow" aria-hidden />
@@ -1296,7 +1322,7 @@ export function BookReader({
                 <p>This EPUB does not include a chapter list.</p>
               )}
               <p className="bl-reader-toc-hint">
-                ← Prev · Next → · arrow keys turn pages
+                Scroll or ↓ / Page Down to read · Prev / Next changes section
               </p>
             </div>
           </section>
@@ -1327,46 +1353,6 @@ export function BookReader({
             <div className="bl-page-leaf-glow" />
           </div>
 
-          {/*
-            Grab from ANY edge (top/right/bottom/left), then drag anywhere —
-            up, down, diagonal, full circles. Middle stays free for text select.
-          */}
-          {!isNarrow && !showContents ? (
-            <div className="bl-free-hit-frame" aria-hidden>
-              {(["top", "right", "bottom", "left"] as const).map((edge) => (
-                <div
-                  key={edge}
-                  className={`bl-free-hit bl-free-hit-${edge}`}
-                  title="Grab any edge — drag anywhere (even in circles) to turn"
-                  onPointerDown={(event) => {
-                    if (event.button !== 0) return;
-                    if (!beginFreeDrag(event.clientX, event.clientY)) return;
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                  }}
-                  onPointerMove={(event) => {
-                    if (!freeDrag.current?.active) return;
-                    moveFreeDrag(event.clientX, event.clientY);
-                  }}
-                  onPointerUp={(event) => {
-                    if (!freeDrag.current?.active && !leafRef.current.active) return;
-                    try {
-                      event.currentTarget.releasePointerCapture(event.pointerId);
-                    } catch {
-                      /* ignore */
-                    }
-                    endFreeDrag(event.clientX, event.clientY);
-                  }}
-                  onPointerCancel={() => {
-                    const drag = freeDrag.current;
-                    freeDrag.current = null;
-                    if (drag?.active || leafRef.current.active) {
-                      void snapLeafBack(leafRef.current);
-                    }
-                  }}
-                />
-              ))}
-            </div>
-          ) : null}
         </div>
       </div>
 
