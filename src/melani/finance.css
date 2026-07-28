@@ -4541,6 +4541,12 @@ svg.wd-linechart {
   text-transform: uppercase;
 }
 
+.wd-filter-empty {
+  margin: 4px 8px 6px;
+  color: var(--wd-tertiary);
+  font-size: 12px;
+}
+
 /* Finance month charts — Whoop Recovery panel language */
 .wd-fin-metric.wx-panel {
   margin: 0;

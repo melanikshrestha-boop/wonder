@@ -486,6 +486,26 @@ function LedgerFilterMenu({
   );
 }
 
+function visibleCategoryOptionsForFilter(
+  kind: TxKind,
+  prefs: CategoryPrefs,
+  rows: FinanceTx[]
+): string[] {
+  const present = new Set(
+    rows
+      .filter((tx) => tx.kind === kind)
+      .map((tx) => normalizedLedgerCategory(tx))
+      .filter((category) => !(kind === "income" && category === "Other"))
+  );
+  if (present.size === 0) return [];
+  const known = dedupeCategories([
+    ...baseCategoriesForKind(kind),
+    ...prefs[kind],
+    ...[...present],
+  ]);
+  return known.filter((category) => present.has(category));
+}
+
 function LedgerCategoryFilter({
   kind,
   category,
@@ -549,24 +569,28 @@ function LedgerCategoryFilter({
               <span>All categories</span>
               <small>Income and expenses</small>
             </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="is-income-choice"
-              onClick={() => setStage("income")}
-            >
-              <span>Income</span>
-              <small>Money coming in →</small>
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="is-expense-choice"
-              onClick={() => setStage("expense")}
-            >
-              <span>Expenses</span>
-              <small>Money going out →</small>
-            </button>
+            {incomeOptions.length > 0 ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="is-income-choice"
+                onClick={() => setStage("income")}
+              >
+                <span>Income</span>
+                <small>Money coming in →</small>
+              </button>
+            ) : null}
+            {expenseOptions.length > 0 ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="is-expense-choice"
+                onClick={() => setStage("expense")}
+              >
+                <span>Expenses</span>
+                <small>Money going out →</small>
+              </button>
+            ) : null}
           </>
         ) : (
           <>
@@ -604,6 +628,9 @@ function LedgerCategoryFilter({
                 {labelFor(stage, option)}
               </button>
             ))}
+            {options.length === 0 ? (
+              <p className="wd-filter-empty">No matching categories.</p>
+            ) : null}
           </>
         )}
       </div>
@@ -1524,36 +1551,25 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     setBooksExtra(reopenMonth(ym, booksExtra));
   };
 
-  const ledger = useMemo(() => {
+  const ledgerScopeRows = useMemo(() => {
     let list = [...txs];
     if (reviewFilter) {
       const ids = new Set(reviewFilter.txIds);
       list = list.filter((t) => ids.has(t.id));
     }
     const searching = filterQ.trim().length > 0;
-    // A search looks across ALL your books, not just the visible month
-    if (!searching) {
+    // A search looks across ALL your books, not just the visible month.
+    // A review filter also owns the ledger view: "duplicate suspects" means
+    // show those exact lines instead of quietly hiding them under month/year.
+    if (!searching && !reviewFilter) {
       if (filterMonth !== "all") {
         list = list.filter((t) => t.date.startsWith(filterMonth));
       } else {
         list = list.filter((t) => t.date.startsWith(String(filterYear)));
       }
     }
-    if (filterKind !== "all") {
-      // REV/EXP are economic activity. Transfers and card payments remain
-      // visible under All and their own category/type filters, but are never
-      // mislabeled as revenue or expense.
-      list = list.filter(
-        (t) =>
-          t.kind === filterKind &&
-          (filterCat !== "all" || !isLedgerMovement(t))
-      );
-    }
     if (filterTxType !== "all")
       list = list.filter((t) => txTypeOf(t) === filterTxType);
-    if (filterCat !== "all") {
-      list = list.filter((t) => normalizedLedgerCategory(t) === filterCat);
-    }
     if (searching) {
       // Every word must match somewhere: payee, note, category, type,
       // date, or amount ("zelle 300", "chase jul", "8.99" all work)
@@ -1562,6 +1578,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         const hay = [
           t.merchant || "",
           t.note || "",
+          normalizedLedgerCategory(t),
           t.category || "",
           txTypeOf(t),
           t.date,
@@ -1572,6 +1589,74 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
           .toLowerCase();
         return words.every((w) => hay.includes(w));
       });
+    }
+    return list;
+  }, [
+    txs,
+    filterMonth,
+    filterYear,
+    filterTxType,
+    filterQ,
+    reviewFilter,
+  ]);
+
+  const incomeFilterOptions = useMemo(
+    () =>
+      visibleCategoryOptionsForFilter("income", categoryPrefs, ledgerScopeRows),
+    [categoryPrefs, ledgerScopeRows]
+  );
+  const expenseFilterOptions = useMemo(
+    () =>
+      visibleCategoryOptionsForFilter("expense", categoryPrefs, ledgerScopeRows),
+    [categoryPrefs, ledgerScopeRows]
+  );
+
+  const reviewFilterMatchedCount = ledgerScopeRows.length;
+
+  useEffect(() => {
+    if (!reviewFilter) return;
+    const ids = new Set(reviewFilter.txIds);
+    const hasLiveRows = txs.some((transaction) => ids.has(transaction.id));
+    if (!hasLiveRows) setReviewFilter(null);
+  }, [reviewFilter, txs]);
+
+  useEffect(() => {
+    if (filterCat === "all") return;
+    const hasRows = ledgerScopeRows.some(
+      (transaction) =>
+        (filterKind === "all" || transaction.kind === filterKind) &&
+        normalizedLedgerCategory(transaction) === filterCat
+    );
+    if (!hasRows) setFilterCat("all");
+  }, [filterCat, filterKind, ledgerScopeRows]);
+
+  useEffect(() => {
+    if (filterKind === "all") return;
+    const hasRows = ledgerScopeRows.some(
+      (transaction) =>
+        transaction.kind === filterKind &&
+        (filterCat !== "all" || !isLedgerMovement(transaction))
+    );
+    if (!hasRows) {
+      setFilterKind("all");
+      setFilterCat("all");
+    }
+  }, [filterCat, filterKind, ledgerScopeRows]);
+
+  const ledger = useMemo(() => {
+    let list = [...ledgerScopeRows];
+    if (filterKind !== "all") {
+      // REV/EXP are economic activity. Transfers and card payments remain
+      // visible under All and their own category/type filters, but are never
+      // mislabeled as revenue or expense.
+      list = list.filter(
+        (t) =>
+          t.kind === filterKind &&
+          (filterCat !== "all" || !isLedgerMovement(t))
+      );
+    }
+    if (filterCat !== "all") {
+      list = list.filter((t) => normalizedLedgerCategory(t) === filterCat);
     }
     const dir = sortDir === "asc" ? 1 : -1;
     list.sort((a, b) => {
@@ -1588,14 +1673,9 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     });
     return list;
   }, [
-    txs,
-    filterMonth,
-    filterYear,
+    ledgerScopeRows,
     filterKind,
-    filterTxType,
     filterCat,
-    filterQ,
-    reviewFilter,
     sortKey,
     sortDir,
   ]);
@@ -1606,13 +1686,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   );
   const zelleReviewCount = useMemo(
     () =>
-      ledger.filter(
+      ledgerScopeRows.filter(
         (transaction) =>
           /\bzelle\b/i.test(
             `${transaction.merchant || ""} ${transaction.note || ""}`
           ) && normalizedLedgerCategory(transaction) === "Uncategorized"
       ).length,
-    [ledger]
+    [ledgerScopeRows]
   );
 
   /**
@@ -1905,6 +1985,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     setFilterCat("all");
     setFilterKind("all");
     setFilterTxType("all");
+    setFilterMonth("all");
   }
 
   function filterLedgerFromChart(
@@ -3876,8 +3957,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               <div className="wd-review-filter" role="status">
                 <span>
                   Ledger filter · <strong>{reviewFilter.label}</strong> ·{" "}
-                  {reviewFilter.txIds.length} line
-                  {reviewFilter.txIds.length === 1 ? "" : "s"}
+                  {reviewFilterMatchedCount} line
+                  {reviewFilterMatchedCount === 1 ? "" : "s"}
                 </span>
                 <button
                   type="button"
@@ -3952,16 +4033,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 <LedgerCategoryFilter
                   kind={filterKind}
                   category={filterCat}
-                  incomeOptions={categoryOptionsForPicker(
-                    "income",
-                    categoryPrefs,
-                    filterKind === "income" ? filterCat : ""
-                  )}
-                  expenseOptions={categoryOptionsForPicker(
-                    "expense",
-                    categoryPrefs,
-                    filterKind === "expense" ? filterCat : ""
-                  )}
+                  incomeOptions={incomeFilterOptions}
+                  expenseOptions={expenseFilterOptions}
                   labelFor={(nextKind, nextCategory) =>
                     displayCategoryName(nextKind, nextCategory, categoryPrefs)
                   }
@@ -3997,8 +4070,19 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 </select>
               </div>
 
-              {monthBooks.length === 0 ? (
+              {txs.length === 0 ? (
                 <p className="wd-muted wd-pad">Import a bank CSV to start.</p>
+              ) : monthBooks.length === 0 ? (
+                <p className="wd-muted wd-pad">
+                  No ledger lines match these filters.{" "}
+                  <button
+                    type="button"
+                    className="wd-link"
+                    onClick={clearLedgerReview}
+                  >
+                    Clear filter
+                  </button>
+                </p>
               ) : null}
 
               {filterMonth === "all" && monthBooks.length > 0 ? (
