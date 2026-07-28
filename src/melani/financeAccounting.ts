@@ -87,6 +87,7 @@ export const CHART_OF_ACCOUNTS: CoaAccount[] = [
   { code: "4100", name: "Family support", type: "income", category: "Family" },
   { code: "5000", name: "Housing", type: "expense", category: "Housing" },
   { code: "5100", name: "Utilities", type: "expense", category: "Utilities" },
+  { code: "5150", name: "Laundry", type: "expense", category: "Laundry" },
   { code: "5200", name: "Groceries", type: "expense", category: "Groceries" },
   { code: "5300", name: "Restaurants", type: "expense", category: "Restaurants" },
   { code: "5400", name: "Transport", type: "expense", category: "Transport" },
@@ -297,8 +298,57 @@ function postingAccountFor(
  * Transfer/card pay: Debit liability or transfer, Credit cash (simplified personal books)
  */
 export function buildJournal(state: FinanceState): JournalReport {
+  const pairedCardPaymentIds = new Set<string>();
+  const unmatchedCardCredits = state.txs.filter(
+    (tx) =>
+      tx.kind === "income" &&
+      normalizeTransactionCategory(
+        tx.category,
+        `${tx.merchant || ""} ${tx.note || ""}`,
+        tx.kind
+      ) === "Credit card payment"
+  );
+  for (const payment of state.txs) {
+    if (
+      payment.kind !== "expense" ||
+      normalizeTransactionCategory(
+        payment.category,
+        `${payment.merchant || ""} ${payment.note || ""}`,
+        payment.kind
+      ) !== "Credit card payment"
+    ) {
+      continue;
+    }
+    const matchIndex = unmatchedCardCredits.findIndex(
+      (credit) =>
+        !pairedCardPaymentIds.has(credit.id) &&
+        credit.date === payment.date &&
+        Math.abs(credit.amount - payment.amount) < 0.005 &&
+        credit.accountId !== payment.accountId
+    );
+    if (matchIndex >= 0) {
+      pairedCardPaymentIds.add(payment.id);
+      pairedCardPaymentIds.add(unmatchedCardCredits[matchIndex].id);
+    }
+  }
+
   const entries: JournalEntry[] = state.txs.map((t) => {
-    const coa = coaForTransaction(t);
+    let coa = coaForTransaction(t);
+    const category = normalizeTransactionCategory(
+      t.category,
+      `${t.merchant || ""} ${t.note || ""}`,
+      t.kind
+    );
+    // A checking-only card payment is Dr card liability / Cr checking.
+    // When both statement legs exist, route them through 6300 so the pair
+    // clears once instead of reducing the liability twice.
+    if (
+      t.kind === "expense" &&
+      category === "Credit card payment" &&
+      !pairedCardPaymentIds.has(t.id)
+    ) {
+      coa = CHART_OF_ACCOUNTS.find((account) => account.code === "2000")!;
+    }
     const postingAccount = postingAccountFor(state, t);
     const pending = !!t.pending;
     const memo = t.merchant || t.note || coa.name;
@@ -435,8 +485,15 @@ export type ReconReport = {
    * Reconciliation requires a statement opening and ending balance. Current
    * account snapshots and tagged activity alone cannot prove a match.
    */
-  status: "unverified" | "no-activity" | "no-account";
+  status:
+    | "reconciled"
+    | "mismatch"
+    | "unverified"
+    | "no-activity"
+    | "no-account";
   drift: number | null;
+  statementOpening: number | null;
+  statementEnding: number | null;
   notes: string[];
   concept: string;
 };
@@ -453,7 +510,9 @@ export function buildReconciliation(state: FinanceState): ReconReport[] {
     }
     const notes: string[] = [];
     let status: ReconReport["status"] = "unverified";
-    const drift: number | null = null;
+    let drift: number | null = null;
+    let statementOpening: number | null = null;
+    let statementEnding: number | null = null;
     if (txs.length === 0) {
       status = "no-activity";
       if (acc.balance !== 0) {
@@ -466,6 +525,50 @@ export function buildReconciliation(state: FinanceState): ReconReport[] {
         );
       }
     } else {
+      const statementTxs = txs
+        .filter(
+          (tx) =>
+            tx.statementBalance != null &&
+            Number.isFinite(tx.statementBalance) &&
+            tx.statementOrder != null &&
+            Number.isFinite(tx.statementOrder)
+        )
+        .sort(
+          (left, right) =>
+            (left.statementOrder ?? 0) - (right.statementOrder ?? 0)
+        );
+      if (statementTxs.length === txs.length) {
+        const first = statementTxs[0];
+        const last = statementTxs.at(-1)!;
+        const firstFlow =
+          first.kind === "income" ? first.amount : -first.amount;
+        statementOpening =
+          Math.round(((first.statementBalance || 0) - firstFlow) * 100) /
+          100;
+        statementEnding = Math.round((last.statementBalance || 0) * 100) / 100;
+        const statementActivity = statementTxs.reduce(
+          (sum, tx) =>
+            sum + (tx.kind === "income" ? tx.amount : -tx.amount),
+          0
+        );
+        const expectedEnding =
+          Math.round((statementOpening + statementActivity) * 100) / 100;
+        drift = Math.round((statementEnding - expectedEnding) * 100) / 100;
+        status = Math.abs(drift) <= 0.01 ? "reconciled" : "mismatch";
+        notes.push(
+          `Statement roll-forward ${moneyCents(statementOpening)} + ${moneyCents(
+            statementActivity
+          )} = ${moneyCents(expectedEnding)}; bank ending ${moneyCents(
+            statementEnding
+          )}.`
+        );
+      } else {
+        notes.push(
+          `${statementTxs.length}/${txs.length} rows carry bank balances. Import statement endpoints for every row before calling this account reconciled.`
+        );
+      }
+    }
+    if (txs.length > 0 && statementEnding == null) {
       notes.push(
         `${txs.length} posted lines are tagged. Current balance ${moneyCents(
           acc.balance
@@ -480,6 +583,8 @@ export function buildReconciliation(state: FinanceState): ReconReport[] {
       txCount: txs.length,
       status,
       drift,
+      statementOpening,
+      statementEnding,
       notes,
       concept: "Accuracy, control",
     });
@@ -493,6 +598,8 @@ export function buildReconciliation(state: FinanceState): ReconReport[] {
       txCount: 0,
       status: "no-account",
       drift: null,
+      statementOpening: null,
+      statementEnding: null,
       notes: ["Add accounts and import statements."],
       concept: "Accuracy, control",
     });
@@ -863,7 +970,16 @@ export function buildStatements(
     const categoryAccount = CHART_OF_ACCOUNTS.find(
       (account) => account.code === categoryCode
     );
-    const transfer = categoryAccount?.type === "transfer";
+    const transfer =
+      categoryAccount?.type === "transfer" ||
+      isTransferLike({
+        ...t,
+        category: normalizeTransactionCategory(
+          t.category,
+          `${t.merchant || ""} ${t.note || ""}`,
+          t.kind
+        ),
+      });
     if (t.kind === "income") {
       if (transfer) transfersIn += t.amount;
       else income += t.amount;
@@ -918,6 +1034,9 @@ export function buildStatements(
 
   const todayIso = today.toISOString().slice(0, 10);
   const currentObserved = periodIncludesDate(period, todayIso);
+  const balancesComplete =
+    currentObserved &&
+    state.accounts.every((account) => account.balanceVerified !== false);
   const asOf = currentObserved ? todayIso : periodEndDate(period);
   const assets: { name: string; amount: number }[] = [];
   const liabilities: { name: string; amount: number }[] = [];
@@ -1004,12 +1123,16 @@ export function buildStatements(
     balanceSheet: {
       asOf,
       status: currentObserved
-        ? "current-observed"
+        ? balancesComplete
+          ? "current-observed"
+          : "current-partial"
         : "historical-unavailable",
       note: currentObserved
-        ? "Current account balances are observed snapshots; open documented receivables and payables are included."
+        ? balancesComplete
+          ? "Current account balances are observed snapshots; open documented receivables and payables are included."
+          : "Some account balances are unverified because their statements have not been imported. Equity is withheld rather than treating missing balances as $0."
         : "Historical bank and card balances are unavailable without period-end statement snapshots. Only documented receivables and payables as of this date are shown.",
-      bankBalancesAvailable: currentObserved,
+      bankBalancesAvailable: balancesComplete,
       assets,
       liabilities,
       totalAssets,
@@ -1384,7 +1507,12 @@ export function buildMonthlyClose(
     {
       id: "recon",
       label: "Accounts reconcilable",
-      ok: false,
+      ok:
+        recon.some((report) => report.status === "reconciled") &&
+        recon.every(
+          (report) =>
+            report.status === "reconciled" || report.status === "no-activity"
+        ),
       detail: recon
         .map((r) => `${r.accountName}: ${r.status}`)
         .slice(0, 4)
@@ -1546,7 +1674,12 @@ export function buildAccountingPack(
         .slice(0, 3)
         .join(" · "),
       metric: `${reconciliation.reduce((s, r) => s + r.txCount, 0)} tagged txs`,
-      ok: false,
+      ok:
+        reconciliation.some((report) => report.status === "reconciled") &&
+        reconciliation.every(
+          (report) =>
+            report.status === "reconciled" || report.status === "no-activity"
+        ),
     },
     {
       id: "receipts",

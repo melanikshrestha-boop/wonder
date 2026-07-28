@@ -304,10 +304,10 @@ export const BOFA_STATEMENT_TXS: FinanceTx[] = [
 ] as FinanceTx[];
 
 export const BOFA_STATEMENT_ACCOUNTS = [
-  { id: "acc-bofa-checking", name: "BofA Adv SafeBalance", kind: "checking" as const, balance: 5.14, institution: "Bank of America", mask: "8804" },
-  { id: "acc-bofa-savings", name: "BofA Savings", kind: "savings" as const, balance: 0, institution: "Bank of America", mask: "7158" },
-  { id: "acc-bofa-cd", name: "BofA CD", kind: "other" as const, balance: 0, institution: "Bank of America", mask: "3133" },
-  { id: "acc-bofa-card", name: "BofA Card · 5499", kind: "credit" as const, balance: 0, institution: "Bank of America", mask: "5499", creditLimit: null },
+  { id: "acc-bofa-checking", name: "BofA Adv SafeBalance", kind: "checking" as const, balance: 5.14, balanceVerified: true, institution: "Bank of America", mask: "8804" },
+  { id: "acc-bofa-savings", name: "BofA Savings", kind: "savings" as const, balance: 0, balanceVerified: false, institution: "Bank of America", mask: "7158" },
+  { id: "acc-bofa-cd", name: "BofA CD", kind: "other" as const, balance: 0, balanceVerified: false, institution: "Bank of America", mask: "3133" },
+  { id: "acc-bofa-card", name: "BofA Card · 5499", kind: "credit" as const, balance: 0, balanceVerified: false, institution: "Bank of America", mask: "5499", creditLimit: null },
 ];
 
 export const BOFA_STATEMENT_META = { count: 23, from: "2026-03-30", to: "2026-06-26", source: "BofA Adv SafeBalance eStatements ···8804 (joint Melani + Bimala)", endingBalance: 5.14 };

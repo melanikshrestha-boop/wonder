@@ -14,6 +14,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Restaurants: "#d64545", // "bad" discretionary — red
   Housing: "#8b6f47",
   Utilities: "#4f7b8f",
+  Laundry: "#4f8f88",
   Health: "#3f8f7b",
   Subscriptions: "#7d5ba6",
   Clothing: "#c94f7c",
@@ -44,6 +45,7 @@ export const FINANCE_CATEGORIES = [
   "Restaurants",
   "Housing",
   "Utilities",
+  "Laundry",
   "Health",
   "Subscriptions",
   "Clothing",
@@ -69,6 +71,7 @@ const ALIASES: Record<string, string> = {
   "Rent / housing": "Housing",
   Cash: "Cash",
   Utilities: "Utilities",
+  Laundry: "Laundry",
   Health: "Health",
   "Build / tools": "Business",
   Travel: "Travel",
@@ -105,6 +108,9 @@ export function normalizeCategory(
   if (raw.toLowerCase() === "parents") return "Family";
 
   const text = `${merchantOrNote}`.toLowerCase();
+  // Wash Kiosk is a laundromat service. Bank exports called it Shopping,
+  // which previously pushed every historical wash into Clothing.
+  if (/\b(wash kiosk|laundromat|laundry)\b/.test(text)) return "Laundry";
   // Zelle wins over unreviewed bank noise, but never over an explicit
   // Transfers / Credit card payment decision above.
   if (/\bzelle\b/.test(text)) return "Zelle";
@@ -185,6 +191,10 @@ const RULES: { category: string; match: RegExp }[] = [
     category: "Utilities",
     match:
       /\b(electric|electricity|water bill|gas bill|utility|utilities|con ed|internet|wifi|phone bill|verizon|t-mobile|at&t|spectrum|xfinity)\b/i,
+  },
+  {
+    category: "Laundry",
+    match: /\b(wash kiosk|laundromat|laundry|wash and fold|dry clean)\b/i,
   },
   {
     category: "Health",

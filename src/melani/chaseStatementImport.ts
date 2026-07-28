@@ -9,11 +9,13 @@ import {
   CHASE_STATEMENT_META,
   CHASE_STATEMENT_TXS,
 } from "./chaseStatementData";
+import { normalizeTransactionCategory } from "./financeCategorize";
 import type { FinanceAccount, FinanceState, FinanceTx } from "./financeStore";
 
 /** Bump when re-extracted statements should force re-merge */
 /** Bump when Chase CSV/PDF re-import should force re-merge into local books */
-export const CHASE_IMPORT_VERSION = "chase-v3-activity-csv-627-2025-08-to-2026-07";
+export const CHASE_IMPORT_VERSION =
+  "chase-v4-statement-balances-laundry-card-movements";
 
 const FLAG_KEY = "wonder-finance-chase-import-version";
 
@@ -93,7 +95,14 @@ export function applyChaseStatements(state: FinanceState): {
       !isChaseImportTx(t) &&
       (t.source === "plaid" || t.source === "csv")
   );
-  const statementTxs: FinanceTx[] = CHASE_STATEMENT_TXS.map((t) => ({ ...t }));
+  const statementTxs: FinanceTx[] = CHASE_STATEMENT_TXS.map((t) => ({
+    ...t,
+    category: normalizeTransactionCategory(
+      t.category,
+      `${t.merchant || ""} ${t.note || ""}`,
+      t.kind
+    ),
+  }));
   const txs = [...keep, ...statementTxs].sort((a, b) =>
     a.date < b.date ? 1 : a.date > b.date ? -1 : 0
   );

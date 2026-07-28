@@ -6,6 +6,7 @@
 import {
   categorizeMerchant,
   cleanMerchant,
+  normalizeTransactionCategory,
 } from "./financeCategorize";
 import type { FinanceTx, TxKind } from "./financeStore";
 
@@ -90,6 +91,7 @@ type ColMap = {
   desc?: number;
   name?: number;
   category?: number;
+  balance?: number;
   /** Bank "Type" column (Zelle credit, ACH debit, DEBIT_CARD…) */
   txType?: number;
 };
@@ -100,10 +102,15 @@ function mapHeaders(headers: string[]): ColMap {
     const n = normHeader(h);
     if (!map.date && /^(date|transactiondate|posteddate|postingdate)$/.test(n))
       map.date = i;
-    if (!map.amount && /^(amount|transactionamount|value|sum)$/.test(n))
+    if (
+      !map.amount &&
+      /^(amount|amountsigned|transactionamount|value|sum)$/.test(n)
+    )
       map.amount = i;
-    if (!map.debit && /^(debit|withdrawal|out)$/.test(n)) map.debit = i;
-    if (!map.credit && /^(credit|deposit|in)$/.test(n)) map.credit = i;
+    if (!map.debit && /^(debit|withdrawal|out|moneyout)$/.test(n))
+      map.debit = i;
+    if (!map.credit && /^(credit|deposit|in|moneyin)$/.test(n))
+      map.credit = i;
     if (
       !map.desc &&
       /^(description|memo|details|narrative|transactiondescription)$/.test(n)
@@ -111,6 +118,11 @@ function mapHeaders(headers: string[]): ColMap {
       map.desc = i;
     if (!map.name && /^(name|merchant|payee|vendor)$/.test(n)) map.name = i;
     if (!map.category && n === "category") map.category = i;
+    if (
+      !map.balance &&
+      /^(balance|runningbalance|runningbalancestatement|statementbalance)$/.test(n)
+    )
+      map.balance = i;
     if (!map.txType && /^(type|transactiontype|trantype)$/.test(n))
       map.txType = i;
   });
@@ -201,9 +213,16 @@ export function parseBankCsv(
     const kind: TxKind = amount < 0 ? "expense" : "income";
     const abs = Math.abs(amount);
     const catRaw = col.category != null ? cells[col.category] : "";
-    const category =
+    const categoryRaw =
       (catRaw && catRaw.trim()) ||
       (kind === "income" ? "Income" : categorizeMerchant(merchant));
+    const category = normalizeTransactionCategory(
+      categoryRaw,
+      `${merchant} ${col.desc != null ? cells[col.desc] || "" : ""}`,
+      kind
+    );
+    const statementBalance =
+      col.balance != null ? parseAmount(cells[col.balance] || "") : null;
 
     const fp = txFingerprint({ date, amount: kind === "expense" ? -abs : abs, merchant });
     // store fingerprint with signed amount for expenses as negative convention in fp
@@ -232,6 +251,8 @@ export function parseBankCsv(
       externalId: fpKey,
       pending: false,
       txType: typeRaw || null,
+      statementBalance,
+      statementOrder: r,
     });
   }
 
@@ -240,7 +261,8 @@ export function parseBankCsv(
 
 /** Export full ledger as CSV (Mintable-style dump) */
 export function exportLedgerCsv(txs: FinanceTx[]): string {
-  const header = "Date,Amount,Type,Category,Merchant,Note,AccountId,Source,ExternalId";
+  const header =
+    "Date,Amount,Type,Category,Merchant,Note,AccountId,Source,ExternalId,StatementBalance,StatementOrder";
   const rows = txs.map((t) => {
     const signed = t.kind === "expense" ? -t.amount : t.amount;
     const cells = [
@@ -253,6 +275,8 @@ export function exportLedgerCsv(txs: FinanceTx[]): string {
       t.accountId || "",
       t.source || "manual",
       t.externalId || "",
+      t.statementBalance ?? "",
+      t.statementOrder ?? "",
     ].map((c) => {
       const s = String(c);
       return s.includes(",") || s.includes('"')

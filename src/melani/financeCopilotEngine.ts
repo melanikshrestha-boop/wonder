@@ -27,6 +27,8 @@ export type CopilotContext = {
   brief: SmartBrief;
   subs: SubscriptionScan;
   worth: number;
+  /** False when one or more account balances lack statement/sync evidence. */
+  worthVerified?: boolean;
   cash: number;
   debt: number;
   income: number;
@@ -515,12 +517,30 @@ export function answerCopilot(
 
   // ── Net worth / cash / debt ──────────────────────────────────────
   if (/\bnet worth\b/.test(q)) {
+    if (ctx.worthVerified === false) {
+      return {
+        text: "Net worth is unverified because at least one account balance is missing statement or bank-sync evidence. Import the card and other missing account activity before treating it as $0.",
+        sources: ["accounts", "statement evidence"],
+      };
+    }
     return { text: `Your net worth is ${money(ctx.worth)} — cash ${money(ctx.cash)} minus what you owe ${money(ctx.debt)}.`, sources: ["accounts"] };
   }
   if (/\b(how much (cash|money)|balance|in the bank)\b/.test(q)) {
-    return { text: `Cash on hand: ${money(ctx.cash)}. You owe ${money(ctx.debt)} on credit. Net ${money(ctx.worth)}.`, sources: ["accounts"] };
+    return {
+      text:
+        ctx.worthVerified === false
+          ? `Recorded cash: ${money(ctx.cash)}. Card debt and net worth are unverified until the missing account statements are imported.`
+          : `Cash on hand: ${money(ctx.cash)}. You owe ${money(ctx.debt)} on credit. Net ${money(ctx.worth)}.`,
+      sources: ["accounts"],
+    };
   }
   if (/\b(debt|owe|owed|balance on card)\b/.test(q)) {
+    if (ctx.worthVerified === false) {
+      return {
+        text: "Your card balance is unverified because the card statement/activity is missing. Card payments in checking prove cash left; they do not prove the remaining card balance is $0.",
+        sources: ["accounts", "statement evidence"],
+      };
+    }
     return { text: `You owe ${money(ctx.debt)} across credit accounts. Utilization ${ctx.credit.utilization == null ? "unknown (add card limits)" : `${Math.round(ctx.credit.utilization * 100)}%`}.`, sources: ["accounts", "credit"] };
   }
 

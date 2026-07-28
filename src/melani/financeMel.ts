@@ -90,7 +90,9 @@ export function buildFinanceLiveContext(
     `As-of month: ${monthLabel(ctx.ym)} (${ctx.ym})`,
     `Rows: ${txs.length}`,
     `Months present: ${months.map(monthLabel).join(", ") || "none"}`,
-    `Net worth: ${money(ctx.worth)} | Cash: ${money(ctx.cash)} | Debt: ${money(ctx.debt)}`,
+    ctx.worthVerified === false
+      ? `Net worth: UNVERIFIED (missing account statement evidence) | Recorded cash: ${money(ctx.cash)} | Recorded debt: ${money(ctx.debt)}`
+      : `Net worth: ${money(ctx.worth)} | Cash: ${money(ctx.cash)} | Debt: ${money(ctx.debt)}`,
     `Period flow — income ${money(ctx.income)}, expense ${money(ctx.expense)}, net ${money(ctx.cashFlow)}`,
     ctx.rate != null ? `Save rate: ${Math.round(ctx.rate * 100)}%` : "Save rate: n/a",
     `Credit score (tracked): ${ctx.credit.estimate ?? "unknown"} (${ctx.credit.band}) | utilization ${

@@ -46,7 +46,7 @@ Date,Account,Type,Payee / Description,Category,Money In,Money Out,Amount (signed
 2025-08-25,Chase College Checking ···8533,Transfer out,Transfer to Chase Savings,Transfers,,200.0,-200.0,17.29,Online Transfer to SAV ...5591 transaction#: 25972078832 08/25
 2025-08-25,Chase College Checking ···8533,Debit card purchase,Target Los Angeles CA,Shopping,,28.52,-28.52,227.29,TARGET ST 3131 S HOOVE LOS ANGELES CA        08/24
 2025-08-25,Chase College Checking ···8533,Debit card purchase,USC/Follett Bookstore Los Angeles CA,Education / school,,34.02,-34.02,356.9,USC/FOLLETT RSRC STOR1 LOS ANGELES CA        08/22
-2025-08-25,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Shopping,,10.0,-10.0,217.29,WASH KIOSK MOBILE 800-4216897 CA             08/24
+2025-08-25,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Laundry,,10.0,-10.0,217.29,WASH KIOSK MOBILE 800-4216897 CA             08/24
 2025-08-25,Chase College Checking ···8533,Zelle in,Zelle from Millennium Shrestha,Income,100.0,,100.0,393.92,Zelle payment from MILLENNIUM SHRESTHA 25968396891
 2025-08-25,Chase College Checking ···8533,Zelle in,Zelle from Umesh Shrestha,Income,150.0,,150.0,293.92,Zelle payment from UMESH SHRESTHA TDP0JH0NFSQC
 2025-08-26,Chase College Checking ···8533,Debit card purchase,USC Hospitality Los Angeles CA,Food / groceries,,7.78,-7.78,9.51,USC HOSP ANNENBERG CAF LOS ANGELES CA        08/25
@@ -141,7 +141,7 @@ Date,Account,Type,Payee / Description,Category,Money In,Money Out,Amount (signed
 2025-09-22,Chase College Checking ···8533,Transfer in,Transfer from Chase Savings,Transfers,10.0,,10.0,535.69,Online Transfer from SAV ...5591 transaction#: 26301849371
 2025-09-22,Chase College Checking ···8533,Transfer in,Transfer from Chase Savings,Transfers,50.0,,50.0,440.69,Online Transfer from SAV ...5591 transaction#: 26307670892
 2025-09-22,Chase College Checking ···8533,Debit card purchase,Target Los Angeles CA,Shopping,,23.96,-23.96,516.73,TARGET STORE T3217 LOS ANGELES CA            09/20
-2025-09-22,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Shopping,,15.0,-15.0,430.92,WASH KIOSK MOBILE 800-4216897 CA             09/21
+2025-09-22,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Laundry,,15.0,-15.0,430.92,WASH KIOSK MOBILE 800-4216897 CA             09/21
 2025-09-22,Chase College Checking ···8533,Debit card purchase,Yogurtland USC,Restaurants / coffee,,8.86,-8.86,445.92,YOGURTLAND USC GATEWAY 213-7421774 CA        09/21
 2025-09-22,Chase College Checking ···8533,Zelle in,Zelle from Bimala Shrestha,Income,80.0,,80.0,390.69,Zelle payment from BIMALA SHRESTHA 26310387720
 2025-09-22,Chase College Checking ···8533,Zelle in,Zelle from Bimala Shrestha,Income,289.0,,289.0,310.69,Zelle payment from BIMALA SHRESTHA 26317211947
@@ -322,7 +322,7 @@ Date,Account,Type,Payee / Description,Category,Money In,Money Out,Amount (signed
 2025-11-10,Chase College Checking ···8533,Zelle out,Zelle to Sunsent Chickne,Transfers,,10.0,-10.0,25.91,Zelle payment to Sunsent Chickne JPM99bu3crb4
 2025-11-10,Chase College Checking ···8533,Zelle out,Zelle to Taco,Transfers,,6.0,-6.0,35.91,Zelle payment to Taco JPM99btypf7p
 2025-11-10,Chase College Checking ···8533,Zelle out,Zelle to Zeba,Transfers,,15.17,-15.17,41.91,Zelle payment to Zeba 26887820771
-2025-11-12,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Shopping,,15.0,-15.0,5.91,WASH KIOSK MOBILE 800-4216897 CA             11/11
+2025-11-12,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Laundry,,15.0,-15.0,5.91,WASH KIOSK MOBILE 800-4216897 CA             11/11
 2025-11-12,Chase College Checking ···8533,Zelle out,Zelle to Zeba,Transfers,,5.0,-5.0,20.91,Zelle payment to Zeba 26919953299
 2025-11-14,Chase College Checking ···8533,Zelle out,Zelle to Zeba,Transfers,,3.0,-3.0,2.91,Zelle payment to Zeba 26952455677
 2025-11-17,Chase College Checking ···8533,Transfer in,Transfer from Chase Savings,Transfers,5.0,,5.0,279.91,Online Transfer from SAV ...5591 transaction#: 26973151080
@@ -426,7 +426,7 @@ Date,Account,Type,Payee / Description,Category,Money In,Money Out,Amount (signed
 2026-01-12,Chase College Checking ···8533,Zelle in,Zelle from Umesh Shrestha,Income,10.0,,10.0,537.42,Zelle payment from UMESH SHRESTHA TDP020ITNTR1
 2026-01-12,Chase College Checking ···8533,Zelle in,Zelle from Umesh Shrestha,Income,90.0,,90.0,492.42,Zelle payment from UMESH SHRESTHA TDP020ITP3CV
 2026-01-12,Chase College Checking ···8533,Zelle out,Zelle to Nicole USC Roomate,Transfers,,35.22,-35.22,10.2,Zelle payment to Nicole  USC Roomate 27674627890
-2026-01-15,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Shopping,,10.0,-10.0,50.2,WASH KIOSK MOBILE 800-4216897 CA             01/14
+2026-01-15,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Laundry,,10.0,-10.0,50.2,WASH KIOSK MOBILE 800-4216897 CA             01/14
 2026-01-15,Chase College Checking ···8533,Zelle in,Zelle from Bimala Shrestha,Income,50.0,,50.0,60.2,Zelle payment from BIMALA SHRESTHA 27705708791
 2026-01-20,Chase College Checking ···8533,Credit card payment,Chase credit card payment,Credit card payment,,80.0,-80.0,0.19,Payment to Chase card ending in 5584 01/20
 2026-01-20,Chase College Checking ···8533,Credit card payment,Chase credit card payment,Credit card payment,,17.0,-17.0,80.19,Payment to Chase card ending in 5584 01/20
@@ -453,7 +453,7 @@ Date,Account,Type,Payee / Description,Category,Money In,Money Out,Amount (signed
 2026-01-30,Chase College Checking ···8533,Transfer out,Transfer to Chase Savings,Transfers,,25.0,-25.0,3.4,Online Transfer to  SAV ...5591 transaction#: 27526326895
 2026-02-02,Chase College Checking ···8533,Transfer in,Transfer from Chase Savings,Transfers,7.0,,7.0,20.4,Online Transfer from SAV ...5591 transaction#: 27900712755
 2026-02-02,Chase College Checking ···8533,Transfer in,Transfer from Chase Savings,Transfers,10.0,,10.0,13.4,Online Transfer from SAV ...5591 transaction#: 27902890722
-2026-02-02,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Shopping,,10.0,-10.0,10.4,WASH KIOSK MOBILE 800-4216897 CA             01/31
+2026-02-02,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Laundry,,10.0,-10.0,10.4,WASH KIOSK MOBILE 800-4216897 CA             01/31
 2026-02-02,Chase College Checking ···8533,Zelle out,Zelle to Zeba,Transfers,,8.03,-8.03,2.37,Zelle payment to Zeba 27902892690
 2026-02-03,Chase College Checking ···8533,Venmo in,Venmo cashout,Income,40.0,,40.0,42.37,VENMO            CASHOUT                    PPD ID: 5264681992
 2026-02-03,Chase College Checking ···8533,Zelle in,Zelle from Sophie Chuang Wfct0Zrp5X3H,Income,7.0,,7.0,49.37,Zelle payment from SOPHIE CHUANG WFCT0ZRP5X3H
@@ -463,7 +463,7 @@ Date,Account,Type,Payee / Description,Category,Money In,Money Out,Amount (signed
 2026-02-13,Chase College Checking ···8533,Zelle out,Zelle to Ziyu Gao,Transfers,,11.0,-11.0,89.37,Zelle payment to Ziyu Gao 28069618004
 2026-02-17,Chase College Checking ···8533,Credit card payment,Chase credit card payment,Credit card payment,,300.0,-300.0,145.53,Payment to Chase card ending in 5584 02/17
 2026-02-17,Chase College Checking ···8533,Credit card payment,Chase credit card payment,Credit card payment,,89.0,-89.0,481.37,Payment to Chase card ending in 5584 02/17
-2026-02-17,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Shopping,,10.0,-10.0,135.53,WASH KIOSK MOBILE 800-4216897 CA             02/16
+2026-02-17,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Laundry,,10.0,-10.0,135.53,WASH KIOSK MOBILE 800-4216897 CA             02/16
 2026-02-17,Chase College Checking ···8533,Zelle in,Zelle from Audrey Davis 0CA0QBJ17YG4,Income,480.0,,480.0,569.37,Zelle payment from Audrey Davis 0CA0QBJ17YG4
 2026-02-17,Chase College Checking ···8533,Zelle in,Zelle from Bimala Shrestha,Income,1.0,,1.0,570.37,Zelle payment from BIMALA SHRESTHA 28078681387
 2026-02-17,Chase College Checking ···8533,Zelle out,Zelle to Carly USC,Transfers,,35.84,-35.84,445.53,Zelle payment to Carly USC JPM99c5vvwj0
@@ -521,7 +521,7 @@ Date,Account,Type,Payee / Description,Category,Money In,Money Out,Amount (signed
 2026-04-06,Chase College Checking ···8533,ACH debit,Goldman Sachs transfer,Transfers,,20.0,-20.0,-11.73,GOLDMAN SACHS BA TRANSFER   000300103579310 WEB ID: 0124085260
 2026-04-06,Chase College Checking ···8533,Transfer in,Transfer from Chase Savings,Transfers,10.0,,10.0,138.27,Online Transfer from SAV ...5591 transaction#: 28715970978
 2026-04-06,Chase College Checking ···8533,Credit card payment,Chase credit card payment,Credit card payment,,120.0,-120.0,18.27,Payment to Chase card ending in 5584 04/06
-2026-04-06,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Shopping,,10.0,-10.0,8.27,WASH KIOSK MOBILE 800-4216897 CA             04/05
+2026-04-06,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Laundry,,10.0,-10.0,8.27,WASH KIOSK MOBILE 800-4216897 CA             04/05
 2026-04-06,Chase College Checking ···8533,Zelle in,Zelle from Bimala Shrestha,Income,101.0,,101.0,128.27,Zelle payment from BIMALA SHRESTHA 28710541489
 2026-04-08,Chase College Checking ···8533,Transfer in,Transfer from Chase Savings,Transfers,100.0,,100.0,88.27,Online Transfer from SAV ...5591 transaction#: 28749612982
 2026-04-09,Chase College Checking ···8533,ACH debit,Goldman Sachs transfer,Transfers,,50.0,-50.0,-49.73,GOLDMAN SACHS BA TRANSFER   000300103579310 WEB ID: 0124085260
@@ -557,7 +557,7 @@ Date,Account,Type,Payee / Description,Category,Money In,Money Out,Amount (signed
 2026-05-11,Chase College Checking ···8533,Credit card payment,Chase credit card payment,Credit card payment,,15.76,-15.76,142.37,Payment to Chase card ending in 5584 05/11
 2026-05-11,Chase College Checking ···8533,Credit card payment,Chase credit card payment,Credit card payment,,93.85,-93.85,158.13,Payment to Chase card ending in 5584 05/11
 2026-05-11,Chase College Checking ···8533,Credit card payment,Chase credit card payment,Credit card payment,,100.0,-100.0,251.98,Payment to Chase card ending in 5584 05/11
-2026-05-11,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Shopping,,10.0,-10.0,351.98,WASH KIOSK MOBILE 800-4216897 CA             05/08
+2026-05-11,Chase College Checking ···8533,Debit card purchase,Wash Kiosk Mobile,Laundry,,10.0,-10.0,351.98,WASH KIOSK MOBILE 800-4216897 CA             05/08
 2026-05-11,Chase College Checking ···8533,Zelle in,Zelle from Bimala Shrestha,Income,100.0,,100.0,271.98,Zelle payment from BIMALA SHRESTHA 29162830274
 2026-05-11,Chase College Checking ···8533,Zelle in,Zelle from Bimala Shrestha,Income,150.0,,150.0,171.98,Zelle payment from BIMALA SHRESTHA 29179587703
 2026-05-11,Chase College Checking ···8533,Zelle out,Zelle to Ronni Wieman,Transfers,,10.0,-10.0,361.98,Zelle payment to Ronni  Wieman JPM99cgbh7zs

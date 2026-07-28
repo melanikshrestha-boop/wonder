@@ -24,7 +24,14 @@ Object.defineProperty(globalThis, "localStorage", {
 const { normalizeTransactionCategory } = await import(
   "../src/melani/financeCategorize.ts"
 );
+const { parseBankCsv } = await import("../src/melani/financeCsv.ts");
+const { CHASE_STATEMENT_ACCOUNTS, CHASE_STATEMENT_TXS } = await import(
+  "../src/melani/chaseStatementData.ts"
+);
 const { loadFinance } = await import("../src/melani/financeStore.ts");
+const { buildReconciliation } = await import(
+  "../src/melani/financeAccounting.ts"
+);
 const { runFinancePlan } = await import("../src/melani/melFinanceTools.ts");
 const { buildBookPageBrief } = await import(
   "../src/melani/bookPageBrief.ts"
@@ -48,6 +55,58 @@ assert.equal(
   normalizeTransactionCategory("Zelle", "Zelle to Bimala Shrestha", "expense"),
   "Zelle"
 );
+assert.equal(
+  normalizeTransactionCategory("Shopping", "Wash Kiosk Mobile", "expense"),
+  "Laundry"
+);
+
+const statementCsv = [
+  "Date,Account,Type,Payee / Description,Category,Money In,Money Out,Amount (signed),Running Balance (statement),Notes",
+  "2025-08-25,Checking,Debit card purchase,Wash Kiosk Mobile,Laundry,,10.0,-10.0,217.29,WASH KIOSK MOBILE",
+].join("\n");
+const parsedStatement = parseBankCsv(statementCsv, {
+  accountId: "acc-chase-checking",
+});
+assert.equal(parsedStatement.added.length, 1);
+assert.equal(parsedStatement.added[0].category, "Laundry");
+assert.equal(parsedStatement.added[0].statementBalance, 217.29);
+assert.equal(parsedStatement.added[0].statementOrder, 1);
+
+assert.equal(CHASE_STATEMENT_TXS.length, 627);
+assert.equal(
+  CHASE_STATEMENT_TXS.filter((tx) => tx.merchant === "Wash Kiosk Mobile").length,
+  8
+);
+assert.ok(
+  CHASE_STATEMENT_TXS.filter(
+    (tx) => tx.merchant === "Wash Kiosk Mobile"
+  ).every((tx) => tx.category === "Laundry")
+);
+assert.ok(
+  CHASE_STATEMENT_TXS.every(
+    (tx) =>
+      tx.statementBalance != null &&
+      Number.isFinite(tx.statementBalance) &&
+      tx.statementOrder != null
+  )
+);
+const finalStatementRow = [...CHASE_STATEMENT_TXS].sort(
+  (left, right) =>
+    (right.statementOrder ?? -1) - (left.statementOrder ?? -1)
+)[0];
+assert.equal(finalStatementRow.statementBalance, 0.03);
+const statementReconciliation = buildReconciliation({
+  ...loadFinance(),
+  accounts: CHASE_STATEMENT_ACCOUNTS,
+  txs: CHASE_STATEMENT_TXS,
+});
+const checkingReconciliation = statementReconciliation.find(
+  (report) => report.accountId === "acc-chase-checking"
+);
+assert.equal(checkingReconciliation?.status, "reconciled");
+assert.equal(checkingReconciliation?.statementOpening, 0);
+assert.equal(checkingReconciliation?.statementEnding, 0.03);
+assert.equal(checkingReconciliation?.drift, 0);
 
 runFinancePlan("I spent $6 cash for food");
 runFinancePlan("log income $100 from Umesh");

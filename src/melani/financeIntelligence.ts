@@ -758,6 +758,7 @@ export function answerFromBrief(
   brief: SmartBrief,
   extras: {
     worth: number;
+    worthVerified?: boolean;
     cash: number;
     debt: number;
     income: number;
@@ -850,7 +851,7 @@ export function answerFromBrief(
   // Default: ranked action + accountant posture
   const top = brief.actions[0];
   return (
-    `${brief.headline}. ${brief.sub} Net ${money(extras.worth)} · Flow ${money(extras.cashFlow)} · ${extras.txCount} txs. ` +
+    `${brief.headline}. ${brief.sub} Net ${extras.worthVerified === false ? "unverified" : money(extras.worth)} · Flow ${money(extras.cashFlow)} · ${extras.txCount} txs. ` +
     `Audit ${brief.audit.score}/100 · Tax: ${brief.tax.order} · Forecast: ${brief.forecast.order} ` +
     `Top action: ${top?.title ?? "Keep data fresh"}. ${top?.detail ?? ""}`
   );

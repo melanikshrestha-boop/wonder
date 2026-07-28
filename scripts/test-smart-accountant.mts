@@ -334,6 +334,95 @@ const {
       !postedLedger.lines.some((line) => line.memo === "Pending hold"),
     postedLedger.lines
   );
+  const oneSidedCardState = {
+    ...accountingState,
+    accounts: [
+      {
+        id: "checking",
+        name: "Checking",
+        kind: "checking" as const,
+        balance: 0,
+      },
+      {
+        id: "card",
+        name: "Chase card",
+        kind: "credit" as const,
+        balance: 0,
+      },
+    ],
+    txs: [
+      newTx({
+        date: "2026-07-12",
+        kind: "expense",
+        amount: 100,
+        category: "Credit card payment",
+        merchant: "Payment to Chase card",
+        accountId: "checking",
+      }),
+    ],
+  };
+  const oneSidedCardJournal = buildJournal(oneSidedCardState).entries[0];
+  check(
+    "accounting: one-sided checking card payment reduces liability",
+    oneSidedCardJournal?.debitCode === "2000" &&
+      oneSidedCardJournal?.creditCode === "1000",
+    oneSidedCardJournal
+  );
+  const oneSidedCardStatements = buildStatements(
+    oneSidedCardState,
+    "2026-07",
+    emptyBooks
+  );
+  check(
+    "accounting: card payment is cash movement, never expense",
+    oneSidedCardStatements.pnl.expenseTotal === 0 &&
+      oneSidedCardStatements.pnl.transfersOut === 100 &&
+      oneSidedCardStatements.cashFlow.transfersNet === -100,
+    oneSidedCardStatements
+  );
+
+  const statementEvidenceState = {
+    ...accountingState,
+    accounts: [
+      {
+        id: "checking",
+        name: "Checking",
+        kind: "checking" as const,
+        balance: 90,
+      },
+    ],
+    txs: [
+      newTx({
+        date: "2026-07-01",
+        kind: "expense",
+        amount: 30,
+        category: "Groceries",
+        merchant: "Market",
+        accountId: "checking",
+        statementBalance: 70,
+        statementOrder: 1,
+      }),
+      newTx({
+        date: "2026-07-02",
+        kind: "income",
+        amount: 20,
+        category: "Income",
+        merchant: "Deposit",
+        accountId: "checking",
+        statementBalance: 90,
+        statementOrder: 2,
+      }),
+    ],
+  };
+  const statementRecon = buildReconciliation(statementEvidenceState)[0];
+  check(
+    "accounting: bank balance endpoints reconcile from opening to ending",
+    statementRecon?.status === "reconciled" &&
+      statementRecon.statementOpening === 100 &&
+      statementRecon.statementEnding === 90 &&
+      statementRecon.drift === 0,
+    statementRecon
+  );
 
   const unknownIncome = buildJournal({
     ...accountingState,
@@ -863,6 +952,27 @@ const { detectSubscriptions: detectSubs2 } = await import("../src/melani/subscri
 
   const nwA = answerCopilot("what's my net worth?", baseCtx as any);
   check("copilot: net worth = $5,000", nwA.text.includes("$5,000"), nwA.text);
+  const unverifiedCtx = { ...baseCtx, worthVerified: false };
+  const unverifiedWorthA = answerCopilot(
+    "what's my net worth?",
+    unverifiedCtx as any
+  );
+  check(
+    "copilot: unverified statements never claim net worth",
+    /unverified/i.test(unverifiedWorthA.text) &&
+      !unverifiedWorthA.text.includes("$5,000"),
+    unverifiedWorthA.text
+  );
+  const unverifiedDebtA = answerCopilot(
+    "what is my card balance?",
+    unverifiedCtx as any
+  );
+  check(
+    "copilot: missing card statement never claims zero debt",
+    /unverified/i.test(unverifiedDebtA.text) &&
+      !/\$0(?:\\.00)?\\b/.test(unverifiedDebtA.text),
+    unverifiedDebtA.text
+  );
 
   const merchA = answerCopilot("how much did I spend at Amazon?", baseCtx as any);
   check("copilot: merchant Amazon = $120", merchA.text.includes("$120") && /amazon/i.test(merchA.text), merchA.text);

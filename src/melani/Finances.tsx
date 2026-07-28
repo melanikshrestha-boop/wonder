@@ -29,6 +29,7 @@ import { importOfx, looksLikeOfx } from "./financeOfx";
 import {
   applyTransferPair,
   detectTransferPairs,
+  isTransferLike,
   monthTrueIncome,
   monthTrueSpend,
   type TransferPair,
@@ -234,7 +235,7 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   {
     id: "essentials",
     label: "Essentials",
-    cats: ["Groceries", "Transport", "Housing", "Utilities", "Health"],
+    cats: ["Groceries", "Transport", "Housing", "Utilities", "Laundry", "Health"],
   },
   {
     id: "lifestyle",
@@ -252,6 +253,18 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
     cats: ["Education", "Business", "Fees", "Other"],
   },
 ];
+
+function normalizedLedgerCategory(tx: FinanceTx): string {
+  return normalizeTransactionCategory(
+    tx.category,
+    `${tx.merchant || ""} ${tx.note || ""}`,
+    tx.kind
+  );
+}
+
+function isLedgerMovement(tx: FinanceTx): boolean {
+  return isTransferLike({ ...tx, category: normalizedLedgerCategory(tx) });
+}
 
 function LedgerFilterMenu({
   value,
@@ -654,6 +667,9 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const income = useMemo(() => monthIncome(txs, ym), [txs, ym]);
   const expense = useMemo(() => monthExpense(txs, ym), [txs, ym]);
   const worth = netWorth(accounts);
+  const worthVerified = accounts.every(
+    (account) => account.balanceVerified !== false
+  );
   const cash = cashOnHand(accounts);
   const debt = creditOwed(accounts);
   const cashFlow = income - expense;
@@ -855,6 +871,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             brief,
             subs: subscriptionScan,
             worth,
+            worthVerified,
             cash,
             debt,
             income,
@@ -865,7 +882,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             ym,
           }
         : null,
-    [state, brief, subscriptionScan, worth, cash, debt, income, expense, cashFlow, rate, creditReport, ym]
+    [state, brief, subscriptionScan, worth, worthVerified, cash, debt, income, expense, cashFlow, rate, creditReport, ym]
   );
 
   /** Do TODAY — minutes, not a fake 7-day project */
@@ -1016,10 +1033,19 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         list = list.filter((t) => t.date.startsWith(String(filterYear)));
       }
     }
-    if (filterKind !== "all") list = list.filter((t) => t.kind === filterKind);
+    if (filterKind !== "all") {
+      // REV/EXP are economic activity. Transfers and card payments remain
+      // visible under All and their own category/type filters, but are never
+      // mislabeled as revenue or expense.
+      list = list.filter(
+        (t) => t.kind === filterKind && !isLedgerMovement(t)
+      );
+    }
     if (filterTxType !== "all")
       list = list.filter((t) => txTypeOf(t) === filterTxType);
-    if (filterCat !== "all") list = list.filter((t) => t.category === filterCat);
+    if (filterCat !== "all") {
+      list = list.filter((t) => normalizedLedgerCategory(t) === filterCat);
+    }
     if (searching) {
       // Every word must match somewhere: payee, note, category, type,
       // date, or amount ("zelle 300", "chase jul", "8.99" all work)
@@ -1084,16 +1110,31 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         const sorted = [...rows].sort((a, b) => {
           const d = b.date.localeCompare(a.date);
           if (d !== 0) return d;
+          if (a.statementOrder != null && b.statementOrder != null) {
+            return b.statementOrder - a.statementOrder;
+          }
           return (a.merchant || a.note || "").localeCompare(
             b.merchant || b.note || ""
           );
         });
         let moneyIn = 0;
         let moneyOut = 0;
+        let movementIn = 0;
+        let movementOut = 0;
+        let cardPaid = 0;
         const recv = new Map<string, number>();
         const spent = new Map<string, number>();
         for (const t of sorted) {
           const name = (t.merchant || t.note || "Unknown").trim() || "Unknown";
+          const category = normalizedLedgerCategory(t);
+          if (isLedgerMovement(t)) {
+            if (t.kind === "income") movementIn += t.amount;
+            else {
+              movementOut += t.amount;
+              if (category === "Credit card payment") cardPaid += t.amount;
+            }
+            continue;
+          }
           if (t.kind === "income") {
             moneyIn += t.amount;
             recv.set(name, (recv.get(name) || 0) + t.amount);
@@ -1110,36 +1151,85 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
           .map(([name, total]) => ({ name, total }))
           .sort((a, b) => b.total - a.total)
           .slice(0, 8);
+        const fullMonthRows = (state?.txs || []).filter((row) =>
+          row.date.startsWith(month)
+        );
+        const statementClosingBalance =
+          [...fullMonthRows]
+            .sort(
+              (left, right) =>
+                (right.statementOrder ?? -1) - (left.statementOrder ?? -1)
+            )
+            .find(
+            (row) =>
+              row.statementBalance != null &&
+              Number.isFinite(row.statementBalance)
+          )?.statementBalance ?? null;
+        const creditAccountIds = new Set(
+          (state?.accounts || [])
+            .filter((account) => account.kind === "credit")
+            .map((account) => account.id)
+        );
+        const hasImportedCardPurchases = fullMonthRows.some(
+          (row) =>
+            row.kind === "expense" &&
+            !!row.accountId &&
+            creditAccountIds.has(row.accountId) &&
+            !isLedgerMovement(row)
+        );
         return {
           month,
           rows: sorted,
           moneyIn,
           moneyOut,
+          movementIn,
+          movementOut,
+          cardPaid,
           net: moneyIn - moneyOut,
           count: sorted.length,
           topReceived,
           topSpent,
+          statementClosingBalance,
+          cardPurchasesMissing: cardPaid > 0 && !hasImportedCardPurchases,
         };
       });
-  }, [ledger]);
+  }, [ledger, state?.accounts]);
 
   const monthNetWorthByMonth = useMemo(() => {
     const map = new Map<string, number | null>();
     for (const month of months) map.set(month, null);
     const currentMonth = monthKey();
-    if (months.includes(currentMonth)) map.set(currentMonth, worth);
+    if (months.includes(currentMonth) && worthVerified) {
+      map.set(currentMonth, worth);
+    }
     return map;
-  }, [months, worth]);
+  }, [months, worth, worthVerified]);
 
   const visibleLedgerSummary = useMemo(() => {
     let rev = 0;
     let exp = 0;
+    let cardPaid = 0;
+    let movement = 0;
     for (const t of ledger) {
-      if (t.kind === "income") rev += t.amount;
+      if (isLedgerMovement(t)) {
+        movement += t.amount;
+        if (
+          t.kind === "expense" &&
+          normalizedLedgerCategory(t) === "Credit card payment"
+        ) {
+          cardPaid += t.amount;
+        }
+      } else if (t.kind === "income") rev += t.amount;
       else exp += t.amount;
     }
-    return { rev, exp, netWorth: worth };
-  }, [ledger, worth]);
+    return {
+      rev,
+      exp,
+      cardPaid,
+      movement,
+      netWorth: worthVerified ? worth : null,
+    };
+  }, [ledger, worth, worthVerified]);
 
   const maxBar = useMemo(() => {
     const m = Math.max(1, ...bars.map((b) => Math.abs(b.net)));
@@ -1566,6 +1656,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     setAskA(
       answerFromBrief(q, brief, {
         worth,
+        worthVerified,
         cash,
         debt,
         income,
@@ -1751,6 +1842,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             name: pa.name,
             kind: pa.kind,
             balance: pa.balance,
+            balanceVerified: true,
             institution: pa.institution || institutionName || "Bank",
             plaidAccountId: pa.plaidAccountId,
             mask: pa.mask || null,
@@ -2319,8 +2411,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 </div>
                 <div className="wd-smart-metric">
                   <span>Net worth</span>
-                  <strong className={worth < 0 ? "is-neg" : ""}>
-                    {money(worth)}
+                  <strong className={worthVerified && worth < 0 ? "is-neg" : ""}>
+                    {worthVerified ? money(worth) : "Unverified"}
                   </strong>
                 </div>
                 <div className="wd-smart-metric">
@@ -3254,13 +3346,22 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                       {moneyCents(visibleLedgerSummary.exp)}
                     </strong>
                     <span className="wd-io-gap" />
+                    <span className="wd-io-label">CARD PAID</span>
+                    <strong>{moneyCents(visibleLedgerSummary.cardPaid)}</strong>
+                    <span className="wd-io-gap" />
                     <span className="wd-io-label">NET WORTH</span>
                     <strong
                       className={
-                        visibleLedgerSummary.netWorth >= 0 ? "is-pos" : "is-neg"
+                        visibleLedgerSummary.netWorth == null
+                          ? "is-unavailable"
+                          : visibleLedgerSummary.netWorth >= 0
+                            ? "is-pos"
+                            : "is-neg"
                       }
                     >
-                      {moneyCents(visibleLedgerSummary.netWorth)}
+                      {visibleLedgerSummary.netWorth == null
+                        ? "—"
+                        : moneyCents(visibleLedgerSummary.netWorth)}
                     </strong>
                   </p>
                 </div>
@@ -3300,6 +3401,25 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                               {moneyCents(book.moneyOut)}
                             </strong>
                             <span className="wd-io-gap" />
+                            <span className="wd-io-label">CARD PAID</span>
+                            <strong>{moneyCents(book.cardPaid)}</strong>
+                            <span className="wd-io-gap" />
+                            <span className="wd-io-label">CHECKING BAL</span>
+                            <strong
+                              className={
+                                book.statementClosingBalance == null
+                                  ? "is-unavailable"
+                                  : book.statementClosingBalance >= 0
+                                  ? "is-pos"
+                                  : "is-neg"
+                              }
+                              title="Latest bank-supplied Chase checking balance in this month"
+                            >
+                              {book.statementClosingBalance == null
+                                ? "—"
+                                : moneyCents(book.statementClosingBalance)}
+                            </strong>
+                            <span className="wd-io-gap" />
                             <span className="wd-io-label">NET WORTH</span>
                             <strong
                               className={
@@ -3320,6 +3440,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                 : moneyCents(monthNetWorth)}
                             </strong>
                           </p>
+                          {book.cardPurchasesMissing ? (
+                            <p className="wd-muted">
+                              Card payments are excluded from EXP. Import the
+                              ··5584 card activity to account for the purchases
+                              those payments settled.
+                            </p>
+                          ) : null}
                         </div>
                       </header>
 
@@ -3331,7 +3458,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                               <th>Payee</th>
                               <th>Category</th>
                               <th className="num">Amount</th>
-                              <th className="num">Stmt bal</th>
+                              <th className="num">Balance</th>
                               <th />
                             </tr>
                           </thead>
@@ -3457,12 +3584,23 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                     />
                                   </div>
                                 </td>
-                                <td
-                                  className="num wd-balance is-unavailable"
-                                  title="Statement balance is unavailable for this row. Import statement balances before Wonder prints historical balances."
-                                >
-                                  —
-                                </td>
+                                {t.statementBalance == null ? (
+                                  <td
+                                    className="num wd-balance is-unavailable"
+                                    title="This source did not include a bank balance for the row."
+                                  >
+                                    —
+                                  </td>
+                                ) : (
+                                  <td
+                                    className={`num wd-balance ${
+                                      t.statementBalance < 0 ? "is-neg" : ""
+                                    }`}
+                                    title="Bank-supplied balance immediately after this transaction"
+                                  >
+                                    {moneyCents(t.statementBalance)}
+                                  </td>
+                                )}
                                 <td>
                                   <button
                                     type="button"
@@ -4919,7 +5057,11 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   ) : null}
                   <li>
                     Total net worth:{" "}
-                    <strong>{moneyCents(composition.total)}</strong>
+                    <strong>
+                      {worthVerified
+                        ? moneyCents(composition.total)
+                        : "Unverified"}
+                    </strong>
                   </li>
                 </ul>
               ) : null}
@@ -5176,10 +5318,23 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                         <td className="num">
                           <input
                             type="number"
-                            value={a.balance}
+                            value={
+                              a.balanceVerified === false ? "" : a.balance
+                            }
+                            placeholder={
+                              a.balanceVerified === false
+                                ? "Unverified"
+                                : undefined
+                            }
+                            title={
+                              a.balanceVerified === false
+                                ? "No statement or bank sync proves this balance yet"
+                                : "Verified account balance"
+                            }
                             onChange={(e) =>
                               patchAccount(a.id, {
                                 balance: Number(e.target.value) || 0,
+                                balanceVerified: e.target.value !== "",
                               })
                             }
                           />

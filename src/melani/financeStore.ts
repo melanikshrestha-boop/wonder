@@ -25,6 +25,12 @@ export type FinanceAccount = {
   /** Balance (credit = amount owed) */
   balance: number;
   /**
+   * Whether the balance is supported by an imported statement, bank sync, or
+   * explicit user entry. False prevents a missing statement from looking
+   * like a verified $0 balance.
+   */
+  balanceVerified?: boolean;
+  /**
    * Credit limit (cards only). Needed for utilization % —
    * the #1 lever people can move fast for credit health.
    */
@@ -72,6 +78,10 @@ export type FinanceTx = {
   pending?: boolean;
   /** Transaction type from OFX (DEBIT, ACH_CREDIT, POS, ATM, ZELLE, etc.) */
   txType?: string | null;
+  /** Bank-supplied account balance immediately after this posted row. */
+  statementBalance?: number | null;
+  /** Original source-row order, used to preserve same-day statement order. */
+  statementOrder?: number | null;
 };
 
 /**
@@ -167,6 +177,7 @@ const DEFAULT_BUDGET: BudgetLine[] = [
   { category: "Restaurants", planned: 0 },
   { category: "Housing", planned: 0 },
   { category: "Utilities", planned: 0 },
+  { category: "Laundry", planned: 0 },
   { category: "Health", planned: 0 },
   { category: "Subscriptions", planned: 0 },
   { category: "Clothing", planned: 0 },
@@ -239,6 +250,14 @@ function migrateTx(raw: Partial<FinanceTx>): FinanceTx {
     externalId: raw.externalId ?? null,
     pending: !!raw.pending,
     txType: raw.txType ?? null,
+    statementBalance:
+      raw.statementBalance == null || !Number.isFinite(Number(raw.statementBalance))
+        ? null
+        : Number(raw.statementBalance),
+    statementOrder:
+      raw.statementOrder == null || !Number.isFinite(Number(raw.statementOrder))
+        ? null
+        : Number(raw.statementOrder),
   };
 }
 
@@ -660,6 +679,9 @@ export function newTx(partial?: Partial<FinanceTx>): FinanceTx {
     source: partial?.source || "manual",
     externalId: partial?.externalId ?? null,
     pending: !!partial?.pending,
+    txType: partial?.txType ?? null,
+    statementBalance: partial?.statementBalance ?? null,
+    statementOrder: partial?.statementOrder ?? null,
   };
 }
 

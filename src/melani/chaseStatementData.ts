@@ -12,6 +12,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Mom",
     "source": "import",
     "externalId": "chase-b02ef8bfd7cbcb69",
+    "statementBalance": 0.03,
+    "statementOrder": 627,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -25,6 +27,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-8cca7ff2cc9eb2db",
+    "statementBalance": 4.03,
+    "statementOrder": 626,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -38,6 +42,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Mom",
     "source": "import",
     "externalId": "chase-ff53ad31c8e85d81",
+    "statementBalance": 300.03,
+    "statementOrder": 624,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -51,6 +57,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-27d0bc88c652d011",
+    "statementBalance": 300.03,
+    "statementOrder": 622,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -64,6 +72,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-a6568f0e51d64d7b",
+    "statementBalance": 0.03,
+    "statementOrder": 625,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -77,6 +87,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-efaafeea04d10db2",
+    "statementBalance": 301.03,
+    "statementOrder": 623,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -90,6 +102,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-384f10ce0b8eaf09",
+    "statementBalance": 450.03,
+    "statementOrder": 620,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -103,6 +117,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-00acd27351c5ee7a",
+    "statementBalance": 0.03,
+    "statementOrder": 621,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -116,6 +132,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-4f2e85fd252bb6f4",
+    "statementBalance": 0.03,
+    "statementOrder": 619,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -129,6 +147,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-b1411da2787b1468",
+    "statementBalance": 356.03,
+    "statementOrder": 615,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -142,6 +162,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-1641ca79dc4cb263",
+    "statementBalance": 305.03,
+    "statementOrder": 614,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -155,6 +177,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-cd779252b8873ab8",
+    "statementBalance": 300.03,
+    "statementOrder": 618,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -168,6 +192,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-342972d98b200d00",
+    "statementBalance": 351.03,
+    "statementOrder": 617,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -181,6 +207,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-c17bf57f37d910d9",
+    "statementBalance": 361.03,
+    "statementOrder": 616,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -194,6 +222,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ziyu Gao",
     "source": "import",
     "externalId": "chase-32d235f2fc1c47dc",
+    "statementBalance": 5.03,
+    "statementOrder": 613,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -207,6 +237,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-f2c05517ed04e067",
+    "statementBalance": 50.58,
+    "statementOrder": 612,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -220,6 +252,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Ziyu Gao",
     "source": "import",
     "externalId": "chase-c0adf2a50adf78e0",
+    "statementBalance": 224.58,
+    "statementOrder": 609,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -233,6 +267,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-7f3265c932e14826",
+    "statementBalance": 200.6,
+    "statementOrder": 608,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -246,6 +282,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-e9f69cb7b461a817",
+    "statementBalance": 74.58,
+    "statementOrder": 611,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -259,6 +297,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-4b6297bbea5e3dab",
+    "statementBalance": 174.58,
+    "statementOrder": 610,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -272,6 +312,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-7a23c83d6af4dc83",
+    "statementBalance": 340.6,
+    "statementOrder": 602,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -285,6 +327,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-c6a27700398e7a91",
+    "statementBalance": 190.6,
+    "statementOrder": 601,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -298,6 +342,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-f1016cde097e30be",
+    "statementBalance": 150.6,
+    "statementOrder": 607,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -311,6 +357,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-8545e27d7167acbb",
+    "statementBalance": 250.6,
+    "statementOrder": 606,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -324,6 +372,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-b16baacaee55d487",
+    "statementBalance": 410.6,
+    "statementOrder": 604,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -337,6 +387,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-aaa9dd5513c70e00",
+    "statementBalance": 400.6,
+    "statementOrder": 605,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -350,6 +402,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Goldman Sachs transfer",
     "source": "import",
     "externalId": "chase-d7ade862ca5a5cd9",
+    "statementBalance": 440.6,
+    "statementOrder": 603,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -363,6 +417,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-88d57d118facd909",
+    "statementBalance": 110.49,
+    "statementOrder": 598,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -376,6 +432,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-ee3181ba7d96d0fb",
+    "statementBalance": 70.49,
+    "statementOrder": 599,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -389,6 +447,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-4cfbb07b380a4356",
+    "statementBalance": 40.6,
+    "statementOrder": 600,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -402,6 +462,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-59d1f7d6bada74da",
+    "statementBalance": 120.45,
+    "statementOrder": 595,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -415,6 +477,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "LYFT *1 RIDE 06-05 HELP.LYFT.COM CA",
     "source": "import",
     "externalId": "chase-9c71efba694d449d",
+    "statementBalance": 140.38,
+    "statementOrder": 597,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -428,6 +492,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cash Redemption",
     "source": "import",
     "externalId": "chase-43d801a6052f5469",
+    "statementBalance": 150.35,
+    "statementOrder": 596,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -441,6 +507,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Waymo",
     "source": "import",
     "externalId": "chase-4f5d6a2d3b77609b",
+    "statementBalance": 81.45,
+    "statementOrder": 594,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -454,6 +522,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-c145f5a96598c6ce",
+    "statementBalance": 99.02,
+    "statementOrder": 593,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -467,6 +537,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-accb527a36ec9911",
+    "statementBalance": 426.02,
+    "statementOrder": 590,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -480,6 +552,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-0e6889105c812b17",
+    "statementBalance": 302.02,
+    "statementOrder": 589,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -493,6 +567,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-6fa260eca6ae6282",
+    "statementBalance": 138.02,
+    "statementOrder": 591,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -506,6 +582,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-116af8e226e2252e",
+    "statementBalance": 124.02,
+    "statementOrder": 592,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -519,6 +597,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-9a23f8e1faabaf7b",
+    "statementBalance": 302.02,
+    "statementOrder": 585,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -532,6 +612,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-e1c77e83e351096f",
+    "statementBalance": 372.02,
+    "statementOrder": 586,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -545,6 +627,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-1f598a7c496d075b",
+    "statementBalance": 2.02,
+    "statementOrder": 588,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -558,6 +642,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-126db1db1dd02ddf",
+    "statementBalance": 302.02,
+    "statementOrder": 587,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -571,6 +657,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-1d3a70844d148a0d",
+    "statementBalance": 14.37,
+    "statementOrder": 583,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -584,6 +672,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chipotle Los Angeles CA",
     "source": "import",
     "externalId": "chase-8508e0b80e95a6a1",
+    "statementBalance": 2.02,
+    "statementOrder": 584,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -597,6 +687,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-711ea64962c4fdd8",
+    "statementBalance": -0.63,
+    "statementOrder": 582,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -610,6 +702,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ricky (Coding Guy)",
     "source": "import",
     "externalId": "chase-d64ef6e25a789ff4",
+    "statementBalance": 264.37,
+    "statementOrder": 578,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -623,6 +717,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Richard Leon COFTEHFODQY9",
     "source": "import",
     "externalId": "chase-b7e0f3d74f827488",
+    "statementBalance": 351.74,
+    "statementOrder": 574,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -636,6 +732,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-2de76355c32f48c2",
+    "statementBalance": 337.24,
+    "statementOrder": 573,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -649,6 +747,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-ae03d5bc0336fb53",
+    "statementBalance": 352.74,
+    "statementOrder": 575,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -662,6 +762,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-6993ffd32aa879b7",
+    "statementBalance": -5.63,
+    "statementOrder": 581,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -675,6 +777,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-7fa17d3aa6288065",
+    "statementBalance": 194.37,
+    "statementOrder": 580,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -688,6 +792,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-549075022b306a4c",
+    "statementBalance": 214.37,
+    "statementOrder": 579,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -701,6 +807,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-de5e2c563ffc7ce2",
+    "statementBalance": 267.37,
+    "statementOrder": 577,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -714,6 +822,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "LYFT *1 RIDE 05-15 HELP.LYFT.COM CA",
     "source": "import",
     "externalId": "chase-09d997ceeab7de33",
+    "statementBalance": 298.77,
+    "statementOrder": 576,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -727,6 +837,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-dd7bc480a3f6c2e3",
+    "statementBalance": 355.91,
+    "statementOrder": 570,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -740,6 +852,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-0787298f2eb4f2f1",
+    "statementBalance": 137.24,
+    "statementOrder": 572,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -753,6 +867,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-eda50857f345e5e0",
+    "statementBalance": 237.24,
+    "statementOrder": 571,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -766,6 +882,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sean Filimon",
     "source": "import",
     "externalId": "chase-bfb49fc6e3bc2cde",
+    "statementBalance": 55.91,
+    "statementOrder": 569,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -779,6 +897,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-535dd3a7fd71482f",
+    "statementBalance": 460.66,
+    "statementOrder": 566,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -792,6 +912,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-bd2b471af24a328d",
+    "statementBalance": 270.91,
+    "statementOrder": 568,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -805,6 +927,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-cbe1e12e89a4adf8",
+    "statementBalance": 370.91,
+    "statementOrder": 567,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -818,6 +942,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-16322100efd90a9c",
+    "statementBalance": 361.51,
+    "statementOrder": 564,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -831,6 +957,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-83a7f57346a334ae",
+    "statementBalance": 260.66,
+    "statementOrder": 565,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -844,6 +972,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cash Redemption",
     "source": "import",
     "externalId": "chase-7890450736784885",
+    "statementBalance": 161.51,
+    "statementOrder": 563,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -857,6 +987,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ronni Wieman",
     "source": "import",
     "externalId": "chase-ca88677639b8a095",
+    "statementBalance": 361.98,
+    "statementOrder": 558,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -870,6 +1002,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-d1e177470c7498a8",
+    "statementBalance": 171.98,
+    "statementOrder": 555,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -883,6 +1017,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-a5ab4f3b2239c0a7",
+    "statementBalance": 271.98,
+    "statementOrder": 556,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -891,11 +1027,13 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "date": "2026-05-11",
     "kind": "expense",
     "amount": 10.0,
-    "category": "Shopping",
+    "category": "Laundry",
     "note": "Wash Kiosk Mobile",
     "merchant": "Wash Kiosk Mobile",
     "source": "import",
     "externalId": "chase-9e114091d0c89be0",
+    "statementBalance": 351.98,
+    "statementOrder": 559,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -909,6 +1047,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-bed55436a7cd0b27",
+    "statementBalance": 142.37,
+    "statementOrder": 562,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -922,6 +1062,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-ec45deaec9b92d6e",
+    "statementBalance": 158.13,
+    "statementOrder": 561,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -935,6 +1077,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-d5389929b303947c",
+    "statementBalance": 251.98,
+    "statementOrder": 560,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -948,6 +1092,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Goldman Sachs transfer",
     "source": "import",
     "externalId": "chase-7d0b17a03cb06760",
+    "statementBalance": 371.98,
+    "statementOrder": 557,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -961,6 +1107,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-7159731d3ed62149",
+    "statementBalance": 21.98,
+    "statementOrder": 554,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -974,6 +1122,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-dd94cac312b25cfa",
+    "statementBalance": 106.98,
+    "statementOrder": 551,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -987,6 +1137,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-d2a5c78353bb9a7a",
+    "statementBalance": 81.98,
+    "statementOrder": 552,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1000,6 +1152,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Goldman Sachs transfer",
     "source": "import",
     "externalId": "chase-44767ba36469077d",
+    "statementBalance": -18.02,
+    "statementOrder": 553,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1013,6 +1167,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-f01eec8beea93d8b",
+    "statementBalance": 204.22,
+    "statementOrder": 547,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1026,6 +1182,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-a700a2f7dc659e04",
+    "statementBalance": 200.07,
+    "statementOrder": 549,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1039,6 +1197,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-859cb635af325400",
+    "statementBalance": 180.07,
+    "statementOrder": 550,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1052,6 +1212,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-a70fcf500108dfbc",
+    "statementBalance": 225.87,
+    "statementOrder": 548,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1065,6 +1227,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sam Peterson",
     "source": "import",
     "externalId": "chase-e400c2f5f1cad0e0",
+    "statementBalance": 4.22,
+    "statementOrder": 546,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1078,6 +1242,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ronni Wieman",
     "source": "import",
     "externalId": "chase-140888af8f1ce6e4",
+    "statementBalance": 27.55,
+    "statementOrder": 545,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1091,6 +1257,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ella Will",
     "source": "import",
     "externalId": "chase-e11b6731fdadf22e",
+    "statementBalance": 85.55,
+    "statementOrder": 543,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1104,6 +1272,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ani",
     "source": "import",
     "externalId": "chase-2d08f0fb6cc62d25",
+    "statementBalance": 39.55,
+    "statementOrder": 544,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1117,6 +1287,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-4875fd02265213b9",
+    "statementBalance": 97.55,
+    "statementOrder": 542,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1130,6 +1302,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-f72806ac98db27c8",
+    "statementBalance": 381.52,
+    "statementOrder": 539,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1143,6 +1317,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-fd25f73c7a5d3d2e",
+    "statementBalance": 331.52,
+    "statementOrder": 538,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1156,6 +1332,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-611230a2c7db5f48",
+    "statementBalance": 281.52,
+    "statementOrder": 541,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1169,6 +1347,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-5c142ee4961a31cb",
+    "statementBalance": 301.52,
+    "statementOrder": 540,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1182,6 +1362,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Goldman Sachs transfer",
     "source": "import",
     "externalId": "chase-036dfc1c1983b39a",
+    "statementBalance": 281.52,
+    "statementOrder": 537,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1195,6 +1377,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Audrey Davis 0CA0IBN13XOA",
     "source": "import",
     "externalId": "chase-5efaf000e54b0ba0",
+    "statementBalance": 450.27,
+    "statementOrder": 532,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1208,6 +1392,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-e87864e5e8f8c163",
+    "statementBalance": 401.52,
+    "statementOrder": 534,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1221,6 +1407,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-0e47ea6e7b9b679d",
+    "statementBalance": 190.52,
+    "statementOrder": 535,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1234,6 +1422,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-254874547a322012",
+    "statementBalance": 640.27,
+    "statementOrder": 533,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1247,6 +1437,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Goldman Sachs transfer",
     "source": "import",
     "externalId": "chase-987625cf5706e331",
+    "statementBalance": 0.52,
+    "statementOrder": 536,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1260,6 +1452,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-e775b2de997cbe5f",
+    "statementBalance": 21.27,
+    "statementOrder": 530,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1273,6 +1467,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Goldman Sachs transfer",
     "source": "import",
     "externalId": "chase-1b71f672d0aeb7dd",
+    "statementBalance": 0.27,
+    "statementOrder": 531,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1286,6 +1482,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Alex",
     "source": "import",
     "externalId": "chase-a961af3acd2a2d6f",
+    "statementBalance": 0.27,
+    "statementOrder": 529,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1299,6 +1497,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-280ccc0f8507e0db",
+    "statementBalance": 30.27,
+    "statementOrder": 528,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1312,6 +1512,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-b7b12309c8f12434",
+    "statementBalance": 0.27,
+    "statementOrder": 526,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1325,6 +1527,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Goldman Sachs transfer",
     "source": "import",
     "externalId": "chase-39561eb09d42845b",
+    "statementBalance": -49.73,
+    "statementOrder": 527,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1338,6 +1542,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-f8f580693b9517a5",
+    "statementBalance": 88.27,
+    "statementOrder": 525,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1351,6 +1557,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-a86b1ac9e20ccab2",
+    "statementBalance": 128.27,
+    "statementOrder": 520,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1359,11 +1567,13 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "date": "2026-04-06",
     "kind": "expense",
     "amount": 10.0,
-    "category": "Shopping",
+    "category": "Laundry",
     "note": "Wash Kiosk Mobile",
     "merchant": "Wash Kiosk Mobile",
     "source": "import",
     "externalId": "chase-dfc1b907fd51e7bf",
+    "statementBalance": 8.27,
+    "statementOrder": 523,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1377,6 +1587,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-8ee271d06f1f0572",
+    "statementBalance": 18.27,
+    "statementOrder": 522,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1390,6 +1602,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-7122613eae4bbb58",
+    "statementBalance": 138.27,
+    "statementOrder": 521,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1403,6 +1617,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Goldman Sachs transfer",
     "source": "import",
     "externalId": "chase-a29870be0640d75e",
+    "statementBalance": -11.73,
+    "statementOrder": 524,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1416,6 +1632,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cash Redemption",
     "source": "import",
     "externalId": "chase-845f77ea2e570769",
+    "statementBalance": 27.27,
+    "statementOrder": 519,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1429,6 +1647,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Cedric Hong",
     "source": "import",
     "externalId": "chase-079d2cf8a670a0db",
+    "statementBalance": 310.97,
+    "statementOrder": 517,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1442,6 +1662,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-16f7069f0081a8b7",
+    "statementBalance": 10.97,
+    "statementOrder": 518,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1455,6 +1677,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sofia USC",
     "source": "import",
     "externalId": "chase-ff7c3a7cbdb90ddd",
+    "statementBalance": 53.85,
+    "statementOrder": 515,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1468,6 +1692,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ivan Shah",
     "source": "import",
     "externalId": "chase-473b69c1bcb6d1a1",
+    "statementBalance": 59.05,
+    "statementOrder": 514,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1481,6 +1707,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-500373576be1a315",
+    "statementBalance": 22.97,
+    "statementOrder": 516,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1494,6 +1722,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-a15902b4bbb160c7",
+    "statementBalance": 74.05,
+    "statementOrder": 513,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1507,6 +1737,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-d2bef9662fa64443",
+    "statementBalance": 100.03,
+    "statementOrder": 512,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1520,6 +1752,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-200183a4b499bd1e",
+    "statementBalance": 0.03,
+    "statementOrder": 511,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1533,6 +1767,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-859b2897d64232cc",
+    "statementBalance": 65.03,
+    "statementOrder": 510,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1546,6 +1782,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-82100eda03244454",
+    "statementBalance": 0.03,
+    "statementOrder": 509,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1559,6 +1797,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-68527f1037d7f5d5",
+    "statementBalance": 80.03,
+    "statementOrder": 508,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1572,6 +1812,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-340498a857d41ece",
+    "statementBalance": 803.03,
+    "statementOrder": 504,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1585,6 +1827,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-c56cf9c28205b6d7",
+    "statementBalance": 403.03,
+    "statementOrder": 503,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1598,6 +1842,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-d75d071beaa55f37",
+    "statementBalance": 0.03,
+    "statementOrder": 507,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1611,6 +1857,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-c7700f92ee244155",
+    "statementBalance": 450.03,
+    "statementOrder": 505,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1624,6 +1872,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-c152fa541ce739c6",
+    "statementBalance": 50.03,
+    "statementOrder": 506,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1637,6 +1887,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Nepa Fashion House Llc",
     "source": "import",
     "externalId": "chase-9684d37b8d04fa4d",
+    "statementBalance": 3.03,
+    "statementOrder": 502,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1650,6 +1902,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-dd157b7bb4dbddaa",
+    "statementBalance": 5.03,
+    "statementOrder": 501,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1663,6 +1917,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-67c6874e1687f6dc",
+    "statementBalance": 61.68,
+    "statementOrder": 499,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1676,6 +1932,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-d5c95a92a9d264e1",
+    "statementBalance": 0.03,
+    "statementOrder": 500,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1689,6 +1947,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-1c76fbc17a3cc294",
+    "statementBalance": 518.88,
+    "statementOrder": 498,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1702,6 +1962,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-d612727e1edae9ed",
+    "statementBalance": 118.88,
+    "statementOrder": 496,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1715,6 +1977,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-f3ec9dccba5e4b24",
+    "statementBalance": 120.88,
+    "statementOrder": 495,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1728,6 +1992,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-435f331a6799c4b0",
+    "statementBalance": 18.88,
+    "statementOrder": 497,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1741,6 +2007,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sofia USC",
     "source": "import",
     "externalId": "chase-05a88e56fcde1b42",
+    "statementBalance": 20.88,
+    "statementOrder": 494,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1754,6 +2022,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Zeba Attar",
     "source": "import",
     "externalId": "chase-0b856e3acbb2fc59",
+    "statementBalance": 51.86,
+    "statementOrder": 492,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1767,6 +2037,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-7520061cbece6499",
+    "statementBalance": 31.86,
+    "statementOrder": 493,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1780,6 +2052,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cash Redemption",
     "source": "import",
     "externalId": "chase-7f18c618225a7bac",
+    "statementBalance": 45.86,
+    "statementOrder": 491,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1793,6 +2067,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Nicolette",
     "source": "import",
     "externalId": "chase-24f2bf1c5f33c0f6",
+    "statementBalance": 27.93,
+    "statementOrder": 490,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1806,6 +2082,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-089ce1c1983a1548",
+    "statementBalance": 135.93,
+    "statementOrder": 485,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1819,6 +2097,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Millennium Shrestha",
     "source": "import",
     "externalId": "chase-f192821e9d2d2951",
+    "statementBalance": 120.93,
+    "statementOrder": 484,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1832,6 +2112,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-e256515b45d91c77",
+    "statementBalance": 80.93,
+    "statementOrder": 482,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1845,6 +2127,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-7641a9e19de0fc12",
+    "statementBalance": 35.93,
+    "statementOrder": 489,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1858,6 +2142,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-5849a144fb4cd285",
+    "statementBalance": 45.93,
+    "statementOrder": 488,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1871,6 +2157,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-5e3fc45d5da7b30d",
+    "statementBalance": 65.93,
+    "statementOrder": 487,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1884,6 +2172,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-56d40fe2178c74f7",
+    "statementBalance": 145.93,
+    "statementOrder": 486,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1897,6 +2187,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-52c881c010727d11",
+    "statementBalance": 100.93,
+    "statementOrder": 483,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1910,6 +2202,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-00e7455391aaf028",
+    "statementBalance": 0.93,
+    "statementOrder": 481,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1923,6 +2217,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-9a8ce769aedcec3f",
+    "statementBalance": 126.93,
+    "statementOrder": 478,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1936,6 +2232,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-ef73d341b0c4078f",
+    "statementBalance": 30.93,
+    "statementOrder": 480,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1949,6 +2247,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-6ce1c6b878e0db71",
+    "statementBalance": 66.93,
+    "statementOrder": 479,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1962,6 +2262,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-95d70a5a2be882d7",
+    "statementBalance": 96.93,
+    "statementOrder": 477,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1975,6 +2277,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-a50561cf62943d60",
+    "statementBalance": 86.93,
+    "statementOrder": 475,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -1988,6 +2292,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-c16fe066b10abe4d",
+    "statementBalance": 61.93,
+    "statementOrder": 476,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2001,6 +2307,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Zeba Attar",
     "source": "import",
     "externalId": "chase-d40e1d8975c296ef",
+    "statementBalance": 6.93,
+    "statementOrder": 474,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2014,6 +2322,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-06b0dead89f071df",
+    "statementBalance": 180.93,
+    "statementOrder": 470,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2027,6 +2337,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-e2733628827269cb",
+    "statementBalance": 0.93,
+    "statementOrder": 473,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2040,6 +2352,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-3cddaa71e003ad3d",
+    "statementBalance": 20.93,
+    "statementOrder": 472,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2053,6 +2367,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-9e497d38254bfda3",
+    "statementBalance": 80.93,
+    "statementOrder": 471,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2066,6 +2382,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cash Redemption",
     "source": "import",
     "externalId": "chase-d063b0101b72023a",
+    "statementBalance": 160.93,
+    "statementOrder": 469,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2079,6 +2397,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Carly USC",
     "source": "import",
     "externalId": "chase-4069835242662bf4",
+    "statementBalance": 445.53,
+    "statementOrder": 466,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2092,6 +2412,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-80b2420f5b4a207c",
+    "statementBalance": 570.37,
+    "statementOrder": 464,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2105,6 +2427,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Audrey Davis 0CA0QBJ17YG4",
     "source": "import",
     "externalId": "chase-f380d5d1381146b1",
+    "statementBalance": 569.37,
+    "statementOrder": 463,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2113,11 +2437,13 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "date": "2026-02-17",
     "kind": "expense",
     "amount": 10.0,
-    "category": "Shopping",
+    "category": "Laundry",
     "note": "Wash Kiosk Mobile",
     "merchant": "Wash Kiosk Mobile",
     "source": "import",
     "externalId": "chase-a36b52302d7067cf",
+    "statementBalance": 135.53,
+    "statementOrder": 468,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2131,6 +2457,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-418e1e838abd3337",
+    "statementBalance": 145.53,
+    "statementOrder": 467,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2144,6 +2472,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-8069980c16bda9a3",
+    "statementBalance": 481.37,
+    "statementOrder": 465,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2157,6 +2487,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ziyu Gao",
     "source": "import",
     "externalId": "chase-7462d5f82f5d4dd5",
+    "statementBalance": 89.37,
+    "statementOrder": 462,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2170,6 +2502,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-7a3301a7c1e75e66",
+    "statementBalance": 100.37,
+    "statementOrder": 461,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2183,6 +2517,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-c1463dc785eb787c",
+    "statementBalance": 0.37,
+    "statementOrder": 460,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2196,6 +2532,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-878b3ea8474f2360",
+    "statementBalance": 67.37,
+    "statementOrder": 459,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2209,6 +2547,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Sophie Chuang Wfct0Zrp5X3H",
     "source": "import",
     "externalId": "chase-9fcb680f631dbeae",
+    "statementBalance": 49.37,
+    "statementOrder": 458,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2222,6 +2562,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Venmo cashout",
     "source": "import",
     "externalId": "chase-38c6d6034b151ebf",
+    "statementBalance": 42.37,
+    "statementOrder": 457,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2235,6 +2577,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-0af7b9921b77893d",
+    "statementBalance": 2.37,
+    "statementOrder": 456,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2243,11 +2587,13 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "date": "2026-02-02",
     "kind": "expense",
     "amount": 10.0,
-    "category": "Shopping",
+    "category": "Laundry",
     "note": "Wash Kiosk Mobile",
     "merchant": "Wash Kiosk Mobile",
     "source": "import",
     "externalId": "chase-8b470dcc083a3264",
+    "statementBalance": 10.4,
+    "statementOrder": 455,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2261,6 +2607,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-9be1be9bfecda412",
+    "statementBalance": 13.4,
+    "statementOrder": 453,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2274,6 +2622,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-452821bb9f9dc8f4",
+    "statementBalance": 20.4,
+    "statementOrder": 454,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2287,6 +2637,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-89834940b2380c10",
+    "statementBalance": 3.4,
+    "statementOrder": 452,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2300,6 +2652,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-be7d4bcfe6e218e0",
+    "statementBalance": 28.4,
+    "statementOrder": 451,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2313,6 +2667,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ced",
     "source": "import",
     "externalId": "chase-8907704504e0932e",
+    "statementBalance": 94.53,
+    "statementOrder": 448,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2326,6 +2682,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-74cc538715c53a82",
+    "statementBalance": 97.53,
+    "statementOrder": 446,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2339,6 +2697,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-ddeda3f3a6a24dc2",
+    "statementBalance": 52.38,
+    "statementOrder": 449,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2352,6 +2712,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-489aac39d58f5021",
+    "statementBalance": 50.38,
+    "statementOrder": 450,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2365,6 +2727,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-8ce9e01d9f0376ca",
+    "statementBalance": 117.53,
+    "statementOrder": 447,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2378,6 +2742,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-3fb715893b9120cc",
+    "statementBalance": 67.53,
+    "statementOrder": 444,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2391,6 +2757,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-8726bbe664af82f0",
+    "statementBalance": 47.53,
+    "statementOrder": 445,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2404,6 +2772,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Zeba Attar",
     "source": "import",
     "externalId": "chase-7438cd3b5ead7f14",
+    "statementBalance": 467.53,
+    "statementOrder": 442,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2417,6 +2787,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-c2b557c7ea0c19e6",
+    "statementBalance": 350.19,
+    "statementOrder": 440,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2430,6 +2802,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-16b178665eb575e2",
+    "statementBalance": 450.19,
+    "statementOrder": 441,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2443,6 +2817,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-e4465a74c7e3db99",
+    "statementBalance": 367.53,
+    "statementOrder": 443,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2456,6 +2832,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ziyu Gao",
     "source": "import",
     "externalId": "chase-f1691a73b033adcb",
+    "statementBalance": 142.45,
+    "statementOrder": 434,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2469,6 +2847,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-11300f18cc431cee",
+    "statementBalance": 97.19,
+    "statementOrder": 437,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2482,6 +2862,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Yuetong Liu 0Jx01B91Kkf8",
     "source": "import",
     "externalId": "chase-e4e586310abb98fd",
+    "statementBalance": 140.95,
+    "statementOrder": 431,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2495,6 +2877,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from JINGTONG LUO BACruwt6mwro",
     "source": "import",
     "externalId": "chase-b5121dbf2a69a1ce",
+    "statementBalance": 152.45,
+    "statementOrder": 433,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2508,6 +2892,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from JINGTONG LUO BAClxqw9147f",
     "source": "import",
     "externalId": "chase-3651904183c3a29c",
+    "statementBalance": 146.95,
+    "statementOrder": 432,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2521,6 +2907,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-6e9921ef204eee46",
+    "statementBalance": 130.2,
+    "statementOrder": 430,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2534,6 +2922,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Waymo",
     "source": "import",
     "externalId": "chase-4c33baa7a815ce0c",
+    "statementBalance": 110.19,
+    "statementOrder": 436,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2547,6 +2937,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Waymo",
     "source": "import",
     "externalId": "chase-b6313c2dad44920c",
+    "statementBalance": 125.97,
+    "statementOrder": 435,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2560,6 +2952,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-8fccf5b5bf7594e4",
+    "statementBalance": 0.19,
+    "statementOrder": 439,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2573,6 +2967,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-b8ac75bd52416b25",
+    "statementBalance": 80.19,
+    "statementOrder": 438,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2586,6 +2982,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-557986907c9b0e2e",
+    "statementBalance": 60.2,
+    "statementOrder": 428,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2594,11 +2992,13 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "date": "2026-01-15",
     "kind": "expense",
     "amount": 10.0,
-    "category": "Shopping",
+    "category": "Laundry",
     "note": "Wash Kiosk Mobile",
     "merchant": "Wash Kiosk Mobile",
     "source": "import",
     "externalId": "chase-76c4e8ac3ff856dd",
+    "statementBalance": 50.2,
+    "statementOrder": 429,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2612,6 +3012,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Nicole USC Roomate",
     "source": "import",
     "externalId": "chase-76f3399ade045e48",
+    "statementBalance": 10.2,
+    "statementOrder": 427,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2625,6 +3027,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-c1ef1960c0a8c147",
+    "statementBalance": 492.42,
+    "statementOrder": 421,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2638,6 +3042,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-793ad71db2e9272c",
+    "statementBalance": 537.42,
+    "statementOrder": 423,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2651,6 +3057,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-f0756b6eb981bd3f",
+    "statementBalance": 527.42,
+    "statementOrder": 422,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2664,6 +3072,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-eab1652aef6760ce",
+    "statementBalance": 402.42,
+    "statementOrder": 420,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2677,6 +3087,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-f3b80faca08ceb29",
+    "statementBalance": 45.42,
+    "statementOrder": 426,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2690,6 +3102,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-7e9d8821df8d6d51",
+    "statementBalance": 435.42,
+    "statementOrder": 425,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2703,6 +3117,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-5f67673bf0f464d1",
+    "statementBalance": 525.42,
+    "statementOrder": 424,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2716,6 +3132,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-a6978a4c6c34ff2c",
+    "statementBalance": 2.42,
+    "statementOrder": 419,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2729,6 +3147,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "New Woodside Grocery Elmhurst NY",
     "source": "import",
     "externalId": "chase-10ef22e783bc6a79",
+    "statementBalance": 59.42,
+    "statementOrder": 418,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2742,6 +3162,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "MTA NYCT PayGo New York NY",
     "source": "import",
     "externalId": "chase-0aa58d4176e06dc9",
+    "statementBalance": 66.07,
+    "statementOrder": 416,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2755,6 +3177,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "MTA NYCT PayGo New York NY",
     "source": "import",
     "externalId": "chase-63c8500f219f17f2",
+    "statementBalance": 63.17,
+    "statementOrder": 417,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2768,6 +3192,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Zeba Attar",
     "source": "import",
     "externalId": "chase-a18d6f361e32a40f",
+    "statementBalance": 192.84,
+    "statementOrder": 410,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2781,6 +3207,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-a96d2bf094f24125",
+    "statementBalance": 91.71,
+    "statementOrder": 413,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2794,6 +3222,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-6c0b596aa154896a",
+    "statementBalance": 164.84,
+    "statementOrder": 411,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2807,6 +3237,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "New Woodside Grocery Elmhurst NY",
     "source": "import",
     "externalId": "chase-7d2ae8d52f0c8998",
+    "statementBalance": 147.67,
+    "statementOrder": 412,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2820,6 +3252,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Las Marias Deli",
     "source": "import",
     "externalId": "chase-f7ff225b00e7465d",
+    "statementBalance": 88.96,
+    "statementOrder": 414,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2833,6 +3267,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "8897 Retro Fitness Fore Glendale NY",
     "source": "import",
     "externalId": "chase-f278769deb5a7fa4",
+    "statementBalance": 68.97,
+    "statementOrder": 415,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2846,6 +3282,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-d65c98cbef55acf1",
+    "statementBalance": 145.71,
+    "statementOrder": 405,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2859,6 +3297,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-2e9b18bb489cc5c5",
+    "statementBalance": 162.72,
+    "statementOrder": 409,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2872,6 +3312,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-61f87128d10f8bbf",
+    "statementBalance": 170.71,
+    "statementOrder": 406,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2885,6 +3327,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-d53a13b061d12647",
+    "statementBalance": 190.71,
+    "statementOrder": 407,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2898,6 +3342,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "G Mart Elmhurst NY",
     "source": "import",
     "externalId": "chase-6885540e84b32b4f",
+    "statementBalance": 187.72,
+    "statementOrder": 408,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2911,6 +3357,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "New Woodside Grocery Elmhurst NY",
     "source": "import",
     "externalId": "chase-9d7b08286a50f050",
+    "statementBalance": 45.71,
+    "statementOrder": 404,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2924,6 +3372,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cash Redemption",
     "source": "import",
     "externalId": "chase-3c76e8d32e4fbb8a",
+    "statementBalance": 48.21,
+    "statementOrder": 403,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2937,6 +3387,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-a700c27594655c79",
+    "statementBalance": 23.42,
+    "statementOrder": 402,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2950,6 +3402,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-b92b81a4dc1c7bd0",
+    "statementBalance": 79.09,
+    "statementOrder": 401,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2963,6 +3417,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-d51641cf9ad2ae66",
+    "statementBalance": 89.28,
+    "statementOrder": 400,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2976,6 +3432,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-ced141cb669990f3",
+    "statementBalance": 400.28,
+    "statementOrder": 397,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -2989,6 +3447,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-5b77d14a69535fb8",
+    "statementBalance": 500.28,
+    "statementOrder": 398,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3002,6 +3462,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-fb12d146cb80a694",
+    "statementBalance": 480.28,
+    "statementOrder": 399,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3015,6 +3477,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-36ce4f07d0ab50f3",
+    "statementBalance": 214.28,
+    "statementOrder": 394,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3028,6 +3492,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-ec36c40ce6aca25e",
+    "statementBalance": 0.28,
+    "statementOrder": 396,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3041,6 +3507,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-12de62b58830a84e",
+    "statementBalance": 200.28,
+    "statementOrder": 395,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3054,6 +3522,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Nayax Amusement",
     "source": "import",
     "externalId": "chase-06cb383aa3441a02",
+    "statementBalance": 32.25,
+    "statementOrder": 391,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3067,6 +3537,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Farmer's Fridge",
     "source": "import",
     "externalId": "chase-b8542d04a4620bad",
+    "statementBalance": 19.38,
+    "statementOrder": 392,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3080,6 +3552,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "First Class Vending",
     "source": "import",
     "externalId": "chase-4896ab82147d732f",
+    "statementBalance": 14.28,
+    "statementOrder": 393,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3093,6 +3567,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-b0259fa965b5a9aa",
+    "statementBalance": 200.05,
+    "statementOrder": 388,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3106,6 +3582,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-869772c4f5ccf316",
+    "statementBalance": 100.05,
+    "statementOrder": 389,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3119,6 +3597,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "LYFT *RIDE TUE 3AM HELP.LYFT.COM CA",
     "source": "import",
     "externalId": "chase-0162f277973fb344",
+    "statementBalance": 46.24,
+    "statementOrder": 390,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3132,6 +3612,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-626fd8dbfcc4517e",
+    "statementBalance": 100.05,
+    "statementOrder": 387,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3145,6 +3627,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-dccfdf3f6579044f",
+    "statementBalance": 0.05,
+    "statementOrder": 386,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3158,6 +3642,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-529946a6911cff47",
+    "statementBalance": 7.75,
+    "statementOrder": 385,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3171,6 +3657,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Lionna ID",
     "source": "import",
     "externalId": "chase-59367121e9195d96",
+    "statementBalance": 16,
+    "statementOrder": 384,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3184,6 +3672,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-24670fc14a5bccec",
+    "statementBalance": 56,
+    "statementOrder": 382,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3197,6 +3687,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-338f504630a05c23",
+    "statementBalance": 76,
+    "statementOrder": 383,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3210,6 +3702,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Carly USC",
     "source": "import",
     "externalId": "chase-ed1723a68bd94e36",
+    "statementBalance": 306,
+    "statementOrder": 378,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3223,6 +3717,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-c6c7eae4d745a7a0",
+    "statementBalance": 300,
+    "statementOrder": 376,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3236,6 +3732,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-2a21ef76192a606f",
+    "statementBalance": 6,
+    "statementOrder": 381,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3249,6 +3747,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-5bd328469d9da293",
+    "statementBalance": 36,
+    "statementOrder": 380,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3262,6 +3762,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-cf14c8ae37449a65",
+    "statementBalance": 286,
+    "statementOrder": 379,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3275,6 +3777,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-ce93d32f08859ae2",
+    "statementBalance": 320,
+    "statementOrder": 377,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3288,6 +3792,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-c1e705b694a4e6d6",
+    "statementBalance": 365,
+    "statementOrder": 368,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3301,6 +3807,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-5c3d163430c5e748",
+    "statementBalance": 576,
+    "statementOrder": 370,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3314,6 +3822,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-ec631b3e63381f99",
+    "statementBalance": 476,
+    "statementOrder": 369,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3327,6 +3837,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-0f8205959c8c011c",
+    "statementBalance": 200,
+    "statementOrder": 367,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3340,6 +3852,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-0572130cb73f07fc",
+    "statementBalance": 0,
+    "statementOrder": 375,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3353,6 +3867,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-369cd1af4e5b2ff1",
+    "statementBalance": 166,
+    "statementOrder": 374,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3366,6 +3882,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-17bcfeb6ba155abf",
+    "statementBalance": 266,
+    "statementOrder": 373,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3379,6 +3897,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-52e94cebb7101b45",
+    "statementBalance": 376,
+    "statementOrder": 372,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3392,6 +3912,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-4bad411c07d50fe7",
+    "statementBalance": 556,
+    "statementOrder": 371,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3405,6 +3927,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-1dda096d77101332",
+    "statementBalance": 288.05,
+    "statementOrder": 357,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3418,6 +3942,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-3146775c08b7665b",
+    "statementBalance": 429.05,
+    "statementOrder": 358,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3431,6 +3957,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Waymo",
     "source": "import",
     "externalId": "chase-de436582a177908f",
+    "statementBalance": 410.86,
+    "statementOrder": 360,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3444,6 +3972,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "The New Stand Los Angeles CA",
     "source": "import",
     "externalId": "chase-1afb021cbb59ed10",
+    "statementBalance": 372.35,
+    "statementOrder": 362,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3457,6 +3987,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-206d0ae45a4b4bc4",
+    "statementBalance": 0,
+    "statementOrder": 366,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3470,6 +4002,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-eb3e010d2b5ca62b",
+    "statementBalance": 141,
+    "statementOrder": 365,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3483,6 +4017,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-77a81b78198b2340",
+    "statementBalance": 143.81,
+    "statementOrder": 364,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3496,6 +4032,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-fc9475cac08deb92",
+    "statementBalance": 429.51,
+    "statementOrder": 359,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3509,6 +4047,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "LYFT *1 RIDE 11-26 HELP.LYFT.COM CA",
     "source": "import",
     "externalId": "chase-7f83b9190241a100",
+    "statementBalance": 381.14,
+    "statementOrder": 361,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3522,6 +4062,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "LAX Cali Pizza Kitchen Los Angeles CA",
     "source": "import",
     "externalId": "chase-aa9b65992b3d5c8b",
+    "statementBalance": 343.81,
+    "statementOrder": 363,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3535,6 +4077,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-ec60bea248348c06",
+    "statementBalance": 200.05,
+    "statementOrder": 354,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3548,6 +4092,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-678abace74e24742",
+    "statementBalance": 88.05,
+    "statementOrder": 356,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3561,6 +4107,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-ca88c71d80a58b5a",
+    "statementBalance": 180.05,
+    "statementOrder": 355,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3574,6 +4122,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Millennium Shrestha",
     "source": "import",
     "externalId": "chase-f3050cc99b5f3aff",
+    "statementBalance": 170.05,
+    "statementOrder": 353,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3587,6 +4137,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-a60819fd9f8112fc",
+    "statementBalance": 150.05,
+    "statementOrder": 352,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3600,6 +4152,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-0d4f9244b3f3e9f8",
+    "statementBalance": 100.05,
+    "statementOrder": 351,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3613,6 +4167,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from CARLY SHARMAT BACchcqzcw11",
     "source": "import",
     "externalId": "chase-3522d04846b50b7f",
+    "statementBalance": 236.16,
+    "statementOrder": 343,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3626,6 +4182,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from CARLY SHARMAT BACa76ulnry8",
     "source": "import",
     "externalId": "chase-c837b2a33db79f73",
+    "statementBalance": 244.64,
+    "statementOrder": 344,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3639,6 +4197,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-43954a5a9639b3a4",
+    "statementBalance": 0.05,
+    "statementOrder": 350,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3652,6 +4212,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-f3d772835323402e",
+    "statementBalance": 79.05,
+    "statementOrder": 349,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3665,6 +4227,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-20e1c9dab757a1e1",
+    "statementBalance": 119.05,
+    "statementOrder": 348,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3678,6 +4242,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-5c5234b53f2ef29a",
+    "statementBalance": 217,
+    "statementOrder": 347,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3691,6 +4257,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-7c6c8b12d0d8d762",
+    "statementBalance": 225.64,
+    "statementOrder": 346,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3704,6 +4272,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-6a8d9624ee762a92",
+    "statementBalance": 228.64,
+    "statementOrder": 345,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3717,6 +4287,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Deposit ID Number",
     "source": "import",
     "externalId": "chase-51b3237085b92417",
+    "statementBalance": 219.38,
+    "statementOrder": 342,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3730,6 +4302,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-97c53ab4143d8cdf",
+    "statementBalance": 2.38,
+    "statementOrder": 341,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3743,6 +4317,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sam Peterson",
     "source": "import",
     "externalId": "chase-378a61239a28e547",
+    "statementBalance": 181.07,
+    "statementOrder": 338,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3756,6 +4332,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ronni Wieman",
     "source": "import",
     "externalId": "chase-06abdb1faa48ee9e",
+    "statementBalance": 224.57,
+    "statementOrder": 335,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3769,6 +4347,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ella Will",
     "source": "import",
     "externalId": "chase-144c1892571e277d",
+    "statementBalance": 188.07,
+    "statementOrder": 337,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3782,6 +4362,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ani",
     "source": "import",
     "externalId": "chase-2bba337cdeb2eb70",
+    "statementBalance": 195.07,
+    "statementOrder": 336,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3795,6 +4377,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-2c096db76038cc6f",
+    "statementBalance": 251.72,
+    "statementOrder": 333,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3808,6 +4392,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-cbe7cd04832cd546",
+    "statementBalance": 16.04,
+    "statementOrder": 340,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3821,6 +4407,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-5039438b745a2f34",
+    "statementBalance": 60.36,
+    "statementOrder": 339,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3834,6 +4422,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chase credit card payment",
     "source": "import",
     "externalId": "chase-ada0c4732f3e7142",
+    "statementBalance": 243.57,
+    "statementOrder": 334,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3847,6 +4437,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Mom",
     "source": "import",
     "externalId": "chase-44afe54aae707333",
+    "statementBalance": 188.72,
+    "statementOrder": 332,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3860,6 +4452,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Rosalyn Amezquita Wfct0Zhf24Gb",
     "source": "import",
     "externalId": "chase-ca38f1fee24b015c",
+    "statementBalance": 274.91,
+    "statementOrder": 329,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3873,6 +4467,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Venmo cashout",
     "source": "import",
     "externalId": "chase-bec1e54fb051e52b",
+    "statementBalance": 174.91,
+    "statementOrder": 327,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3886,6 +4482,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-8b9e714e1e6c0a3f",
+    "statementBalance": 272.72,
+    "statementOrder": 331,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3899,6 +4497,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-086345a776713629",
+    "statementBalance": 254.91,
+    "statementOrder": 328,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3912,6 +4512,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-21c4c9fd950bac4a",
+    "statementBalance": 279.91,
+    "statementOrder": 330,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3925,6 +4527,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-d16b2a8998f6a0b7",
+    "statementBalance": 2.91,
+    "statementOrder": 326,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3938,6 +4542,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-8330bb2dbfab0cf9",
+    "statementBalance": 20.91,
+    "statementOrder": 324,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3946,11 +4552,13 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "date": "2025-11-12",
     "kind": "expense",
     "amount": 15.0,
-    "category": "Shopping",
+    "category": "Laundry",
     "note": "Wash Kiosk Mobile",
     "merchant": "Wash Kiosk Mobile",
     "source": "import",
     "externalId": "chase-4ffe4d4dc8baa2c6",
+    "statementBalance": 5.91,
+    "statementOrder": 325,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3964,6 +4572,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-45f39877aa3751a2",
+    "statementBalance": 41.91,
+    "statementOrder": 321,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3977,6 +4587,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Taco",
     "source": "import",
     "externalId": "chase-078cf379aeddf473",
+    "statementBalance": 35.91,
+    "statementOrder": 322,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -3990,6 +4602,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sunsent Chickne",
     "source": "import",
     "externalId": "chase-04d1e8974812f727",
+    "statementBalance": 25.91,
+    "statementOrder": 323,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4003,6 +4617,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-9d567c7ce0fb8b68",
+    "statementBalance": 57.08,
+    "statementOrder": 320,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4016,6 +4632,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-094a6309eff07121",
+    "statementBalance": 7.08,
+    "statementOrder": 319,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4029,6 +4647,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-0b82ea53e1a42a91",
+    "statementBalance": 49.08,
+    "statementOrder": 318,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4042,6 +4662,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-12ec3f1c85215fbe",
+    "statementBalance": 60.03,
+    "statementOrder": 317,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4055,6 +4677,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sunsent Chickne",
     "source": "import",
     "externalId": "chase-69c4bb260a38d8e2",
+    "statementBalance": 70.98,
+    "statementOrder": 316,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4068,6 +4692,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sunsent Chickne",
     "source": "import",
     "externalId": "chase-323037a972c49b87",
+    "statementBalance": 80.98,
+    "statementOrder": 315,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4081,6 +4707,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-7c1e71fd90120951",
+    "statementBalance": 90.98,
+    "statementOrder": 314,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4094,6 +4722,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-dc457d5ca313a758",
+    "statementBalance": 109.78,
+    "statementOrder": 312,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4107,6 +4737,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-517e2b6ca6ebbdaf",
+    "statementBalance": 132.15,
+    "statementOrder": 310,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4120,6 +4752,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-91d398c617e87e7e",
+    "statementBalance": 133.15,
+    "statementOrder": 309,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4133,6 +4767,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-222475ca9cfa3080",
+    "statementBalance": 115.73,
+    "statementOrder": 311,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4146,6 +4782,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-f1bc4e74bf7841eb",
+    "statementBalance": 156.24,
+    "statementOrder": 307,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4159,6 +4797,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-4a1050076a24e61f",
+    "statementBalance": 169.24,
+    "statementOrder": 306,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4172,6 +4812,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-3fe3f0ce61418fc5",
+    "statementBalance": 172.24,
+    "statementOrder": 305,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4185,6 +4827,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sunsent Chickne",
     "source": "import",
     "externalId": "chase-e1bd88d1cc8b9e4a",
+    "statementBalance": 95.78,
+    "statementOrder": 313,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4198,6 +4842,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Jada New North",
     "source": "import",
     "externalId": "chase-9b5172db2f717c11",
+    "statementBalance": 149.57,
+    "statementOrder": 308,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4211,6 +4857,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Zeba Attar",
     "source": "import",
     "externalId": "chase-1b08e21743ecde18",
+    "statementBalance": 182.22,
+    "statementOrder": 304,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4224,6 +4872,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Shraddha Silwal",
     "source": "import",
     "externalId": "chase-7b84db9a2051502c",
+    "statementBalance": 148.38,
+    "statementOrder": 303,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4237,6 +4887,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-1093912625b15e79",
+    "statementBalance": 50.87,
+    "statementOrder": 301,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4250,6 +4902,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-b94e1b5987bee411",
+    "statementBalance": 48.38,
+    "statementOrder": 302,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4263,6 +4917,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Surf",
     "source": "import",
     "externalId": "chase-ce48a38a97257bbf",
+    "statementBalance": 91.15,
+    "statementOrder": 299,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4276,6 +4932,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-27700820a406e0a1",
+    "statementBalance": 66.15,
+    "statementOrder": 300,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4289,6 +4947,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Brother",
     "source": "import",
     "externalId": "chase-423b53baadc82b2d",
+    "statementBalance": 111.15,
+    "statementOrder": 298,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4302,6 +4962,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Millennium Shrestha",
     "source": "import",
     "externalId": "chase-625eb7a41c35aa8d",
+    "statementBalance": 175.15,
+    "statementOrder": 297,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4315,6 +4977,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Brother",
     "source": "import",
     "externalId": "chase-061a5e316adf625a",
+    "statementBalance": 115.15,
+    "statementOrder": 296,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4328,6 +4992,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Trader Joe's Los Angeles CA",
     "source": "import",
     "externalId": "chase-7efca649a8012d98",
+    "statementBalance": 175.15,
+    "statementOrder": 295,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4341,6 +5007,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Amazon Marketplace",
     "source": "import",
     "externalId": "chase-a5f08ec5954d457b",
+    "statementBalance": 179.14,
+    "statementOrder": 294,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4354,6 +5022,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Laura",
     "source": "import",
     "externalId": "chase-ea00550d672dbbd6",
+    "statementBalance": 225.62,
+    "statementOrder": 288,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4367,6 +5037,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-b6b648941686b1e1",
+    "statementBalance": 172.57,
+    "statementOrder": 279,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4380,6 +5052,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-63153444bce98bd6",
+    "statementBalance": 197.64,
+    "statementOrder": 292,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4393,6 +5067,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-9149d37f6fc0502d",
+    "statementBalance": 260.29,
+    "statementOrder": 285,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4406,6 +5082,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Subway Los Angeles CA",
     "source": "import",
     "externalId": "chase-4706e8a0fc84a911",
+    "statementBalance": 217.3,
+    "statementOrder": 290,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4419,6 +5097,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Public Estrellas Los Angeles CA",
     "source": "import",
     "externalId": "chase-d5052c48ae468edf",
+    "statementBalance": 242.62,
+    "statementOrder": 287,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4432,6 +5112,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-d350948853131b2f",
+    "statementBalance": 272.57,
+    "statementOrder": 280,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4445,6 +5127,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-2f95fe6551ca6645",
+    "statementBalance": 304.57,
+    "statementOrder": 283,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4458,6 +5142,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-3e0a293e2dbf31d7",
+    "statementBalance": 299.57,
+    "statementOrder": 282,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4471,6 +5157,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-eef8637cd474f591",
+    "statementBalance": 289.57,
+    "statementOrder": 281,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4484,6 +5172,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-fc9d27e6ebd3d4f5",
+    "statementBalance": 192.15,
+    "statementOrder": 293,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4497,6 +5187,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-9808bf03df9fe499",
+    "statementBalance": 211.81,
+    "statementOrder": 291,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4510,6 +5202,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "DoorDash",
     "source": "import",
     "externalId": "chase-75f9b7544e071c55",
+    "statementBalance": 265.77,
+    "statementOrder": 284,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4523,6 +5217,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "ARCO Los Angeles CA",
     "source": "import",
     "externalId": "chase-44b41f5fd76f550d",
+    "statementBalance": 220.29,
+    "statementOrder": 289,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4536,6 +5232,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Apple.com/Bill",
     "source": "import",
     "externalId": "chase-9649e719463f3944",
+    "statementBalance": 250.3,
+    "statementOrder": 286,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4549,6 +5247,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Zeba Attar",
     "source": "import",
     "externalId": "chase-158029409e6e7253",
+    "statementBalance": 79,
+    "statementOrder": 276,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4562,6 +5262,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC Hospitality Los Angeles CA",
     "source": "import",
     "externalId": "chase-2982422752d421c4",
+    "statementBalance": 74.01,
+    "statementOrder": 277,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4575,6 +5277,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-e322687bc91fcb35",
+    "statementBalance": 71.57,
+    "statementOrder": 278,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4588,6 +5292,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-b4043133412abb70",
+    "statementBalance": 59.6,
+    "statementOrder": 275,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4601,6 +5307,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC Hospitality Los Angeles CA",
     "source": "import",
     "externalId": "chase-d0b0eeeaa9ee07b1",
+    "statementBalance": 14.08,
+    "statementOrder": 273,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4614,6 +5322,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-cbf1b17b28f039e9",
+    "statementBalance": 9.6,
+    "statementOrder": 274,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4627,6 +5337,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-ddeee3a95f9ac95a",
+    "statementBalance": 25.07,
+    "statementOrder": 272,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4640,6 +5352,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-0e6e47e86668c03f",
+    "statementBalance": 26.56,
+    "statementOrder": 271,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4653,6 +5367,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-b2283029526df586",
+    "statementBalance": 21.56,
+    "statementOrder": 270,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4666,6 +5382,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-5e40d0dfb3f7a04b",
+    "statementBalance": 14.56,
+    "statementOrder": 269,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4679,6 +5397,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-e00373e98659274a",
+    "statementBalance": 17.44,
+    "statementOrder": 267,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4692,6 +5412,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-52569a37f79dec80",
+    "statementBalance": 22.44,
+    "statementOrder": 268,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4705,6 +5427,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Shraddha Silwal",
     "source": "import",
     "externalId": "chase-0d592d3f912eee90",
+    "statementBalance": 301.21,
+    "statementOrder": 262,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4718,6 +5442,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC Hospitality Los Angeles CA",
     "source": "import",
     "externalId": "chase-1fba8542138ea245",
+    "statementBalance": 286.44,
+    "statementOrder": 265,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4731,6 +5457,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC Hospitality Los Angeles CA",
     "source": "import",
     "externalId": "chase-463b52593023cf79",
+    "statementBalance": 294.63,
+    "statementOrder": 264,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4744,6 +5472,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-48133a7a86923dae",
+    "statementBalance": 10.44,
+    "statementOrder": 266,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4757,6 +5487,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-f09ac54da6a7b44c",
+    "statementBalance": 311.21,
+    "statementOrder": 263,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4770,6 +5502,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Zeba",
     "source": "import",
     "externalId": "chase-104891cfbe39c064",
+    "statementBalance": 126.76,
+    "statementOrder": 258,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4783,6 +5517,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Zeba Attar",
     "source": "import",
     "externalId": "chase-548cef885fdfa18e",
+    "statementBalance": 144.7,
+    "statementOrder": 255,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4796,6 +5532,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-5580ef18e54d94c1",
+    "statementBalance": 139.7,
+    "statementOrder": 253,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4809,6 +5547,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-42d0514ed28cf031",
+    "statementBalance": 89.7,
+    "statementOrder": 252,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4822,6 +5562,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Sunset Hot Chicken Los Angeles CA",
     "source": "import",
     "externalId": "chase-916b994e3505d350",
+    "statementBalance": 128.76,
+    "statementOrder": 257,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4835,6 +5577,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-8bd601f4b0b2afa3",
+    "statementBalance": 110.99,
+    "statementOrder": 259,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4848,6 +5592,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-43773f04b2951747",
+    "statementBalance": 139.71,
+    "statementOrder": 256,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4861,6 +5607,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "SHEIN Los Angeles CA",
     "source": "import",
     "externalId": "chase-a70514321b4e32bb",
+    "statementBalance": 102.3,
+    "statementOrder": 260,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4874,6 +5622,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-dd61e295247209c7",
+    "statementBalance": 142.7,
+    "statementOrder": 254,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4887,6 +5637,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Apple.com/Bill",
     "source": "import",
     "externalId": "chase-bccb2d503b8d100e",
+    "statementBalance": 101.21,
+    "statementOrder": 261,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4900,6 +5652,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Zeba Attar",
     "source": "import",
     "externalId": "chase-73dc3d336bc2d85f",
+    "statementBalance": 81.92,
+    "statementOrder": 249,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4913,6 +5667,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-a54e26621cb8e5db",
+    "statementBalance": 63.32,
+    "statementOrder": 248,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4926,6 +5682,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-23bc25a90777427f",
+    "statementBalance": 76.93,
+    "statementOrder": 250,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4939,6 +5697,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Himalayan House Los Angeles CA",
     "source": "import",
     "externalId": "chase-fe31641d84304061",
+    "statementBalance": 39.7,
+    "statementOrder": 251,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4952,6 +5712,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC Hospitality Los Angeles CA",
     "source": "import",
     "externalId": "chase-6c7c9db924abe898",
+    "statementBalance": 13.32,
+    "statementOrder": 247,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4965,6 +5727,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-0030f956e971ce24",
+    "statementBalance": 32.39,
+    "statementOrder": 245,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4978,6 +5742,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-34647d981640d2c3",
+    "statementBalance": 26.9,
+    "statementOrder": 246,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -4991,6 +5757,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-37c88620fc11d3d0",
+    "statementBalance": 22.39,
+    "statementOrder": 244,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5004,6 +5772,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Venmo payment",
     "source": "import",
     "externalId": "chase-f24a81faeed3c6a8",
+    "statementBalance": 28.37,
+    "statementOrder": 242,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5017,6 +5787,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Bruxie - USC Los Angeles CA",
     "source": "import",
     "externalId": "chase-f4f853b47799b4ec",
+    "statementBalance": 126.7,
+    "statementOrder": 237,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5030,6 +5802,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Trader Joe's Los Angeles CA",
     "source": "import",
     "externalId": "chase-d2e9511a1307d267",
+    "statementBalance": 24.38,
+    "statementOrder": 243,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5043,6 +5817,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-eab2f1bb17ecaa4e",
+    "statementBalance": 73.37,
+    "statementOrder": 241,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5056,6 +5832,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-3c078449f5dc21a1",
+    "statementBalance": 151.4,
+    "statementOrder": 236,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5069,6 +5847,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-11ac9ed79e80233b",
+    "statementBalance": 161.28,
+    "statementOrder": 234,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5082,6 +5862,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-7801c8087ac53873",
+    "statementBalance": 169.83,
+    "statementOrder": 233,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5095,6 +5877,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Squarespace",
     "source": "import",
     "externalId": "chase-5b99cf1f2f2ddfad",
+    "statementBalance": 173.82,
+    "statementOrder": 232,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5108,6 +5892,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-f4865c64c1f598e7",
+    "statementBalance": 116.62,
+    "statementOrder": 226,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5121,6 +5907,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-67c49dad9a082f71",
+    "statementBalance": 189.62,
+    "statementOrder": 228,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5134,6 +5922,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-672738f530b1e706",
+    "statementBalance": 209.62,
+    "statementOrder": 229,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5147,6 +5937,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-c28f393f932784fd",
+    "statementBalance": 214.62,
+    "statementOrder": 230,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5160,6 +5952,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-e4cfb62bead7e440",
+    "statementBalance": 161.62,
+    "statementOrder": 227,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5173,6 +5967,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-49cd6af4d476bfcc",
+    "statementBalance": 66.62,
+    "statementOrder": 225,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5186,6 +5982,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-6ff78372064c3cab",
+    "statementBalance": 115.72,
+    "statementOrder": 238,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5199,6 +5997,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-4a7f8e85cbe0e166",
+    "statementBalance": 155.79,
+    "statementOrder": 235,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5212,6 +6012,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "DoorDash",
     "source": "import",
     "externalId": "chase-31418f34648db9c7",
+    "statementBalance": 82.1,
+    "statementOrder": 240,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5225,6 +6027,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-eddafc37446c688d",
+    "statementBalance": 99.92,
+    "statementOrder": 239,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5238,6 +6042,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-e22dff404360b8f2",
+    "statementBalance": 198.82,
+    "statementOrder": 231,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5251,6 +6057,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-aa96e976476fcef5",
+    "statementBalance": 33.82,
+    "statementOrder": 223,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5264,6 +6072,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-aac4501d0aa41ea9",
+    "statementBalance": 31.4,
+    "statementOrder": 220,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5277,6 +6087,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-e634cf79e35fe84c",
+    "statementBalance": 43.4,
+    "statementOrder": 222,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5290,6 +6102,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-acd137ac198da6a0",
+    "statementBalance": 41.4,
+    "statementOrder": 221,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5303,6 +6117,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "DoorDash",
     "source": "import",
     "externalId": "chase-5bd509bc0a119fef",
+    "statementBalance": 16.62,
+    "statementOrder": 224,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5316,6 +6132,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-453792539f34ac53",
+    "statementBalance": 21.79,
+    "statementOrder": 218,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5329,6 +6147,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-54a30d403875d56b",
+    "statementBalance": 16.4,
+    "statementOrder": 219,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5342,6 +6162,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-975957991836711b",
+    "statementBalance": 16.79,
+    "statementOrder": 217,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5355,6 +6177,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-8c0ecbeda061ff11",
+    "statementBalance": 6.79,
+    "statementOrder": 216,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5368,6 +6192,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Sunlife Organics Los Angeles CA",
     "source": "import",
     "externalId": "chase-e59864bce4db2dfc",
+    "statementBalance": 39.78,
+    "statementOrder": 211,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5381,6 +6207,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Atlapulco Los Angeles CA",
     "source": "import",
     "externalId": "chase-03fe922c696698d4",
+    "statementBalance": 31,
+    "statementOrder": 212,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5394,6 +6222,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-82c123e2873396ca",
+    "statementBalance": 54.78,
+    "statementOrder": 209,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5407,6 +6237,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-85af2abecd03093f",
+    "statementBalance": 34.78,
+    "statementOrder": 207,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5420,6 +6252,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-f4608a0b3823829e",
+    "statementBalance": 44.78,
+    "statementOrder": 208,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5433,6 +6267,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-d80dfc746a354406",
+    "statementBalance": 59.78,
+    "statementOrder": 210,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5446,6 +6282,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-90fdf374018a893d",
+    "statementBalance": 25.51,
+    "statementOrder": 213,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5459,6 +6297,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "CVS Pharmacy",
     "source": "import",
     "externalId": "chase-c74df0a1b113b097",
+    "statementBalance": 1.79,
+    "statementOrder": 215,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5472,6 +6312,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Audible",
     "source": "import",
     "externalId": "chase-dbaf467a9f97c640",
+    "statementBalance": 10.56,
+    "statementOrder": 214,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5485,6 +6327,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Shraddha Silwal",
     "source": "import",
     "externalId": "chase-c1ca44af672f7721",
+    "statementBalance": 130.09,
+    "statementOrder": 194,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5498,6 +6342,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Waymo",
     "source": "import",
     "externalId": "chase-451317d714bfd650",
+    "statementBalance": 142.59,
+    "statementOrder": 202,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5511,6 +6357,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Shell Los Angeles CA",
     "source": "import",
     "externalId": "chase-7613fd0dfc84bb57",
+    "statementBalance": 40.3,
+    "statementOrder": 204,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5524,6 +6372,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-b6fa6b61fa3c99b0",
+    "statementBalance": 42.59,
+    "statementOrder": 203,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5537,6 +6387,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-c87a416ad9eeb53a",
+    "statementBalance": 165.09,
+    "statementOrder": 196,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5550,6 +6402,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-0e322b1d913f83de",
+    "statementBalance": 150.09,
+    "statementOrder": 195,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5563,6 +6417,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-6c1df5b708681f11",
+    "statementBalance": 179.09,
+    "statementOrder": 198,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5576,6 +6432,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-f65f2085963925cc",
+    "statementBalance": 172.09,
+    "statementOrder": 197,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5589,6 +6447,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-bc3785388cf5875e",
+    "statementBalance": 23.78,
+    "statementOrder": 206,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5602,6 +6462,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-2711b7b7e93f4c5a",
+    "statementBalance": 168.11,
+    "statementOrder": 200,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5615,6 +6477,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-2cde93ac58943c61",
+    "statementBalance": 173.6,
+    "statementOrder": 199,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5628,6 +6492,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Best Buy",
     "source": "import",
     "externalId": "chase-59364edcce2d19db",
+    "statementBalance": 29.27,
+    "statementOrder": 205,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5641,6 +6507,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "7-Eleven Los Angeles CA",
     "source": "import",
     "externalId": "chase-869a21a30f6ad068",
+    "statementBalance": 162.38,
+    "statementOrder": 201,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5654,6 +6522,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-ecba6a751f58b644",
+    "statementBalance": 212.09,
+    "statementOrder": 191,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5667,6 +6537,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-c1ed192f971a248e",
+    "statementBalance": 232.09,
+    "statementOrder": 192,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5680,6 +6552,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-c6f3e953070e5b60",
+    "statementBalance": 20.09,
+    "statementOrder": 193,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5693,6 +6567,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Waymo",
     "source": "import",
     "externalId": "chase-20cbb4d71c2e4f9b",
+    "statementBalance": 130.24,
+    "statementOrder": 188,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5706,6 +6582,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Waymo",
     "source": "import",
     "externalId": "chase-26abfc351bfe2578",
+    "statementBalance": 157.23,
+    "statementOrder": 187,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5719,6 +6597,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-f39532d19a0b12ed",
+    "statementBalance": 111.09,
+    "statementOrder": 190,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5732,6 +6612,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-f06819de619b8abf",
+    "statementBalance": 116.58,
+    "statementOrder": 189,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5745,6 +6627,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sam Peterson",
     "source": "import",
     "externalId": "chase-f2e4ed8f77f848ce",
+    "statementBalance": 239.5,
+    "statementOrder": 183,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5758,6 +6642,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ronni Wieman",
     "source": "import",
     "externalId": "chase-74daea8fd06da1db",
+    "statementBalance": 253,
+    "statementOrder": 182,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5771,6 +6657,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Nelly USC",
     "source": "import",
     "externalId": "chase-c4eb8829e76b0f85",
+    "statementBalance": 272,
+    "statementOrder": 181,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5784,6 +6672,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ella Will",
     "source": "import",
     "externalId": "chase-4fb1b752660adab5",
+    "statementBalance": 310,
+    "statementOrder": 180,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5797,6 +6687,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ella Will",
     "source": "import",
     "externalId": "chase-f0d983676e32636e",
+    "statementBalance": 322.5,
+    "statementOrder": 179,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5810,6 +6702,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ani",
     "source": "import",
     "externalId": "chase-5f1d6f09005a366b",
+    "statementBalance": 214.5,
+    "statementOrder": 184,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5823,6 +6717,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from SHUBHECHCHHA KHADKA BACz9uz3p2uz",
     "source": "import",
     "externalId": "chase-5643ae40b65e617e",
+    "statementBalance": 389.45,
+    "statementOrder": 177,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5836,6 +6732,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-518b548204f961fb",
+    "statementBalance": 311.45,
+    "statementOrder": 176,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5849,6 +6747,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-e92355724d5f8cfd",
+    "statementBalance": 211.45,
+    "statementOrder": 175,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5862,6 +6762,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Starbucks",
     "source": "import",
     "externalId": "chase-f0effe4e60e00818",
+    "statementBalance": 383.5,
+    "statementOrder": 178,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5875,6 +6777,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-87f0ad218560fc4a",
+    "statementBalance": 184.01,
+    "statementOrder": 186,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5888,6 +6792,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-ef502d051b697819",
+    "statementBalance": 209.01,
+    "statementOrder": 185,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5901,6 +6807,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-d361d41c02a144c3",
+    "statementBalance": 10.94,
+    "statementOrder": 172,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5914,6 +6822,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-530b1a2300bdeb8a",
+    "statementBalance": 16.94,
+    "statementOrder": 173,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5927,6 +6837,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-af03d9fb3bc2832c",
+    "statementBalance": 11.45,
+    "statementOrder": 174,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5940,6 +6852,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sophie",
     "source": "import",
     "externalId": "chase-4774f42ec68a5403",
+    "statementBalance": 32.74,
+    "statementOrder": 169,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5953,6 +6867,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-4daa4e50a93308f4",
+    "statementBalance": 94.13,
+    "statementOrder": 165,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5966,6 +6882,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-7d754ab93a3c6a19",
+    "statementBalance": 109.13,
+    "statementOrder": 166,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5979,6 +6897,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-89db4df0115c05c3",
+    "statementBalance": 79.13,
+    "statementOrder": 164,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -5992,6 +6912,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Kobunga Los Angeles CA",
     "source": "import",
     "externalId": "chase-730ab1aa0d37d407",
+    "statementBalance": 97.74,
+    "statementOrder": 167,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6005,6 +6927,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Platinum Educational",
     "source": "import",
     "externalId": "chase-c3e87784b9737a2a",
+    "statementBalance": 42.74,
+    "statementOrder": 168,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6018,6 +6942,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-3e20859f228f932d",
+    "statementBalance": 0.94,
+    "statementOrder": 171,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6031,6 +6957,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-8f4a8da641e7c69f",
+    "statementBalance": 16.94,
+    "statementOrder": 170,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6044,6 +6972,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Apple.com/Bill",
     "source": "import",
     "externalId": "chase-d11c90fdf71e6227",
+    "statementBalance": 24.13,
+    "statementOrder": 163,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6057,6 +6987,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sohanu",
     "source": "import",
     "externalId": "chase-a818c1fffce5969f",
+    "statementBalance": 56.06,
+    "statementOrder": 161,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6070,6 +7002,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Millennium Shrestha",
     "source": "import",
     "externalId": "chase-7e7517a3d9c085c8",
+    "statementBalance": 140.46,
+    "statementOrder": 158,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6083,6 +7017,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC Hospitality Los Angeles CA",
     "source": "import",
     "externalId": "chase-3268aa91993888c5",
+    "statementBalance": 128.97,
+    "statementOrder": 159,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6096,6 +7032,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Kobunga Los Angeles CA",
     "source": "import",
     "externalId": "chase-674201d4f45d5e5c",
+    "statementBalance": 116.06,
+    "statementOrder": 160,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6109,6 +7047,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-109a8e73255c0dfa",
+    "statementBalance": 34.12,
+    "statementOrder": 162,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6122,6 +7062,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Millennium Shrestha",
     "source": "import",
     "externalId": "chase-4231b868de809a5a",
+    "statementBalance": 144.84,
+    "statementOrder": 154,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6135,6 +7077,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC Hospitality Los Angeles CA",
     "source": "import",
     "externalId": "chase-e53d7b3b3a8665ac",
+    "statementBalance": 136.07,
+    "statementOrder": 155,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6148,6 +7092,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Trader Joe's Los Angeles CA",
     "source": "import",
     "externalId": "chase-0e40e63490ba8dfd",
+    "statementBalance": 95.95,
+    "statementOrder": 156,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6161,6 +7107,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-c39e53de665d7ec0",
+    "statementBalance": 90.46,
+    "statementOrder": 157,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6174,6 +7122,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-b1565d63b7131452",
+    "statementBalance": 44.84,
+    "statementOrder": 153,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6187,6 +7137,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Jones & Bartlett Learning",
     "source": "import",
     "externalId": "chase-1abab8e5cbe0d251",
+    "statementBalance": 64.48,
+    "statementOrder": 151,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6200,6 +7152,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-b4a55df21bc7823d",
+    "statementBalance": 353.94,
+    "statementOrder": 150,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6213,6 +7167,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "American DataBank",
     "source": "import",
     "externalId": "chase-5ab5f20330756e22",
+    "statementBalance": 359.43,
+    "statementOrder": 149,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6226,6 +7182,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-0a7b55174bdeb360",
+    "statementBalance": 48.68,
+    "statementOrder": 152,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6239,6 +7197,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Ani",
     "source": "import",
     "externalId": "chase-1e72289384f4ab5c",
+    "statementBalance": 489.73,
+    "statementOrder": 143,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6252,6 +7212,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-83fe9d551f738e7c",
+    "statementBalance": 485.69,
+    "statementOrder": 137,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6265,6 +7227,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-b6c7c99763a7dd3f",
+    "statementBalance": 310.69,
+    "statementOrder": 134,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6278,6 +7242,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-aec5887127323a31",
+    "statementBalance": 390.69,
+    "statementOrder": 135,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6291,6 +7257,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Yogurtland USC",
     "source": "import",
     "externalId": "chase-51cbe8ff7a804dff",
+    "statementBalance": 445.92,
+    "statementOrder": 147,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6299,11 +7267,13 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "date": "2025-09-22",
     "kind": "expense",
     "amount": 15.0,
-    "category": "Shopping",
+    "category": "Laundry",
     "note": "Wash Kiosk Mobile",
     "merchant": "Wash Kiosk Mobile",
     "source": "import",
     "externalId": "chase-7bf2ac74b367650c",
+    "statementBalance": 430.92,
+    "statementOrder": 148,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6317,6 +7287,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-f1dd8dc52c74dfda",
+    "statementBalance": 516.73,
+    "statementOrder": 142,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6330,6 +7302,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-3ba807c65a5e0126",
+    "statementBalance": 440.69,
+    "statementOrder": 136,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6343,6 +7317,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-044885633222b66e",
+    "statementBalance": 535.69,
+    "statementOrder": 140,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6356,6 +7332,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-1fca21e51e97edb5",
+    "statementBalance": 525.69,
+    "statementOrder": 139,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6369,6 +7347,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-f9c459e054ed834f",
+    "statementBalance": 515.69,
+    "statementOrder": 138,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6382,6 +7362,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-9994c0b1546ed06f",
+    "statementBalance": 540.69,
+    "statementOrder": 141,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6395,6 +7377,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-d2917034e2b4577e",
+    "statementBalance": 468.44,
+    "statementOrder": 145,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6408,6 +7392,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-4c3ce4f351566161",
+    "statementBalance": 454.78,
+    "statementOrder": 146,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6421,6 +7407,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-9d5575bab2b433f5",
+    "statementBalance": 473.93,
+    "statementOrder": 144,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6434,6 +7422,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-353bf304a121a445",
+    "statementBalance": 21.69,
+    "statementOrder": 133,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6447,6 +7437,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-af2532ad3b91551f",
+    "statementBalance": 31.48,
+    "statementOrder": 132,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6460,6 +7452,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Pot of Cha Los Angeles CA",
     "source": "import",
     "externalId": "chase-a2b88eb2fe728345",
+    "statementBalance": 36.97,
+    "statementOrder": 131,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6473,6 +7467,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Grace Rose Wfct0Z94G69C",
     "source": "import",
     "externalId": "chase-a4f61c26dd469576",
+    "statementBalance": 68.45,
+    "statementOrder": 127,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6486,6 +7482,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Wingstop Los Angeles CA",
     "source": "import",
     "externalId": "chase-d0f3bb83a1402315",
+    "statementBalance": 43.22,
+    "statementOrder": 130,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6499,6 +7497,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-b7a0d117ab6df3be",
+    "statementBalance": 61.87,
+    "statementOrder": 128,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6512,6 +7512,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-19ab92754114df8c",
+    "statementBalance": 56.38,
+    "statementOrder": 129,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6525,6 +7527,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Bruxie - USC Los Angeles CA",
     "source": "import",
     "externalId": "chase-8c1908bf5cedaac2",
+    "statementBalance": 21.28,
+    "statementOrder": 125,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6538,6 +7542,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-cd3584439a30dd4f",
+    "statementBalance": 13.45,
+    "statementOrder": 126,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6551,6 +7557,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-5f4cfcefe8a77e37",
+    "statementBalance": 31.64,
+    "statementOrder": 123,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6564,6 +7572,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-691b5b011f49bf50",
+    "statementBalance": 36.64,
+    "statementOrder": 124,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6577,6 +7587,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-0726fbf42c343a13",
+    "statementBalance": 78.29,
+    "statementOrder": 115,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6590,6 +7602,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-96ce457d4cd6cc40",
+    "statementBalance": 48.29,
+    "statementOrder": 113,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6603,6 +7617,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Bruxie - USC Los Angeles CA",
     "source": "import",
     "externalId": "chase-6a22b2d89b12ba2c",
+    "statementBalance": 51.66,
+    "statementOrder": 119,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6616,6 +7632,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-b2d91f8b8c4db528",
+    "statementBalance": 70.32,
+    "statementOrder": 118,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6629,6 +7647,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-9604f6bb6736084e",
+    "statementBalance": 68.29,
+    "statementOrder": 114,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6642,6 +7662,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-48f272f8831a2174",
+    "statementBalance": 83.29,
+    "statementOrder": 116,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6655,6 +7677,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-e38e4dd7139918bf",
+    "statementBalance": 21.64,
+    "statementOrder": 122,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6668,6 +7692,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-80a87b52fec1b0df",
+    "statementBalance": 27.13,
+    "statementOrder": 121,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6681,6 +7707,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-c47bbdcafecb0239",
+    "statementBalance": 77.8,
+    "statementOrder": 117,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6694,6 +7722,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-80e8cb48ec1048a8",
+    "statementBalance": 32.62,
+    "statementOrder": 120,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6707,6 +7737,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Venmo cashout",
     "source": "import",
     "externalId": "chase-3d839ca3a722e81d",
+    "statementBalance": 103.78,
+    "statementOrder": 109,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6720,6 +7752,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-afa5901af416a05a",
+    "statementBalance": 28.29,
+    "statementOrder": 112,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6733,6 +7767,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-2282393d51062bf9",
+    "statementBalance": 123.78,
+    "statementOrder": 110,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6746,6 +7782,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-d42bce26253ad6b1",
+    "statementBalance": 118.29,
+    "statementOrder": 111,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6759,6 +7797,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC/Follett Bookstore Los Angeles CA",
     "source": "import",
     "externalId": "chase-bc60b81d6fdf76b1",
+    "statementBalance": 42.78,
+    "statementOrder": 106,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6772,6 +7812,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Squarespace",
     "source": "import",
     "externalId": "chase-e227717b89239158",
+    "statementBalance": 3.78,
+    "statementOrder": 108,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6785,6 +7827,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Squarespace",
     "source": "import",
     "externalId": "chase-2d7446c276f8c582",
+    "statementBalance": 28.78,
+    "statementOrder": 107,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6798,6 +7842,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-f86842f52e530594",
+    "statementBalance": 55.94,
+    "statementOrder": 105,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6811,6 +7857,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Bruxie - USC Los Angeles CA",
     "source": "import",
     "externalId": "chase-3d3bfc531bb5bb51",
+    "statementBalance": 64.42,
+    "statementOrder": 103,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6824,6 +7872,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Trader Joe's Los Angeles CA",
     "source": "import",
     "externalId": "chase-faddae1d8ce96cfb",
+    "statementBalance": 61.43,
+    "statementOrder": 104,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6837,6 +7887,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-0b6be3311731e350",
+    "statementBalance": 79.24,
+    "statementOrder": 102,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6850,6 +7902,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-f75d239395d3dedf",
+    "statementBalance": 64.24,
+    "statementOrder": 100,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6863,6 +7917,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-20d560673b72df40",
+    "statementBalance": 74.24,
+    "statementOrder": 101,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6876,6 +7932,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC Hospitality Los Angeles CA",
     "source": "import",
     "externalId": "chase-4c04680daee28bdd",
+    "statementBalance": 70.04,
+    "statementOrder": 98,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6889,6 +7947,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-ab0dd6baf68635b0",
+    "statementBalance": 55.83,
+    "statementOrder": 96,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6902,6 +7962,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-6cd7dd759761bdc9",
+    "statementBalance": 71.83,
+    "statementOrder": 97,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6915,6 +7977,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-05ffad2ce8338c0f",
+    "statementBalance": 54.24,
+    "statementOrder": 99,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6928,6 +7992,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Madison Aikins Nav0Jhdzhkdf",
     "source": "import",
     "externalId": "chase-ce35b48e76cc12e1",
+    "statementBalance": 168.3,
+    "statementOrder": 85,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6941,6 +8007,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-a047ea94d19ace5c",
+    "statementBalance": 201.3,
+    "statementOrder": 87,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6954,6 +8022,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Trader Joe's Los Angeles CA",
     "source": "import",
     "externalId": "chase-c9f5e0334975adab",
+    "statementBalance": 5.83,
+    "statementOrder": 95,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6967,6 +8037,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Subway Los Angeles CA",
     "source": "import",
     "externalId": "chase-6dfb3d3ab4d3da32",
+    "statementBalance": 207.2,
+    "statementOrder": 91,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6980,6 +8052,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-e365abaf382759d4",
+    "statementBalance": 21.4,
+    "statementOrder": 94,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -6993,6 +8067,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-fd533ef4a3dc86e0",
+    "statementBalance": 151.4,
+    "statementOrder": 93,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7006,6 +8082,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-d46564259163e537",
+    "statementBalance": 216.3,
+    "statementOrder": 90,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7019,6 +8097,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-36946aaae820f6ad",
+    "statementBalance": 211.3,
+    "statementOrder": 89,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7032,6 +8112,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-c7164e73a90ca4b2",
+    "statementBalance": 206.3,
+    "statementOrder": 88,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7045,6 +8127,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-73bc704da210c802",
+    "statementBalance": 121.3,
+    "statementOrder": 84,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7058,6 +8142,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-b1fd6c0370bb53ff",
+    "statementBalance": 188.3,
+    "statementOrder": 86,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7071,6 +8157,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-b1eec4ed69e4a3eb",
+    "statementBalance": 191.4,
+    "statementOrder": 92,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7084,6 +8172,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-49245f077ad27593",
+    "statementBalance": 1.3,
+    "statementOrder": 83,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7097,6 +8187,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-b92514ac3c362166",
+    "statementBalance": 107.91,
+    "statementOrder": 77,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7110,6 +8202,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-894603dd91b34f3d",
+    "statementBalance": 157.91,
+    "statementOrder": 80,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7123,6 +8217,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-1ea64be2466e4ea8",
+    "statementBalance": 12.91,
+    "statementOrder": 76,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7136,6 +8232,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-3bd74806d8e5c402",
+    "statementBalance": 117.1,
+    "statementOrder": 81,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7149,6 +8247,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-7306d40edc4a81e7",
+    "statementBalance": 17.1,
+    "statementOrder": 82,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7162,6 +8262,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-be7eed9cb2448c27",
+    "statementBalance": 152.91,
+    "statementOrder": 79,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7175,6 +8277,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-76347544947f5e9e",
+    "statementBalance": 132.91,
+    "statementOrder": 78,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7188,6 +8292,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Overdraft fee",
     "source": "import",
     "externalId": "chase-48e75cf1991d9673",
+    "statementBalance": -87.09,
+    "statementOrder": 75,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7201,6 +8307,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Sc Snow Club Llc",
     "source": "import",
     "externalId": "chase-4d9b054584e7dea2",
+    "statementBalance": 234.52,
+    "statementOrder": 68,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7214,6 +8322,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC Bookstore Los Angeles CA",
     "source": "import",
     "externalId": "chase-e747fa110fab20bc",
+    "statementBalance": 91.74,
+    "statementOrder": 69,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7227,6 +8337,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Univ of California",
     "source": "import",
     "externalId": "chase-22b5fb9ae1e2d3c6",
+    "statementBalance": 244.52,
+    "statementOrder": 67,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7240,6 +8352,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Univ of California",
     "source": "import",
     "externalId": "chase-9611d6df3084378e",
+    "statementBalance": 290.44,
+    "statementOrder": 66,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7253,6 +8367,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-274d502b81754b7f",
+    "statementBalance": 67.32,
+    "statementOrder": 71,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7266,6 +8382,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-05a24c33aa5d6101",
+    "statementBalance": 12.32,
+    "statementOrder": 72,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7279,6 +8397,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-f08cf526cccf718b",
+    "statementBalance": 1960.44,
+    "statementOrder": 65,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7292,6 +8412,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-e8133958000bc956",
+    "statementBalance": 1949.44,
+    "statementOrder": 64,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7305,6 +8427,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-fa663ec0b73e60c1",
+    "statementBalance": 1.34,
+    "statementOrder": 73,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7318,6 +8442,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Apple.com/Bill",
     "source": "import",
     "externalId": "chase-08c9db751e733ec0",
+    "statementBalance": -53.09,
+    "statementOrder": 74,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7331,6 +8457,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-4d20689e3c16931c",
+    "statementBalance": 69.41,
+    "statementOrder": 70,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7344,6 +8472,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-6cee7ea1440e91cb",
+    "statementBalance": 1819.44,
+    "statementOrder": 63,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7357,6 +8487,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Insomnia Cookies",
     "source": "import",
     "externalId": "chase-f45bd1a9061d7b1e",
+    "statementBalance": 1844.44,
+    "statementOrder": 62,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7370,6 +8502,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Cava USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-7987f4027825d4bc",
+    "statementBalance": 1847.73,
+    "statementOrder": 61,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7383,6 +8517,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-1f979eaf36c7eeae",
+    "statementBalance": 1873.16,
+    "statementOrder": 59,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7396,6 +8532,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "YBSY Superette USC Los Angeles CA",
     "source": "import",
     "externalId": "chase-8d3e8ecbad3a8177",
+    "statementBalance": 1866.66,
+    "statementOrder": 60,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7409,6 +8547,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-ed8682bcd8c5f61e",
+    "statementBalance": 1073.16,
+    "statementOrder": 58,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7422,6 +8562,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Mom",
     "source": "import",
     "externalId": "chase-c55ccb2c8d838ca3",
+    "statementBalance": 353.16,
+    "statementOrder": 56,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7435,6 +8577,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle to Dad",
     "source": "import",
     "externalId": "chase-58b2dcdb92d959d1",
+    "statementBalance": 203.16,
+    "statementOrder": 57,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7448,6 +8592,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Millennium Shrestha",
     "source": "import",
     "externalId": "chase-4f95245427b28f9b",
+    "statementBalance": 409.51,
+    "statementOrder": 53,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7461,6 +8607,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-65f62ccdf508b1a3",
+    "statementBalance": 503.16,
+    "statementOrder": 55,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7474,6 +8622,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-b09a8d4ba5528bb3",
+    "statementBalance": 509.51,
+    "statementOrder": 54,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7487,6 +8637,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-1be499e9c5fbe727",
+    "statementBalance": 309.51,
+    "statementOrder": 52,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7500,6 +8652,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC Hospitality Los Angeles CA",
     "source": "import",
     "externalId": "chase-4a286f4d569498e6",
+    "statementBalance": 9.51,
+    "statementOrder": 51,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7513,6 +8667,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Umesh Shrestha",
     "source": "import",
     "externalId": "chase-1ec1b262c18c4636",
+    "statementBalance": 293.92,
+    "statementOrder": 42,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7526,6 +8682,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Millennium Shrestha",
     "source": "import",
     "externalId": "chase-42a1046a9aada346",
+    "statementBalance": 393.92,
+    "statementOrder": 43,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7534,11 +8692,13 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "date": "2025-08-25",
     "kind": "expense",
     "amount": 10.0,
-    "category": "Shopping",
+    "category": "Laundry",
     "note": "Wash Kiosk Mobile",
     "merchant": "Wash Kiosk Mobile",
     "source": "import",
     "externalId": "chase-b9eee69066d6a9bf",
+    "statementBalance": 217.29,
+    "statementOrder": 49,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7552,6 +8712,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC/Follett Bookstore Los Angeles CA",
     "source": "import",
     "externalId": "chase-09b0a1cf1615a2bf",
+    "statementBalance": 356.9,
+    "statementOrder": 45,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7565,6 +8727,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-e68cc30af6a15930",
+    "statementBalance": 227.29,
+    "statementOrder": 48,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7578,6 +8742,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-271d74033b9bea17",
+    "statementBalance": 17.29,
+    "statementOrder": 50,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7591,6 +8757,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-74ad9f49c984ee84",
+    "statementBalance": 256.9,
+    "statementOrder": 46,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7604,6 +8772,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Coca Cola Los Angeles CA",
     "source": "import",
     "externalId": "chase-a12a3c3a3382aa2f",
+    "statementBalance": 390.92,
+    "statementOrder": 44,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7617,6 +8787,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Apple.com/Bill",
     "source": "import",
     "externalId": "chase-956bc8274ad8512a",
+    "statementBalance": 255.81,
+    "statementOrder": 47,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7630,6 +8802,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Jasis Shrestha",
     "source": "import",
     "externalId": "chase-a7de80c22da0de34",
+    "statementBalance": 133.92,
+    "statementOrder": 40,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7643,6 +8817,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-18f79328e7a339ad",
+    "statementBalance": 143.92,
+    "statementOrder": 41,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7656,6 +8832,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Dulce USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-baae2ce0a5156cec",
+    "statementBalance": 57.32,
+    "statementOrder": 37,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7669,6 +8847,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Dulce USC Village Los Angeles CA",
     "source": "import",
     "externalId": "chase-be8b88edc86cb117",
+    "statementBalance": 50.82,
+    "statementOrder": 38,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7682,6 +8862,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-254b45a6bf43b202",
+    "statementBalance": 63.82,
+    "statementOrder": 36,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7695,6 +8877,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-70fba7cbacb53173",
+    "statementBalance": 43.82,
+    "statementOrder": 35,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7708,6 +8892,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Chipotle Los Angeles CA",
     "source": "import",
     "externalId": "chase-fba30f310ad7a75b",
+    "statementBalance": 33.92,
+    "statementOrder": 39,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7721,6 +8907,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-11a4de81877ddffa",
+    "statementBalance": 103.75,
+    "statementOrder": 32,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7734,6 +8922,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Target Los Angeles CA",
     "source": "import",
     "externalId": "chase-838d6468b659d81e",
+    "statementBalance": 110.1,
+    "statementOrder": 31,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7747,6 +8937,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-46930e932566f7da",
+    "statementBalance": 13.82,
+    "statementOrder": 34,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7760,6 +8952,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-821bc37c85dec5b0",
+    "statementBalance": 118.88,
+    "statementOrder": 28,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7773,6 +8967,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Butala Emporium",
     "source": "import",
     "externalId": "chase-acf0c6d69465394b",
+    "statementBalance": 118.88,
+    "statementOrder": 30,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7786,6 +8982,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Apple.com/Bill",
     "source": "import",
     "externalId": "chase-6c1bbdbb68527295",
+    "statementBalance": 79.82,
+    "statementOrder": 33,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7799,6 +8997,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "081/14 Apple.Com/Bill Cr",
     "source": "import",
     "externalId": "chase-3f6b962741fc3de0",
+    "statementBalance": 122.14,
+    "statementOrder": 29,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7812,6 +9012,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Trader Joe's Los Angeles CA",
     "source": "import",
     "externalId": "chase-6e0423ca96730827",
+    "statementBalance": 108.88,
+    "statementOrder": 27,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7825,6 +9027,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "JFK T5 Cibo Express",
     "source": "import",
     "externalId": "chase-bd411e82dc9ea62d",
+    "statementBalance": 113.87,
+    "statementOrder": 26,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7838,6 +9042,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-ca5a603553114031",
+    "statementBalance": 714.07,
+    "statementOrder": 16,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7851,6 +9057,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-7c95db6b80c5e0f4",
+    "statementBalance": 514.07,
+    "statementOrder": 15,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7864,6 +9072,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "USC Ticket Office",
     "source": "import",
     "externalId": "chase-7d8f814ea97d60b8",
+    "statementBalance": 454.07,
+    "statementOrder": 18,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7877,6 +9087,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "JCM Souvenir New York NY",
     "source": "import",
     "externalId": "chase-71a08d2876137310",
+    "statementBalance": 448.57,
+    "statementOrder": 19,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7890,6 +9102,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-9592aa04c3c843b8",
+    "statementBalance": 118.36,
+    "statementOrder": 25,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7903,6 +9117,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-3a341a49eec58f6c",
+    "statementBalance": 729.07,
+    "statementOrder": 17,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7916,6 +9132,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "MTA NYCT PayGo New York NY",
     "source": "import",
     "externalId": "chase-339e627c861581c1",
+    "statementBalance": 435.15,
+    "statementOrder": 22,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7929,6 +9147,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "MTA NYCT PayGo New York NY",
     "source": "import",
     "externalId": "chase-396d111d9d4d2ceb",
+    "statementBalance": 438.05,
+    "statementOrder": 21,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7942,6 +9162,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "LYFT *RIDE SUN 2PM LYFT.COM CA",
     "source": "import",
     "externalId": "chase-2fd0e1d522d21bba",
+    "statementBalance": 422.16,
+    "statementOrder": 23,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7955,6 +9177,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Gong Cha Elmhurst NY",
     "source": "import",
     "externalId": "chase-e5005dc52832fad0",
+    "statementBalance": 440.95,
+    "statementOrder": 20,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7968,6 +9192,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Duane Reade",
     "source": "import",
     "externalId": "chase-cfdef7b9fbf86e0f",
+    "statementBalance": 418.36,
+    "statementOrder": 24,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7981,6 +9207,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-d605bbdd92c66458",
+    "statementBalance": 294.07,
+    "statementOrder": 14,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -7994,6 +9222,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "ATM cash deposit",
     "source": "import",
     "externalId": "chase-5e74e1b57eb7e4e9",
+    "statementBalance": 734.07,
+    "statementOrder": 13,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8007,6 +9237,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "ATM cash deposit",
     "source": "import",
     "externalId": "chase-ffa2b8cbbd4751bc",
+    "statementBalance": 715.07,
+    "statementOrder": 12,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8020,6 +9252,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Walgreens Elmhurst NY",
     "source": "import",
     "externalId": "chase-25dffe18ddcbe4b2",
+    "statementBalance": 281.37,
+    "statementOrder": 10,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8033,6 +9267,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-b8b161e8f298f1e2",
+    "statementBalance": 275.07,
+    "statementOrder": 11,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8046,6 +9282,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-b83e01c9ffabfc3b",
+    "statementBalance": 286.46,
+    "statementOrder": 9,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8059,6 +9297,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from Chase Savings",
     "source": "import",
     "externalId": "chase-f16d6df845d938c5",
+    "statementBalance": 386.46,
+    "statementOrder": 8,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8072,6 +9312,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Zelle from Bimala Shrestha",
     "source": "import",
     "externalId": "chase-4b7ce31f2dbd0edb",
+    "statementBalance": 651,
+    "statementOrder": 3,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8085,6 +9327,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer from CHK XXXXX0321",
     "source": "import",
     "externalId": "chase-b7f2706ab495a3b8",
+    "statementBalance": 651.46,
+    "statementOrder": 4,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8098,6 +9342,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-cde11adeb5ef7aeb",
+    "statementBalance": 126.46,
+    "statementOrder": 6,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8111,6 +9357,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Transfer to Chase Savings",
     "source": "import",
     "externalId": "chase-e65618b2bac5eca4",
+    "statementBalance": 626.46,
+    "statementOrder": 5,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8124,6 +9372,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "Card replacement fee",
     "source": "import",
     "externalId": "chase-3cf9eb2ebf39ad9d",
+    "statementBalance": 111.46,
+    "statementOrder": 7,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8137,6 +9387,8 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "ATM cash deposit",
     "source": "import",
     "externalId": "chase-8282fbdbd34d8cbf",
+    "statementBalance": 650,
+    "statementOrder": 2,
     "pending": false,
     "accountId": "acc-chase-checking"
   },
@@ -8150,15 +9402,17 @@ export const CHASE_STATEMENT_TXS: FinanceTx[] = [
     "merchant": "ATM cash deposit",
     "source": "import",
     "externalId": "chase-337b4e15bcd4f281",
+    "statementBalance": 550,
+    "statementOrder": 1,
     "pending": false,
     "accountId": "acc-chase-checking"
   }
 ] as FinanceTx[];
 
 export const CHASE_STATEMENT_ACCOUNTS = [
-  { id: "acc-chase-checking", name: "Chase College Checking", kind: "checking" as const, balance: 0.03, institution: "Chase", mask: "8533" },
-  { id: "acc-chase-savings", name: "Chase Savings", kind: "savings" as const, balance: 5.0, institution: "Chase", mask: "5591" },
-  { id: "acc-chase-card", name: "Chase Card · 5584", kind: "credit" as const, balance: 0, institution: "Chase", mask: "5584", creditLimit: null },
+  { id: "acc-chase-checking", name: "Chase College Checking", kind: "checking" as const, balance: 0.03, balanceVerified: true, institution: "Chase", mask: "8533" },
+  { id: "acc-chase-savings", name: "Chase Savings", kind: "savings" as const, balance: 5.0, balanceVerified: false, institution: "Chase", mask: "5591" },
+  { id: "acc-chase-card", name: "Chase Card · 5584", kind: "credit" as const, balance: 0, balanceVerified: false, institution: "Chase", mask: "5584", creditLimit: null },
 ];
 
 export const CHASE_STATEMENT_META = { count: 627, from: "2025-08-12", to: "2026-07-15", source: "Chase8533_Activity CSV export" };
