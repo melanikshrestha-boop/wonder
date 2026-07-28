@@ -670,17 +670,6 @@ html.is-sidebar-resizing {
   color: #fff;
 }
 
-/* Hide action buttons until hover — cleaner wall of pages */
-.page-row-actions {
-  opacity: 0;
-  transition: opacity 0.12s ease;
-}
-
-.page-row:hover .page-row-actions,
-.page-row:focus-within .page-row-actions {
-  opacity: 1;
-}
-
 /* Sidebar line icons only — NOT the big page emoji picker */
 .side-icon {
   width: 18px;
@@ -864,14 +853,23 @@ html.theme-light .sidebar .sidebar-search svg {
 }
 
 .page-row-actions {
-  display: none;
+  display: flex;
   gap: 2px;
   align-items: center;
-  height: 32px;
+  height: 30px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px);
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
 }
 
-.page-row:hover .page-row-actions {
-  display: flex;
+.page-row:hover .page-row-actions,
+.page-row:focus-within .page-row-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
 }
 
 .page-mini-btn {
@@ -887,6 +885,23 @@ html.theme-light .sidebar .sidebar-search svg {
   cursor: pointer;
   font-size: 12px;
   line-height: 1;
+}
+
+.page-agent-delete {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px);
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+}
+
+.page-row-agent:hover .page-agent-delete,
+.page-row-agent:focus-within .page-agent-delete,
+.page-agent-delete:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
 }
 
 .page-mini-btn:hover {
@@ -2635,7 +2650,7 @@ html.theme-light .main.is-melani .main-scroll {
   margin-top: 2px;
 }
 
-/* Agents: title left, × always on the far right of the sidebar */
+/* Agents: title left, × lives at the edge but only appears on hover/focus */
 .page-row-agent {
   display: flex;
   flex-direction: row;
@@ -2659,7 +2674,6 @@ html.theme-light .main.is-melani .main-scroll {
 }
 
 .page-row-agent .page-agent-delete {
-  opacity: 0.55;
   flex: 0 0 auto;
   flex-shrink: 0;
   margin-left: auto;
@@ -2670,8 +2684,11 @@ html.theme-light .main.is-melani .main-scroll {
 }
 
 .page-row-agent:hover .page-agent-delete,
-.page-row-agent.is-active .page-agent-delete {
+.page-row-agent:focus-within .page-agent-delete,
+.page-agent-delete:focus-visible {
   opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
 }
 
 /* Private list shares the same left inset as Agents / Favorites */
