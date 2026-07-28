@@ -114,6 +114,44 @@ const LIBRARY_CHIPS: { id: Filter; label: string }[] = [
   { id: "finished", label: "Done" },
 ];
 
+const LIBRARY_VIEW_KEY = "wonder-bookshelf-view-v1";
+
+type LibraryViewState = {
+  filter?: Filter;
+  groupMode?: GroupMode;
+  openFolders?: Record<string, boolean>;
+};
+
+function loadLibraryView(): LibraryViewState {
+  try {
+    const parsed = JSON.parse(
+      window.localStorage.getItem(LIBRARY_VIEW_KEY) || "{}"
+    ) as LibraryViewState;
+    const validFilter = LIBRARY_CHIPS.some((chip) => chip.id === parsed.filter);
+    return {
+      filter: validFilter ? parsed.filter : undefined,
+      groupMode:
+        parsed.groupMode === "subjects" || parsed.groupMode === "status"
+          ? parsed.groupMode
+          : undefined,
+      openFolders:
+        parsed.openFolders && typeof parsed.openFolders === "object"
+          ? parsed.openFolders
+          : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function saveLibraryView(view: LibraryViewState) {
+  try {
+    window.localStorage.setItem(LIBRARY_VIEW_KEY, JSON.stringify(view));
+  } catch {
+    /* The current view still works when browser storage is unavailable. */
+  }
+}
+
 function isBookStatusFilter(filter: Filter): filter is BookStatus {
   return (
     filter === "reading" ||
@@ -240,9 +278,15 @@ export function BooksLibrary({
   const [folders, setFolders] = useState<BookFolder[]>(() =>
     includeBookFolders(loadBookFolders(), loadBooks())
   );
-  const [filter, setFilter] = useState<Filter>("all");
-  const [groupMode, setGroupMode] = useState<GroupMode>("subjects");
-  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
+  const [filter, setFilter] = useState<Filter>(
+    () => loadLibraryView().filter || "all"
+  );
+  const [groupMode, setGroupMode] = useState<GroupMode>(
+    () => loadLibraryView().groupMode || "subjects"
+  );
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>(
+    () => loadLibraryView().openFolders || {}
+  );
   const [q, setQ] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [readerId, setReaderId] = useState<string | null>(null);
@@ -275,6 +319,7 @@ export function BooksLibrary({
     state: "idle",
     message: "Apple Books",
   });
+  const searchRef = useRef<HTMLInputElement>(null);
   /** Deep-link applied once: ?page=pg-library&book=id&read=1 */
   const deepLinkDone = useRef(false);
 
@@ -298,12 +343,41 @@ export function BooksLibrary({
   }, [toast]);
 
   useEffect(() => {
+    const handleLibraryShortcut = (event: KeyboardEvent) => {
+      if (!searchRef.current) return;
+      const target =
+        event.target instanceof HTMLElement ? event.target : null;
+      const isEditing =
+        target?.matches("input, textarea, select, [contenteditable='true']") ||
+        Boolean(target?.closest("[contenteditable='true']"));
+      if (event.key === "/" && !isEditing) {
+        event.preventDefault();
+        searchRef.current.focus();
+        return;
+      }
+      if (event.key === "Escape") {
+        setFinderOpen(false);
+        setAdding(false);
+        setAddingFolder(false);
+        setQ("");
+        searchRef.current.blur();
+      }
+    };
+    window.addEventListener("keydown", handleLibraryShortcut);
+    return () => window.removeEventListener("keydown", handleLibraryShortcut);
+  }, []);
+
+  useEffect(() => {
     saveBooks(books);
   }, [books]);
 
   useEffect(() => {
     saveBookFolders(folders);
   }, [folders]);
+
+  useEffect(() => {
+    saveLibraryView({ filter, groupMode, openFolders });
+  }, [filter, groupMode, openFolders]);
 
   useEffect(() => {
     setFolders((current) => includeBookFolders(current, books));
@@ -356,7 +430,7 @@ export function BooksLibrary({
 
   /**
    * Pull EPUBs from Downloads + Documents books folders.
-   * New Ocean of PDF downloads show up automatically while Bookshelf is open.
+   * New EPUB downloads show up automatically while Bookshelf is open.
    */
   const syncLocalFiles = useCallback(async (options?: { quiet?: boolean }) => {
     if (!options?.quiet) {
@@ -595,9 +669,38 @@ export function BooksLibrary({
     () => ({
       total: books.length,
       reading: books.filter((book) => book.status === "reading").length,
+      want: books.filter((book) => book.status === "want").length,
       finished: books.filter((book) => book.status === "finished").length,
       quotes: books.reduce((count, book) => count + book.quotes.length, 0),
     }),
+    [books]
+  );
+
+  const sectionCounts = useMemo<Record<Filter, number>>(
+    () => ({
+      all: books.length + GREATS_AUTHORS.length,
+      books: books.length,
+      blogs: GREATS_AUTHORS.length,
+      reading: stats.reading,
+      want: stats.want,
+      paused: books.filter((book) => book.status === "paused").length,
+      finished: stats.finished,
+    }),
+    [books, stats.finished, stats.reading, stats.want]
+  );
+
+  const resumeBook = useMemo(
+    () =>
+      [...books]
+        .filter(
+          (book) =>
+            Boolean(book.readerUrl) &&
+            book.status !== "finished" &&
+            (Boolean(book.smartBookmark) ||
+              (book.readerProgress || 0) > 0 ||
+              book.status === "reading")
+        )
+        .sort((left, right) => right.updatedAt - left.updatedAt)[0] || null,
     [books]
   );
 
@@ -605,29 +708,43 @@ export function BooksLibrary({
     // Blogs tab is essays only — no books in the list.
     if (filter === "blogs") return [] as Book[];
     const query = q.trim().toLowerCase();
-    return books.filter((book) => {
-      // Status chips: Reading / Next (want) / Done / Paused
-      if (isBookStatusFilter(filter) && book.status !== filter) return false;
-      // all + books: every status (drives of books)
-      if (!query) return true;
-      return [
-        book.title,
-        book.author,
-        book.category,
-        book.notes,
-        book.description || "",
-        ...book.quotes.flatMap((quote) => [
-          quote.text,
-          quote.note || "",
-          quote.interpretation || "",
-        ]),
-      ].some((value) => value.toLowerCase().includes(query));
-    });
+    return books
+      .filter((book) => {
+        // Status chips: Reading / Next (want) / Done / Paused
+        if (isBookStatusFilter(filter) && book.status !== filter) return false;
+        // all + books: every status (drives of books)
+        if (!query) return true;
+        return [
+          book.title,
+          book.author,
+          book.category,
+          book.notes,
+          book.description || "",
+          ...book.quotes.flatMap((quote) => [
+            quote.text,
+            quote.note || "",
+            quote.interpretation || "",
+          ]),
+        ].some((value) => value.toLowerCase().includes(query));
+      })
+      .sort((left, right) => {
+        const leftActive = left.status === "reading" ? 1 : 0;
+        const rightActive = right.status === "reading" ? 1 : 0;
+        return (
+          rightActive - leftActive ||
+          right.updatedAt - left.updatedAt ||
+          left.title.localeCompare(right.title)
+        );
+      });
   }, [books, filter, q]);
+
+  const effectiveGroupMode: GroupMode = isBookStatusFilter(filter)
+    ? "subjects"
+    : groupMode;
 
   const groups = useMemo<ShelfGroup[]>(() => {
     if (filter === "blogs") return [];
-    if (groupMode === "subjects") {
+    if (effectiveGroupMode === "subjects") {
       return folders
         .map((folder) => ({
           id: folder.id,
@@ -645,7 +762,7 @@ export function BooksLibrary({
       accent: STATUS_TONES[status],
       canRename: false,
     })).filter((group) => group.books.length);
-  }, [filter, filtered, folders, groupMode]);
+  }, [effectiveGroupMode, filter, filtered, folders]);
 
   /** Blogs under books on All, or alone on Blogs. */
   const showBlogs = filter === "all" || filter === "blogs";
@@ -1047,18 +1164,22 @@ export function BooksLibrary({
         data-books-theme={booksPreferences.theme}
         data-books-font={booksPreferences.font}
       >
-        <button type="button" className="bl-back" onClick={() => setOpenId(null)}>
-          ← Bookshelf
-        </button>
-        <BooksAppearanceControls
-          compact
-          theme={booksPreferences.theme}
-          font={booksPreferences.font}
-          onTheme={setBooksTheme}
-          onFont={setReadingFont}
-        />
+        <div className="bl-detail-topbar">
+          <button type="button" className="bl-back" onClick={() => setOpenId(null)}>
+            ← Bookshelf
+          </button>
+          <BooksAppearanceControls
+            compact
+            theme={booksPreferences.theme}
+            font={booksPreferences.font}
+            onTheme={setBooksTheme}
+            onFont={setReadingFont}
+          />
+        </div>
 
-        <div className="bl-detail-head">
+        <div className="bl-detail-workspace">
+        <aside className="bl-detail-overview">
+          <div className="bl-detail-head">
           <BookCover
             book={open}
             className="bl-cover"
@@ -1254,15 +1375,17 @@ export function BooksLibrary({
               </div>
             </div>
           </div>
-        </div>
+          </div>
 
-        {open.description ? (
-          <details className="bl-description">
-            <summary>About this book</summary>
-            <p>{open.description}</p>
-          </details>
-        ) : null}
+          {open.description ? (
+            <details className="bl-description">
+              <summary>About this book</summary>
+              <p>{open.description}</p>
+            </details>
+          ) : null}
+        </aside>
 
+        <main className="bl-detail-reading">
         <section className="bl-section">
           <div className="bl-section-title-row">
             <h3 className="bl-section-h">Highlights &amp; notes</h3>
@@ -1306,9 +1429,7 @@ export function BooksLibrary({
               </button>
             </div>
           </div>
-          {open.quotes.length === 0 ? (
-            <p className="bl-empty-shelf">No quotes saved yet.</p>
-          ) : (
+          {open.quotes.length ? (
             <ul className="bl-quote-list">
               {visibleQuotes.map((quote) => (
                 <li key={quote.id} className={`bl-quote-item${quote.note || quote.interpretation ? " has-thought" : ""}`}>
@@ -1398,7 +1519,7 @@ export function BooksLibrary({
                 </li>
               ))}
             </ul>
-          )}
+          ) : null}
           {open.quotes.length > 40 ? (
             <button
               type="button"
@@ -1433,6 +1554,8 @@ export function BooksLibrary({
             </button>
           </div>
         ) : null}
+        </main>
+        </div>
       </div>
     );
   }
@@ -1445,55 +1568,85 @@ export function BooksLibrary({
     >
       <header className="bl-head">
         <div className="bl-head-main">
-          <div>
+          <div className="bl-head-copy">
             <h1 className="bl-title">
               <MinimalIcon name="books" size={22} />
               Bookshelf
             </h1>
+            <div className="bl-stats" aria-label="Library totals">
+              <span><b>{stats.total}</b> books</span>
+              <span><b>{stats.reading}</b> reading</span>
+              <span><b>{stats.want}</b> next</span>
+              <span><b>{stats.quotes}</b> highlights</span>
+            </div>
           </div>
-          <button
-            type="button"
-            className={`bl-sync${sync.state === "syncing" ? " is-syncing" : ""}`}
-            onClick={() => void syncAll()}
-            title="Refresh Apple Books + Downloads EPUBs + covers"
-          >
-            <ArrowsClockwise size={15} aria-hidden />
-            <span>{sync.message}</span>
-          </button>
-          <button
-            type="button"
-            className="bl-sync"
-            onClick={() => void enrichCovers()}
-            title="Find missing cover images"
-          >
-            <span>Covers</span>
-          </button>
-          <label className="bl-sync bl-goodreads-import" title="Import Goodreads library CSV">
-            <span>Goodreads CSV</span>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              hidden
-              onChange={(e) => {
-                importGoodreadsCsv(e.target.files?.[0] || null);
-                e.target.value = "";
-              }}
+          <div className="bl-head-actions">
+            <button
+              type="button"
+              className={`bl-sync${sync.state === "syncing" ? " is-syncing" : ""}`}
+              onClick={() => void syncAll()}
+              title={sync.message}
+            >
+              <ArrowsClockwise size={15} aria-hidden />
+              <span>
+                {sync.state === "error"
+                  ? "Sync unavailable"
+                  : sync.state === "idle"
+                    ? "Sync library"
+                    : sync.message}
+              </span>
+            </button>
+            <label
+              className="bl-sync bl-goodreads-import"
+              title="Import a Goodreads library CSV"
+            >
+              <DownloadSimple size={15} aria-hidden />
+              <span>Import CSV</span>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                hidden
+                onChange={(event) => {
+                  importGoodreadsCsv(event.target.files?.[0] || null);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+            <BooksAppearanceControls
+              theme={booksPreferences.theme}
+              font={booksPreferences.font}
+              onTheme={setBooksTheme}
+              onFont={setReadingFont}
             />
-          </label>
-          <BooksAppearanceControls
-            theme={booksPreferences.theme}
-            font={booksPreferences.font}
-            onTheme={setBooksTheme}
-            onFont={setReadingFont}
-          />
-        </div>
-        <div className="bl-stats">
-          <span><b>{stats.total}</b> books</span>
-          <span><b>{stats.reading}</b> reading</span>
-          <span><b>{stats.finished}</b> finished</span>
-          <span><b>{stats.quotes}</b> quotes</span>
+          </div>
         </div>
       </header>
+
+      <div className="bl-filter" aria-label="Library sections">
+        {LIBRARY_CHIPS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            className={`bl-chip${filter === id ? " is-on" : ""}`}
+            onClick={() => {
+              setFilter(id);
+              setAdding(false);
+              setAddingFolder(false);
+              if (id === "want") {
+                setFinderOpen(true);
+                setFinderMessage(
+                  "Type a title and press Enter. Wonder files the best legal catalog match automatically."
+                );
+              } else {
+                setFinderOpen(false);
+              }
+            }}
+          >
+            <span>{label}</span>
+            <em>{sectionCounts[id]}</em>
+          </button>
+        ))}
+      </div>
 
       {filter !== "blogs" ? (
       <div className="bl-toolbar">
@@ -1511,20 +1664,20 @@ export function BooksLibrary({
         >
           <MagnifyingGlass size={15} aria-hidden />
           <input
+            ref={searchRef}
             className="bl-search"
             value={q}
+            aria-label="Search bookshelf"
+            aria-keyshortcuts="/"
             onChange={(event) => {
               setQ(event.target.value);
               if (filter === "want") setFinderQuery(event.target.value);
             }}
             placeholder={
-              filter === "blogs"
-                ? "Blogs open as links — switch to Books to search the shelf"
-                : filter === "want"
-                  ? "Next to read? Type a title + Enter (legal free/catalog search)"
-                  : "Search titles, authors, notes, or quotes"
+              filter === "want"
+                ? "Find your next book by title or author"
+                : "Search titles, authors, notes, or highlights"
             }
-            disabled={filter === "blogs"}
           />
           {filter === "want" ? (
             <button
@@ -1537,22 +1690,24 @@ export function BooksLibrary({
             </button>
           ) : null}
         </form>
-        <div className="bl-view-tabs" aria-label="Library arrangement">
-          <button
-            type="button"
-            className={groupMode === "subjects" ? "is-on" : ""}
-            onClick={() => setGroupMode("subjects")}
-          >
-            Folders
-          </button>
-          <button
-            type="button"
-            className={groupMode === "status" ? "is-on" : ""}
-            onClick={() => setGroupMode("status")}
-          >
-            Status
-          </button>
-        </div>
+        {!isBookStatusFilter(filter) ? (
+          <div className="bl-view-tabs" aria-label="Library arrangement">
+            <button
+              type="button"
+              className={groupMode === "subjects" ? "is-on" : ""}
+              onClick={() => setGroupMode("subjects")}
+            >
+              Folders
+            </button>
+            <button
+              type="button"
+              className={groupMode === "status" ? "is-on" : ""}
+              onClick={() => setGroupMode("status")}
+            >
+              Status
+            </button>
+          </div>
+        ) : <span className="bl-toolbar-spacer" aria-hidden />}
         <button
           type="button"
           className="bl-add-btn"
@@ -1562,7 +1717,7 @@ export function BooksLibrary({
           <MagnifyingGlass size={15} aria-hidden />
           Find
         </button>
-        {groupMode === "subjects" ? (
+        {effectiveGroupMode === "subjects" ? (
           <button
             type="button"
             className="bl-add-btn bl-folder-add-btn"
@@ -1589,6 +1744,47 @@ export function BooksLibrary({
           {adding ? "Close" : "Add book"}
         </button>
       </div>
+      ) : null}
+
+      {resumeBook &&
+      !q.trim() &&
+      (filter === "all" || filter === "books" || filter === "reading") ? (
+        <section className="bl-resume" aria-label="Continue reading">
+          <BookCover
+            book={resumeBook}
+            className="bl-resume-cover"
+            folderLabel={folderById.get(resumeBook.category)?.label}
+          />
+          <div className="bl-resume-copy">
+            <span>Continue reading</span>
+            <strong>{resumeBook.title}</strong>
+            <small>
+              {resumeBook.author || folderById.get(resumeBook.category)?.label}
+              {(resumeBook.readerProgress || 0) > 0
+                ? ` · ${progressPercent(resumeBook.readerProgress || 0)}%`
+                : ""}
+            </small>
+            {resumeBook.smartBookmark?.text ? (
+              <q>{resumeBook.smartBookmark.text}</q>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            className="bl-btn bl-btn-primary bl-resume-action"
+            onClick={() => readBook(resumeBook.id)}
+          >
+            <BookOpen size={15} aria-hidden />
+            Continue
+            <CaretRight size={14} weight="bold" aria-hidden />
+          </button>
+          <span className="bl-resume-progress" aria-hidden>
+            <i
+              style={{
+                width: `${Math.max(1, (resumeBook.readerProgress || 0) * 100)}%`,
+              }}
+            />
+          </span>
+        </section>
       ) : null}
 
       {filter !== "blogs" && addingFolder ? (
@@ -1734,28 +1930,6 @@ export function BooksLibrary({
         </section>
       ) : null}
 
-      <div className="bl-filter" aria-label="Library sections">
-        {LIBRARY_CHIPS.map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            className={`bl-chip${filter === id ? " is-on" : ""}`}
-            onClick={() => {
-              setFilter(id);
-              // Next (want): focus the “get this book” flow
-              if (id === "want") {
-                setFinderOpen(true);
-                setFinderMessage(
-                  "Type a title above and press Enter / Get. Legal catalogs only (Open Library). Auto-files into a folder."
-                );
-              }
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
       {filter !== "blogs" && adding ? (
         <div className="bl-add-panel">
           <input
@@ -1815,14 +1989,14 @@ export function BooksLibrary({
           </p>
         ) : (
           groups.map((group) => {
-            const expanded = Boolean(openFolders[group.id]) || Boolean(q.trim());
+            const expanded = openFolders[group.id] !== false || Boolean(q.trim());
             return (
               <section
                 key={group.id}
                 className={`bl-shelf${expanded ? " is-open" : ""}${dropFolderId === group.id ? " is-drop-target" : ""}`}
                 style={folderTone(group.accent)}
                 onDragOver={(event) => {
-                  if (groupMode !== "subjects") return;
+                  if (effectiveGroupMode !== "subjects") return;
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "move";
                   setDropFolderId(group.id);
@@ -1831,7 +2005,7 @@ export function BooksLibrary({
                   if (dropFolderId === group.id) setDropFolderId(null);
                 }}
                 onDrop={(event) => {
-                  if (groupMode !== "subjects") return;
+                  if (effectiveGroupMode !== "subjects") return;
                   event.preventDefault();
                   const bookId =
                     draggingBookId ||
@@ -1846,7 +2020,7 @@ export function BooksLibrary({
                     onClick={() =>
                       setOpenFolders((current) => ({
                         ...current,
-                        [group.id]: !current[group.id],
+                        [group.id]: current[group.id] === false,
                       }))
                     }
                     aria-expanded={expanded}
@@ -1925,7 +2099,7 @@ export function BooksLibrary({
                         key={book.id}
                         book={book}
                         folderLabel={group.label}
-                        draggable={groupMode === "subjects"}
+                        draggable={effectiveGroupMode === "subjects"}
                         dragging={draggingBookId === book.id}
                         onOpen={() => openBookDetails(book.id)}
                         onContinue={
@@ -1953,28 +2127,78 @@ export function BooksLibrary({
         )
       ) : null}
 
-      {/* Blogs under book drives on All; alone on Blogs — plain links only for now */}
+      {/* Blogs under books on All, or as a focused writing index on Blogs. */}
       {showBlogs ? (
         <section
           className={`bl-greats${filter === "all" ? " bl-greats-after-books" : ""}`}
           aria-label="Blogs and essays"
         >
-          <h2 className="bl-greats-h">Blogs</h2>
-          <ul className="bl-greats-links">
+          <div className="bl-greats-head">
+            <div>
+              <span>Writing worth returning to</span>
+              <h2 className="bl-greats-h">Blogs &amp; essays</h2>
+            </div>
+            <small>{GREATS_AUTHORS.length} sources</small>
+          </div>
+          <div className="bl-greats-grid">
             {GREATS_AUTHORS.map((author) => (
-              <li key={author.id}>
+              <article
+                key={author.id}
+                className="bl-greats-card"
+                style={{ "--bl-blog-accent": author.accent } as CSSProperties}
+              >
+                <header>
+                  <div>
+                    <span>{author.kind}</span>
+                    <h3>{author.name}</h3>
+                  </div>
+                  <a
+                    href={author.homeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Open ${author.name}`}
+                    aria-label={`Open ${author.name}`}
+                  >
+                    <ArrowSquareOut size={16} aria-hidden />
+                  </a>
+                </header>
+                {author.posts.length ? (
+                  <ul>
+                    {author.posts.slice(0, 4).map((post) => (
+                      <li key={post.id}>
+                        <a
+                          href={post.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <span>{post.title}</span>
+                          <CaretRight size={13} weight="bold" aria-hidden />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <a
+                    className="bl-greats-own-blog"
+                    href={author.homeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open {author.name}&apos;s writing
+                    <CaretRight size={13} weight="bold" aria-hidden />
+                  </a>
+                )}
                 <a
-                  className="bl-greats-link"
+                  className="bl-greats-home"
                   href={author.homeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {author.name}
+                  {new URL(author.homeUrl).hostname.replace(/^www\./, "")}
                 </a>
-                <span className="bl-greats-link-url">{author.homeUrl}</span>
-              </li>
+              </article>
             ))}
-          </ul>
+          </div>
         </section>
       ) : null}
 
@@ -2089,7 +2313,7 @@ function BookCard({
           </span>
         ) : null}
       </button>
-      {onContinue && progress > 0.01 ? (
+      {onContinue ? (
         <button
           type="button"
           className="bl-card-continue"
@@ -2098,7 +2322,7 @@ function BookCard({
             onContinue();
           }}
         >
-          Continue
+          {progress > 0.01 ? "Continue" : "Read"}
         </button>
       ) : null}
     </div>

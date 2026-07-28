@@ -789,8 +789,8 @@ function mathLedgerStats(q: string, ctx: CopilotContext): CopilotAnswer | null {
   const corr = pearson(incV, expV);
   return {
     text: [
-      `Monthly expense series: n=${expV.length} months.`,
-      `Mean μ = ${money(m)}, sample σ = ${money(sd)}, CV = σ/μ = ${cv.toFixed(3)}.`,
+      `Average monthly spend = ${money(m)} across ${expV.length} months.`,
+      `Sample σ = ${money(sd)}; CV = σ/μ = ${cv.toFixed(3)}.`,
       corr != null
         ? `Pearson correlation(income, expense) = ${corr.toFixed(3)} (n=${Math.min(incV.length, expV.length)}).`
         : `Correlation: need aligned income months.`,

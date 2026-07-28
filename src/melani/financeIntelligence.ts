@@ -56,7 +56,14 @@ export type SmartAction = {
   amount?: number;
   /** Where to go / what to press */
   cta: string;
-  tab?: "overview" | "transactions" | "plan" | "goals" | "insights" | "accounts";
+  tab?:
+    | "overview"
+    | "transactions"
+    | "plan"
+    | "subscriptions"
+    | "goals"
+    | "insights"
+    | "accounts";
 };
 
 export type MonthProjection = {

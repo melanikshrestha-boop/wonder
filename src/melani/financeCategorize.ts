@@ -10,9 +10,17 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Transfers: "#1f6f8b", // account / card moves — cool teal, not Zelle
   Groceries: "#5c8d5c",
   Restaurants: "#d64545", // "bad" discretionary — red
+  Housing: "#8b6f47",
+  Utilities: "#4f7b8f",
+  Health: "#3f8f7b",
   Subscriptions: "#7d5ba6",
   Clothing: "#c94f7c",
   Transport: "#e8743b",
+  Education: "#7766b8",
+  Travel: "#2f84a6",
+  Business: "#586f92",
+  Fees: "#a66b52",
+  Gifts: "#b66e91",
   "Credit card payment": "#6b8e9e",
   Other: "#8a8580",
   Uncategorized: "#6a6560",
@@ -31,9 +39,17 @@ export const FINANCE_CATEGORIES = [
   "Transfers",
   "Groceries",
   "Restaurants",
+  "Housing",
+  "Utilities",
+  "Health",
   "Subscriptions",
   "Clothing",
   "Transport",
+  "Education",
+  "Travel",
+  "Business",
+  "Fees",
+  "Gifts",
   "Credit card payment",
   "Other",
 ] as const;
@@ -48,15 +64,16 @@ const ALIASES: Record<string, string> = {
   Restaurant: "Restaurants",
   Coffee: "Restaurants",
   Shopping: "Clothing",
-  "Rent / housing": "Other",
+  "Rent / housing": "Housing",
   Cash: "Other",
-  Utilities: "Other",
-  Health: "Other",
-  "Build / tools": "Subscriptions",
-  Travel: "Other",
-  "Education / school": "Other",
+  Utilities: "Utilities",
+  Health: "Health",
+  "Build / tools": "Business",
+  Travel: "Travel",
+  "Education / school": "Education",
+  "Gifts received": "Gifts",
   Fun: "Restaurants",
-  Fees: "Other",
+  Fees: "Fees",
   Uncategorized: "Other",
 };
 
@@ -68,11 +85,22 @@ export function normalizeCategory(
   category: string | null | undefined,
   merchantOrNote = ""
 ): string {
+  const raw = (category || "").trim();
+  // A reviewed transfer classification is accounting evidence. Preserve it
+  // even when the bank description contains "Zelle"; otherwise an approved
+  // checking↔savings pair silently becomes income/expense again on reload.
+  const explicitTransfer = FINANCE_CATEGORIES.find(
+    (candidate) =>
+      (candidate === "Transfers" || candidate === "Credit card payment") &&
+      candidate.toLowerCase() === raw.toLowerCase()
+  );
+  if (explicitTransfer) return explicitTransfer;
+
   const text = `${merchantOrNote}`.toLowerCase();
-  // Zelle wins over Transfers / Other when the payee line says Zelle
+  // Zelle wins over unreviewed bank noise, but never over an explicit
+  // Transfers / Credit card payment decision above.
   if (/\bzelle\b/.test(text)) return "Zelle";
 
-  const raw = (category || "").trim();
   if (!raw) return "Other";
   if (ALIASES[raw]) return ALIASES[raw];
   if ((FINANCE_CATEGORIES as readonly string[]).includes(raw)) return raw;
@@ -102,6 +130,10 @@ const RULES: { category: string; match: RegExp }[] = [
     match:
       /\b(payment to chase card|chase credit card payment|loan_pmt|payment thank you|autopay)\b/i,
   },
+  {
+    category: "Gifts",
+    match: /\b(gift|family support)\b/i,
+  },
   // Zelle is its own bucket — most of your payment volume lives here
   { category: "Zelle", match: /\bzelle\b/i },
   {
@@ -125,6 +157,21 @@ const RULES: { category: string; match: RegExp }[] = [
       /\b(uber|lyft|waymo|mta|metrocard|omny|shell|exxon|chevron|gas station|parking|toll|ezpass|citi bike|arco)\b/i,
   },
   {
+    category: "Housing",
+    match:
+      /\b(rent|landlord|mortgage|property management|housing|apartment|lease)\b/i,
+  },
+  {
+    category: "Utilities",
+    match:
+      /\b(electric|electricity|water bill|gas bill|utility|utilities|con ed|internet|wifi|phone bill|verizon|t-mobile|at&t|spectrum|xfinity)\b/i,
+  },
+  {
+    category: "Health",
+    match:
+      /\b(pharmacy|cvs|walgreens|doctor|medical|dental|dentist|hospital|therapy|health|copay|prescription)\b/i,
+  },
+  {
     category: "Subscriptions",
     match:
       /\b(netflix|spotify|hulu|disney\+|youtube premium|icloud|google one|adobe|notion|openai|anthropic|github|cursor|midjourney|audible|apple\.com\/bill|squarespace|sqsp|aws|vercel|figma|domain)\b/i,
@@ -133,6 +180,26 @@ const RULES: { category: string; match: RegExp }[] = [
     category: "Clothing",
     match:
       /\b(nordstrom|zara|h&m|uniqlo|shein|fashion|clothing|apparel|lululemon|gap |old navy|forever 21|nepa fashion|athleta|free people|reformation|sephora|ulta)\b/i,
+  },
+  {
+    category: "Education",
+    match:
+      /\b(tuition|university|college|school|course|textbook|student fee|education)\b/i,
+  },
+  {
+    category: "Travel",
+    match:
+      /\b(airline|flight|hotel|airbnb|booking\.com|expedia|hostel|resort)\b/i,
+  },
+  {
+    category: "Business",
+    match:
+      /\b(business expense|hosting|domain|aws|cloudflare|office supplies|equipment|contractor)\b/i,
+  },
+  {
+    category: "Fees",
+    match:
+      /\b(overdraft|service fee|bank fee|late fee|maintenance fee|foreign transaction fee)\b/i,
   },
 ];
 

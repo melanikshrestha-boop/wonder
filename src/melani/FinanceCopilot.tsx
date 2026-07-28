@@ -326,6 +326,19 @@ export function FinanceCopilot({
                           </tbody>
                         </table>
                       ) : null}
+                      {m.role === "assistant" && m.sources?.length ? (
+                        <details className="fc-sources">
+                          <summary>
+                            Evidence · {m.sources.length} source
+                            {m.sources.length === 1 ? "" : "s"}
+                          </summary>
+                          <ul>
+                            {m.sources.map((source, index) => (
+                              <li key={`${source}-${index}`}>{source}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      ) : null}
                     </article>
                   ))}
                   {thinking ? (

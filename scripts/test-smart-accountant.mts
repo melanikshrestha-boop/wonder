@@ -131,7 +131,7 @@ const ofxAgain = importOfx(ofxSgml, {
   existingFingerprints: new Set(ofxTxs.added.map((t) => t.externalId || "")),
 });
 check("ofx re-import deduped", ofxAgain.added.length === 0 && ofxAgain.skipped === 2);
-check("ofx categorized groceries", ofxTxs.added[0]?.category === "Food / groceries");
+check("ofx categorized groceries", ofxTxs.added[0]?.category === "Groceries");
 
 // ── mergeTxs dedupe ─────────────────────────────────────────
 console.log("ledger merge");
@@ -194,6 +194,351 @@ check(
   "true spend excludes transfers, keeps coffee",
   monthTrueSpend(applied, ymT) === 6.75
 );
+
+// ── Accounting-grade postings and period review ──────────────────
+const {
+  buildJournal,
+  buildLedger,
+  buildStatements,
+  buildAccountantReview,
+  buildReconciliation,
+  buildBudgetVariance,
+  buildRunway,
+  buildMonthlyClose,
+  buildTransactionInbox,
+} = await import("../src/melani/financeAccounting.ts");
+{
+  const accountingState = {
+    version: 2 as const,
+    accounts: [
+      { id: "checking", name: "Checking", kind: "checking" as const, balance: -50 },
+      { id: "savings", name: "Savings", kind: "savings" as const, balance: 500 },
+      { id: "card", name: "Chase", kind: "credit" as const, balance: 100, creditLimit: 1000, apr: 24.99, dueDay: 10, statementCloseDay: 13 },
+    ],
+    txs: [
+      newTx({ date: "2026-07-01", kind: "income", amount: 1000, category: "Income", merchant: "PAYROLL", accountId: "checking" }),
+      newTx({ date: "2026-07-02", kind: "income", amount: 500, category: "Transfers", merchant: "From checking", accountId: "savings" }),
+      newTx({ date: "2026-07-03", kind: "expense", amount: 500, category: "Transfers", merchant: "To savings", accountId: "checking" }),
+      newTx({ date: "2026-07-04", kind: "expense", amount: 100, category: "Groceries", merchant: "Trader Joes", accountId: "card" }),
+      newTx({ date: "2026-07-05", kind: "income", amount: 80, category: "Zelle", merchant: "Zelle from Mom", note: "family gift", accountId: "checking" }),
+      newTx({ date: "2026-07-06", kind: "expense", amount: 30, category: "Zelle", merchant: "Zelle to friend", accountId: "checking" }),
+      newTx({ date: "2026-07-07", kind: "expense", amount: 12, category: "Other", merchant: "Unknown", accountId: null }),
+    ],
+    budget: [{ category: "Groceries", planned: 200 }],
+    watchlist: [],
+    goals: [],
+    creditProfile: null,
+  };
+  const journal = buildJournal(accountingState);
+  const cardPurchase = journal.entries.find((entry) => entry.memo === "Trader Joes");
+  check(
+    "accounting: card purchase credits card liability",
+    cardPurchase?.debitCode === "5200" && cardPurchase?.creditCode === "2000",
+    cardPurchase
+  );
+  const gift = journal.entries.find((entry) => entry.memo === "Zelle from Mom");
+  const zelleOut = journal.entries.find((entry) => entry.memo === "Zelle to friend");
+  check("accounting: family Zelle income posts to gifts", gift?.creditCode === "4100", gift);
+  check("accounting: outbound Zelle is expense, not transfer", zelleOut?.debitCode === "6900", zelleOut);
+
+  const statements = buildStatements(accountingState, "2026-07");
+  check(
+    "accounting: P&L excludes account transfers",
+    statements.pnl.income === 1080 &&
+      statements.pnl.expenseTotal === 142 &&
+      statements.pnl.transfersIn === 500 &&
+      statements.pnl.transfersOut === 500,
+    statements.pnl
+  );
+  check(
+    "accounting: overdraft is a liability",
+    statements.balanceSheet.totalAssets === 500 &&
+      statements.balanceSheet.totalLiabilities === 150 &&
+      statements.balanceSheet.equity === 350,
+    statements.balanceSheet
+  );
+
+  const emptyBooks = {
+    version: 1 as const,
+    payables: [],
+    receivables: [],
+    receipts: [],
+    closedMonths: [],
+  };
+  const review = buildAccountantReview(accountingState, "2026-07", emptyBooks);
+  check(
+    "accounting: review finds weak and unassigned lines",
+    review.weakCategoryLines === 1 &&
+      review.unassignedLines === 1 &&
+      review.items.some((item) => item.id === "review-categories"),
+    review
+  );
+
+  const cashEvidenceState = {
+    ...accountingState,
+    accounts: [
+      { id: "checking", name: "Checking", kind: "checking" as const, balance: 900 },
+      { id: "card", name: "Card", kind: "credit" as const, balance: 0 },
+    ],
+    txs: [
+      newTx({ date: "2026-07-01", kind: "income", amount: 1000, category: "Income", merchant: "PAYROLL", accountId: "checking" }),
+      newTx({ date: "2026-07-02", kind: "expense", amount: 100, category: "Groceries", merchant: "Grocery on card", accountId: "card" }),
+      newTx({ date: "2026-07-05", kind: "expense", amount: 100, category: "Credit card payment", merchant: "Payment to card", accountId: "checking" }),
+      newTx({ date: "2026-07-05", kind: "income", amount: 100, category: "Credit card payment", merchant: "Payment received", accountId: "card" }),
+      newTx({ date: "2026-07-10", kind: "expense", amount: 999, category: "Groceries", merchant: "Pending hold", accountId: "checking", pending: true }),
+    ],
+  };
+  const cashEvidenceStatements = buildStatements(
+    cashEvidenceState,
+    "2026-07",
+    emptyBooks,
+    new Date("2026-07-27T12:00:00Z")
+  );
+  check(
+    "accounting: card purchase does not move cash; card payment moves cash once",
+    cashEvidenceStatements.cashFlow.operatingIn === 1000 &&
+      cashEvidenceStatements.cashFlow.operatingOut === 0 &&
+      cashEvidenceStatements.cashFlow.transfersNet === -100 &&
+      cashEvidenceStatements.cashFlow.netChange === 900,
+    cashEvidenceStatements.cashFlow
+  );
+  check(
+    "accounting: pending authorizations excluded from statements",
+    cashEvidenceStatements.pnl.expenseTotal === 100 &&
+      cashEvidenceStatements.cashFlow.netChange === 900,
+    cashEvidenceStatements
+  );
+  const postedLedger = buildLedger(buildJournal(cashEvidenceState));
+  check(
+    "accounting: pending journal entry excluded from general ledger",
+    postedLedger.lines.length === 8 &&
+      !postedLedger.lines.some((line) => line.memo === "Pending hold"),
+    postedLedger.lines
+  );
+
+  const unknownIncome = buildJournal({
+    ...accountingState,
+    txs: [
+      newTx({ date: "2026-07-11", kind: "income", amount: 25, category: "Other", merchant: "Unknown deposit", accountId: "checking" }),
+    ],
+  }).entries[0];
+  check(
+    "accounting: unknown income credits income, never expense",
+    unknownIncome?.creditCode === "4000",
+    unknownIncome
+  );
+
+  const recon = buildReconciliation(cashEvidenceState);
+  check(
+    "accounting: tagged activity is unverified without statement endpoints",
+    recon.every((account) =>
+      account.txCount > 0
+        ? account.status === "unverified" && account.drift === null
+        : account.status === "no-activity" && account.drift === null
+    ),
+    recon
+  );
+
+  const pendingOnlyState = {
+    ...accountingState,
+    accounts: [],
+    txs: [
+      newTx({ date: "2026-08-02", kind: "expense", amount: 40, category: "Groceries", merchant: "Pending grocery", pending: true }),
+    ],
+  };
+  const pendingVariance = buildBudgetVariance(pendingOnlyState, "2026-08");
+  const pendingClose = buildMonthlyClose(
+    pendingOnlyState,
+    "2026-08",
+    emptyBooks,
+    pendingVariance,
+    buildReconciliation(pendingOnlyState),
+    buildTransactionInbox(pendingOnlyState)
+  );
+  check(
+    "accounting: pending-only month has no posted evidence and cannot close",
+    !pendingClose.readyToClose &&
+      pendingClose.checks.find((item) => item.id === "has-txs")?.ok === false &&
+      pendingClose.checks.find((item) => item.id === "pending")?.critical === true &&
+      pendingClose.checks.find((item) => item.id === "pending")?.ok === false,
+    pendingClose
+  );
+
+  const superficiallyHealthyState = {
+    ...accountingState,
+    accounts: [],
+    txs: [
+      newTx({ date: "2026-08-02", kind: "expense", amount: 40, category: "Groceries", merchant: "Posted grocery", source: "import" }),
+    ],
+    budget: [{ category: "Groceries", planned: 100 }],
+  };
+  const healthyVariance = buildBudgetVariance(
+    superficiallyHealthyState,
+    "2026-08"
+  );
+  const gatedClose = buildMonthlyClose(
+    superficiallyHealthyState,
+    "2026-08",
+    emptyBooks,
+    healthyVariance,
+    buildReconciliation(superficiallyHealthyState),
+    buildTransactionInbox(superficiallyHealthyState)
+  );
+  check(
+    "accounting: failed critical check blocks close even when score is at least 80",
+    gatedClose.score >= 80 &&
+      !gatedClose.readyToClose &&
+      gatedClose.checks.some((item) => item.critical && !item.ok),
+    gatedClose
+  );
+
+  const historicalBooks = {
+    ...emptyBooks,
+    payables: [
+      {
+        id: "ap-historical",
+        what: "Vendor bill",
+        amount: 50,
+        dueDate: "2025-12-20",
+        paid: true,
+        paidDate: "2026-01-15",
+        createdAt: "2025-12-01T12:00:00Z",
+      },
+    ],
+    receivables: [
+      {
+        id: "ar-historical",
+        who: "Client",
+        amount: 80,
+        dueDate: "2025-12-20",
+        received: false,
+        createdAt: "2025-12-01T12:00:00Z",
+      },
+    ],
+  };
+  const historicalStatements = buildStatements(
+    { ...accountingState, txs: [] },
+    "2025-12",
+    historicalBooks,
+    new Date("2026-07-27T12:00:00Z")
+  );
+  check(
+    "accounting: historical balance sheet does not reuse current bank balances",
+    historicalStatements.balanceSheet.status === "historical-unavailable" &&
+      !historicalStatements.balanceSheet.bankBalancesAvailable &&
+      historicalStatements.balanceSheet.asOf === "2025-12-31" &&
+      historicalStatements.balanceSheet.totalAssets === 80 &&
+      historicalStatements.balanceSheet.totalLiabilities === 50,
+    historicalStatements.balanceSheet
+  );
+  check(
+    "accounting: historical balance sheet labels unavailable bank evidence",
+    /unavailable.*period-end statement/i.test(
+      historicalStatements.balanceSheet.note
+    ),
+    historicalStatements.balanceSheet.note
+  );
+
+  const annualBudget = buildBudgetVariance(
+    {
+      ...accountingState,
+      txs: [
+        newTx({ date: "2026-02-02", kind: "expense", amount: 50, category: "Groceries", merchant: "Grocer" }),
+      ],
+      budget: [{ category: "Groceries", planned: 200 }],
+    },
+    "2026"
+  );
+  check(
+    "accounting: annual Books does not repeat the current monthly budget",
+    annualBudget.periodKind === "year" &&
+      !annualBudget.comparable &&
+      annualBudget.plannedTotal === 0 &&
+      annualBudget.actualTotal === 50,
+    annualBudget
+  );
+  const annualClose = buildMonthlyClose(
+    accountingState,
+    "2026",
+    emptyBooks,
+    annualBudget,
+    buildReconciliation(accountingState),
+    buildTransactionInbox(accountingState)
+  );
+  check(
+    "accounting: annual Books is reporting-only, not a fake monthly close",
+    annualClose.periodKind === "year" && !annualClose.readyToClose,
+    annualClose
+  );
+
+  const runway = buildRunway({
+    ...accountingState,
+    accounts: [
+      { id: "checking", name: "Checking", kind: "checking" as const, balance: 300 },
+    ],
+    txs: [
+      newTx({ date: "2026-07-01", kind: "income", amount: 100, category: "Income", merchant: "Real income" }),
+      newTx({ date: "2026-07-02", kind: "income", amount: 1000, category: "Transfers", merchant: "Transfer from savings" }),
+      newTx({ date: "2026-07-03", kind: "income", amount: 400, category: "Credit card payment", merchant: "Card payment credit" }),
+      newTx({ date: "2026-07-04", kind: "expense", amount: 500, category: "Transfers", merchant: "Transfer to savings" }),
+      newTx({ date: "2026-07-05", kind: "expense", amount: 20, category: "Groceries", merchant: "Grocer" }),
+      newTx({ date: "2026-07-06", kind: "expense", amount: 10, category: "Zelle", merchant: "Zelle to barber" }),
+    ],
+  });
+  check(
+    "accounting: runway excludes transfer/card-payment credits but counts external Zelle spend",
+    runway.avgMonthlyIncome === 100 && runway.avgMonthlyBurn === 30,
+    runway
+  );
+
+  // A user-approved Zelle pair must survive the normalize/load boundary.
+  values.clear();
+  values.set(
+    "wonder-finance-v2",
+    JSON.stringify({
+      version: 2,
+      accounts: accountingState.accounts,
+      budget: accountingState.budget,
+      watchlist: [],
+      goals: [],
+      creditProfile: null,
+      txs: [
+        {
+          id: "approved-zelle-out",
+          date: "2026-07-08",
+          kind: "expense",
+          amount: 200,
+          category: "Transfers",
+          merchant: "Zelle to savings",
+          note: "Approved own-account pair",
+          accountId: "checking",
+          source: "import",
+        },
+        {
+          id: "approved-zelle-in",
+          date: "2026-07-08",
+          kind: "income",
+          amount: 200,
+          category: "Transfers",
+          merchant: "Zelle from checking",
+          note: "Approved own-account pair",
+          accountId: "savings",
+          source: "import",
+        },
+      ],
+    })
+  );
+  const reloadedTransfers = (
+    await import("../src/melani/financeStore.ts")
+  ).loadFinance();
+  check(
+    "accounting: approved Zelle transfer pair survives reload",
+    reloadedTransfers.txs.length === 2 &&
+      reloadedTransfers.txs.every((tx) => tx.category === "Transfers"),
+    reloadedTransfers.txs
+  );
+  values.clear();
+}
 
 // ── Net worth timeline ──────────────────────────────────────
 console.log("net worth timeline");
@@ -422,13 +767,48 @@ const { detectSubscriptions } = await import("../src/melani/subscriptions.ts");
     newTx({ date: "2026-06-06", kind: "expense", amount: 9.99, merchant: "ACME CLOUD HOSTING", category: "Software" }),
   ];
   const realScan = detectSubscriptions(realTxs);
-  check("subs: Claude detected", realScan.subs.some((s) => s.merchant === "Claude"), realScan.subs);
+  check("subs: Claude detected", realScan.subs.some((s) => /claude/i.test(s.merchant)), realScan.subs);
   check("subs: Cursor detected", realScan.subs.some((s) => s.merchant === "Cursor"), realScan.subs);
   check("subs: identical same-day unknown detected", realScan.subs.some((s) => /acme/i.test(s.merchant)), realScan.subs);
+
+  const adversarialRecurring = [
+    // Habitual same-month coffee is not a fixed contract.
+    newTx({ date: "2026-07-01", kind: "expense", amount: 6.25, merchant: "STARBUCKS", category: "Restaurants" }),
+    newTx({ date: "2026-07-08", kind: "expense", amount: 6.25, merchant: "STARBUCKS", category: "Restaurants" }),
+    newTx({ date: "2026-07-15", kind: "expense", amount: 6.25, merchant: "STARBUCKS", category: "Restaurants" }),
+    newTx({ date: "2026-07-22", kind: "expense", amount: 6.25, merchant: "STARBUCKS", category: "Restaurants" }),
+    // A recurring grocery merchant with unstable baskets remains variable spend.
+    newTx({ date: "2026-04-05", kind: "expense", amount: 42, merchant: "WHOLE FOODS", category: "Groceries" }),
+    newTx({ date: "2026-05-05", kind: "expense", amount: 91, merchant: "WHOLE FOODS", category: "Groceries" }),
+    newTx({ date: "2026-06-05", kind: "expense", amount: 28, merchant: "WHOLE FOODS", category: "Groceries" }),
+    // Generic Apple billing can be one-off media/app purchases.
+    newTx({ date: "2026-01-03", kind: "expense", amount: 2.99, merchant: "APPLE.COM/BILL", category: "Subscriptions" }),
+    newTx({ date: "2026-02-17", kind: "expense", amount: 14.99, merchant: "APPLE.COM/BILL", category: "Subscriptions" }),
+    newTx({ date: "2026-04-20", kind: "expense", amount: 7.99, merchant: "APPLE.COM/BILL", category: "Subscriptions" }),
+    // A real weekly service keeps its weekly cadence and monthly normalization.
+    newTx({ date: "2026-06-01", kind: "expense", amount: 5, merchant: "WEEKLY CLOUD MEMBERSHIP", category: "Subscriptions" }),
+    newTx({ date: "2026-06-08", kind: "expense", amount: 5, merchant: "WEEKLY CLOUD MEMBERSHIP", category: "Subscriptions" }),
+    newTx({ date: "2026-06-15", kind: "expense", amount: 5, merchant: "WEEKLY CLOUD MEMBERSHIP", category: "Subscriptions" }),
+    newTx({ date: "2026-06-22", kind: "expense", amount: 5, merchant: "WEEKLY CLOUD MEMBERSHIP", category: "Subscriptions" }),
+    // Pending authorizations are not recurring evidence.
+    newTx({ date: "2026-07-15", kind: "expense", amount: 15.49, merchant: "NETFLIX.COM", category: "Subscriptions", pending: true }),
+  ];
+  const adversarialScan = detectSubscriptions(adversarialRecurring);
+  check("subs: same-month Starbucks is variable spend", !adversarialScan.subs.some((s) => /starbucks/i.test(s.merchant)), adversarialScan.subs);
+  check("subs: unstable groceries are not fixed cost", !adversarialScan.subs.some((s) => /whole foods/i.test(s.merchant)), adversarialScan.subs);
+  check("subs: irregular generic Apple purchases excluded", !adversarialScan.subs.some((s) => s.merchant === "Apple"), adversarialScan.subs);
+  const weeklyService = adversarialScan.subs.find((s) => /weekly cloud/i.test(s.merchant));
+  check(
+    "subs: weekly cadence and monthly cost are preserved",
+    weeklyService?.cadence === "weekly" &&
+      Math.abs((weeklyService?.monthlyCost || 0) - 21.73) < 0.01,
+    weeklyService
+  );
+  check("subs: pending authorization is not evidence", !adversarialScan.subs.some((s) => s.merchant === "Netflix"), adversarialScan.subs);
 }
 
 // ── Finance copilot (grounded ledger queries) ──────────────────────
-const { answerCopilot } = await import("../src/melani/financeCopilot.ts");
+const { answerCopilot } = await import("../src/melani/financeCopilotEngine.ts");
 const { detectSubscriptions: detectSubs2 } = await import("../src/melani/subscriptions.ts");
 {
   const ctxTxs = [
@@ -451,7 +831,7 @@ const { detectSubscriptions: detectSubs2 } = await import("../src/melani/subscri
 
   const foodA = answerCopilot("how much did I spend on food in June?", baseCtx as any);
   check("copilot: food total = $100", foodA.text.includes("$100"), foodA.text);
-  check("copilot: cites Food category", foodA.sources.some((s) => /Food/i.test(s)), foodA.sources);
+  check("copilot: cites groceries category", foodA.sources.some((s) => /grocer/i.test(s)), foodA.sources);
 
   const incA = answerCopilot("how much did I make in June?", baseCtx as any);
   check("copilot: income = $3,000", incA.text.includes("$3,000"), incA.text);
@@ -507,7 +887,7 @@ const { runSql } = await import("../src/melani/financeSql.ts");
   check("sql: total expense = 420", r1.rows[0]?.[0] === 420, r1);
 
   const r2 = runSql("SELECT category, SUM(amount) FROM transactions WHERE kind = 'expense' GROUP BY category ORDER BY SUM(amount) DESC", sqlTxs);
-  check("sql: group by category top = Shopping 320", r2.rows[0]?.[0] === "Shopping" && r2.rows[0]?.[1] === 320, r2);
+  check("sql: group by category top = Clothing 320", r2.rows[0]?.[0] === "Clothing" && r2.rows[0]?.[1] === 320, r2);
 
   const r3 = runSql("SELECT date, merchant, amount FROM transactions WHERE kind = 'expense' AND amount > 100 ORDER BY amount DESC", sqlTxs);
   check("sql: filter expense amount>100 returns 2", r3.rowCount === 2 && r3.rows[0]?.[2] === 200, r3);

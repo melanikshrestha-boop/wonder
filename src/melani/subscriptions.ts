@@ -28,6 +28,8 @@ export type Subscription = {
   yearlyCost: number;
   /** How many charges were seen */
   count: number;
+  /** Number of distinct calendar months containing a charge */
+  monthsSeen: number;
   lastDate: string; // YYYY-MM-DD
   /** Predicted next charge date */
   nextDate: string; // YYYY-MM-DD
@@ -43,7 +45,7 @@ export type SubscriptionScan = {
   count: number;
 };
 
-/** Well-known recurring brands — catch even a single charge. */
+/** Well-known recurring brands — names help classification, not proof. */
 const KNOWN: { match: RegExp; name: string }[] = [
   { match: /netflix/i, name: "Netflix" },
   { match: /spotify/i, name: "Spotify" },
@@ -186,6 +188,16 @@ function cadenceFor(gapDays: number): { cadence: SubCadence; perMonth: number } 
   return { cadence: "irregular", perMonth: 1 };
 }
 
+function gapsFitCadence(gaps: number[], cadence: SubCadence): boolean {
+  if (!gaps.length || cadence === "irregular") return false;
+  return gaps.every((gap) => {
+    if (cadence === "weekly") return gap >= 4 && gap <= 10;
+    if (cadence === "monthly") return gap >= 24 && gap <= 45;
+    if (cadence === "quarterly") return gap >= 75 && gap <= 105;
+    return gap >= 330 && gap <= 400;
+  });
+}
+
 /** Coefficient of variation — how consistent the charge amounts are. */
 function amountConsistency(amounts: number[]): number {
   if (amounts.length < 2) return 1;
@@ -198,6 +210,8 @@ function amountConsistency(amounts: number[]): number {
 
 /** Merchant-name words that signal a physical place, not a subscription. */
 const VENUE_WORDS = /\b(village|cafe|caf|coffee|grill|kitchen|restaurant|bar|bistro|deli|market|mart|diner|eatery|pizzeria|taqueria|sushi|bakery|juice|bowls?|tacos?|burger|thai|ramen|store|shop|salon|spa|nails?|barber)\b/i;
+const SERVICE_WORDS =
+  /\b(cloud|hosting|software|subscription|saas|storage|domain|server|workspace|membership)\b/i;
 
 /** How tightly the charges land on the same day of the month (0 = identical day). */
 function dayOfMonthSpread(dates: string[]): number {
@@ -225,6 +239,7 @@ export function detectSubscriptions(txs: FinanceTx[]): SubscriptionScan {
 
   for (const t of txs) {
     if (t.kind !== "expense") continue;
+    if (t.pending) continue;
     if (isTransferLike(t)) continue;
     if (t.amount <= 0) continue;
     const key = normalizeKey(t);
@@ -241,46 +256,85 @@ export function detectSubscriptions(txs: FinanceTx[]): SubscriptionScan {
     const amounts = list.map((t) => t.amount);
     const amount = median(amounts);
     const last = list[list.length - 1];
-    const isKnown = Boolean(matchKnown((last.merchant || last.note || "").toLowerCase()));
+    const rawDescription = list
+      .map((t) => `${t.merchant || ""} ${t.note || ""}`)
+      .join(" ");
+    const isKnown = Boolean(matchKnown(rawDescription.toLowerCase()));
     const cat = (last.category || "").toLowerCase().trim();
+    const monthsSeen = new Set(list.map((t) => t.date.slice(0, 7))).size;
 
     let cadence: SubCadence = "monthly";
     let perMonth = 1;
     let gap = 30;
+    const gaps: number[] = [];
 
     if (list.length >= 2) {
-      const gaps: number[] = [];
       for (let i = 1; i < list.length; i++) {
-        gaps.push(daysBetween(list[i - 1].date, list[i].date));
+        const days = daysBetween(list[i - 1].date, list[i].date);
+        if (days > 0) gaps.push(days);
       }
-      gap = Math.round(median(gaps.filter((g) => g > 0)) || 30);
+      gap = Math.round(median(gaps) || 30);
       const c = cadenceFor(gap);
       cadence = c.cadence;
       perMonth = c.perMonth;
     }
 
+    // A cadence is evidence only when every observed interval fits it. We do
+    // not relabel irregular purchases as monthly merely because the merchant
+    // also sells a subscription.
+    if (!gapsFitCadence(gaps, cadence)) continue;
+
     if (isKnown) {
-      // Even a recognized brand must actually recur to count. A single
-      // Audible/Apple charge is a one-time purchase, not a subscription.
-      // Require 2+ charges on a roughly-regular rhythm, and don't accept a
-      // wildly varying amount (that's à-la-carte buying, not a plan).
       if (list.length < 2) continue;
-      if (amountConsistency(amounts) > 0.45) continue; // erratic → not a plan
-      // A weekly/irregular rhythm on a brand is usually monthly billing plus
-      // one-off buys — normalize to monthly rather than inflating it.
-      if (cadence === "weekly" || cadence === "irregular") {
-        cadence = "monthly";
-        perMonth = 1;
-        gap = 30;
+      if (cadence === "weekly" && list.length < 3) continue;
+      if (cadence !== "weekly" && monthsSeen < 2) continue;
+      if (amountConsistency(amounts) > 0.15) continue;
+      if (
+        cadence === "monthly" &&
+        dayOfMonthSpread(list.map((t) => t.date)) > DOM_SPREAD_MAX
+      ) {
+        continue;
+      }
+
+      // APPLE.COM/BILL and iTunes include à-la-carte purchases. Without a
+      // named service, require three clean recurring periods before treating
+      // the charges as a fixed cost.
+      const genericApple = /\b(?:apple\.com\/bill|itunes)\b/i.test(
+        rawDescription
+      );
+      const namedAppleService =
+        /\b(?:apple\s*(?:music|tv|one|icloud)|icloud)\b/i.test(
+          rawDescription
+        );
+      if (
+        genericApple &&
+        !namedAppleService &&
+        (list.length < 3 ||
+          (cadence !== "weekly" && monthsSeen < 3) ||
+          amountConsistency(amounts) > AMOUNT_CV_MAX)
+      ) {
+        continue;
       }
     } else {
       // Unknown merchant — must clear every strict gate to count.
       const raw = (last.merchant || last.note || "");
       if (list.length < 3) continue; // two similar charges is coincidence, not a plan
-      if (NON_SUBSCRIPTION_CATEGORIES.has(cat)) continue; // restaurants, gas, shopping…
+      if (NON_SUBSCRIPTION_CATEGORIES.has(cat) && !SERVICE_WORDS.test(raw)) {
+        continue; // restaurants, gas, shopping…
+      }
       if (VENUE_WORDS.test(raw)) continue; // "… Village", "… Cafe" → a place, not a plan
-      if (cadence !== "monthly" && cadence !== "quarterly" && cadence !== "yearly") {
-        continue; // weekly/irregular unknowns are spending, not plans
+      if (cadence === "weekly") {
+        // Weekly fixed costs exist, but require an explicit service signal and
+        // enough history to separate them from habitual shopping.
+        if (
+          list.length < 4 ||
+          daysBetween(list[0].date, last.date) < 21 ||
+          !(SERVICE_WORDS.test(raw) || cat === "subscriptions")
+        ) {
+          continue;
+        }
+      } else if (monthsSeen < 3) {
+        continue;
       }
       if (amountConsistency(amounts) > AMOUNT_CV_MAX) continue; // varies → not a plan
       if (cadence === "monthly" && dayOfMonthSpread(list.map((t) => t.date)) > DOM_SPREAD_MAX) {
@@ -299,15 +353,13 @@ export function detectSubscriptions(txs: FinanceTx[]): SubscriptionScan {
       monthlyCost: Math.round(monthlyCost * 100) / 100,
       yearlyCost: Math.round(monthlyCost * 12 * 100) / 100,
       count: list.length,
+      monthsSeen,
       lastDate: last.date,
       nextDate,
       category: last.category,
       known: isKnown,
     });
   }
-
-  // Always include Melani's AI tools even if the bank CSV hasn't landed yet
-  mergeDeclaredAiSubs(subs);
 
   subs.sort((a, b) => b.monthlyCost - a.monthlyCost);
 
@@ -449,55 +501,4 @@ export function applySubPrefs(scan: SubscriptionScan): SubscriptionScan {
     yearlyTotal: Math.round(monthlyTotal * 12 * 100) / 100,
     count: subs.length,
   };
-}
-
-/**
- * AI tools you pay for — same shape as ledger-detected subs so they
- * show in the original table / donut (no separate Keep/Cut UI).
- */
-const DECLARED_AI_SUBS: { name: string; key: string; monthly: number }[] = [
-  { name: "Claude Code", key: "claude code", monthly: 20 },
-  { name: "Cursor", key: "cursor", monthly: 20 },
-  { name: "ChatGPT", key: "chatgpt", monthly: 20 },
-  { name: "Grok", key: "grok", monthly: 30 },
-];
-
-/** Append declared AI rows when not already found in the ledger. */
-function mergeDeclaredAiSubs(subs: Subscription[]) {
-  const today = new Date().toISOString().slice(0, 10);
-  const next = addDays(today, 30);
-  for (const d of DECLARED_AI_SUBS) {
-    // Already in list from bank detection? keep ledger amount, skip double-count
-    const hit = subs.find(
-      (s) =>
-        s.key === d.key ||
-        s.merchant.toLowerCase() === d.name.toLowerCase() ||
-        s.merchant.toLowerCase().includes(d.name.toLowerCase().split(" ")[0])
-    );
-    if (hit) {
-      // Prefer declared monthly if ledger amount is wildly off / partial
-      if (hit.monthlyCost < d.monthly * 0.5 || hit.monthlyCost > d.monthly * 1.5) {
-        hit.amount = d.monthly;
-        hit.monthlyCost = d.monthly;
-        hit.yearlyCost = d.monthly * 12;
-        hit.cadence = "monthly";
-      }
-      hit.merchant = d.name;
-      hit.known = true;
-      continue;
-    }
-    subs.push({
-      merchant: d.name,
-      key: d.key,
-      cadence: "monthly",
-      amount: d.monthly,
-      monthlyCost: d.monthly,
-      yearlyCost: d.monthly * 12,
-      count: 1,
-      lastDate: today,
-      nextDate: next,
-      category: "Software",
-      known: true,
-    });
-  }
 }

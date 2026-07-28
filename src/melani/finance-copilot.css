@@ -301,6 +301,31 @@ html body .fc * {
   color: var(--ink);
 }
 
+.fc-sources {
+  margin-top: 8px;
+  color: var(--faint);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.fc-sources summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--soft);
+  list-style-position: inside;
+}
+
+.fc-sources ul {
+  display: grid;
+  gap: 3px;
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.fc-sources li {
+  overflow-wrap: anywhere;
+}
+
 /* Week */
 .fc-week {
   max-width: 24rem;

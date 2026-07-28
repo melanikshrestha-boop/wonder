@@ -126,15 +126,40 @@ const WEEK_DAYS: { key: DayKey; short: string; initial: string }[] = [
 ];
 
 const SHOWER_TYPES = [
-  { id: "daily_shower", label: "Daily shower", icon: "shower-daily", color: "#2563eb" },
+  {
+    id: "daily_shower",
+    label: "Daily shower",
+    icon: "shower-daily",
+    pageId: "pg-shower-daily",
+    rowClass: "is-daily",
+    weekClass: "is-shower-daily",
+  },
   {
     id: "everything_shower",
     label: "Everything shower",
     icon: "shower-everything",
-    color: "#db2777",
+    pageId: "pg-shower-everything",
+    rowClass: "is-everything",
+    weekClass: "is-shower-everything",
   },
-  { id: "hair_care", label: "Hair care", icon: "hair", color: "#7c3aed" },
+  {
+    id: "hair_care",
+    label: "Hair care",
+    icon: "hair",
+    pageId: "pg-hair",
+    rowClass: "is-hair",
+    weekClass: "is-hair",
+  },
 ] as const;
+
+type HygienePlanLink = {
+  id: string;
+  label: string;
+  icon: string;
+  pageId: string;
+  rowClass: string;
+  weekClass: string;
+};
 
 const WEEK_KEY = "dr-melani-hygiene-shower-week";
 const PM_WEEK_KEY = "dr-melani-hygiene-pm-week";
@@ -167,6 +192,7 @@ function weekdayKey(d: Date = new Date()): DayKey {
 function weekStrip(): {
   key: DayKey;
   initial: string;
+  short: string;
   dateNum: number;
   isToday: boolean;
 }[] {
@@ -183,6 +209,7 @@ function weekStrip(): {
     return {
       key: wd.key,
       initial: wd.initial,
+      short: wd.short,
       dateNum: d.getDate(),
       isToday: iso === todayKey(),
     };
@@ -308,53 +335,71 @@ function HygieneHub({ onGo }: { onGo: (id: string) => void }) {
     });
   }
 
-  const TYPE_ICON: Record<string, string> = {
-    daily_shower: "shower-daily",
-    everything_shower: "shower-everything",
-    hair_care: "hair",
-  };
-
-  // Tonight PM type for "today's routines"
-  const tonightPm = PM_ORDER.find((id) =>
-    (pmPlan[id] || []).includes(todayWd)
-  );
-  const tonightMeta = tonightPm ? PM_ROUTINES[tonightPm] : null;
-
-  function iconsForDay(day: DayKey): string[] {
-    const out: string[] = [];
-    for (const [type, days] of Object.entries(showerPlan)) {
-      if ((days || []).includes(day) && TYPE_ICON[type]) out.push(TYPE_ICON[type]);
+  function routinesForDay(day: DayKey) {
+    const planned: HygienePlanLink[] = SHOWER_TYPES.filter((routine) =>
+      (showerPlan[routine.id] || []).includes(day)
+    ).map((routine) => ({
+      id: routine.id,
+      label: routine.label,
+      icon: routine.icon,
+      pageId: routine.pageId,
+      rowClass: routine.rowClass,
+      weekClass: routine.weekClass,
+    }));
+    const pmId = PM_ORDER.find((id) => (pmPlan[id] || []).includes(day));
+    if (pmId) {
+      const pm = PM_ROUTINES[pmId];
+      planned.push({
+        id: pmId,
+        label: pm.label,
+        icon: pm.icon,
+        pageId: "pg-pm-skin",
+        rowClass: "is-pm",
+        weekClass: "is-pm",
+      });
     }
-    return out;
+    return planned;
   }
 
+  const todayRoutines = [
+    {
+      id: "am_skincare",
+      label: "AM skincare",
+      icon: "am-skin",
+      pageId: "pg-am-skin",
+      rowClass: "is-am",
+      weekClass: "is-am",
+    },
+    ...routinesForDay(todayWd),
+  ];
+
   return (
-    <div className="hx">
-      <section className="hx-section">
+    <div className="hx hx-hub">
+      <section className="hx-section hx-hub-today">
         <h2 className="hx-h2">Today&apos;s routines</h2>
-        {tonightMeta ? (
-          <button
-            type="button"
-            className="hx-today-pill"
-            onClick={() => onGo("pg-pm-skin")}
-          >
-            <MinimalIcon name={tonightMeta.icon} size={16} className="hx-today-icon" />
-            <span>
-              {tonightMeta.short} night →
-            </span>
-          </button>
-        ) : (
-          <p className="hx-muted">No PM type set for today</p>
-        )}
+        <div className="hx-nav hx-today-nav">
+          {todayRoutines.map((routine) => (
+            <button
+              key={routine.id}
+              type="button"
+              className={`hx-nav-row ${routine.rowClass}`}
+              onClick={() => onGo(routine.pageId)}
+            >
+              <MinimalIcon name={routine.icon} size={16} className="hx-nav-ic" />
+              <span className="hx-nav-label">{routine.label}</span>
+              <span className="hx-nav-chev">→</span>
+            </button>
+          ))}
+        </div>
       </section>
 
-      <section className="hx-section">
+      <section className="hx-section hx-hub-shower">
         <h2 className="hx-h2">Shower routine</h2>
         <div className="hx-week-block">
           <h3 className="hx-h3">This week</h3>
           <div className="hx-week-strip">
             {strip.map((c) => {
-              const icons = iconsForDay(c.key);
+              const routines = routinesForDay(c.key);
               return (
                 <div
                   key={c.key}
@@ -363,19 +408,25 @@ function HygieneHub({ onGo }: { onGo: (id: string) => void }) {
                   <span className="hx-week-dow">{c.initial}</span>
                   <span className="hx-week-num">{c.dateNum}</span>
                   <span className="hx-week-icons">
-                    {icons.length
-                      ? icons.map((name) => (
-                          <span
-                            key={name}
-                            className={`hx-week-ic-wrap is-${name}`}
-                            title={name}
+                    {routines.length
+                      ? routines.map((routine) => (
+                          <button
+                            key={routine.id}
+                            type="button"
+                            className={`hx-week-ic-wrap ${routine.weekClass}`}
+                            title={`Open ${routine.label}`}
+                            aria-label={`Open ${routine.label} for ${c.short} ${c.dateNum}`}
+                            onClick={() => onGo(routine.pageId)}
                           >
                             <MinimalIcon
-                              name={name}
+                              name={routine.icon}
                               size={13}
                               className="hx-week-ic"
                             />
-                          </span>
+                            <span className="hx-week-routine-label">
+                              {routine.label}
+                            </span>
+                          </button>
                         ))
                       : null}
                   </span>
@@ -448,7 +499,7 @@ function HygieneHub({ onGo }: { onGo: (id: string) => void }) {
         </div>
       </section>
 
-      <section className="hx-section">
+      <section className="hx-section hx-hub-skin">
         <h2 className="hx-h2">Skincare routine</h2>
         <div className="hx-nav">
           <button

@@ -1073,7 +1073,10 @@ html.theme-light .sidebar .sidebar-search svg {
 .page-inner {
   max-width: var(--page-max);
   margin: 0 auto;
-  padding: 0 96px 30vh;
+  /* Keep enough room to add another block without manufacturing a long,
+     empty tail after every ordinary page. Rich desks (including Fitness)
+     do not render this editor surface. */
+  padding: 0 96px clamp(64px, 10vh, 112px);
   /* Clickable typing surface */
   min-height: 70vh;
 }
@@ -1090,7 +1093,7 @@ html.theme-light .sidebar .sidebar-search svg {
 
 @media (max-width: 768px) {
   .page-inner {
-    padding: 0 24px 30vh;
+    padding: 0 24px clamp(56px, 9vh, 88px);
   }
   /* On phones the sidebar overlays the page instead of crushing its width. */
   .sidebar {

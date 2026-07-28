@@ -527,7 +527,12 @@ export function answerCopilot(
   // ── Judgement questions ONLY → advisory brain ────────────────────
   // (afford / credit / runway / reinvest / cut). Everything else gets a
   // short, honest nudge instead of a canned wall of advice.
+  const isTaxQuestion =
+    /\b(tax|taxes|irs|1099|w-?2|withhold(?:ing)?|deduct(?:ion|ible)?|filing|estimated payment|schedule c|standard deduction|tax credit|refund)\b/.test(
+      q
+    );
   const isJudgement =
+    isTaxQuestion ||
     /\b(afford|should i|worth it|can i buy|credit|score|fico|utilization|runway|broke|survive|reinvest|invest|save rate|cut|reduce|leak|budget|forecast|owe|debt)\b/.test(
       q
     );
@@ -545,7 +550,13 @@ export function answerCopilot(
     });
     return {
       text: advisory,
-      sources: [`${txs.length} transactions`, "budget + credit + reinvest model"],
+      sources: isTaxQuestion
+        ? [
+            `${txs.length} transactions`,
+            "tax classification model",
+            ...ctx.brief.tax.sourceNotes,
+          ]
+        : [`${txs.length} transactions`, "budget + credit + reinvest model"],
     };
   }
 

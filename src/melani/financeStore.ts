@@ -161,9 +161,17 @@ const DEFAULT_BUDGET: BudgetLine[] = [
   { category: "Transfers", planned: 0 },
   { category: "Groceries", planned: 0 },
   { category: "Restaurants", planned: 0 },
+  { category: "Housing", planned: 0 },
+  { category: "Utilities", planned: 0 },
+  { category: "Health", planned: 0 },
   { category: "Subscriptions", planned: 0 },
   { category: "Clothing", planned: 0 },
   { category: "Transport", planned: 0 },
+  { category: "Education", planned: 0 },
+  { category: "Travel", planned: 0 },
+  { category: "Business", planned: 0 },
+  { category: "Fees", planned: 0 },
+  { category: "Gifts", planned: 0 },
   { category: "Credit card payment", planned: 0 },
   { category: "Other", planned: 0 },
 ];
@@ -214,7 +222,7 @@ function migrateTx(raw: Partial<FinanceTx>): FinanceTx {
     date: raw.date || new Date().toISOString().slice(0, 10),
     kind: raw.kind === "income" ? "income" : "expense",
     amount: Math.abs(Number(raw.amount) || 0),
-    // Fold legacy labels + pull Zelle out of Transfers
+    // Fold legacy labels while preserving reviewed Transfers / card payments.
     category: normalizeCategory(raw.category, `${merchant} ${note}`),
     note,
     merchant,
@@ -262,7 +270,7 @@ export function loadFinance(): FinanceState {
     // Drop demo/seed "manual" rows. Keep bank imports + Mel-logged hands.
     const txs = rawTxs
       .map(migrateTx)
-      .filter((t) => t.source !== "manual" || t.source === "mel");
+      .filter((t) => t.source !== "manual");
 
     // Collapse budget lines onto the short category list
     const budgetRaw =
@@ -316,7 +324,7 @@ export function loadFinance(): FinanceState {
       })(),
     };
 
-    // Persist category renames (e.g. Zelle out of Transfers) so every month stays fixed
+    // Persist category migrations without undoing reviewed transfer decisions.
     const catsChanged = rawTxs.some((t) => {
       if (t.source === "manual") return false;
       const nextCat = normalizeCategory(
@@ -837,4 +845,3 @@ export function savingsRate(txs: FinanceTx[], ym: string): number | null {
   const exp = monthExpense(txs, ym);
   return Math.round(((inc - exp) / inc) * 100);
 }
-

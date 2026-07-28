@@ -87,7 +87,6 @@ import {
   cashOnHand,
   creditOwed,
   fingerprintsFromTxs,
-  invested,
   loadFinance,
   mergeTxs,
   money,
@@ -152,6 +151,7 @@ import {
   type BooksExtraState,
 } from "./financeBooksStore";
 import { buildTodayPlan } from "./financeTodayPlan";
+import { buildAccountingPack } from "./financeAccounting";
 
 export const FINANCES_PAGE_ID = "pg-finance";
 
@@ -190,8 +190,8 @@ type SortKey = "date" | "merchant" | "category" | "amount" | "kind";
 /** Bookkeeper desk — ledger is home, not a marketing dashboard */
 
 const NAV: { id: TabId; label: string; icon: string }[] = [
-  { id: "transactions", label: "Ledger", icon: "☰" },
   { id: "overview", label: "Books", icon: "◉" },
+  { id: "transactions", label: "Ledger", icon: "☰" },
   { id: "plan", label: "Plan", icon: "▦" },
   { id: "subscriptions", label: "Subscriptions", icon: "↻" },
   { id: "sql", label: "SQL", icon: "⌗" },
@@ -223,12 +223,12 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   {
     id: "essentials",
     label: "Essentials",
-    cats: ["Groceries", "Transport"],
+    cats: ["Groceries", "Transport", "Housing", "Utilities", "Health"],
   },
   {
     id: "lifestyle",
     label: "Lifestyle",
-    cats: ["Restaurants", "Clothing", "Subscriptions"],
+    cats: ["Restaurants", "Clothing", "Subscriptions", "Travel"],
   },
   {
     id: "moves",
@@ -238,7 +238,7 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   {
     id: "buffer",
     label: "Buffer",
-    cats: ["Other"],
+    cats: ["Education", "Business", "Fees", "Gifts", "Other"],
   },
 ];
 
@@ -362,12 +362,12 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     },
     []
   );
-  // Ledger is the Finance home — deep-link: ?tab=overview|plan|…
+  // Books is the Finance home; the ledger remains one click away.
   const [tab, setTab] = useState<TabId>(() => {
-    if (typeof window === "undefined") return "transactions";
+    if (typeof window === "undefined") return "overview";
     const t = new URLSearchParams(window.location.search).get("tab");
     if (t && ALL_TAB_IDS.includes(t as TabId)) return t as TabId;
-    return "transactions";
+    return "overview";
   });
   // Open quant desk from URL (?desk=1 or ?copilot=1)
   const [copilotOpen, setCopilotOpen] = useState(() => {
@@ -389,7 +389,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    if (tab === "transactions") url.searchParams.delete("tab");
+    if (tab === "overview") url.searchParams.delete("tab");
     else url.searchParams.set("tab", tab);
     window.history.replaceState({}, "", url.toString());
   }, [tab]);
@@ -401,6 +401,11 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const [filterMonth, setFilterMonth] = useState<string>(() => monthKey());
   const [filterKind, setFilterKind] = useState<"all" | TxKind>("all");
   const [filterTxType, setFilterTxType] = useState("all");
+  const [reviewFilter, setReviewFilter] = useState<{
+    label: string;
+    txIds: string[];
+  } | null>(null);
+  const [booksExpanded, setBooksExpanded] = useState(true);
   const [importNote, setImportNote] = useState("");
   const [plaid, setPlaid] = useState<PlaidStatus | null>(null);
   const [plaidBusy, setPlaidBusy] = useState(false);
@@ -613,6 +618,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const liveMonth = today.getMonth() + 1; // 1–12
 
   const ym = filterMonth === "all" ? monthKey() : filterMonth || monthKey();
+  const accountingPeriod =
+    filterMonth === "all" ? String(filterYear) : ym;
   const txs = state?.txs || [];
   const accounts = state?.accounts || [];
   const spentMap = useMemo(() => spentByCategory(txs, ym), [txs, ym]);
@@ -621,7 +628,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const worth = netWorth(accounts);
   const cash = cashOnHand(accounts);
   const debt = creditOwed(accounts);
-  const inv = invested(accounts);
   const cashFlow = income - expense;
   const rate = useMemo(() => savingsRate(txs, ym), [txs, ym]);
   const goals = state?.goals || [];
@@ -782,8 +788,17 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     [state, ym, planRows, creditReport, booksExtra]
   );
   const safeToSpend = brief.safeToSpend;
-  const runwayMonths = brief.runwayMonths;
-  const accounting = brief.accounting;
+  const accounting = useMemo(
+    () =>
+      state
+        ? buildAccountingPack(state, accountingPeriod, booksExtra)
+        : brief.accounting,
+    [state, accountingPeriod, booksExtra, brief.accounting]
+  );
+  const closeBlockers = accounting.monthlyClose.checks.filter(
+    (check) => check.critical && !check.ok
+  );
+  const periodOpenItems = accounting.review.items.length + closeBlockers.length;
 
   const copilotCtx: CopilotContext | null = useMemo(
     () =>
@@ -930,15 +945,21 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   };
 
   const doCloseMonth = () => {
+    if (filterMonth === "all") return;
     setBooksExtra(closeMonth(ym, booksExtra));
   };
 
   const doReopenMonth = () => {
+    if (filterMonth === "all") return;
     setBooksExtra(reopenMonth(ym, booksExtra));
   };
 
   const ledger = useMemo(() => {
     let list = [...txs];
+    if (reviewFilter) {
+      const ids = new Set(reviewFilter.txIds);
+      list = list.filter((t) => ids.has(t.id));
+    }
     const searching = filterQ.trim().length > 0;
     // A search looks across ALL your books, not just the visible month
     if (!searching) {
@@ -993,6 +1014,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     filterTxType,
     filterCat,
     filterQ,
+    reviewFilter,
     sortKey,
     sortDir,
   ]);
@@ -1340,6 +1362,21 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     setImportNote("Plan loosened 10% across categories.");
   }
 
+  function clearPlan() {
+    if (
+      !window.confirm(
+        "Clear every monthly plan amount? Your transactions will stay untouched."
+      )
+    ) {
+      return;
+    }
+    patchState((s) => ({
+      ...s,
+      budget: s.budget.map((b) => ({ ...b, planned: 0 })),
+    }));
+    setImportNote("Monthly plan cleared. Transactions were not changed.");
+  }
+
   function nudgeBudget(category: string, delta: number) {
     patchState((s) => {
       const cur = s.budget.find((b) => b.category === category)?.planned || 0;
@@ -1499,6 +1536,50 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       return;
     }
     setTab("transactions");
+  }
+
+  function runAccountantReview(itemId: string) {
+    const item = accounting.review.items.find((candidate) => candidate.id === itemId);
+    if (!item) return;
+    if (item.id === "review-import") {
+      fileRef.current?.click();
+      return;
+    }
+    if (item.id === "review-plan") {
+      autoBuildPlan();
+      setTab("plan");
+      return;
+    }
+    if (item.txIds?.length) {
+      setReviewFilter({ label: item.title, txIds: item.txIds });
+      setFilterQ("");
+      setFilterCat("all");
+      setFilterKind("all");
+      setFilterTxType("all");
+      setFilterYear(Number(ym.slice(0, 4)));
+      setFilterMonth(ym);
+      setTab("transactions");
+      return;
+    }
+    if (item.destination === "overview") {
+      setBooksExpanded(true);
+      window.requestAnimationFrame(() => {
+        document
+          .getElementById("wd-accounting-workspace")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
+    setTab(item.destination);
+  }
+
+  function reviewMonthlyClose() {
+    setBooksExpanded(true);
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById("wd-monthly-close")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   async function plaidSandboxConnect() {
@@ -1707,7 +1788,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 key={n.id}
                 type="button"
                 className={`wd-subnav-link${tab === n.id ? " is-active" : ""}`}
-                onClick={() => setTab(n.id)}
+                onClick={() => {
+                  if (n.id === "transactions") setReviewFilter(null);
+                  setTab(n.id);
+                }}
               >
                 {n.label}
               </button>
@@ -1763,41 +1847,233 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
 
         {/* ════════ BOOKS — capital command (not budget theater) ════════ */}
         {tab === "overview" ? (
-          <div className="wd-overview">
+          <div className={`wd-overview${booksExpanded ? " is-expanded" : ""}`}>
             <section className="wd-panel wd-action-board" aria-label="Finance actions">
               <div className="wd-action-board-head">
                 <div>
-                  <p className="wd-section-kicker">Books</p>
-                  <h2>Do next</h2>
+                  <p className="wd-section-kicker">
+                    Accountant review · {accountingPeriod}
+                  </p>
+                  <h2>
+                    {accounting.monthlyClose.locked
+                      ? "Period is closed"
+                      : periodOpenItems === 0 &&
+                          accounting.monthlyClose.readyToClose
+                        ? "Period is close-ready"
+                        : `${periodOpenItems} control${
+                            periodOpenItems === 1 ? "" : "s"
+                          } ${periodOpenItems === 1 ? "needs" : "need"} attention`}
+                  </h2>
                   <p>
-                    The shortest route from today’s books to cleaner money.
+                    Posted evidence, control gaps, and decisions from the live
+                    ledger—ordered by what blocks trustworthy statements.
                   </p>
                 </div>
-                <span className="wd-chip">
-                  {accounting.modules.filter((m) => m.ok).length}/
-                  {accounting.modules.length} accounting checks passing
+                <span
+                  className={`wd-chip wd-review-status is-${
+                    closeBlockers.length
+                      ? "blocked"
+                      : accounting.review.status
+                  }`}
+                >
+                  Close {accounting.monthlyClose.score}/100
                 </span>
               </div>
-              <ol className="wd-action-list">
-                {brief.actions.slice(0, 5).map((action, index) => (
-                  <li key={action.id} className={`wd-action-item wd-sev-${action.severity}`}>
-                    <span className="wd-action-index">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <div className="wd-action-copy">
-                      <strong>{action.title}</strong>
-                      <p>{action.detail}</p>
+
+              <div className="wd-accountant-metrics" aria-label="Period facts">
+                <div>
+                  <span>Operating income</span>
+                  <strong className="is-pos">
+                    {moneyCents(accounting.statements.pnl.income)}
+                  </strong>
+                </div>
+                <div>
+                  <span>Operating spend</span>
+                  <strong className="is-neg">
+                    {moneyCents(accounting.statements.pnl.expenseTotal)}
+                  </strong>
+                </div>
+                <div>
+                  <span>Net operating</span>
+                  <strong
+                    className={
+                      accounting.statements.pnl.netOperating < 0
+                        ? "is-neg"
+                        : "is-pos"
+                    }
+                  >
+                    {moneyCents(accounting.statements.pnl.netOperating)}
+                  </strong>
+                </div>
+                <div>
+                  <span>Cash movement</span>
+                  <strong
+                    className={
+                      accounting.statements.cashFlow.netChange < 0
+                        ? "is-neg"
+                        : "is-pos"
+                    }
+                  >
+                    {moneyCents(accounting.statements.cashFlow.netChange)}
+                  </strong>
+                </div>
+                <div>
+                  <span>Balance-sheet equity</span>
+                  <strong>
+                    {accounting.statements.balanceSheet.bankBalancesAvailable
+                      ? moneyCents(accounting.statements.balanceSheet.equity)
+                      : "Unavailable"}
+                  </strong>
+                </div>
+                <div>
+                  <span>Close control</span>
+                  <strong>{accounting.monthlyClose.score}/100</strong>
+                </div>
+                <div>
+                  <span>Posted evidence</span>
+                  <strong>
+                    {accounting.review.postedLines}/{accounting.review.periodLines}
+                  </strong>
+                </div>
+                <div>
+                  <span>Last activity</span>
+                  <strong>
+                    {accounting.review.lastActivityDate
+                      ? formatDateMDY(accounting.review.lastActivityDate)
+                      : "—"}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="wd-accountant-columns">
+                <div className="wd-accountant-primary">
+                  <section aria-labelledby="wd-period-review-title">
+                    <div className="wd-accountant-section-head">
+                      <h3 id="wd-period-review-title">Period work queue</h3>
+                      <span>{periodOpenItems} open</span>
                     </div>
-                    <button
-                      type="button"
-                      className="wd-btn wd-action-button"
-                      onClick={() => runSmartAction(action.id, action.tab)}
-                    >
-                      {action.cta.replace(/\s*→\s*$/, "")}
-                    </button>
-                  </li>
-                ))}
-              </ol>
+                    {periodOpenItems ? (
+                      <ol className="wd-action-list wd-review-list">
+                        {accounting.review.items.slice(0, 7).map((item, index) => (
+                          <li
+                            key={item.id}
+                            className={`wd-action-item wd-sev-${item.severity}`}
+                          >
+                            <span className="wd-action-index">
+                              {String(index + 1).padStart(2, "0")}
+                            </span>
+                            <div className="wd-action-copy">
+                              <strong>{item.title}</strong>
+                              <p>{item.detail}</p>
+                            </div>
+                            <button
+                              type="button"
+                              className="wd-btn wd-action-button"
+                              onClick={() => runAccountantReview(item.id)}
+                            >
+                              {item.cta}
+                            </button>
+                          </li>
+                        ))}
+                        {closeBlockers.map((check, index) => (
+                          <li
+                            key={`close-${check.id}`}
+                            className="wd-action-item wd-sev-high"
+                          >
+                            <span className="wd-action-index">
+                              {String(
+                                accounting.review.items.length + index + 1
+                              ).padStart(2, "0")}
+                            </span>
+                            <div className="wd-action-copy">
+                              <strong>{check.label}</strong>
+                              <p>{check.detail}</p>
+                            </div>
+                            <button
+                              type="button"
+                              className="wd-btn wd-action-button"
+                              onClick={reviewMonthlyClose}
+                            >
+                              Review close
+                            </button>
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="wd-review-clear">
+                        No pending, weak, duplicate, or unassigned period lines.
+                        Every required close control has passed.
+                      </p>
+                    )}
+                  </section>
+
+                  <div
+                    className="wd-statement-strip"
+                    aria-label="Financial statements"
+                  >
+                    <div>
+                      <span>P&amp;L</span>
+                      <strong>
+                        {moneyCents(accounting.statements.pnl.netOperating)}
+                      </strong>
+                      <small>
+                        {moneyCents(accounting.statements.pnl.income)} in ·{" "}
+                        {moneyCents(accounting.statements.pnl.expenseTotal)} out
+                      </small>
+                    </div>
+                    <div>
+                      <span>Cash flow</span>
+                      <strong>
+                        {moneyCents(accounting.statements.cashFlow.netChange)}
+                      </strong>
+                      <small>
+                        Transfers net{" "}
+                        {moneyCents(accounting.statements.cashFlow.transfersNet)}
+                      </small>
+                    </div>
+                    <div>
+                      <span>Balance sheet</span>
+                      <strong>
+                        {moneyCents(accounting.statements.balanceSheet.equity)}
+                      </strong>
+                      <small>
+                        Assets{" "}
+                        {moneyCents(accounting.statements.balanceSheet.totalAssets)}
+                        {" · "}liabilities{" "}
+                        {moneyCents(
+                          accounting.statements.balanceSheet.totalLiabilities,
+                        )}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+
+                <aside className="wd-decision-queue" aria-label="Capital decisions">
+                  <div className="wd-accountant-section-head">
+                    <h3>Decision queue</h3>
+                    <span>live model</span>
+                  </div>
+                  <ol>
+                    {brief.actions.slice(0, 4).map((action, index) => (
+                      <li key={action.id}>
+                        <span>{String(index + 1).padStart(2, "0")}</span>
+                        <div>
+                          <strong>{action.title}</strong>
+                          <p>{action.detail}</p>
+                          <button
+                            type="button"
+                            className="wd-link"
+                            onClick={() => runSmartAction(action.id, action.tab)}
+                          >
+                            {action.cta.replace(/\s*→\s*$/, "")} →
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </aside>
+              </div>
+
               <div className="wd-action-footer">
                 <button
                   type="button"
@@ -1819,6 +2095,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   onClick={() => setCopilotOpen(true)}
                 >
                   Ask Mel
+                </button>
+                <button
+                  type="button"
+                  className="wd-btn"
+                  onClick={() => setBooksExpanded((open) => !open)}
+                >
+                  {booksExpanded ? "Hide full books" : "Open full books"}
                 </button>
               </div>
             </section>
@@ -2069,7 +2352,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             </section>
 
             {/* ═══ 14 accounting modules — work first, no chrome ═══ */}
-            <section className="wd-panel wd-acct-modules">
+            <section
+              id="wd-accounting-workspace"
+              className="wd-panel wd-acct-modules"
+            >
               <div className="wd-panel-head">
                 <h2>Accounting modules (live)</h2>
                 <span className="wd-chip">
@@ -2149,6 +2435,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 </div>
                 <div>
                   <h3>Balance sheet</h3>
+                  <p className="wd-muted">
+                    As of {accounting.statements.balanceSheet.asOf}.{" "}
+                    {accounting.statements.balanceSheet.note}
+                  </p>
                   <ul className="wd-acct-list">
                     <li>
                       Assets{" "}
@@ -2189,7 +2479,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   <ul className="wd-acct-list">
                     {accounting.recurring.charges.slice(0, 6).map((c) => (
                       <li key={c.merchant}>
-                        {c.merchant} · {moneyCents(c.avgAmount)} · {c.times}×
+                        {c.merchant} · {moneyCents(c.monthlyCost)}/mo ·{" "}
+                        {c.cadence} · {c.times}×
                       </li>
                     ))}
                   </ul>
@@ -2197,7 +2488,12 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               </div>
 
               {/* Variance */}
-              <h3 style={{ marginTop: 16 }}>Variance · {ym}</h3>
+              <h3 id="wd-monthly-close" style={{ marginTop: 16 }}>
+                Variance · {accounting.budgetVariance.month}
+              </h3>
+              <p className="wd-muted">
+                {accounting.budgetVariance.basisNote}
+              </p>
               {accounting.budgetVariance.lines.length === 0 ? (
                 <p className="wd-muted">
                   No plan yet — open Plan tab → Auto-build plan.
@@ -2237,42 +2533,59 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               )}
 
               {/* Monthly close checks */}
-              <h3 style={{ marginTop: 16 }}>Monthly close · {ym}</h3>
+              <h3 style={{ marginTop: 16 }}>
+                {accounting.monthlyClose.periodKind === "year"
+                  ? `Annual reporting · ${accountingPeriod}`
+                  : `Monthly close · ${accountingPeriod}`}
+              </h3>
               <ul className="wd-acct-list">
                 {accounting.monthlyClose.checks.map((c) => (
                   <li key={c.id}>
                     {c.ok ? "✓" : "✗"} {c.label} — {c.detail}
+                    {c.critical ? " · required" : ""}
                   </li>
                 ))}
               </ul>
-              <div className="wd-acct-actions">
-                {accounting.monthlyClose.locked ? (
-                  <button type="button" className="wd-btn" onClick={doReopenMonth}>
-                    Reopen {ym}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="wd-btn wd-btn-primary"
-                    onClick={doCloseMonth}
-                    disabled={!accounting.monthlyClose.readyToClose}
-                    title={
-                      accounting.monthlyClose.readyToClose
-                        ? "Lock this month"
-                        : `Score ${accounting.monthlyClose.score}/100 — fix checks first`
-                    }
-                  >
-                    Close {ym} ({accounting.monthlyClose.score}/100)
-                  </button>
-                )}
-                <span className="wd-muted">
-                  {accounting.monthlyClose.locked
-                    ? "LOCKED"
-                    : accounting.monthlyClose.readyToClose
-                      ? "Ready"
-                      : "Not ready"}
-                </span>
-              </div>
+              {accounting.monthlyClose.periodKind === "month" ? (
+                <div className="wd-acct-actions">
+                  {accounting.monthlyClose.locked ? (
+                    <button
+                      type="button"
+                      className="wd-btn"
+                      onClick={doReopenMonth}
+                    >
+                      Reopen {accountingPeriod}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="wd-btn wd-btn-primary"
+                      onClick={doCloseMonth}
+                      disabled={!accounting.monthlyClose.readyToClose}
+                      title={
+                        accounting.monthlyClose.readyToClose
+                          ? "Lock this month"
+                          : `Score ${accounting.monthlyClose.score}/100 — every required check must pass`
+                      }
+                    >
+                      Close {accountingPeriod} (
+                      {accounting.monthlyClose.score}/100)
+                    </button>
+                  )}
+                  <span className="wd-muted">
+                    {accounting.monthlyClose.locked
+                      ? "LOCKED"
+                      : accounting.monthlyClose.readyToClose
+                        ? "Ready"
+                        : "Not ready"}
+                  </span>
+                </div>
+              ) : (
+                <p className="wd-muted">
+                  This is a year-to-date or full-year report. Choose a month
+                  above to run and lock its close.
+                </p>
+              )}
 
               {/* Payables / receivables / receipts — working inputs */}
               <div className="wd-acct-grid" style={{ marginTop: 16 }}>
@@ -2708,6 +3021,22 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         {/* ════════ LEDGER — full lists always, months next to filters ════════ */}
         {tab === "transactions" ? (
           <div className="wd-page">
+            {reviewFilter ? (
+              <div className="wd-review-filter" role="status">
+                <span>
+                  Accountant review · <strong>{reviewFilter.label}</strong> ·{" "}
+                  {reviewFilter.txIds.length} line
+                  {reviewFilter.txIds.length === 1 ? "" : "s"}
+                </span>
+                <button
+                  type="button"
+                  className="wd-link"
+                  onClick={() => setReviewFilter(null)}
+                >
+                  Clear review
+                </button>
+              </div>
+            ) : null}
             {transferPairs.length ? (
               <section className="wd-panel" aria-label="Likely transfers">
                 <div className="wd-panel-head">
@@ -3330,6 +3659,14 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   disabled={planPlanned <= 0}
                 >
                   Loosen +10%
+                </button>
+                <button
+                  type="button"
+                  className="wd-btn"
+                  onClick={clearPlan}
+                  disabled={planPlanned <= 0}
+                >
+                  Clear plan
                 </button>
               </div>
 
