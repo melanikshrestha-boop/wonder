@@ -12,7 +12,6 @@ import {
 import { isTransferLike } from "./financeTransfers";
 import {
   fitChartHoverLabel,
-  hoverLabelPlacement,
 } from "./chartLayout";
 import { pieSlicePath } from "./pieGeometry";
 
@@ -165,16 +164,7 @@ export function LabeledLineChart({
   const baseY = yMin < 0 && yMax > 0 ? py(0) : PAD_T + plotH;
   const area = `${path} L${px(points.length - 1).toFixed(1)},${baseY.toFixed(1)} L${px(0).toFixed(1)},${baseY.toFixed(1)} Z`;
   const hoverLabel =
-    hover == null
-      ? null
-      : {
-          ...hoverLabelPlacement(
-            px(hover),
-            PAD_L,
-            W - PAD_R
-          ),
-          text: fitChartHoverLabel(points[hover].label, plotW),
-        };
+    hover == null ? "" : fitChartHoverLabel(points[hover].label, plotW);
 
   /** Nearest day under the cursor — move freely, no precise target. */
   function onPlotMove(e: MouseEvent<SVGSVGElement>) {
@@ -205,6 +195,15 @@ export function LabeledLineChart({
           <h3 className="wd-hab-chart-title">{title}</h3>
         </header>
       ) : null}
+      <div className="wd-hab-hover-lane" aria-live="polite">
+        {hoverLabel ? (
+          <span>{hoverLabel}</span>
+        ) : (
+          <span className="is-empty" aria-hidden="true">
+            Hover for details
+          </span>
+        )}
+      </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="wd-hab-chart"
@@ -327,7 +326,7 @@ export function LabeledLineChart({
           style={{ cursor: "crosshair" }}
         />
 
-        {hover != null && hoverLabel ? (
+        {hover != null ? (
           <g style={{ pointerEvents: "none" }}>
             <line
               x1={px(hover)}
@@ -345,14 +344,6 @@ export function LabeledLineChart({
               strokeWidth={2.2}
               className="wd-hab-hover-dot"
             />
-            <text
-              x={hoverLabel.x}
-              y={PAD_T + 14}
-              textAnchor={hoverLabel.textAnchor}
-              className="wd-hab-chart-hover"
-            >
-              {hoverLabel.text}
-            </text>
           </g>
         ) : null}
       </svg>
