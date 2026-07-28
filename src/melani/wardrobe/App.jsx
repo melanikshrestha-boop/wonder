@@ -1328,20 +1328,6 @@ export function App() {
     <div className={`app-shell${selectedItem ? " has-selection" : ""}`}>
       <main className="gallery-pane">
         <header className="gallery-header">
-          <div className="gallery-meta-row">
-            <div>
-              <p className="piece-count">Wardrobe intelligence</p>
-              <h1 className="wardrobe-title">Comfort first. Taste always.</h1>
-              <p className="wardrobe-subtitle">
-                Real outfits from what you own, exact links for what you want, and only intentional resale.
-              </p>
-            </div>
-            <div className="wardrobe-kpis" aria-label="Wardrobe summary">
-              <span><strong>{ownedCount}</strong> closet</span>
-              <span><strong>{wantCount}</strong> wishlist</span>
-              <span><strong>{saleCount}</strong> for sale</span>
-            </div>
-          </div>
           <nav className="collection-nav" aria-label="Wardrobe collections">
             {[
               ["looks", "Daily looks"],
@@ -1369,6 +1355,11 @@ export function App() {
               </button>
             ))}
           </nav>
+          <p className="wardrobe-kpis" aria-label="Wardrobe summary">
+            <span><strong>{ownedCount}</strong> closet</span>
+            <span><strong>{wantCount}</strong> wishlist</span>
+            <span><strong>{saleCount}</strong> for sale</span>
+          </p>
           {!["shop", "looks"].includes(collection) ? (
             <>
               <nav className="category-nav" aria-label="Filter wardrobe by section">

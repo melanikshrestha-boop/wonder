@@ -1,0 +1,759 @@
+/*
+ * Wardrobe visual system
+ * ----------------------
+ * Mirrors Fitness: open paper, plain text navigation, compact metric rows,
+ * hairline structure, and content-led hierarchy. Product imagery remains the
+ * visual focus; permanent cards, pills, gradients, and ornamental shadows do not.
+ */
+
+:root {
+  --paper: #f7f7fa;
+  --ink: #1a1c22;
+  --muted: #8f929a;
+  --line: #dedfe4;
+  --accent: #2468f2;
+  background: var(--paper);
+}
+
+html,
+body,
+.app-shell {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* The same usable column and breathing room as Fitness. */
+.gallery-header,
+.gallery-section,
+.daily-gen,
+.wishlist-bridge,
+.ss-root {
+  width: min(100%, 1180px);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.gallery-header {
+  padding: 18px 34px 0;
+}
+
+/* Fitness-style text tabs: no capsule, no tray, no underline box. */
+.collection-nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin: 0;
+  padding: 0 0 12px;
+  border: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.collection-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.collection-nav button,
+.category-nav button,
+.subcategory-nav button,
+.ss-lanes button {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #7f828a;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.collection-nav button:hover,
+.collection-nav button:focus-visible,
+.category-nav button:hover,
+.category-nav button:focus-visible,
+.subcategory-nav button:hover,
+.subcategory-nav button:focus-visible,
+.ss-lanes button:hover,
+.ss-lanes button:focus-visible {
+  outline: none;
+  color: var(--ink);
+  background: transparent !important;
+}
+
+.collection-nav button.active,
+.category-nav button.active,
+.subcategory-nav button.active,
+.ss-lanes button.active {
+  color: var(--ink);
+  background: transparent !important;
+  font-weight: 700;
+}
+
+.wardrobe-kpis {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.wardrobe-kpis span {
+  display: inline;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.wardrobe-kpis span + span::before {
+  content: " · ";
+  white-space: pre;
+}
+
+.wardrobe-kpis strong {
+  color: inherit;
+  font-size: inherit;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.category-nav {
+  width: 100%;
+  gap: 24px;
+  margin: 0;
+  padding: 0 0 11px;
+  border-bottom: 1px solid var(--line);
+}
+
+.category-nav button {
+  font-size: 13px;
+}
+
+.subcategory-nav {
+  width: 100%;
+  gap: 20px;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.subcategory-nav button {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.subcategory-nav button + button {
+  padding-left: 0;
+}
+
+/* Daily Looks is a report, not an ecommerce card. */
+.daily-gen {
+  margin-top: 4px;
+  margin-bottom: 42px;
+  padding: 0 34px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.daily-gen__head {
+  align-items: flex-end;
+  gap: 22px;
+  margin: 0 0 14px;
+  padding: 0;
+}
+
+.daily-gen__eyebrow,
+.piece-count,
+.ss-eyebrow,
+.daily-gen__piece-kind,
+.gallery-section-title,
+.ss-section-title {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .11em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.daily-gen__title {
+  gap: 12px;
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+  line-height: 1.08;
+}
+
+.daily-gen__sub {
+  margin: 7px 0 0;
+  max-width: 48rem;
+  color: #71747c;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.daily-gen__score,
+.daily-gen__inspo-badge,
+.daily-gen__weather-badge,
+.ss-dna li,
+.ss-badge,
+.gallery-item-badge {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.daily-gen__title > span + span::before {
+  content: "· ";
+}
+
+.daily-gen__actions-top,
+.daily-gen__pager,
+.daily-gen__commit {
+  gap: 18px;
+}
+
+.daily-gen__btn,
+.ss-cotton-btn,
+.ss-ask button,
+.wishlist-bridge-form button {
+  min-height: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+  color: #595c64 !important;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.25;
+  text-transform: none;
+  text-decoration: none;
+}
+
+.daily-gen__btn:hover:not(:disabled),
+.daily-gen__btn:focus-visible:not(:disabled),
+.ss-cotton-btn:hover,
+.ss-ask button:hover,
+.wishlist-bridge-form button:hover {
+  outline: none;
+  background: transparent !important;
+  color: var(--accent) !important;
+}
+
+.daily-gen__btn.primary,
+.daily-gen__btn.primary:hover:not(:disabled) {
+  color: var(--accent) !important;
+  background: transparent !important;
+  font-weight: 600;
+}
+
+.daily-gen__btn.primary.is-done {
+  color: #109a45 !important;
+}
+
+.daily-gen__modes {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  margin: 18px 0 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.daily-gen__modes button {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #83868e;
+}
+
+.daily-gen__modes button:hover,
+.daily-gen__modes button:focus-visible {
+  outline: none;
+  border: 0;
+  color: var(--ink);
+}
+
+.daily-gen__modes button.is-active {
+  border: 0;
+  background: transparent;
+  color: #ef2626;
+}
+
+.daily-gen__modes strong {
+  color: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.daily-gen__modes span {
+  color: inherit;
+  font-size: 11px;
+  opacity: .72;
+}
+
+.daily-gen__stage {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+  margin: 0 0 22px;
+  padding: 0;
+}
+
+.daily-gen__piece {
+  display: grid;
+  grid-template-rows: minmax(250px, 1fr) auto;
+  gap: 8px;
+  padding: 0 0 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.daily-gen__piece:hover,
+.daily-gen__piece:focus-visible {
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  border-bottom-color: #aeb1b9;
+}
+
+.daily-gen__piece-media {
+  min-height: 250px;
+  aspect-ratio: 1 / 1;
+}
+
+.daily-gen__img {
+  filter: none;
+}
+
+.daily-gen__piece-meta {
+  gap: 4px;
+}
+
+.daily-gen__piece-kind {
+  margin: 0;
+}
+
+.daily-gen__piece-name {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.daily-gen__why-block {
+  margin: 0 0 18px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.daily-gen__why,
+.daily-gen__why-list {
+  color: #50535a;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.daily-gen__why-label {
+  color: var(--ink);
+}
+
+.daily-gen__toolbar {
+  padding: 2px 0 0;
+}
+
+.daily-gen__pager-label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Optional Pinterest workspace appears as a flat work area. */
+.daily-gen__inspo {
+  margin: 0 0 20px;
+  padding: 14px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.daily-gen__inspo.is-drag {
+  border-color: var(--accent);
+  background: rgba(36, 104, 242, .04);
+}
+
+.daily-gen__pinterest-input,
+.ss-ask input,
+.wishlist-bridge-form input {
+  min-height: 38px;
+  padding: 7px 0;
+  border: 0;
+  border-bottom: 1px solid #bfc1c8;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.daily-gen__pinterest-input:focus,
+.ss-ask input:focus,
+.wishlist-bridge-form input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+.daily-gen__inspo-thumb,
+.daily-gen__inspo-card,
+.daily-gen__inspo-card img {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Closet / Wishlist / Resale: open catalog rows. */
+.gallery-section {
+  padding: 16px 34px 10px;
+}
+
+.gallery-section + .gallery-section {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.gallery-section-title {
+  margin-bottom: 12px;
+}
+
+.gallery-grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px 26px;
+}
+
+.gallery-item,
+.wishlist-card-shell,
+.gallery-item-lettermark {
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.gallery-item-media .gallery-img,
+.gallery-item-media img {
+  filter: none;
+}
+
+.gallery-item-name,
+button.gallery-item .gallery-item-name {
+  color: #555860 !important;
+  -webkit-text-fill-color: #555860 !important;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.gallery-item-retail,
+button.gallery-item .gallery-item-retail {
+  color: var(--ink) !important;
+  -webkit-text-fill-color: var(--ink) !important;
+  font-size: 12px;
+}
+
+.wishlist-card-shell:hover {
+  background: transparent;
+  transform: none;
+}
+
+.wishlist-card-actions {
+  padding: 6px 0 10px;
+}
+
+.wishlist-bridge {
+  grid-template-columns: minmax(230px, .8fr) minmax(320px, 1.2fr);
+  gap: 18px 32px;
+  margin-top: 10px;
+  margin-bottom: 8px;
+  padding: 16px 34px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.wishlist-bridge-label,
+.wishlist-bridge-foot,
+.wishlist-bridge p:not(.wishlist-bridge-label) {
+  color: var(--muted);
+}
+
+.wishlist-bridge h2 {
+  color: var(--ink);
+  font-size: 17px;
+}
+
+.wishlist-bridge-foot a {
+  color: var(--accent);
+}
+
+/* Shop Assistant follows the same report language. */
+.ss-root {
+  padding: 8px 34px 60px;
+}
+
+.ss-hero {
+  margin: 0 0 20px;
+  padding: 0 0 18px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ss-hero h2 {
+  margin-bottom: 7px;
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+}
+
+.ss-hero p,
+.ss-philosophy {
+  color: #6f727a !important;
+  font-size: 13px !important;
+}
+
+.ss-dna {
+  gap: 16px;
+}
+
+.ss-badges {
+  gap: 10px;
+}
+
+.ss-lanes {
+  gap: 24px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ss-reply {
+  border-color: var(--line);
+}
+
+.ss-grid {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0 26px;
+}
+
+.ss-card {
+  gap: 8px;
+  padding: 16px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Popups may contain boundaries, but should still feel like the same page. */
+.viewer-overlay-popup {
+  background: rgba(26, 28, 34, .26);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.product-popup {
+  border: 1px solid #d5d6db;
+  border-radius: 2px;
+  background: var(--paper);
+  box-shadow: 0 20px 60px rgba(26, 28, 34, .18);
+}
+
+.product-popup-stage {
+  border-radius: 0;
+  background: transparent;
+}
+
+.product-popup-stage .product-popup-img,
+.product-popup-stage img {
+  filter: none;
+}
+
+.product-popup-close {
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Importing stays available, but reads as a small status line—not a black bubble. */
+.import-tray {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  gap: 6px;
+  width: min(calc(100% - 68px), 1180px);
+  margin: 18px auto 32px;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: rgba(247, 247, 250, .9);
+  color: #696c74;
+  box-shadow: none;
+}
+
+.import-tray:hover,
+.import-tray:focus-within,
+.import-tray.is-expanded {
+  box-shadow: none;
+}
+
+.import-tray__button,
+.import-icon-button {
+  flex-basis: 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
+  color: var(--accent);
+}
+
+.import-tray__button:hover,
+.import-tray__button:focus-visible,
+.import-icon-button:hover,
+.import-icon-button:focus-visible {
+  outline: none;
+  background: transparent;
+}
+
+.import-tray__actions,
+.import-tray:hover .import-tray__actions,
+.import-tray:focus-within .import-tray__actions,
+.import-tray.is-expanded .import-tray__actions {
+  max-width: min(360px, calc(100vw - 76px));
+  overflow: visible;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.import-tray__preview,
+.import-tray:hover .import-tray__preview,
+.import-tray:focus-within .import-tray__preview,
+.import-tray.is-expanded .import-tray__preview {
+  display: none;
+}
+
+.import-tray__label {
+  padding: 0 4px 0 0;
+  color: #696c74;
+  font-size: 11px;
+}
+
+.import-popover {
+  border-radius: 2px;
+  background: var(--paper);
+  box-shadow: 0 20px 60px rgba(26, 28, 34, .18);
+}
+
+.import-card,
+.import-editor__preview,
+.import-cleanup-comparison figure,
+.import-field input,
+.import-field select,
+.import-field textarea,
+.import-button,
+.import-drop-target {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+@media (max-width: 720px) {
+  .gallery-header,
+  .gallery-section,
+  .daily-gen,
+  .wishlist-bridge,
+  .ss-root {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .collection-nav,
+  .category-nav {
+    gap: 22px;
+  }
+
+  .daily-gen {
+    margin-top: 4px;
+  }
+
+  .daily-gen__head {
+    align-items: flex-start;
+  }
+
+  .daily-gen__title {
+    font-size: 21px;
+  }
+
+  .daily-gen__modes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 20px;
+  }
+
+  .daily-gen__stage {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .daily-gen__piece {
+    grid-template-rows: minmax(220px, 58vh) auto;
+  }
+
+  .wishlist-bridge {
+    grid-template-columns: 1fr;
+  }
+
+  .wishlist-bridge-foot {
+    grid-column: 1;
+    margin-top: 0;
+  }
+}

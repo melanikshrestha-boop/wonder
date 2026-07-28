@@ -2440,19 +2440,28 @@ html.theme-light .main.is-melani .main-scroll {
   color: #1a1c22 !important;
 }
 
-/* The upstream Wardrobe app owns its canvas; Wonder only supplies the shell. */
+/* Wardrobe follows the same page flow as Fitness: quote, tabs, then content. */
 .main.is-wardrobe .main-scroll {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.main.is-wardrobe .wonder-page-quote {
+  width: min(calc(100% - 68px), 1180px);
+  max-width: 1180px;
+  flex: 0 0 auto;
+  margin-top: 16px;
+  margin-bottom: 10px;
 }
 
 .main.is-wardrobe .notion-melani-page,
 .main.is-wardrobe .notion-melani-body {
   width: 100%;
-  height: 100%;
-  min-height: 0;
+  height: auto;
+  min-height: calc(100vh - 142px);
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* ── Notion-style sidebar extras (Agents, bottom links) ── */
