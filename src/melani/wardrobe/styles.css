@@ -822,22 +822,24 @@ button.gallery-item .gallery-item-retail {
   -webkit-backdrop-filter: blur(6px);
 }
 
-/* ── Product popup — photo + name + price only (no form garbage) ── */
+/* Product popup: compact product view with useful actions. */
 .product-popup {
   position: relative;
-  width: min(400px, 100%);
-  max-height: min(90dvh, 720px);
+  width: min(520px, calc(100vw - 28px));
+  max-height: min(92dvh, 760px);
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0;
-  padding: 20px 18px 16px;
+  gap: 10px;
+  padding: 16px;
   border-radius: 16px;
-  background: var(--paper);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 246, 0.42), rgba(232, 224, 210, 0)),
+    var(--paper);
   border: 1px solid rgba(25, 22, 18, 0.1);
   box-shadow: 0 28px 80px rgba(25, 24, 22, 0.28);
   animation: popup-in 200ms cubic-bezier(.22, .8, .22, 1) both;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .product-popup-close {
@@ -862,10 +864,15 @@ button.gallery-item .gallery-item-retail {
 .product-popup-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 0.9;
+  aspect-ratio: 1.2;
   display: grid;
   place-items: center;
-  margin: 4px 0 12px;
+  margin: 2px 0 0;
+  border-radius: 12px;
+  background:
+    radial-gradient(ellipse at 50% 58%, rgba(255, 252, 246, .74), rgba(255, 252, 246, 0) 62%),
+    linear-gradient(180deg, rgba(244, 238, 228, .5), rgba(216, 207, 191, .16));
+  overflow: hidden;
 }
 
 .product-popup-stage .product-popup-img,
@@ -878,7 +885,20 @@ button.gallery-item .gallery-item-retail {
   transition: opacity 180ms ease, transform 220ms ease;
   filter:
     drop-shadow(0 1px 1px rgba(25, 22, 18, 0.08))
-    drop-shadow(0 12px 22px rgba(25, 22, 18, 0.12));
+    drop-shadow(0 12px 22px rgba(25, 22, 18, 0.15));
+}
+
+.product-popup[data-family="shoes"] .product-popup-stage {
+  aspect-ratio: 1.18;
+}
+
+.product-popup[data-family="shoes"] .product-popup-img,
+.product-popup[data-family="shoes"] img {
+  transform: scale(1.28);
+}
+
+.product-popup[data-family="shoes"] .product-popup-stage:hover .product-popup-img {
+  transform: scale(1.32);
 }
 
 .product-popup-front { opacity: 1; z-index: 1; }
@@ -896,11 +916,31 @@ button.gallery-item .gallery-item-retail {
 
 .product-popup-meta {
   text-align: center;
-  padding: 0 8px 8px;
+  padding: 0 4px;
+}
+
+.product-popup-kicker {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.product-popup-kicker span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(25, 22, 18, .07);
+  color: #6e6860;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .product-popup-brand {
-  margin: 0 0 4px;
+  margin: 0 0 3px;
   font-size: 10px;
   font-weight: 650;
   letter-spacing: 0.12em;
@@ -909,11 +949,11 @@ button.gallery-item .gallery-item-retail {
 }
 
 .product-popup-name {
-  margin: 0 0 6px;
-  font-size: 1.05rem;
+  margin: 0 0 4px;
+  font-size: clamp(1.08rem, 3.2vw, 1.35rem);
   font-weight: 550;
   letter-spacing: -0.01em;
-  line-height: 1.25;
+  line-height: 1.12;
   color: #141210;
 }
 
@@ -980,54 +1020,63 @@ button.gallery-item .gallery-item-retail {
 }
 
 /* Size + materials block under price (click popup) */
-.product-popup-details {
-  margin-top: 12px;
+.product-popup-chips {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
-  text-align: center;
+  max-width: 430px;
+  margin: 10px auto 0;
 }
 
-.product-popup-size,
-.product-popup-materials {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.4;
-  color: #3a3630;
+.product-popup-chips span {
+  max-width: 100%;
+  padding: 5px 9px;
+  border: 1px solid rgba(25, 22, 18, .1);
+  border-radius: 999px;
+  background: rgba(255, 252, 246, .58);
+  color: #4a443d;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
-.product-popup-detail-label {
-  display: block;
-  margin-bottom: 2px;
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #8d877e;
-}
-
-.product-popup-materials {
-  max-width: 28ch;
-  margin-left: auto;
-  margin-right: auto;
+.product-popup-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 13px auto 0;
+  max-width: 360px;
 }
 
 .product-popup-link {
-  display: inline-block;
-  margin-top: 10px;
+  display: grid;
+  min-height: 38px;
+  place-items: center;
+  border-radius: 999px;
+  background: #1d1a17;
+  color: #f7f1e8;
   font-size: 13px;
-  font-weight: 600;
-  color: #141210;
-  text-underline-offset: 3px;
+  font-weight: 650;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.product-popup-link.secondary {
+  border: 1px solid rgba(25, 22, 18, .13);
+  background: rgba(255, 252, 246, .64);
+  color: #211e1a;
+}
+
+.product-popup-link:hover {
+  transform: translateY(-1px);
 }
 
 .product-popup-foot {
   display: flex;
   justify-content: center;
-  padding-top: 8px;
+  padding-top: 2px;
   border-top: 1px solid rgba(25, 22, 18, 0.08);
-  margin-top: 4px;
+  margin-top: 0;
 }
 
 .product-popup-delete {

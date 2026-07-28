@@ -65,11 +65,18 @@ function shopWantToItem(row) {
 function productUrlForItem(item) {
   const candidate = String(item?.productRef || item?.url || "").trim();
   if (/^https?:\/\//i.test(candidate)) return candidate;
+  const seedSource = String(item?.seedSource || "").trim();
+  if (/^https?:\/\//i.test(seedSource)) return seedSource;
   if (/handball spezial/i.test(item?.name || "") && /bd7632/i.test(candidate)) {
     return "https://www.adidas.com/us/handball-spezial-shoes/BD7632.html";
   }
+  const terms = [item?.brand, item?.name].filter(Boolean);
+  const dedupedTerms = terms.filter((term, index) => {
+    if (index === 0) return true;
+    return !String(term).toLowerCase().startsWith(`${String(terms[0]).toLowerCase()} `);
+  });
   return `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(
-    [item?.brand, item?.name].filter(Boolean).join(" "),
+    dedupedTerms.join(" "),
   )}`;
 }
 
@@ -831,7 +838,28 @@ function ItemViewer({ item, onClose, onDelete, sellMode = false, onAskingPriceCh
   const hasBack = itemHasBackDesign(item, front, back);
   const retail = formatRetailPrice(item.retailPrice, item.retailCurrency || "USD");
   const name = item.name || type;
-  const productUrl = (item.productRef || "").trim() || null;
+  const productUrl = productUrlForItem(item);
+  const pinterestUrl = pinterestSearchForItem(item);
+  const family = itemFamily(item);
+  const tags = (item.tags || [])
+    .filter((tag) => !["own", "daily", "wishlist", "want"].includes(String(tag).toLowerCase()))
+    .slice(0, 4);
+  const statusText = item.forSale || sellMode
+    ? "For sale"
+    : isWantItem(item)
+      ? "Wishlist"
+      : "In closet";
+  const materials =
+    item.composition ||
+    (typeof item.fabric === "string"
+      ? item.fabric
+      : item.fabric?.text) ||
+    null;
+  const sizeText =
+    item.sizeLabel ||
+    (item.size != null && String(item.size).trim() !== ""
+      ? String(item.size)
+      : null);
   const [askDraft, setAskDraft] = useState(
     item.askingPrice != null && item.askingPrice !== ""
       ? String(item.askingPrice)
@@ -868,6 +896,7 @@ function ItemViewer({ item, onClose, onDelete, sellMode = false, onAskingPriceCh
     >
       <div
         className="product-popup"
+        data-family={family}
         role="dialog"
         aria-modal="true"
         aria-label={name}
@@ -904,6 +933,10 @@ function ItemViewer({ item, onClose, onDelete, sellMode = false, onAskingPriceCh
         </div>
 
         <div className="product-popup-meta">
+          <div className="product-popup-kicker">
+            <span>{statusText}</span>
+            <span>{TYPE_MAP[item.part]?.label || type}</span>
+          </div>
           {item.brand ? <p className="product-popup-brand">{item.brand}</p> : null}
           <h2 className="product-popup-name">{name}</h2>
           {sellMode || item.forSale ? (
@@ -944,48 +977,31 @@ function ItemViewer({ item, onClose, onDelete, sellMode = false, onAskingPriceCh
           ) : retail ? (
             <p className="product-popup-price">{retail}</p>
           ) : null}
-          {(() => {
-            // Size: prefer sizeLabel ("Small"), else size ("S" / "8.5")
-            const sizeText =
-              item.sizeLabel ||
-              (item.size != null && String(item.size).trim() !== ""
-                ? String(item.size)
-                : null);
-            // Materials: composition string, or fabric.text object from library
-            const materials =
-              item.composition ||
-              (typeof item.fabric === "string"
-                ? item.fabric
-                : item.fabric?.text) ||
-              null;
-            if (!sizeText && !materials) return null;
-            return (
-              <div className="product-popup-details">
-                {sizeText ? (
-                  <p className="product-popup-size">
-                    <span className="product-popup-detail-label">Size</span>
-                    {sizeText}
-                  </p>
-                ) : null}
-                {materials ? (
-                  <p className="product-popup-materials">
-                    <span className="product-popup-detail-label">Materials</span>
-                    {materials}
-                  </p>
-                ) : null}
-              </div>
-            );
-          })()}
-          {productUrl ? (
+          <div className="product-popup-chips" aria-label="Item details">
+            {sizeText ? <span>Size {sizeText}</span> : null}
+            {materials ? <span>{materials}</span> : null}
+            {tags.map((tag) => (
+              <span key={tag}>{tag}</span>
+            ))}
+          </div>
+          <div className="product-popup-actions">
             <a
               className="product-popup-link"
               href={productUrl}
               target="_blank"
               rel="noreferrer"
             >
-              Open product ↗
+              Open product
             </a>
-          ) : null}
+            <a
+              className="product-popup-link secondary"
+              href={pinterestUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Outfit ideas
+            </a>
+          </div>
         </div>
 
         <div className="product-popup-foot">
