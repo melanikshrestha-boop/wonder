@@ -12,6 +12,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Reselling: "#2f7f91",
   Cash: "#b56f38",
   Transfers: "#1f6f8b", // account / card moves — cool teal, not Zelle
+  Repayment: "#496b7a",
   Groceries: "#5c8d5c",
   Restaurants: "#d64545", // "bad" discretionary — red
   Experiences: "#c4832f",
@@ -51,6 +52,7 @@ export const EXPENSE_CATEGORIES = [
   "Uncategorized",
   "Cash",
   "Transfers",
+  "Repayment",
   "Groceries",
   "Restaurants",
   "Experiences",
@@ -82,6 +84,7 @@ export const FINANCE_CATEGORIES = [
   "Reselling",
   "Cash",
   "Transfers",
+  "Repayment",
   "Groceries",
   "Restaurants",
   "Experiences",
@@ -131,6 +134,9 @@ const ALIASES: Record<string, string> = {
   Reselling: "Reselling",
   "Resale income": "Reselling",
   Parents: "Family",
+  Repayment: "Repayment",
+  "Family repayment": "Repayment",
+  "Loan payment": "Repayment",
   Zelle: "Uncategorized",
   Fun: "Experiences",
   Leisure: "Experiences",
@@ -152,7 +158,9 @@ export function normalizeCategory(
   // checking↔savings pair silently becomes income/expense again on reload.
   const explicitTransfer = FINANCE_CATEGORIES.find(
     (candidate) =>
-      (candidate === "Transfers" || candidate === "Credit card payment") &&
+      (candidate === "Transfers" ||
+        candidate === "Repayment" ||
+        candidate === "Credit card payment") &&
       candidate.toLowerCase() === raw.toLowerCase()
   );
   if (explicitTransfer) return explicitTransfer;
@@ -176,7 +184,9 @@ export function normalizeCategory(
   return ALIASES[raw] || "Other";
 }
 
-const FAMILY_NAMES = /\b(bimala|umesh|millennium)\b/i;
+const FAMILY_NAMES = /\b(mom|dad|mother|father|bimala|umesh|millennium)\b/i;
+const FAMILY_REPAYMENT_NAMES =
+  /\b(mom|dad|mother|father|bimala(?:\s+shrestha)?|umesh(?:\s+shrestha)?)\b/i;
 
 /**
  * Owner-confirmed Zelle purposes. Zelle is the rail in the payee/type fields;
@@ -200,6 +210,8 @@ export function zellePurposeCategory(
     return "Experiences";
 
   if (kind === "expense") {
+    const recipient = text.match(/\bzelle\s+to\s+(.+)$/i)?.[1] || "";
+    if (FAMILY_REPAYMENT_NAMES.test(recipient)) return "Repayment";
     if (/\bzelle\s+to\s+sean\s+(?:filimon|philemon)\b/i.test(text))
       return "Travel";
     if (/\bzelle\s+to\s+ricky\b/i.test(text)) return "Restaurants";
@@ -226,8 +238,8 @@ export function zellePurposeCategory(
 
 /**
  * Normalize with transaction direction. A payment rail is not a source:
- * incoming payments from Bimala, Umesh, or Millennium are family funding,
- * while outgoing payments to a family member remain an expense/P2P payment.
+ * incoming payments from family are family funding. Money sent to Mom or Dad
+ * is repayment of a family advance: cash goes out, but it is not consumption.
  */
 export function normalizeTransactionCategory(
   category: string | null | undefined,

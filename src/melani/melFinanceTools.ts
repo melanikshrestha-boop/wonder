@@ -135,6 +135,8 @@ function matchCategory(raw: string): string | null {
   if (/grocery|grocer|trader|whole foods|costco|target/.test(q))
     return "Groceries";
   if (/transfer|venmo|wire/.test(q)) return "Transfers";
+  if (/\b(repay|repayment|pay back|family loan)\b/.test(q))
+    return "Repayment";
   if (/sub|netflix|spotify|openai|claude|cursor/.test(q)) return "Subscriptions";
   if (/uber|lyft|gas|parking|transit/.test(q)) return "Transport";
   if (/card\s*pay|payment to chase|credit card/.test(q))

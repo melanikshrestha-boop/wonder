@@ -9,6 +9,7 @@ import {
   categoryColor,
   normalizeTransactionCategory,
 } from "./financeCategorize";
+import { isTransferLike } from "./financeTransfers";
 import {
   fitChartHoverLabel,
   hoverLabelPlacement,
@@ -644,10 +645,9 @@ export function monthChartData(rows: FinanceTx[], month: string) {
       `${t.merchant || ""} ${t.note || ""}`,
       t.kind
     );
-    const internal =
-      cat === "Transfers" || cat === "Credit card payment";
+    const movement = isTransferLike({ ...t, category: cat });
     if (t.kind === "expense") {
-      if (internal) {
+      if (movement) {
         movementOut += t.amount;
         continue;
       }
@@ -655,7 +655,7 @@ export function monthChartData(rows: FinanceTx[], month: string) {
       if (cat === "Income") continue;
       expenseByCat.set(cat, (expenseByCat.get(cat) || 0) + t.amount);
     } else if (t.kind === "income") {
-      if (internal) {
+      if (movement) {
         movementIn += t.amount;
         continue;
       }
@@ -816,7 +816,7 @@ export function MonthBookCharts({
               {" · net "}
               {moneyCents(net)}
               {movementIn + movementOut > 0
-                ? ` · internal movement ${moneyCents(movementIn + movementOut)}`
+                ? ` · money movement ${moneyCents(movementIn + movementOut)}`
                 : ""}
             </span>
           </footer>
@@ -883,7 +883,7 @@ export function AllLedgerCharts({ rows }: { rows: FinanceTx[] }) {
       row.kind
     );
     const map = row.kind === "income" ? incomeMap : expenseMap;
-    if (name === "Transfers" || name === "Credit card payment") continue;
+    if (isTransferLike({ ...row, category: name })) continue;
     map.set(name, (map.get(name) || 0) + row.amount);
   }
   const toSlices = (map: Map<string, number>) =>
@@ -920,7 +920,7 @@ export function AllLedgerCharts({ rows }: { rows: FinanceTx[] }) {
             </dd>
           </div>
           <div>
-            <dt>Internal movement</dt>
+            <dt>Money movement</dt>
             <dd>{moneyCents(totalMovement)}</dd>
           </div>
         </dl>

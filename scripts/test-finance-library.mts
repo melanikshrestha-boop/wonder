@@ -63,8 +63,19 @@ assert.equal(
 );
 assert.equal(
   normalizeTransactionCategory("Zelle", "Zelle to Bimala Shrestha", "expense"),
-  "Uncategorized"
+  "Repayment"
 );
+for (const payee of [
+  "Zelle to Mom",
+  "Zelle to Dad",
+  "Zelle to Bimala Shrestha",
+  "Zelle to Umesh Shrestha",
+]) {
+  assert.equal(
+    normalizeImportedTransactionCategory("Transfers", payee, "expense"),
+    "Repayment"
+  );
+}
 assert.equal(
   normalizeImportedTransactionCategory(
     "Transfers",
@@ -165,6 +176,7 @@ assert.ok(FINANCE_CATEGORIES.includes("Photography"));
 assert.ok(FINANCE_CATEGORIES.includes("Experiences"));
 assert.ok(FINANCE_CATEGORIES.includes("Gifts"));
 assert.ok(FINANCE_CATEGORIES.includes("Reselling"));
+assert.ok(FINANCE_CATEGORIES.includes("Repayment"));
 assert.ok(INCOME_CATEGORIES.includes("Gifts"));
 assert.ok(INCOME_CATEGORIES.includes("Reselling"));
 assert.ok(!(EXPENSE_CATEGORIES as readonly string[]).includes("Gifts"));
@@ -234,6 +246,17 @@ assert.deepEqual(
 assert.deepEqual(
   categoriesFor("Zelle from Madison Aikins Nav0Jhdzhkdf"),
   ["Uncategorized"]
+);
+assert.ok(
+  categorizedChase
+    .filter((transaction) =>
+      /Zelle to (Mom|Dad)/.test(transaction.merchant || "")
+    )
+    .every(
+      (transaction) =>
+        transaction.category === "Repayment" &&
+        transaction.categoryReviewed === true
+    )
 );
 assert.ok(
   categorizedChase

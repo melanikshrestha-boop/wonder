@@ -208,6 +208,26 @@ console.log("Quarterly money report");
   const q1 = report(
     [
       tx(
+        "family-repayment",
+        "2026-02-05",
+        "expense",
+        75,
+        "Repayment",
+        "Zelle to Mom",
+      ),
+    ],
+    "2026-Q1",
+    "2026-03-31",
+  );
+  assert("family repayment is excluded from spending", q1.personal.moneyOut === 0);
+  assert("family repayment is financing cash outflow", q1.personal.movement.financing === -75);
+  assert("family repayment is resolved without a classification warning", q1.integrity.openClassificationCount === 0);
+}
+
+{
+  const q1 = report(
+    [
+      tx(
         "pending",
         "2026-03-20",
         "expense",

@@ -16,7 +16,7 @@ import {
 import type { FinanceAccount, FinanceState, FinanceTx } from "./financeStore";
 
 /** Bump when BofA re-extract should force re-merge */
-export const BOFA_IMPORT_VERSION = "bofa-v3-zelle-purpose-review";
+export const BOFA_IMPORT_VERSION = "bofa-v4-family-repayments";
 
 const FLAG_KEY = "wonder-finance-bofa-import-version";
 

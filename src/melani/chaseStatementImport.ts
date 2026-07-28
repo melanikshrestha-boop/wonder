@@ -18,7 +18,7 @@ import type { FinanceAccount, FinanceState, FinanceTx } from "./financeStore";
 /** Bump when re-extracted statements should force re-merge */
 /** Bump when Chase CSV/PDF re-import should force re-merge into local books */
 export const CHASE_IMPORT_VERSION =
-  "chase-v6-income-expense-categories";
+  "chase-v7-family-repayments";
 
 const FLAG_KEY = "wonder-finance-chase-import-version";
 

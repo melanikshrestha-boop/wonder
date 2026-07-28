@@ -10,6 +10,7 @@ import type { FinanceTx } from "./financeStore";
 /** Categories that represent money movement, not real income/spending. */
 export const TRANSFER_CATEGORIES = new Set([
   "Transfers",
+  "Repayment",
   "Credit card payment",
 ]);
 

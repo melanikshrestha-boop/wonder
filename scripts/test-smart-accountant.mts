@@ -264,6 +264,7 @@ const {
       newTx({ date: "2026-07-03", kind: "expense", amount: 500, category: "Transfers", merchant: "To savings", accountId: "checking" }),
       newTx({ date: "2026-07-04", kind: "expense", amount: 100, category: "Groceries", merchant: "Trader Joes", accountId: "card" }),
       newTx({ date: "2026-07-05", kind: "income", amount: 80, category: "Family", merchant: "Zelle from Bimala Shrestha", note: "family support", accountId: "checking", categoryReviewed: true }),
+      newTx({ date: "2026-07-05", kind: "expense", amount: 25, category: "Repayment", merchant: "Zelle to Mom", accountId: "checking", categoryReviewed: true }),
       newTx({ date: "2026-07-06", kind: "expense", amount: 30, category: "Zelle", merchant: "Zelle to friend", accountId: "checking" }),
       newTx({ date: "2026-07-07", kind: "expense", amount: 12, category: "Other", merchant: "Unknown", accountId: null }),
     ],
@@ -280,8 +281,15 @@ const {
     cardPurchase
   );
   const gift = journal.entries.find((entry) => entry.memo === "Zelle from Bimala Shrestha");
+  const familyRepayment = journal.entries.find((entry) => entry.memo === "Zelle to Mom");
   const zelleOut = journal.entries.find((entry) => entry.memo === "Zelle to friend");
   check("accounting: family Zelle income posts to family support", gift?.creditCode === "4100", gift);
+  check(
+    "accounting: family repayment reduces a liability instead of posting expense",
+    familyRepayment?.debitCode === "2200" &&
+      familyRepayment.creditCode === "1000",
+    familyRepayment
+  );
   check(
     "accounting: unknown outbound Zelle is an expense awaiting purpose",
     zelleOut?.debitCode === "6999",
@@ -333,7 +341,7 @@ const {
     statements.pnl.income === 1080 &&
       statements.pnl.expenseTotal === 142 &&
       statements.pnl.transfersIn === 500 &&
-      statements.pnl.transfersOut === 500,
+      statements.pnl.transfersOut === 525,
     statements.pnl
   );
   check(
@@ -841,11 +849,12 @@ const { buildAnnualBook, annualBookCsv } = await import(
     newTx({ date: "2026-01-10", kind: "expense", amount: 300, category: "Rent / housing" }),
     newTx({ date: "2026-02-15", kind: "expense", amount: 200, category: "Food / groceries" }),
     newTx({ date: "2026-01-20", kind: "expense", amount: 150, category: "Transfers", merchant: "To savings" }),
+    newTx({ date: "2026-02-20", kind: "expense", amount: 75, category: "Repayment", merchant: "Zelle to Dad" }),
     newTx({ date: "2025-12-31", kind: "expense", amount: 999, category: "Shopping" }), // wrong year
   ];
   const book = buildAnnualBook(atxs, 2026);
   check("annual: income total", book.income.annualTotal === 2000, book.income);
-  check("annual: expense total excludes transfers + other years", book.expenses.annualTotal === 500, book.expenses);
+  check("annual: expense total excludes transfers, repayments + other years", book.expenses.annualTotal === 500, book.expenses);
   check("annual: transfers counted as savings", book.savings.annualTotal === 150, book.savings);
   check("annual: potential to save = 2000-500", book.potentialToSave === 1500, book);
   check("annual: monthly placement (Jan income)", book.income.monthlyTotals[0] === 1000, book.income.monthlyTotals);

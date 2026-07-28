@@ -188,6 +188,7 @@ const BREAKDOWN_COLORS = [
 
 const NON_OPERATING_CATEGORY = new Set([
   "Transfers",
+  "Repayment",
   "Credit card payment",
   "Family",
   "Gifts",
@@ -198,7 +199,7 @@ const INVESTING_TEXT =
 const FINANCING_IN_TEXT =
   /\b(loan proceeds|loan disbursement|borrowed|credit line advance|cash advance)\b/i;
 const FINANCING_OUT_TEXT =
-  /\b(loan principal|principal payment|debt principal)\b/i;
+  /\b(loan principal|principal payment|debt principal|family repayment|loan repayment|repay(?:ment|ing)?)\b/i;
 const CARD_SETTLEMENT_TEXT =
   /\b(card payment|payment to .*card|autopay|epay|crd pmt|payment thank you)\b/i;
 const EARNED_INCOME_TEXT =
@@ -332,6 +333,7 @@ function isInvestingMovement(
 function isFinancingMovement(tx: FinanceTx): boolean {
   const text = txText(tx);
   return (
+    normalizedCategory(tx) === "Repayment" ||
     (tx.kind === "income" && FINANCING_IN_TEXT.test(text)) ||
     (tx.kind === "expense" && FINANCING_OUT_TEXT.test(text))
   );

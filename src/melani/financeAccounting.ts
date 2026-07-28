@@ -82,6 +82,12 @@ export const CHART_OF_ACCOUNTS: CoaAccount[] = [
   { code: "1200", name: "Investments", type: "asset" },
   { code: "2000", name: "Credit cards", type: "liability" },
   { code: "2100", name: "Other payables", type: "liability" },
+  {
+    code: "2200",
+    name: "Family advances payable",
+    type: "liability",
+    category: "Repayment",
+  },
   { code: "3000", name: "Owner equity / net worth", type: "equity" },
   { code: "4000", name: "Income", type: "income", category: "Income" },
   { code: "4100", name: "Family support", type: "income", category: "Family" },

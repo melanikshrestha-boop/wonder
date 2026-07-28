@@ -258,7 +258,7 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   {
     id: "moves",
     label: "Money moves",
-    cats: ["Transfers", "Credit card payment"],
+    cats: ["Transfers", "Repayment", "Credit card payment"],
   },
   {
     id: "buffer",
@@ -1169,7 +1169,9 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       // visible under All and their own category/type filters, but are never
       // mislabeled as revenue or expense.
       list = list.filter(
-        (t) => t.kind === filterKind && !isLedgerMovement(t)
+        (t) =>
+          t.kind === filterKind &&
+          (filterCat !== "all" || !isLedgerMovement(t))
       );
     }
     if (filterTxType !== "all")
