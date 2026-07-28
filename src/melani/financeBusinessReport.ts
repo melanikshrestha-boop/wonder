@@ -127,7 +127,7 @@ const EXPENSE_COLORS = [
 const NON_OPERATING_CATEGORY = new Set([
   "Transfers",
   "Credit card payment",
-  "Parents",
+  "Family",
 ]);
 
 const INVESTING_TEXT =
@@ -141,7 +141,7 @@ const CARD_SETTLEMENT_TEXT =
 const EARNED_INCOME_TEXT =
   /\b(payroll|salary|wages?|earned income|client payment|customer payment|invoice paid|freelance|contract income|consulting|business income|direct dep)\b/i;
 const NON_REVENUE_INFLOW_TEXT =
-  /\b(gift|family|mom|dad|parent|bimala|umesh|shrestha|owner contribution|capital contribution|reimbursement|refund|rebate|loan|borrowed|brokerage|investment sale|stock sale|dividend|interest)\b/i;
+  /\b(gift|family|mom|dad|parent|bimala|umesh|millennium|shrestha|owner contribution|capital contribution|reimbursement|refund|rebate|loan|borrowed|brokerage|investment sale|stock sale|dividend|interest)\b/i;
 const TRANSFER_TEXT =
   /\b(transfer|own account|self transfer|to savings|from savings|to checking|from checking)\b/i;
 

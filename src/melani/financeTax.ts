@@ -141,7 +141,7 @@ function isUnconfirmedFamilyLike(tx: FinanceTx): boolean {
   if (isConfirmedGift(tx)) return false;
   const text = transactionText(tx);
   const familySignal =
-    /\b(bimala|umesh|shrestha|parent|mom|dad|family support|allowance)\b/.test(
+    /\b(bimala|umesh|millennium|shrestha|parent|mom|dad|family support|allowance)\b/.test(
       text
     );
   const cashRailSignal =

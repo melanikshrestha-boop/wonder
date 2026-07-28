@@ -34,7 +34,15 @@ const { pieSlicePath } = await import("../src/melani/pieGeometry.ts");
 
 assert.equal(
   normalizeTransactionCategory("Zelle", "Zelle from Bimala Shrestha", "income"),
-  "Parents"
+  "Family"
+);
+assert.equal(
+  normalizeTransactionCategory("Zelle", "Zelle from Millennium", "income"),
+  "Family"
+);
+assert.equal(
+  normalizeTransactionCategory("Parents", "Legacy saved transaction", "income"),
+  "Family"
 );
 assert.equal(
   normalizeTransactionCategory("Zelle", "Zelle to Bimala Shrestha", "expense"),
@@ -45,7 +53,7 @@ runFinancePlan("I spent $6 cash for food");
 runFinancePlan("log income $100 from Umesh");
 const finance = loadFinance();
 assert.equal(finance.txs.length, 2);
-assert.equal(finance.txs[0].category, "Parents");
+assert.equal(finance.txs[0].category, "Family");
 assert.equal(finance.txs[1].category, "Cash");
 assert.equal(finance.txs[1].merchant, "food");
 

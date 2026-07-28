@@ -6,7 +6,7 @@
 /** Fixed colors for pie / legend — same category = same color every month */
 export const CATEGORY_COLORS: Record<string, string> = {
   Income: "#3d8f6e",
-  Parents: "#0f8f7d",
+  Family: "#0f8f7d",
   Zelle: "#5b6ee1", // most P2P volume — distinct indigo
   Cash: "#b56f38",
   Transfers: "#1f6f8b", // account / card moves — cool teal, not Zelle
@@ -36,7 +36,7 @@ export const BAD_CATEGORIES = new Set(["Restaurants"]);
  */
 export const FINANCE_CATEGORIES = [
   "Income",
-  "Parents",
+  "Family",
   "Zelle",
   "Cash",
   "Transfers",
@@ -76,6 +76,7 @@ const ALIASES: Record<string, string> = {
   Gift: "Other",
   Gifts: "Other",
   "Gifts received": "Other",
+  Parents: "Family",
   Fun: "Restaurants",
   Fees: "Fees",
   Uncategorized: "Other",
@@ -99,6 +100,9 @@ export function normalizeCategory(
       candidate.toLowerCase() === raw.toLowerCase()
   );
   if (explicitTransfer) return explicitTransfer;
+  // One-time label migration: keep historical family funding together instead
+  // of splitting old "Parents" rows from the new Family category.
+  if (raw.toLowerCase() === "parents") return "Family";
 
   const text = `${merchantOrNote}`.toLowerCase();
   // Zelle wins over unreviewed bank noise, but never over an explicit
@@ -116,19 +120,19 @@ export function normalizeCategory(
   return ALIASES[raw] || "Other";
 }
 
-const PARENT_NAMES = /\b(bimala|umesh)\b/i;
+const FAMILY_NAMES = /\b(bimala|umesh|millennium)\b/i;
 
 /**
  * Normalize with transaction direction. A payment rail is not a source:
- * incoming Zelle from Bimala or Umesh is parent funding, while outgoing
- * Zelle to either name remains an expense/P2P payment.
+ * incoming payments from Bimala, Umesh, or Millennium are family funding,
+ * while outgoing payments to a family member remain an expense/P2P payment.
  */
 export function normalizeTransactionCategory(
   category: string | null | undefined,
   merchantOrNote = "",
   kind: "income" | "expense" = "expense"
 ): string {
-  if (kind === "income" && PARENT_NAMES.test(merchantOrNote)) return "Parents";
+  if (kind === "income" && FAMILY_NAMES.test(merchantOrNote)) return "Family";
   return normalizeCategory(category, merchantOrNote);
 }
 
