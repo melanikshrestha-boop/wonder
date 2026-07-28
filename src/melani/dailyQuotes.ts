@@ -1030,6 +1030,16 @@ function rotationBank(): DailyQuote[] {
   return out.length ? out : HERO_QUOTES;
 }
 
+function uniqueRotationBank(): DailyQuote[] {
+  const seen = new Set<string>();
+  return rotationBank().filter((quote) => {
+    const key = `${quote.source}\u0000${quote.text}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /**
  * Personal epoch — first open sets the clock; then every 6h a new slot.
  * Stored locally; never shown in UI.
@@ -1094,6 +1104,28 @@ export function quoteForSlot(slotKey: string = quoteSlotKey()): DailyQuote {
   }
   const idx = hashSlot(slotKey) % list.length;
   return list[idx];
+}
+
+/**
+ * Deterministic manual alternatives for a slot.
+ * Offset 0 is the scheduled quote; later offsets are guaranteed to be
+ * different from the scheduled quote and from one another when the bank has
+ * enough distinct lines.
+ */
+export function quoteForSlotOffset(
+  slotKey: string = quoteSlotKey(),
+  offset = 0
+): DailyQuote {
+  const scheduled = quoteForSlot(slotKey);
+  if (offset <= 0) return scheduled;
+
+  const alternatives = uniqueRotationBank().filter(
+    (quote) =>
+      quote.text !== scheduled.text || quote.source !== scheduled.source
+  );
+  if (!alternatives.length) return scheduled;
+  const start = hashSlot(`${slotKey}:manual`) % alternatives.length;
+  return alternatives[(start + offset - 1) % alternatives.length];
 }
 
 /** @deprecated alias — same as quoteForSlot */

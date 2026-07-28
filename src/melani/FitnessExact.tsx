@@ -39,7 +39,8 @@ import {
 } from "./whoopStore";
 import { groupMetricsBySection, metricDef } from "./whoopMetrics";
 import { MetricExplainModal, MetricGraphPanel } from "./whoopMetricUi";
-import { todayQuote, msUntilNextQuoteSlot } from "./dailyQuotes";
+import { QuoteRefreshControl } from "./QuoteRefreshControl";
+import { useQuoteRotation } from "./useQuoteRotation";
 import "./fitness-exact.css";
 import "./gym-exact.css";
 import "./whoop-lab.css";
@@ -2056,28 +2057,24 @@ export function FitnessExact({ pageId, onGo }: Props) {
     onGo(TAB_TO_PAGE[t]);
   }
 
-  // Private 6h rotation — no timer chrome in the UI, only the line + name
-  const [quote, setQuote] = useState(() => todayQuote());
-  useEffect(() => {
-    let timer: number | undefined;
-    const arm = () => {
-      setQuote(todayQuote());
-      // Wake a few seconds after the private slot flips
-      const wait = Math.min(msUntilNextQuoteSlot() + 1500, 6 * 60 * 60 * 1000);
-      timer = window.setTimeout(arm, Math.max(30_000, wait));
-    };
-    arm();
-    return () => {
-      if (timer !== undefined) window.clearTimeout(timer);
-    };
-  }, []);
+  const { quote, remaining, limit, msUntilReset, nextQuote } =
+    useQuoteRotation();
 
   return (
     <div className="fx-page">
       <div className="fx-inner">
         <div className="fx-quote">
-          <p className="fx-quote-text">“{quote.text}”</p>
-          <p className="fx-quote-author">{quote.source}</p>
+          <div className="fx-quote-copy">
+            <p className="fx-quote-text">“{quote.text}”</p>
+            <p className="fx-quote-author">{quote.source}</p>
+          </div>
+          <QuoteRefreshControl
+            remaining={remaining}
+            limit={limit}
+            msUntilReset={msUntilReset}
+            onChange={nextQuote}
+            className="fx-quote-refresh"
+          />
         </div>
 
         {/* Sleep · Meals · Gym · Focus */}

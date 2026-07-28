@@ -26,6 +26,7 @@
     "test:models": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-finance-models.mts",
     "test:trading": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-trading.mts",
     "test:care-agent": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-care-agent.mts",
+    "test:quotes": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-quote-rotation.mts",
     "screen": "python3 scripts/screentime.py",
     "screen:watch": "python3 scripts/screentime.py --watch --disk --save --phone",
     "screen:week": "python3 scripts/screentime.py --days 7 --disk",

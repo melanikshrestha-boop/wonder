@@ -955,8 +955,16 @@ html.theme-light .sidebar .sidebar-search svg {
   max-width: 1380px;
   margin: 16px auto 8px;
   padding: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   color: var(--text);
   box-sizing: border-box;
+}
+
+.wonder-page-quote-copy {
+  min-width: 0;
 }
 
 .wonder-page-quote blockquote {
@@ -972,10 +980,50 @@ html.theme-light .sidebar .sidebar-search svg {
   font-size: 14px;
 }
 
+.wonder-quote-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.wonder-quote-refresh button {
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+}
+
+.wonder-quote-refresh button:hover:not(:disabled) {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.wonder-quote-refresh button:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 1px;
+}
+
+.wonder-quote-refresh button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
 @media (max-width: 560px) {
   .wonder-page-quote {
     width: calc(100% - 24px);
     margin-top: 12px;
+    gap: 8px;
   }
 }
 

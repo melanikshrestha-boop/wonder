@@ -92,6 +92,14 @@ html.theme-light .fx-page {
   padding: 0;
   border: none;
   background: transparent;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fx-quote-copy {
+  min-width: 0;
 }
 
 .fx-quote-text {
@@ -111,6 +119,16 @@ html.theme-light .fx-page {
   font-family: var(--fx-font);
   font-weight: 400;
   line-height: 1;
+}
+
+.fx-quote .wonder-quote-refresh {
+  color: var(--fx-muted);
+  font-family: var(--fx-font);
+}
+
+.fx-quote .wonder-quote-refresh button:hover:not(:disabled) {
+  color: var(--fx-strong);
+  background: color-mix(in srgb, var(--fx-strong) 6%, transparent);
 }
 
 /* Subnav: Sleep Meals Gym — text only, no middle dots */

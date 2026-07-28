@@ -1,28 +1,22 @@
-import { useEffect, useState } from "react";
-import { msUntilNextQuoteSlot, todayQuote } from "./dailyQuotes";
+import { QuoteRefreshControl } from "./QuoteRefreshControl";
+import { useQuoteRotation } from "./useQuoteRotation";
 
 export function UniversalQuote() {
-  const [quote, setQuote] = useState(() => todayQuote());
-
-  useEffect(() => {
-    let timer: number | undefined;
-    const refresh = () => {
-      setQuote(todayQuote());
-      timer = window.setTimeout(
-        refresh,
-        Math.max(30_000, msUntilNextQuoteSlot() + 1_500)
-      );
-    };
-    refresh();
-    return () => {
-      if (timer !== undefined) window.clearTimeout(timer);
-    };
-  }, []);
+  const { quote, remaining, limit, msUntilReset, nextQuote } =
+    useQuoteRotation();
 
   return (
     <figure className="wonder-page-quote">
-      <blockquote>“{quote.text}”</blockquote>
-      <figcaption>{quote.source}</figcaption>
+      <div className="wonder-page-quote-copy">
+        <blockquote>“{quote.text}”</blockquote>
+        <figcaption>{quote.source}</figcaption>
+      </div>
+      <QuoteRefreshControl
+        remaining={remaining}
+        limit={limit}
+        msUntilReset={msUntilReset}
+        onChange={nextQuote}
+      />
     </figure>
   );
 }
