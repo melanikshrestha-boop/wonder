@@ -3829,7 +3829,7 @@ svg.wd-linechart {
   width: 100%;
   height: auto;
   display: block;
-  overflow: visible;
+  overflow: hidden;
 }
 .wd-hab-chart-tick {
   fill: var(--wd-secondary);

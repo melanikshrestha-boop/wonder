@@ -9,6 +9,10 @@ import {
   categoryColor,
   normalizeTransactionCategory,
 } from "./financeCategorize";
+import {
+  fitChartHoverLabel,
+  hoverLabelPlacement,
+} from "./chartLayout";
 import { pieSlicePath } from "./pieGeometry";
 
 const PALETTE = [
@@ -159,6 +163,17 @@ export function LabeledLineChart({
   // Area to zero baseline when range crosses 0; else to bottom of plot
   const baseY = yMin < 0 && yMax > 0 ? py(0) : PAD_T + plotH;
   const area = `${path} L${px(points.length - 1).toFixed(1)},${baseY.toFixed(1)} L${px(0).toFixed(1)},${baseY.toFixed(1)} Z`;
+  const hoverLabel =
+    hover == null
+      ? null
+      : {
+          ...hoverLabelPlacement(
+            px(hover),
+            PAD_L,
+            W - PAD_R
+          ),
+          text: fitChartHoverLabel(points[hover].label, plotW),
+        };
 
   /** Nearest day under the cursor — move freely, no precise target. */
   function onPlotMove(e: MouseEvent<SVGSVGElement>) {
@@ -311,7 +326,7 @@ export function LabeledLineChart({
           style={{ cursor: "crosshair" }}
         />
 
-        {hover != null ? (
+        {hover != null && hoverLabel ? (
           <g style={{ pointerEvents: "none" }}>
             <line
               x1={px(hover)}
@@ -330,12 +345,12 @@ export function LabeledLineChart({
               className="wd-hab-hover-dot"
             />
             <text
-              x={Math.min(Math.max(px(hover), PAD_L + 70), W - PAD_R - 70)}
+              x={hoverLabel.x}
               y={PAD_T + 14}
-              textAnchor="middle"
+              textAnchor={hoverLabel.textAnchor}
               className="wd-hab-chart-hover"
             >
-              {points[hover].label}
+              {hoverLabel.text}
             </text>
           </g>
         ) : null}

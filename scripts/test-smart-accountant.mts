@@ -33,6 +33,9 @@ const {
 } = await import("../src/melani/financeTransfers.ts");
 const { buildWorthSeries, valuationAt, monthEndDates, newValuationItem } =
   await import("../src/melani/financeNetWorth.ts");
+const { fitChartHoverLabel, hoverLabelPlacement } = await import(
+  "../src/melani/chartLayout.ts"
+);
 
 let passed = 0;
 let failed = 0;
@@ -60,6 +63,27 @@ check("formatCents 123456", formatCents(123456) === "$1,234.56");
 check("formatCents -5", formatCents(-5) === "-$0.05");
 check("sumCents no float dust", sumCents([10, 20, 1]) === 31);
 check("roundDollars kills dust", roundDollars(0.1 + 0.2) === 0.3);
+
+console.log("chart layout");
+check(
+  "chart hover: first point anchors inward",
+  hoverLabelPlacement(48, 48, 628).textAnchor === "start" &&
+    hoverLabelPlacement(48, 48, 628).x > 48
+);
+check(
+  "chart hover: middle point stays centered",
+  hoverLabelPlacement(338, 48, 628).textAnchor === "middle"
+);
+check(
+  "chart hover: last point anchors inward",
+  hoverLabelPlacement(628, 48, 628).textAnchor === "end" &&
+    hoverLabelPlacement(628, 48, 628).x < 628
+);
+check(
+  "chart hover: long labels are bounded",
+  fitChartHoverLabel("x".repeat(200), 580).endsWith("…") &&
+    fitChartHoverLabel("x".repeat(200), 580).length < 100
+);
 
 // ── CSV import ──────────────────────────────────────────────
 console.log("csv import");
