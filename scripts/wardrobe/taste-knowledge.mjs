@@ -393,6 +393,14 @@ function volumeLabel(item) {
   return item.taste?.silhouette?.volume || "medium";
 }
 
+function isBlueFamily(item) {
+  return ["blue", "indigo", "lightblue", "navy"].includes(item?.taste?.color?.key);
+}
+
+function isBlueDenim(item) {
+  return isBlueFamily(item) && Boolean(item?.taste?.role?.isJeans);
+}
+
 function colorPairReason(a, b) {
   if (!a?.taste?.color || !b?.taste?.color) return null;
   const ca = a.taste.color;
@@ -573,7 +581,7 @@ function silhouetteReason(top, bottom, shoes) {
   return reasons;
 }
 
-function hardRules(top, bottom, mode) {
+function hardRules(top, bottom, shoes, mode) {
   const reasons = [];
   const strict = mode === "everyday" || mode === "build" || mode === "stream";
   if (top?.taste?.role?.isJersey && bottom?.taste?.role?.isSweats) {
@@ -607,6 +615,27 @@ function hardRules(top, bottom, mode) {
       good: false,
       weight: 20,
       text: "Two statement pieces fight for focus — one focal point only.",
+    });
+  }
+
+  // Blue is a useful base, not a complete outfit recipe. A blue hoodie over
+  // blue denim needs a deliberate tonal match; adding a blue-accent sneaker
+  // turns the whole look into three near-but-not-equal blues. That is the
+  // exact "random closet dump" failure the daily editor must keep out.
+  if (top && bottom && isBlueFamily(top) && isBlueDenim(bottom) && !top.taste?.role?.isJeans) {
+    reasons.push({
+      kind: "color-rule",
+      good: false,
+      weight: 42,
+      text: "Blue top + blue denim is too close without being a deliberate matching set. Break the column with cream, grey, black, burgundy, or an earth tone.",
+    });
+  }
+  if (top && bottom && shoes && isBlueFamily(top) && isBlueDenim(bottom) && isBlueFamily(shoes)) {
+    reasons.push({
+      kind: "color-rule",
+      good: false,
+      weight: 64,
+      text: "Three competing blues (top, denim, and sneaker accent) fight instead of forming a palette. Keep the shoe neutral or make one blue piece the only focal point.",
     });
   }
   return reasons;
@@ -736,7 +765,7 @@ export function reasonOutfit(items = [], context = {}) {
   /** @type {Array<{kind:string,good:boolean,weight?:number,text:string}>} */
   const principles = [];
 
-  principles.push(...hardRules(top, bottom, mode));
+  principles.push(...hardRules(top, bottom, shoes, mode));
   principles.push(...dnaFormula(top, bottom, shoes));
   principles.push(...silhouetteReason(top, bottom, shoes));
 

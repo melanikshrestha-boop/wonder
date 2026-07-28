@@ -332,7 +332,20 @@ function fashionTasteScore(items, mode = "everyday", inspoVibes = []) {
 function pairColorScore(first, second) {
   const a = first.colorProfile;
   const b = second.colorProfile;
+  const blueKeys = new Set(["blue", "indigo", "lightblue", "navy"]);
+  const aBlue = blueKeys.has(first.traits?.colorKey);
+  const bBlue = blueKeys.has(second.traits?.colorKey);
+  const denimPair = first.traits?.isJeans || second.traits?.isJeans;
   if (a.neutral || b.neutral) return 92;
+  // Related blues are not automatically a coherent outfit. In particular,
+  // a coloured top and denim need enough contrast to read as separate pieces.
+  // This keeps a blue hoodie + blue jeans from being rewarded like a neutral
+  // monochrome stack.
+  if (aBlue && bBlue && denimPair) {
+    const valueGap = Math.abs(a.lightness - b.lightness);
+    const hueGap = hueDistance(a.hue, b.hue);
+    return valueGap >= 0.34 || hueGap >= 42 ? 68 : 38;
+  }
   const distance = hueDistance(a.hue, b.hue);
   if (distance <= 28) return 96 - distance * 0.35;
   if (distance >= 145 && distance <= 215) return 88;
@@ -652,6 +665,9 @@ export function generateOutfits(library, state = {}, request = {}) {
       }
     }
     const tasteMeta = fashionTasteScore(unique, context.mode, context.inspoVibes || []);
+    const failsColorFormula = tasteMeta.principles?.some((principle) => (
+      principle.kind === "color-rule" && principle.good === false
+    ));
     // Everyday: skip generating garbage jersey+sweats as candidates at all
     if (
       (context.mode === "everyday" || context.mode === "build")
@@ -667,6 +683,9 @@ export function generateOutfits(library, state = {}, request = {}) {
     ) {
       continue;
     }
+    // These are visual vetoes, not a low-score suggestion. Never surface a
+    // blue top + blue denim + blue sneaker pile as a "look" for Melani.
+    if (failsColorFormula) continue;
     // Everyday: deprioritize jersey looks in the candidate pool (content mode still allows)
     if (
       (context.mode === "everyday" || context.mode === "build")

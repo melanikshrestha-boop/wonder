@@ -45,6 +45,21 @@ assert.ok(stream.looks.every((look) => look.items.every((item) => item.id !== "t
 assert.ok(stream.looks.every((look) => look.items.some((item) => item.kind === "dress") || (look.items.some((item) => item.kind === "top") && look.items.some((item) => item.kind === "bottom"))), "every look needs a complete base");
 assert.deepEqual(stream.looks.map((look) => look.id), generateOutfits(library, state, { mode: "stream", temperatureF: 64, rain: true, count: 4 }).looks.map((look) => look.id), "recommendations must be deterministic");
 
+const blueOnBlueCloset = [
+  { id: "blue-hoodie", name: "Blue Scuffers Hoodie", part: "upperbody", color: "#4a6b8a", tags: ["hoodie", "oversized"], image: "/blue-hoodie.png" },
+  { id: "blue-jeans", name: "Baggy Blue Washed Denim", part: "lowerbody", color: "#5b7fa8", tags: ["jeans", "baggy", "washed"], image: "/blue-jeans.png" },
+  { id: "blue-jordan", name: "Nike Air Jordan Dark Blue Black Swoosh", part: "shoes", color: "#1e3a5f", tags: ["sneakers", "blue"], image: "/blue-jordan.png" },
+  { id: "black-jeans", name: "Baggy Black Jeans", part: "lowerbody", color: "#111111", tags: ["jeans", "baggy"], image: "/black-jeans.png" },
+  { id: "white-sneaker", name: "Clean White Sneaker", part: "shoes", color: "#f5f5f5", tags: ["sneakers"], image: "/white-sneaker.png" },
+];
+const blueOnBlueState = { items: Object.fromEntries(blueOnBlueCloset.map((item) => [item.id, { status: "clean" }])) };
+const colorVetoLooks = generateOutfits(blueOnBlueCloset, blueOnBlueState, { mode: "build", temperatureF: 68, count: 12 }).looks;
+assert.ok(colorVetoLooks.length >= 1, "a closet with alternatives should still yield usable looks");
+assert.ok(
+  colorVetoLooks.every((look) => !["blue-hoodie", "blue-jeans", "blue-jordan"].every((id) => look.items.some((item) => item.id === id))),
+  "the generator must never recommend competing blue hoodie + blue denim + blue sneaker stack",
+);
+
 const packing = buildPackingPlan(library, state, { days: 3, mode: "everyday", temperatureF: 70 });
 assert.equal(packing.days, 3);
 assert.ok(packing.items.length >= 1);
