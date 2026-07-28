@@ -96,7 +96,12 @@ const csvRes = parseBankCsv(chaseCsv);
 check("chase-style rows parsed", csvRes.added.length === 2, csvRes.errors);
 const coffee = csvRes.added.find((t) => t.kind === "expense");
 check("expense amount positive w/ kind", coffee?.amount === 6.75);
-check("income categorized", csvRes.added.some((t) => t.category === "Income"));
+check(
+  "unknown income waits for source classification",
+  csvRes.added.some(
+    (t) => t.kind === "income" && t.category === "Uncategorized"
+  )
+);
 
 const dup = parseBankCsv(chaseCsv, {
   existingFingerprints: new Set(
@@ -362,7 +367,7 @@ const {
   const review = buildAccountantReview(accountingState, "2026-07", emptyBooks);
   check(
     "accounting: review finds weak and unassigned lines",
-    review.weakCategoryLines === 2 &&
+    review.weakCategoryLines === 3 &&
       review.unassignedLines === 1 &&
       review.items.some((item) => item.id === "review-categories"),
     review

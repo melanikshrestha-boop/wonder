@@ -382,6 +382,7 @@ export function InteractivePieChart({
   showLegend = true,
   formatValue,
   className = "",
+  onSliceDoubleClick,
 }: {
   title?: string;
   slices: PieSlice[];
@@ -392,8 +393,10 @@ export function InteractivePieChart({
   showLegend?: boolean;
   formatValue?: (value: number, frac: number) => string;
   className?: string;
+  onSliceDoubleClick?: (slice: PieSlice) => void;
 }) {
   const [hover, setHover] = useState<number | null>(null);
+  const [selectedName, setSelectedName] = useState<string | null>(null);
   const total = slices.reduce((s, x) => s + Math.max(0, x.value), 0);
   if (!slices.length || total <= 0) return null;
 
@@ -457,7 +460,23 @@ export function InteractivePieChart({
     setHover((prev) => (prev === next ? prev : next));
   }
 
-  const hot = hover != null ? arcs[hover] : null;
+  const selectedIndex = selectedName
+    ? arcs.findIndex((arc) => arc.slice.name === selectedName)
+    : -1;
+  const activeIndex =
+    hover != null ? hover : selectedIndex >= 0 ? selectedIndex : null;
+  const hot = activeIndex != null ? arcs[activeIndex] : null;
+  const toggleSelected = (index: number) => {
+    const name = arcs[index]?.slice.name;
+    if (!name) return;
+    setSelectedName((previous) => (previous === name ? null : name));
+  };
+  const filterToSlice = (index: number) => {
+    const slice = arcs[index]?.slice;
+    if (!slice) return;
+    setSelectedName(null);
+    onSliceDoubleClick?.(slice);
+  };
   const valueLine = (v: number, frac: number) =>
     formatValue
       ? formatValue(v, frac)
@@ -493,10 +512,26 @@ export function InteractivePieChart({
             className="wd-pie-svg"
             onMouseMove={onPieMove}
             onMouseLeave={() => setHover(null)}
+            onClick={(event) => {
+              const index = sliceAtPointer(
+                event.clientX,
+                event.clientY,
+                event.currentTarget
+              );
+              if (index != null) toggleSelected(index);
+            }}
+            onDoubleClick={(event) => {
+              const index = sliceAtPointer(
+                event.clientX,
+                event.clientY,
+                event.currentTarget
+              );
+              if (index != null) filterToSlice(index);
+            }}
           >
             {arcs.map((a, i) => {
-              const isHot = hover === i;
-              const dim = hover != null && !isHot;
+              const isHot = activeIndex === i;
+              const dim = activeIndex != null && !isHot;
               const tx = isHot ? Math.cos(a.mid) * popDist : 0;
               const ty = isHot ? Math.sin(a.mid) * popDist : 0;
               return (
@@ -537,7 +572,7 @@ export function InteractivePieChart({
               cy={CY}
               r={HIT_R}
               fill="rgba(0,0,0,0.001)"
-              style={{ cursor: "crosshair" }}
+              style={{ cursor: "pointer" }}
             />
             {/* Center labels — donut / static center only (never stacked with HTML chip) */}
             {centerMain || centerSub ? (
@@ -586,7 +621,19 @@ export function InteractivePieChart({
                 key={`${a.slice.name}-${i}`}
                 onMouseEnter={() => setHover(i)}
                 onMouseLeave={() => setHover(null)}
-                className={hover === i ? "is-hot" : undefined}
+                onClick={() => toggleSelected(i)}
+                onDoubleClick={() => filterToSlice(i)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    toggleSelected(i);
+                  }
+                }}
+                className={activeIndex === i ? "is-hot" : undefined}
+                role="button"
+                tabIndex={0}
+                aria-pressed={selectedIndex === i}
+                title="Click to highlight · double-click to filter the ledger"
               >
                 <span
                   className="wd-sub-dot"
@@ -850,7 +897,16 @@ export function MonthBookCharts({
   );
 }
 
-export function AllLedgerCharts({ rows }: { rows: FinanceTx[] }) {
+export function AllLedgerCharts({
+  rows,
+  onCategoryDoubleClick,
+}: {
+  rows: FinanceTx[];
+  onCategoryDoubleClick?: (
+    kind: "income" | "expense",
+    category: string
+  ) => void;
+}) {
   if (!rows.length) return null;
 
   const monthKeys = Array.from(
@@ -944,6 +1000,9 @@ export function AllLedgerCharts({ rows }: { rows: FinanceTx[] }) {
           centerPrimary={moneyCents(totalIncome)}
           centerSecondary="income"
           showLegend
+          onSliceDoubleClick={(slice) =>
+            onCategoryDoubleClick?.("income", slice.name)
+          }
         />
         <InteractivePieChart
           title="All expenses by category"
@@ -953,6 +1012,9 @@ export function AllLedgerCharts({ rows }: { rows: FinanceTx[] }) {
           centerPrimary={moneyCents(totalExpenses)}
           centerSecondary="expenses"
           showLegend
+          onSliceDoubleClick={(slice) =>
+            onCategoryDoubleClick?.("expense", slice.name)
+          }
         />
       </div>
     </section>

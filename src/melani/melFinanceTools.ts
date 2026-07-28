@@ -3,7 +3,11 @@
  * Ground truth only. No invented balances.
  */
 
-import { FINANCE_CATEGORIES, normalizeCategory } from "./financeCategorize";
+import {
+  FINANCE_CATEGORIES,
+  normalizeCategory,
+  normalizeTransactionCategory,
+} from "./financeCategorize";
 import {
   buildCreditReport,
   DEFAULT_CREDIT_PROFILE,
@@ -251,7 +255,12 @@ export function finance_log_expense(opts: {
   }
   const kind = opts.kind === "income" ? "income" : "expense";
   const merchant = (opts.merchant || opts.note || "Mel log").trim();
-  const category = matchCategory(opts.category || merchant) || "Other";
+  const matchedCategory = matchCategory(opts.category || merchant) || "Other";
+  const category = normalizeTransactionCategory(
+    matchedCategory,
+    merchant,
+    kind
+  );
   const melTx = newTx({
     amount,
     kind,
@@ -691,7 +700,7 @@ export function planFinanceCommands(q: string): string[] {
       finance_log_expense({
         amount: Number(logInc[1].replace(/,/g, "")),
         merchant: logInc[2].trim(),
-        category: "Income",
+        category: "Uncategorized",
         kind: "income",
       })
     );

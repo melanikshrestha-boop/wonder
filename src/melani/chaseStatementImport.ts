@@ -18,7 +18,7 @@ import type { FinanceAccount, FinanceState, FinanceTx } from "./financeStore";
 /** Bump when re-extracted statements should force re-merge */
 /** Bump when Chase CSV/PDF re-import should force re-merge into local books */
 export const CHASE_IMPORT_VERSION =
-  "chase-v7-family-repayments";
+  "chase-v8-review-unknown-income";
 
 const FLAG_KEY = "wonder-finance-chase-import-version";
 
@@ -111,7 +111,11 @@ export function applyChaseStatements(state: FinanceState): {
     const previousCategory = (previous?.category || "").trim();
     const previousHasPurpose =
       !!previous?.categoryReviewed &&
-      !/^(zelle|income|other|uncategorized)$/i.test(previousCategory);
+      !/^(zelle|income|other|uncategorized)$/i.test(previousCategory) &&
+      !(
+        t.kind === "income" &&
+        /^(income|experiences)$/i.test(previousCategory)
+      );
     if (previousHasPurpose) {
       return {
         ...t,

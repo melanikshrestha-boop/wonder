@@ -38,12 +38,10 @@ export const BAD_CATEGORIES = new Set(["Restaurants"]);
 /** Income and expense purposes stay separate in every category picker. */
 export const INCOME_CATEGORIES = [
   "Uncategorized",
-  "Income",
   "Family",
   "Gifts",
   "Photography",
   "Reselling",
-  "Experiences",
   "Transfers",
   "Other",
 ] as const;
@@ -206,9 +204,6 @@ export function zellePurposeCategory(
     return "Gifts";
   if (kind === "income" && /\bzelle\s+from\s+grace\s+rose\b/i.test(text))
     return "Reselling";
-  if (kind === "income" && /\bzelle\s+from\s+cedric\s+hong\b/i.test(text))
-    return "Experiences";
-
   if (kind === "expense") {
     const recipient = text.match(/\bzelle\s+to\s+(.+)$/i)?.[1] || "";
     if (FAMILY_REPAYMENT_NAMES.test(recipient)) return "Repayment";
@@ -250,7 +245,8 @@ export function normalizeTransactionCategory(
   if (
     /\bzelle\b/i.test(merchantOrNote) &&
     raw &&
-    !/^(zelle|income|other|uncategorized)$/i.test(raw)
+    !/^(zelle|income|other|uncategorized)$/i.test(raw) &&
+    !(kind === "income" && /^experiences$/i.test(raw))
   ) {
     // A deliberate purpose (including an approved Transfers pair) always
     // beats the built-in merchant defaults.
@@ -258,12 +254,18 @@ export function normalizeTransactionCategory(
   }
   const zellePurpose = zellePurposeCategory(merchantOrNote, kind);
   if (zellePurpose) return zellePurpose;
+  if (kind === "income" && FAMILY_NAMES.test(merchantOrNote)) return "Family";
+  // "Income" only repeats the transaction direction, and "Experiences" is an
+  // expense purpose. Neither identifies how income was earned. Retire both
+  // labels at the normalization boundary so stored, imported, and Mel-entered
+  // rows all return to the review queue.
+  if (kind === "income" && /^(income|experiences)$/i.test(raw))
+    return "Uncategorized";
   if (
     /\bzelle\b/i.test(merchantOrNote) &&
     (!raw || /^(zelle|income|other|uncategorized)$/i.test(raw))
   )
     return "Uncategorized";
-  if (kind === "income" && FAMILY_NAMES.test(merchantOrNote)) return "Family";
   return normalizeCategory(category, merchantOrNote);
 }
 

@@ -3271,8 +3271,12 @@ html:not(.theme-light) .wd-pie-hover-val {
 .wd-pie-legend li.is-hot {
   transform: translateX(2px);
 }
+.wd-pie-legend li:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+}
 .wd-pie-svg {
-  cursor: crosshair;
+  cursor: pointer;
   flex: 0 0 auto;
   width: min(220px, 100%);
   height: auto;

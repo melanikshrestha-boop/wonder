@@ -16,7 +16,7 @@ import {
 import type { FinanceAccount, FinanceState, FinanceTx } from "./financeStore";
 
 /** Bump when BofA re-extract should force re-merge */
-export const BOFA_IMPORT_VERSION = "bofa-v4-family-repayments";
+export const BOFA_IMPORT_VERSION = "bofa-v5-review-unknown-income";
 
 const FLAG_KEY = "wonder-finance-bofa-import-version";
 
@@ -86,10 +86,17 @@ export function applyBofaStatements(state: FinanceState): {
   const keep = state.txs.filter((t) => !isBofaImportTx(t));
   const statementTxs: FinanceTx[] = BOFA_STATEMENT_TXS.map((t) => {
     const previous = priorStatementRows.get(t.externalId || t.id);
-    if (previous?.categoryReviewed) {
+    const previousCategory = (previous?.category || "").trim();
+    const previousHasPurpose =
+      !!previous?.categoryReviewed &&
+      !(
+        t.kind === "income" &&
+        /^(income|experiences)$/i.test(previousCategory)
+      );
+    if (previousHasPurpose) {
       return {
         ...t,
-        category: previous.category,
+        category: previousCategory,
         categoryReviewed: true,
       };
     }

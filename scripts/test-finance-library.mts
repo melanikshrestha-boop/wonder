@@ -127,7 +127,8 @@ assert.equal(
     "Zelle from Cedric Hong",
     "income"
   ),
-  "Experiences"
+  "Uncategorized",
+  "incoming concert money has no confirmed earned-income source"
 );
 assert.equal(
   normalizeImportedTransactionCategory(
@@ -179,6 +180,8 @@ assert.ok(FINANCE_CATEGORIES.includes("Reselling"));
 assert.ok(FINANCE_CATEGORIES.includes("Repayment"));
 assert.ok(INCOME_CATEGORIES.includes("Gifts"));
 assert.ok(INCOME_CATEGORIES.includes("Reselling"));
+assert.ok(!(INCOME_CATEGORIES as readonly string[]).includes("Income"));
+assert.ok(!(INCOME_CATEGORIES as readonly string[]).includes("Experiences"));
 assert.ok(!(EXPENSE_CATEGORIES as readonly string[]).includes("Gifts"));
 assert.ok(!(EXPENSE_CATEGORIES as readonly string[]).includes("Reselling"));
 assert.deepEqual(categoriesForKind("income"), INCOME_CATEGORIES);
@@ -186,6 +189,18 @@ assert.deepEqual(categoriesForKind("expense"), EXPENSE_CATEGORIES);
 assert.equal(
   normalizeTransactionCategory("Shopping", "Wash Kiosk Mobile", "expense"),
   "Laundry"
+);
+assert.equal(
+  normalizeTransactionCategory("Income", "Unknown deposit", "income"),
+  "Uncategorized"
+);
+assert.equal(
+  normalizeTransactionCategory(
+    "Experiences",
+    "Concert reimbursement",
+    "income"
+  ),
+  "Uncategorized"
 );
 
 const statementCsv = [
@@ -246,6 +261,16 @@ assert.deepEqual(
 assert.deepEqual(
   categoriesFor("Zelle from Madison Aikins Nav0Jhdzhkdf"),
   ["Uncategorized"]
+);
+assert.deepEqual(categoriesFor("Zelle from Cedric Hong"), ["Uncategorized"]);
+assert.ok(
+  categorizedChase
+    .filter((transaction) => transaction.kind === "income")
+    .every(
+      (transaction) =>
+        transaction.category !== "Income" &&
+        transaction.category !== "Experiences"
+    )
 );
 assert.ok(
   categorizedChase

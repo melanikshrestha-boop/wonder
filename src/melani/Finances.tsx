@@ -11,6 +11,7 @@ import {
   useState,
   type ClipboardEvent,
 } from "react";
+import { pushUndo } from "../undoStack";
 import "./finance.css";
 import "./whoop-lab.css"; // Recovery-panel graph chrome (wx-panel)
 import {
@@ -1532,6 +1533,37 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     setFilterTxType("all");
   }
 
+  function filterLedgerFromChart(
+    kind: "income" | "expense",
+    category: string
+  ) {
+    const previous = {
+      reviewFilter,
+      filterQ,
+      filterCat,
+      filterKind,
+      filterTxType,
+      filterMonth,
+      tab,
+    };
+    pushUndo(`Finance ${category} filter`, () => {
+      setReviewFilter(previous.reviewFilter);
+      setFilterQ(previous.filterQ);
+      setFilterCat(previous.filterCat);
+      setFilterKind(previous.filterKind);
+      setFilterTxType(previous.filterTxType);
+      setFilterMonth(previous.filterMonth);
+      setTab(previous.tab);
+    });
+    setReviewFilter(null);
+    setFilterQ("");
+    setFilterCat(category);
+    setFilterKind(kind);
+    setFilterTxType("all");
+    setFilterMonth("all");
+    setTab("transactions");
+  }
+
   function recordCredit() {
     const score = Number(scoreInput);
     if (!Number.isFinite(score) || score < 300 || score > 850) {
@@ -2194,7 +2226,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         {/* ════════ BOOKS — capital command (not budget theater) ════════ */}
         {tab === "overview" ? (
           <div className={`wd-overview${booksExpanded ? " is-expanded" : ""}`}>
-            <AllLedgerCharts rows={txs} />
+            <AllLedgerCharts
+              rows={txs}
+              onCategoryDoubleClick={filterLedgerFromChart}
+            />
             <section className="wd-panel wd-action-board" aria-label="Finance actions">
               <div className="wd-action-board-head">
                 <div>
@@ -3492,7 +3527,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               ) : null}
 
               {filterMonth === "all" && monthBooks.length > 0 ? (
-                <AllLedgerCharts rows={ledgerChartRows} />
+                <AllLedgerCharts
+                  rows={ledgerChartRows}
+                  onCategoryDoubleClick={filterLedgerFromChart}
+                />
               ) : null}
 
               {/* Always full list — no ···, no hide */}
