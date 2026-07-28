@@ -3472,3 +3472,83 @@ select,
 .focus-overlay {
   line-height: 1 !important;
 }
+
+/* ═══════════════════════════════════════════
+   Workspace rhythm contract
+   One gap between peers; two gaps is the maximum deliberate break.
+   Fitness is the approved reference and remains untouched.
+   ═══════════════════════════════════════════ */
+:root {
+  --workspace-space: 16px;
+  --workspace-space-double: 32px;
+}
+
+.main:not(.is-fitness) :is(
+  .wd-subnav-bar,
+  .wd-subnav-left,
+  .wd-subnav-right,
+  .wd-filters-ledger,
+  .bl-filter,
+  .bl-toolbar,
+  .bl-view-tabs,
+  .bl-format-picks,
+  .bl-head-actions,
+  .collection-nav,
+  .category-nav,
+  .subcategory-nav,
+  .fx-subnav,
+  .flab-filters,
+  .ct-learn-tabs,
+  .ca-tabs,
+  .tr-sub-tabs,
+  .tr-blotter-tabs
+) {
+  column-gap: var(--workspace-space) !important;
+  row-gap: var(--workspace-space) !important;
+}
+
+/* Finance navigation is one sequence, not two groups pushed to opposite walls. */
+.main.is-finances:not(.is-fitness) .wd-subnav-bar {
+  justify-content: flex-start !important;
+  gap: var(--workspace-space) !important;
+  margin-bottom: var(--workspace-space-double) !important;
+}
+
+.main.is-finances:not(.is-fitness) .wd-subnav-left,
+.main.is-finances:not(.is-fitness) .wd-subnav-right {
+  display: contents !important;
+}
+
+.main.is-finances:not(.is-fitness) .wd-filters.wd-filters-ledger {
+  justify-content: flex-start !important;
+  gap: var(--workspace-space) !important;
+  margin-bottom: var(--workspace-space-double) !important;
+}
+
+/* Search occupies only its visible label until the user types. */
+.main.is-finances:not(.is-fitness)
+  .wd-filters-ledger
+  input[type="search"] {
+  flex-basis: 8ch !important;
+  width: 8ch !important;
+  min-width: 8ch !important;
+  max-width: 12ch !important;
+}
+
+/* Top-level tab/filter rows never create a decorative empty gulf. */
+.main:not(.is-fitness) :is(
+  .wd-subnav-bar,
+  .bl-filter,
+  .collection-nav,
+  .category-nav,
+  .subcategory-nav,
+  .fx-subnav,
+  .flab-filters,
+  .ct-learn-tabs,
+  .ca-tabs,
+  .tr-sub-tabs,
+  .tr-blotter-tabs
+) {
+  justify-content: flex-start !important;
+  max-width: 100%;
+}

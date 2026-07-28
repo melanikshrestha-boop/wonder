@@ -12,6 +12,8 @@
   --muted: #8f929a;
   --line: #dedfe4;
   --accent: #2468f2;
+  --workspace-space: 16px;
+  --workspace-space-double: 32px;
   background: var(--paper);
 }
 
@@ -41,7 +43,7 @@ body,
 .collection-nav {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: var(--workspace-space);
   margin: 0;
   padding: 0 0 12px;
   border: 0;
@@ -97,7 +99,7 @@ body,
 .wardrobe-kpis {
   display: flex;
   align-items: baseline;
-  gap: 0;
+  gap: var(--workspace-space);
   margin: 0 0 14px;
   color: var(--muted);
   font-size: 12px;
@@ -106,6 +108,7 @@ body,
 
 .wardrobe-kpis span {
   display: inline;
+  flex: 0 0 auto;
   min-width: 0;
   padding: 0;
   border: 0;
@@ -118,8 +121,7 @@ body,
 }
 
 .wardrobe-kpis span + span::before {
-  content: " · ";
-  white-space: pre;
+  content: "";
 }
 
 .wardrobe-kpis strong {
@@ -131,7 +133,7 @@ body,
 
 .category-nav {
   width: 100%;
-  gap: 24px;
+  gap: var(--workspace-space);
   margin: 0;
   padding: 0 0 11px;
   border-bottom: 1px solid var(--line);
@@ -143,7 +145,7 @@ body,
 
 .subcategory-nav {
   width: 100%;
-  gap: 20px;
+  gap: var(--workspace-space);
   margin: 10px 0 0;
   padding: 0;
 }
@@ -160,7 +162,7 @@ body,
 /* Daily Looks is a report, not an ecommerce card. */
 .daily-gen {
   margin-top: 4px;
-  margin-bottom: 42px;
+  margin-bottom: var(--workspace-space-double);
   padding: 0 34px;
   border: 0;
   border-radius: 0;
@@ -718,7 +720,7 @@ button.gallery-item .gallery-item-retail {
 
   .collection-nav,
   .category-nav {
-    gap: 22px;
+    gap: var(--workspace-space);
   }
 
   .daily-gen {

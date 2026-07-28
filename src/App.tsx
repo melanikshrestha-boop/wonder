@@ -431,7 +431,8 @@ export default function App() {
             : ""
         }${activePage.id === "pg-habits" ? " is-habits" : ""}${
           isHygienePage(activePage.id) ? " is-hygiene" : ""
-        }`}
+        }${isFitnessPage(activePage.id) ? " is-fitness" : ""}`}
+        data-page-id={activePage.id}
       >
         <header className="topbar">
           <button
