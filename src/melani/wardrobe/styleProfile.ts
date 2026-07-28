@@ -81,7 +81,7 @@ export const STYLE_BRANDS: BrandLane[] = [
     searchUrl: (q) =>
       `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(`Anti Social Social Club ${q || "hoodie"}`)}`,
   },
-  // —— Minimalist tees (billionaire-simple: understated, cotton, jeans-ready) ——
+  // —— Minimalist tees (understated, cotton, jeans-ready) ——
   {
     brand: "Everlane",
     lanes: ["tees"],
@@ -109,7 +109,7 @@ export const STYLE_BRANDS: BrandLane[] = [
   {
     brand: "Buck Mason",
     lanes: ["tees"],
-    why: "US slub cotton tees — soft hand, understated, billionaire-uniform energy.",
+    why: "US slub cotton tees — soft hand, understated, easy-uniform energy.",
     homeUrl: "https://www.buckmason.com/collections/mens-tees",
     searchUrl: (q) =>
       `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(`Buck Mason ${q || "slub tee"} 100% cotton`)}`,
@@ -121,11 +121,11 @@ export const MELANI_STYLE = {
   title: "Melani Style DNA",
   oneLiner:
     "Edikted baggy denim · Uniqlo cotton · understated tops. Simple uniforms that save mental energy.",
-  /** Quiet-luxury / decision-fatigue philosophy */
+  /** Comfort-first, low-friction outfit philosophy */
   philosophy: {
     title: "Simple uniform energy",
     note:
-      "Billionaires wear simple, understated clothing to avoid decision fatigue, protect mental energy, and look work-focused. Your version: baggy Edikted jeans + 100% cotton minimalist tees + Uniqlo comfort.",
+      "Repeat the comfortable silhouettes that already work: baggy Edikted jeans + 100% cotton minimalist tees + Uniqlo comfort.",
     rules: [
       "One silhouette, many neutrals — black, white, heather gray, navy, bone.",
       "No loud seasonal graphics on everyday tees (hoodies can flex).",

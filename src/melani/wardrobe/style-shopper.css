@@ -1,14 +1,19 @@
 /* Style Shopper — cream desk, same house as wardrobe gallery */
 .ss-root {
-  padding: 8px 52px 64px;
+  padding: 24px 52px 64px;
   color: #191919;
-  max-width: 1100px;
+  max-width: none;
 }
 
 .ss-hero {
   margin: 0 0 28px;
-  padding: 0 0 22px;
-  border-bottom: 1px solid rgba(25, 22, 18, 0.12);
+  padding: 26px;
+  border: 0;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(180,130,115,.16), transparent 31%),
+    rgba(255,252,246,.68);
+  box-shadow: 0 18px 45px rgba(25,22,18,.07);
 }
 
 .ss-eyebrow {
@@ -22,9 +27,9 @@
 
 .ss-hero h2 {
   margin: 0 0 10px;
-  font-size: clamp(28px, 4vw, 40px);
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 580;
+  letter-spacing: -0.04em;
   line-height: 1.05;
   color: #141210;
 }
@@ -222,9 +227,10 @@
   gap: 8px;
   padding: 16px 16px 14px;
   border: 1px solid rgba(25, 22, 18, 0.1);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.48);
   min-height: 100%;
+  box-shadow: 0 10px 28px rgba(25,22,18,.045);
 }
 
 .ss-card-top {

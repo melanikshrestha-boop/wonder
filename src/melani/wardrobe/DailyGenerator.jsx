@@ -4,9 +4,17 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OptimizedImage } from "./OptimizedImage.jsx";
+import { getFreshSavedWeather, weatherWardrobeContext } from "../weather/weatherCore";
 import "./daily-generator.css";
 
 const DAILY_KEY = "wonder-daily-outfit-v1";
+const PINTEREST_BOARD_KEY = "wonder-wardrobe-pinterest-board-v1";
+const MODES = [
+  { id: "build", label: "Comfort", note: "soft · unrestricted" },
+  { id: "everyday", label: "Everyday", note: "clean · effortless" },
+  { id: "out", label: "Going out", note: "stronger silhouette" },
+  { id: "content", label: "Content", note: "camera-aware" },
+];
 
 function todayKey() {
   const d = new Date();
@@ -81,6 +89,7 @@ function fileToDataUrl(file) {
 export function DailyGenerator({ items = [], onOpenItem }) {
   const date = todayKey();
   const fileRef = useRef(null);
+  const [mode, setMode] = useState("build");
   const [looks, setLooks] = useState([]);
   const [lookIndex, setLookIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -91,7 +100,15 @@ export function DailyGenerator({ items = [], onOpenItem }) {
   const [busy, setBusy] = useState(false);
   const [inspoItems, setInspoItems] = useState([]);
   const [inspoBusy, setInspoBusy] = useState(false);
-  const [pinterestUrl, setPinterestUrl] = useState("");
+  const [pinterestUrl, setPinterestUrl] = useState(() => {
+    try {
+      return localStorage.getItem(PINTEREST_BOARD_KEY) || "";
+    } catch {
+      return "";
+    }
+  });
+  const [showInspo, setShowInspo] = useState(false);
+  const [weatherContext, setWeatherContext] = useState(null);
   const [dragOver, setDragOver] = useState(false);
 
   const closetReady = Array.isArray(items) && items.length > 0;
@@ -115,14 +132,19 @@ export function DailyGenerator({ items = [], onOpenItem }) {
     setLoading(true);
     setError("");
     try {
+      const snapshot = await getFreshSavedWeather();
+      const liveWeather = snapshot ? weatherWardrobeContext(snapshot) : null;
+      if (liveWeather) setWeatherContext(liveWeather);
       const response = await fetch("/api/wardrobe/recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode: "everyday",
+          mode,
           count: 8,
-          temperatureF: 68,
-          rain: false,
+          temperatureF: liveWeather?.temperatureF ?? 68,
+          rain: Boolean(liveWeather?.rain),
+          weatherLocation: liveWeather?.location,
+          weatherCondition: liveWeather?.condition,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -169,7 +191,7 @@ export function DailyGenerator({ items = [], onOpenItem }) {
     } finally {
       setLoading(false);
     }
-  }, [closetReady, date]);
+  }, [closetReady, date, mode]);
 
   useEffect(() => {
     refreshInspo();
@@ -318,10 +340,7 @@ export function DailyGenerator({ items = [], onOpenItem }) {
       return;
     }
     setInspoBusy(true);
-    setStatusNote("Step 1/3 · Opening your board in headless Chromium…");
-    // Fake staged status so she knows work is real (scrape is 15–40s)
-    const stageTimer = setTimeout(() => setStatusNote("Step 2/3 · Scrolling pin grid and downloading photos…"), 6000);
-    const stageTimer2 = setTimeout(() => setStatusNote("Step 3/3 · Extracting fashion palettes + re-ranking looks…"), 18000);
+    setStatusNote("Importing the public pins and reading their palettes…");
     try {
       const res = await fetch("/api/wardrobe/inspo/pinterest", {
         method: "POST",
@@ -331,7 +350,11 @@ export function DailyGenerator({ items = [], onOpenItem }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Pinterest import failed.");
       if (!data.imported) throw new Error("No real pin photos imported — board may be private or empty.");
-      setPinterestUrl("");
+      try {
+        localStorage.setItem(PINTEREST_BOARD_KEY, url);
+      } catch {
+        /* the live import still works when storage is unavailable */
+      }
       await refreshInspo();
       setStatusNote(
         data.kind === "board"
@@ -343,8 +366,6 @@ export function DailyGenerator({ items = [], onOpenItem }) {
     } catch (err) {
       setStatusNote(err instanceof Error ? err.message : "Pinterest import failed.");
     } finally {
-      clearTimeout(stageTimer);
-      clearTimeout(stageTimer2);
       setInspoBusy(false);
     }
   };
@@ -395,9 +416,9 @@ export function DailyGenerator({ items = [], onOpenItem }) {
 
   if (!closetReady) {
     return (
-      <section className="daily-gen" aria-label="Daily cloth generator">
+      <section className="daily-gen" aria-label="Smart outfit generator">
         <header className="daily-gen__head">
-          <p className="daily-gen__eyebrow">Daily cloth generator</p>
+          <p className="daily-gen__eyebrow">Smart outfit generator</p>
           <h2 className="daily-gen__title">Import pieces to unlock today&apos;s look</h2>
         </header>
         <p className="daily-gen__empty">
@@ -408,12 +429,12 @@ export function DailyGenerator({ items = [], onOpenItem }) {
   }
 
   return (
-    <section className="daily-gen" aria-label="Daily cloth generator">
+    <section className="daily-gen" aria-label="Smart outfit generator">
       <header className="daily-gen__head">
         <div className="daily-gen__head-text">
-          <p className="daily-gen__eyebrow">Daily cloth generator</p>
+          <p className="daily-gen__eyebrow">Smart outfit generator · {prettyDate(date)}</p>
           <h2 className="daily-gen__title">
-            {prettyDate(date)}
+            Today&apos;s comfort-first edit
             {look?.vibes?.length ? (
               <span className="daily-gen__inspo-badge" title="Outfit vibe tags from knowledge base">
                 {look.vibes.slice(0, 3).join(" · ")}
@@ -428,20 +449,47 @@ export function DailyGenerator({ items = [], onOpenItem }) {
                 {activeInspo.length} inspo
               </span>
             ) : null}
+            {weatherContext ? (
+              <span className="daily-gen__weather-badge">
+                {Math.round(weatherContext.temperatureF)}° · {weatherContext.condition}
+              </span>
+            ) : null}
           </h2>
           <p className="daily-gen__sub">
-            Taste engine — proportion, color harmony, texture, and your inspo vibes. Not color-matching scores.
+            Built from your real closet, current weather, comfort rules, fit balance, and the Pinterest references you choose.
           </p>
         </div>
         <div className="daily-gen__actions-top">
-          <button type="button" className="daily-gen__btn ghost" onClick={reshuffle} disabled={loading || busy || inspoBusy}>
-            Reshuffle day
+          <button type="button" className="daily-gen__btn ghost" onClick={() => setShowInspo((current) => !current)}>
+            {activeInspo.length ? `Pinterest · ${activeInspo.length}` : "Pinterest & inspo"}
+          </button>
+          <button type="button" className="daily-gen__btn primary" onClick={reshuffle} disabled={loading || busy || inspoBusy}>
+            New lineup
           </button>
         </div>
       </header>
 
+      <div className="daily-gen__modes" aria-label="Outfit purpose">
+        {MODES.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={mode === option.id ? "is-active" : ""}
+            aria-pressed={mode === option.id}
+            onClick={() => {
+              setMode(option.id);
+              setStatusNote("");
+              setWornToday(false);
+            }}
+          >
+            <strong>{option.label}</strong>
+            <span>{option.note}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Inspo rail — drop zone + Pinterest + filmstrip */}
-      <div
+      {showInspo ? <div
         className={`daily-gen__inspo${dragOver ? " is-drag" : ""}`}
         onDragEnter={(e) => {
           e.preventDefault();
@@ -458,7 +506,7 @@ export function DailyGenerator({ items = [], onOpenItem }) {
           <div>
             <p className="daily-gen__inspo-label">Style inspo</p>
             <p className="daily-gen__inspo-hint">
-              Drop fit screenshots · paste pin links (you can paste many). Board URLs often get blocked by Pinterest login walls.
+              Drop outfit screenshots or paste a public Pinterest profile, board, or pin.
             </p>
           </div>
           <div className="daily-gen__inspo-actions">
@@ -542,7 +590,7 @@ export function DailyGenerator({ items = [], onOpenItem }) {
             No inspo yet — drop a fit photo or connect a public Pinterest board so today&apos;s generator has a color target.
           </p>
         )}
-      </div>
+      </div> : null}
 
       {loading ? (
         <p className="daily-gen__status">Generating today&apos;s look…</p>

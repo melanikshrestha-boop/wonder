@@ -7,6 +7,77 @@ import { DailyGenerator } from "./DailyGenerator.jsx";
 
 const STORAGE_KEY = "open-wardrobe-edits-v1";
 const DELETED_STORAGE_KEY = "open-wardrobe-deleted-v1";
+const SHOP_WANTS_KEY = "wonder-style-shopper-wants-v1";
+const PINTEREST_BOARD_KEY = "wonder-wardrobe-pinterest-board-v1";
+const RESALE_FIX_KEY = "wonder-wardrobe-resale-correction-2026-07-27";
+
+function isOriginalResalePiece(item) {
+  return /anti social social club.*hoodie|fear of god essentials.*hoodie/i.test(
+    String(item?.name || ""),
+  );
+}
+
+function isWantItem(item) {
+  return item?.role === "wishlist"
+    || (item?.tags || []).some((tag) => String(tag).toLowerCase() === "want");
+}
+
+function isForSaleItem(item) {
+  return Boolean(item?.forSale) && !isWantItem(item);
+}
+
+function readShopWants() {
+  try {
+    const rows = JSON.parse(localStorage.getItem(SHOP_WANTS_KEY) || "[]");
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
+function shopWantToItem(row) {
+  const lane = String(row.lane || row.tags?.[0] || "").toLowerCase();
+  const part =
+    lane === "jeans" || lane === "sweats"
+      ? "lowerbody"
+      : lane === "shoes"
+        ? "shoes"
+        : "upperbody";
+  return {
+    id: String(row.id || `shop-want-${Date.now()}`).startsWith("shop-want-")
+      ? String(row.id)
+      : `shop-want-${row.id}`,
+    name: row.name || "Saved find",
+    brand: row.brand || "",
+    part,
+    role: "wishlist",
+    tags: [...new Set([...(row.tags || []), "want", "wishlist"])],
+    productRef: row.productRef || row.url || "",
+    retailPrice: row.price ?? null,
+    retailCurrency: row.currency || "USD",
+    image: row.image || null,
+    thumbnail: row.image || null,
+    savedAt: row.savedAt || new Date().toISOString(),
+    source: "style-shopper",
+  };
+}
+
+function productUrlForItem(item) {
+  const candidate = String(item?.productRef || item?.url || "").trim();
+  if (/^https?:\/\//i.test(candidate)) return candidate;
+  if (/handball spezial/i.test(item?.name || "") && /bd7632/i.test(candidate)) {
+    return "https://www.adidas.com/us/handball-spezial-shoes/BD7632.html";
+  }
+  return `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(
+    [item?.brand, item?.name].filter(Boolean).join(" "),
+  )}`;
+}
+
+function pinterestSearchForItem(item) {
+  return `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(
+    [item?.name, "outfit"].filter(Boolean).join(" "),
+  )}`;
+}
 
 /**
  * Closet nav — top-level sections Melani asked for.
@@ -420,13 +491,20 @@ function GalleryItem({
     >
       {/* Stacked front/back — hover or keyboard focus reveals the back (logo/print side) */}
       <span className="gallery-item-media" aria-hidden="true">
-        <OptimizedImage
-          className="gallery-img gallery-img-front"
-          src={front}
-          alt=""
-          sizes={sizes}
-          breakpoints={breakpoints}
-        />
+        {front ? (
+          <OptimizedImage
+            className="gallery-img gallery-img-front"
+            src={front}
+            alt=""
+            sizes={sizes}
+            breakpoints={breakpoints}
+          />
+        ) : (
+          <span className="gallery-item-lettermark">
+            <span>{item.brand || "Saved"}</span>
+            <small>Product link ready</small>
+          </span>
+        )}
         {hasBack ? (
           <OptimizedImage
             className="gallery-img gallery-img-back"
@@ -931,10 +1009,26 @@ export function App() {
   const [activeNav, setActiveNav] = useState("all");
   /** Sub: hoodies | tees | jeans | sweats | null (= whole section) */
   const [activeSub, setActiveSub] = useState(null);
-  const [collection, setCollection] = useState("wardrobe");
+  const [collection, setCollection] = useState("looks");
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pinterestBoard, setPinterestBoard] = useState(() => {
+    try {
+      return localStorage.getItem(PINTEREST_BOARD_KEY) || "";
+    } catch {
+      return "";
+    }
+  });
+  const [pinterestBoardInput, setPinterestBoardInput] = useState(() => {
+    try {
+      return localStorage.getItem(PINTEREST_BOARD_KEY) || "";
+    } catch {
+      return "";
+    }
+  });
+  const [pinterestStatus, setPinterestStatus] = useState("");
+  const [pinterestBusy, setPinterestBusy] = useState(false);
 
   useEffect(() => {
     fetch("/api/import/wardrobe", { cache: "no-store" })
@@ -946,7 +1040,36 @@ export function App() {
         const edits = readEdits();
         const deleted = readDeletedItems();
         const visibleItems = loadedItems.filter((item) => !deleted.has(item.id));
-        setItems(visibleItems.map((item) => mergeLibraryEdit(item, edits[item.id])));
+        let libraryItems = visibleItems.map((item) => mergeLibraryEdit(item, edits[item.id]));
+        try {
+          if (!localStorage.getItem(RESALE_FIX_KEY)) {
+            libraryItems = libraryItems.map((item) => {
+              const shouldSell = isOriginalResalePiece(item);
+              if (Boolean(item.forSale) === shouldSell) return item;
+              const corrected = { ...item, forSale: shouldSell };
+              persistEdit(corrected);
+              fetch(`/api/wardrobe/items/${encodeURIComponent(item.id)}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ forSale: shouldSell }),
+              }).catch(() => {});
+              return corrected;
+            });
+            localStorage.setItem(RESALE_FIX_KEY, "done");
+          }
+        } catch {
+          /* the corrected library file still supplies the right default */
+        }
+        const queuedWants = readShopWants()
+          .map(shopWantToItem)
+          .filter((queued) => (
+            !deleted.has(queued.id)
+            && !libraryItems.some(
+              (item) => item.id === queued.id
+                || (queued.productRef && item.productRef === queued.productRef),
+            )
+          ));
+        setItems([...libraryItems, ...queuedWants]);
       })
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false));
@@ -958,18 +1081,14 @@ export function App() {
   const subOptions = activeNavMeta?.sub || null;
 
   const visibleItems = useMemo(() => {
-    const isWant = (item) =>
-      item.role === "wishlist" || (item.tags || []).includes("want");
     const collectionItems =
       collection === "resale"
-        // Sell = owned closet with resale pricing (retail X'd out · editable ask)
-        // Auto-lists when she sets an ask; still shows forSale pieces
-        ? items.filter((item) => !isWant(item))
+        ? items.filter(isForSaleItem)
         : collection === "want"
-          ? items.filter(isWant)
+          ? items.filter(isWantItem)
           : collection === "shop"
             ? items // shopper reads full closet (owned + want)
-            : items.filter((item) => !isWant(item)); // Owned = not wishlist
+            : items.filter((item) => !isWantItem(item)); // Closet + Looks = owned only
 
     let filtered = collectionItems;
     if (activeNav !== "all") {
@@ -1156,15 +1275,65 @@ export function App() {
     setItems((current) => current.map((item) => item.id === id ? { ...item, modeledImage } : item));
   }, []);
 
+  const connectPinterestBoard = async () => {
+    const url = pinterestBoardInput.trim();
+    if (!/^https?:\/\/(?:www\.)?pinterest\.[^/]+\//i.test(url)) {
+      setPinterestStatus("Paste a Pinterest profile, board, or pin URL.");
+      return;
+    }
+    setPinterestBusy(true);
+    setPinterestStatus("Connecting your board and reading the outfit pins…");
+    try {
+      const response = await fetch("/api/wardrobe/inspo/pinterest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Pinterest connection failed.");
+      if (!payload.imported) throw new Error("No public outfit pins were found on that link.");
+      localStorage.setItem(PINTEREST_BOARD_KEY, url);
+      setPinterestBoard(url);
+      setPinterestStatus(
+        `Connected · ${payload.imported} pin${payload.imported === 1 ? "" : "s"} now influence Daily Looks.`,
+      );
+    } catch (requestError) {
+      setPinterestStatus(requestError instanceof Error ? requestError.message : "Pinterest connection failed.");
+    } finally {
+      setPinterestBusy(false);
+    }
+  };
+
+  const ownedCount = items.filter((item) => !isWantItem(item)).length;
+  const wantCount = items.filter(isWantItem).length;
+  const saleCount = items.filter(isForSaleItem).length;
+
   return (
     <div className={`app-shell${selectedItem ? " has-selection" : ""}`}>
       <main className="gallery-pane">
         <header className="gallery-header">
           <div className="gallery-meta-row">
-            <p className="piece-count">{items.length} {items.length === 1 ? "piece" : "pieces"}</p>
+            <div>
+              <p className="piece-count">Wardrobe intelligence</p>
+              <h1 className="wardrobe-title">Comfort first. Taste always.</h1>
+              <p className="wardrobe-subtitle">
+                Real outfits from what you own, exact links for what you want, and only intentional resale.
+              </p>
+            </div>
+            <div className="wardrobe-kpis" aria-label="Wardrobe summary">
+              <span><strong>{ownedCount}</strong> closet</span>
+              <span><strong>{wantCount}</strong> wishlist</span>
+              <span><strong>{saleCount}</strong> for sale</span>
+            </div>
           </div>
           <nav className="collection-nav" aria-label="Wardrobe collections">
-            {[['wardrobe', 'Owned'], ['want', 'Want'], ['resale', 'Sell'], ['shop', 'Shop']].map(([id, label]) => (
+            {[
+              ["looks", "Daily looks"],
+              ["wardrobe", "My closet"],
+              ["want", "Wishlist"],
+              ["resale", "For sale"],
+              ["shop", "Shop assistant"],
+            ].map(([id, label]) => (
               <button
                 key={id}
                 type="button"
@@ -1176,15 +1345,15 @@ export function App() {
               >
                 {label}
                 {id === "resale"
-                  ? ` ${items.filter((item) => !(item.role === "wishlist" || (item.tags || []).includes("want"))).length}`
+                  ? ` ${saleCount}`
                   : ""}
                 {id === "want"
-                  ? ` ${items.filter((item) => item.role === "wishlist" || (item.tags || []).includes("want")).length}`
+                  ? ` ${wantCount}`
                   : ""}
               </button>
             ))}
           </nav>
-          {collection !== "shop" ? (
+          {!["shop", "looks"].includes(collection) ? (
             <>
               <nav className="category-nav" aria-label="Filter wardrobe by section">
                 {NAV.map((nav) => (
@@ -1233,39 +1402,76 @@ export function App() {
           <StyleShopper
             items={items}
             onSaveWant={(find) => {
-              // Soft-queue + open product so she can confirm before Want import
+              const row = {
+                id: `shop-want-${find.id}`,
+                name: find.name,
+                brand: find.brand,
+                lane: find.lane,
+                url: find.url,
+                price: find.price,
+                currency: find.currency,
+                tags: [...(find.tags || []), "want"],
+                productRef: find.url,
+                savedAt: new Date().toISOString(),
+              };
               try {
-                const key = "wonder-style-shopper-wants-v1";
-                const prev = JSON.parse(localStorage.getItem(key) || "[]");
-                const row = {
-                  id: find.id,
-                  name: find.name,
-                  brand: find.brand,
-                  url: find.url,
-                  price: find.price,
-                  currency: find.currency,
-                  tags: [...(find.tags || []), "want"],
-                  productRef: find.url,
-                  savedAt: new Date().toISOString(),
-                };
+                const previous = readShopWants();
                 localStorage.setItem(
-                  key,
-                  JSON.stringify([row, ...prev.filter((x) => x.id !== find.id)].slice(0, 40))
+                  SHOP_WANTS_KEY,
+                  JSON.stringify([row, ...previous.filter((item) => item.id !== row.id)].slice(0, 40))
                 );
               } catch { /* ignore */ }
-              window.open(find.url, "_blank", "noopener,noreferrer");
+              const saved = shopWantToItem(row);
+              setItems((current) => [
+                ...current.filter((item) => item.id !== saved.id),
+                saved,
+              ]);
             }}
           />
+        ) : collection === "looks" ? (
+          !loading ? (
+            <DailyGenerator
+              items={items.filter((item) => !isWantItem(item))}
+              onOpenItem={setSelectedId}
+            />
+          ) : (
+            <p className="status">Loading your outfit engine</p>
+          )
         ) : (
           <>
-            {/* Daily outfit from her real closet — always on Owned */}
-            {collection === "wardrobe" && !loading ? (
-              <DailyGenerator
-                items={items.filter(
-                  (item) => !(item.role === "wishlist" || (item.tags || []).includes("want")),
-                )}
-                onOpenItem={setSelectedId}
-              />
+            {collection === "want" ? (
+              <section className="wishlist-bridge" aria-label="Pinterest connection">
+                <div>
+                  <p className="wishlist-bridge-label">Pinterest taste connection</p>
+                  <h2>Make the generator dress from your visual world.</h2>
+                  <p>Paste your profile, one fashion board, or a pin. Wonder saves the link and uses those colors and silhouettes in Daily Looks.</p>
+                </div>
+                <div className="wishlist-bridge-form">
+                  <input
+                    type="url"
+                    inputMode="url"
+                    value={pinterestBoardInput}
+                    onChange={(event) => setPinterestBoardInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        connectPinterestBoard();
+                      }
+                    }}
+                    placeholder="https://www.pinterest.com/your-name/your-fashion-board/"
+                    aria-label="Your Pinterest board"
+                  />
+                  <button type="button" onClick={connectPinterestBoard} disabled={pinterestBusy}>
+                    {pinterestBusy ? "Connecting…" : pinterestBoard ? "Refresh board" : "Connect Pinterest"}
+                  </button>
+                </div>
+                <div className="wishlist-bridge-foot">
+                  {pinterestStatus ? <span role="status">{pinterestStatus}</span> : <span>Public boards and individual pins work best.</span>}
+                  {pinterestBoard ? (
+                    <a href={pinterestBoard} target="_blank" rel="noreferrer">Open my Pinterest ↗</a>
+                  ) : null}
+                </div>
+              </section>
             ) : null}
 
             {error && <p className="status error">{error}</p>}
@@ -1283,9 +1489,9 @@ export function App() {
             {!error && !loading && items.length > 0 && !visibleItems.length && (
               <p className="status empty">
                 {collection === "resale"
-                  ? "Nothing to sell yet — add pieces on Owned first."
+                  ? "Nothing is marked for sale. Open a closet piece and move it to the resale rack."
                   : collection === "want"
-                    ? "No want pieces yet. Mark something as wishlist when you covet it."
+                    ? "No wishlist pieces yet. Save exact product links from Shop assistant."
                     : "No pieces in this view."}
               </p>
             )}
@@ -1301,17 +1507,28 @@ export function App() {
                   <span className="gallery-section-count">{section.items.length}</span>
                 </h2>
                 <div className="gallery-grid">
-                  {section.items.map((item) => (
-                    <GalleryItem
-                      key={item.id}
-                      item={item}
-                      selected={selectedId === item.id}
-                      onOpen={setSelectedId}
-                      hideWantBadge={collection === "want"}
-                      sellMode={collection === "resale"}
-                      onAskingPriceChange={updateAskingPrice}
-                    />
-                  ))}
+                  {section.items.map((item) => {
+                    const card = (
+                      <GalleryItem
+                        item={item}
+                        selected={selectedId === item.id}
+                        onOpen={setSelectedId}
+                        hideWantBadge={collection === "want"}
+                        sellMode={collection === "resale"}
+                        onAskingPriceChange={updateAskingPrice}
+                      />
+                    );
+                    if (collection !== "want") return <div key={item.id} className="gallery-card-shell">{card}</div>;
+                    return (
+                      <article key={item.id} className="wishlist-card-shell">
+                        {card}
+                        <div className="wishlist-card-actions">
+                          <a href={productUrlForItem(item)} target="_blank" rel="noreferrer">Shop exact item ↗</a>
+                          <a href={pinterestSearchForItem(item)} target="_blank" rel="noreferrer">Style on Pinterest ↗</a>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               </section>
             ))}

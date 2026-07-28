@@ -2,7 +2,7 @@
  * Style Shopper UI — Melani DNA + closet-aware picks.
  */
 import { useMemo, useState } from "react";
-import { MELANI_STYLE, STYLE_BRANDS } from "./styleProfile";
+import { STYLE_BRANDS } from "./styleProfile";
 import {
   analyzeCloset,
   askShopper,
@@ -22,7 +22,7 @@ const LANES = [
 const PROMPTS = [
   "What should I buy next?",
   "Minimalist 100% cotton tees for my jeans",
-  "Billionaire simple tee uniform",
+  "Build me an easy everyday uniform",
   "Uniqlo cotton sweatpants",
   "Edikted baggy jeans",
   "Stussy or Scuffers hoodie",
@@ -65,7 +65,7 @@ export function StyleShopper({ items = [], onSaveWant }) {
   const saveWant = (find) => {
     if (onSaveWant) {
       onSaveWant(find);
-      setNotice(`Saved “${find.name}” intent — open Want after you import / pin the link.`);
+      setNotice(`Saved “${find.name}” to Wishlist with its product link.`);
       return;
     }
     // Fallback: stash in localStorage for wardrobe want queue
@@ -86,7 +86,7 @@ export function StyleShopper({ items = [], onSaveWant }) {
         ...prev.filter((x) => x.id !== find.id),
       ].slice(0, 40);
       localStorage.setItem(key, JSON.stringify(next));
-      setNotice(`Queued “${find.name}” · open the product page and add to Want with the link.`);
+      setNotice(`Saved “${find.name}” to Wishlist with its product link.`);
     } catch {
       setNotice("Could not save locally — open the product page instead.");
     }
@@ -95,16 +95,15 @@ export function StyleShopper({ items = [], onSaveWant }) {
   return (
     <div className="ss-root">
       <header className="ss-hero">
-        <p className="ss-eyebrow">Style shopper · your DNA</p>
-        <h2>Shop like you already dress.</h2>
-        <p>{MELANI_STYLE.oneLiner}</p>
-        <p className="ss-philosophy">{MELANI_STYLE.philosophy?.note}</p>
+        <p className="ss-eyebrow">Personal stylist · shopping assistant</p>
+        <h2>Buy less. Buy the right thing.</h2>
+        <p>Every result must clear three gates: comfortable enough to live in, compatible with your closet, and worth the price.</p>
         <ul className="ss-dna">
-          <li>Edikted baggy denim</li>
-          <li>100% cotton tees</li>
-          <li>Uniqlo cotton sweats</li>
-          <li>Stussy · Scuffers · Essentials</li>
-          <li>Simple uniform · low decision fatigue</li>
+          <li>Comfort is the veto</li>
+          <li>Baggy denim + relaxed tops</li>
+          <li>Cotton and soft fleece first</li>
+          <li>Exact product links</li>
+          <li>Closet gaps before trends</li>
         </ul>
       </header>
 
@@ -200,7 +199,7 @@ export function StyleShopper({ items = [], onSaveWant }) {
             <article key={find.id} className="ss-card">
               <div className="ss-card-top">
                 <span className="ss-brand">{find.brand}</span>
-                <span className="ss-score">{find.score} fit</span>
+                <span className="ss-score">{find.score}% fit</span>
               </div>
               <div className="ss-badges">
                 {find.cotton100 ? <span className="ss-badge ss-badge-cotton">100% cotton</span> : null}
@@ -222,10 +221,10 @@ export function StyleShopper({ items = [], onSaveWant }) {
               {find.fillsGap ? <p className="ss-meta">Fills · {find.fillsGap}</p> : null}
               <div className="ss-actions">
                 <a className="primary" href={find.url} target="_blank" rel="noreferrer">
-                  {find.source === "live-web" ? "Surf shop ↗" : "Open shop ↗"}
+                  {find.source === "live-web" ? "Open live result ↗" : "Shop exact item ↗"}
                 </a>
                 <button type="button" onClick={() => saveWant(find)}>
-                  Save want
+                  Save to Wishlist
                 </button>
               </div>
             </article>

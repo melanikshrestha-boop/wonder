@@ -1,12 +1,16 @@
 /* Daily Cloth Generator — cream paper, serif, no chrome clutter */
 
 .daily-gen {
-  margin: 18px 56px 8px;
-  padding: 20px 22px 18px;
-  border: 1px solid rgba(25, 22, 18, 0.1);
-  border-radius: 14px;
-  background: rgba(255, 252, 246, 0.55);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.55) inset;
+  margin: 24px 52px 28px;
+  padding: 26px;
+  border: 0;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 92% 4%, rgba(180, 130, 115, .13), transparent 31%),
+    rgba(255, 252, 246, 0.72);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.72) inset,
+    0 20px 55px rgba(25, 22, 18, .08);
 }
 
 .daily-gen__head {
@@ -32,9 +36,9 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  font-size: 22px;
-  font-weight: 550;
-  letter-spacing: -0.01em;
+  font-size: clamp(25px, 3.2vw, 42px);
+  font-weight: 580;
+  letter-spacing: -0.035em;
   color: #191612;
   line-height: 1.15;
 }
@@ -64,6 +68,65 @@
   font-weight: 650;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.daily-gen__weather-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(25, 22, 18, .07);
+  color: #575149;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.daily-gen__modes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.daily-gen__modes button {
+  appearance: none;
+  display: grid;
+  gap: 2px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid rgba(25, 22, 18, .11);
+  border-radius: 12px;
+  background: rgba(255,255,255,.42);
+  color: #746d64;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.daily-gen__modes button:hover,
+.daily-gen__modes button:focus-visible {
+  border-color: rgba(25, 22, 18, .28);
+  outline: none;
+}
+
+.daily-gen__modes button.is-active {
+  border-color: #211e1a;
+  background: #211e1a;
+  color: #f7f1e8;
+}
+
+.daily-gen__modes strong {
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.daily-gen__modes span {
+  color: inherit;
+  font-size: 10px;
+  opacity: .68;
 }
 
 /* —— Inspo rail (drop + Pinterest) —— */
@@ -265,14 +328,17 @@
 }
 
 .daily-gen__actions-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex: 0 0 auto;
 }
 
 .daily-gen__stage {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px 14px;
-  margin: 4px 0 12px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin: 6px 0 16px;
 }
 
 .daily-gen__piece {
@@ -281,10 +347,10 @@
   grid-template-rows: 1fr auto;
   gap: 8px;
   margin: 0;
-  padding: 10px 10px 12px;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
+  padding: 12px 12px 14px;
+  border: 1px solid rgba(25, 22, 18, .08);
+  border-radius: 16px;
+  background: rgba(255,255,255,.46);
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -293,14 +359,15 @@
 
 .daily-gen__piece:hover,
 .daily-gen__piece:focus-visible {
-  background: rgba(25, 22, 18, 0.05);
+  background: rgba(255,255,255,.78);
+  box-shadow: 0 13px 30px rgba(25,22,18,.08);
   outline: none;
 }
 
 .daily-gen__piece-media {
   display: grid;
   place-items: center;
-  min-height: 140px;
+  min-height: 190px;
   aspect-ratio: 4 / 5;
 }
 
@@ -349,9 +416,11 @@
 }
 
 .daily-gen__why-block {
-  margin: 0 0 14px;
-  padding: 10px 12px;
-  border-left: 2px solid rgba(110, 48, 46, 0.45);
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(110, 48, 46, .055);
 }
 
 .daily-gen__why {
@@ -410,8 +479,8 @@
 
 .daily-gen__btn {
   appearance: none;
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 39px;
+  padding: 0 15px;
   border-radius: 999px;
   border: 1px solid rgba(25, 22, 18, 0.16);
   background: transparent;
@@ -487,7 +556,19 @@
   }
 
   .daily-gen__title {
-    font-size: 18px;
+    font-size: 29px;
+  }
+
+  .daily-gen__actions-top {
+    width: 100%;
+  }
+
+  .daily-gen__actions-top .daily-gen__btn {
+    flex: 1;
+  }
+
+  .daily-gen__modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .daily-gen__pinterest {

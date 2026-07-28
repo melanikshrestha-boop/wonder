@@ -215,7 +215,7 @@ const CURATED: Omit<ShopFind, "score" | "source">[] = [
     ],
     tags: ["hoodie", "essentials", "fog"],
   },
-  // —— Minimalist 100% cotton tees (decision-fatigue uniform) ——
+  // —— Minimalist 100% cotton tees (easy everyday uniform) ——
   {
     id: "cur-tee-uniqlo-crew",
     name: "Uniqlo Crew Neck T-Shirt — 100% cotton blanks",
@@ -225,7 +225,7 @@ const CURATED: Omit<ShopFind, "score" | "source">[] = [
     currency: "USD",
     url: "https://www.uniqlo.com/us/en/search?q=crew%20neck%20t-shirt%20100%25%20cotton",
     why: [
-      "Billionaire-simple: one cut, every neutral — zero outfit stress.",
+      "One proven cut in useful neutrals makes getting dressed easy.",
       "Confirm fabric line says 100% cotton before cart.",
       "Tucks or hangs clean over Edikted Petite Raelynn baggy jeans.",
     ],
@@ -511,43 +511,60 @@ export function analyzeCloset(items: ClosetPiece[]): ClosetInsight {
 }
 
 function scoreFind(find: Omit<ShopFind, "score" | "source">, insight: ClosetInsight, query = ""): number {
-  let s = 55;
+  let s = 38;
   const brandHit = STYLE_BRANDS.find(
     (b) => b.brand.toLowerCase() === find.brand.toLowerCase()
   );
-  if (brandHit) s += 18;
-  if (find.lane === "sweats" && /uniqlo/i.test(find.brand)) s += 12;
-  if (find.lane === "jeans" && /edikted/i.test(find.brand)) s += 12;
-  if (find.lane === "hoodies" && /stussy|scuffers|essentials|cold culture/i.test(find.brand)) s += 10;
-  if (find.lane === "tees" && /uniqlo|everlane|cos|arket|buck mason|stussy/i.test(find.brand)) s += 12;
-  if (find.fabricNote && /cotton/i.test(find.fabricNote)) s += 8;
-  if (find.cotton100) s += 14; // hard prefer 100% cotton
-  if (find.minimalist) s += 8;
-  if (find.fitNote && /baggy|relaxed|oversized|wide|boxy/i.test(find.fitNote)) s += 6;
-  if (find.fillsGap && insight.gaps.some((g) => g.toLowerCase().includes(find.lane))) s += 8;
-  if (find.fillsGap) s += 5;
-  if (find.pairsWith && /jean|denim|raelynn/i.test(find.pairsWith)) s += 4;
+  const fabric = String(find.fabricNote || "").toLowerCase();
+  const fit = String(find.fitNote || "").toLowerCase();
+  const isSoft = /soft|fleece|sweat|jersey|slub/.test(fabric);
+  const isRelaxed = /baggy|relaxed|oversized|wide|boxy|open-hem/.test(fit);
+  if (brandHit) s += 7;
+  if (find.lane === "sweats" && /uniqlo/i.test(find.brand)) s += 9;
+  if (find.lane === "jeans" && /edikted/i.test(find.brand)) s += 7;
+  if (find.lane === "hoodies" && /stussy|scuffers|essentials|cold culture/i.test(find.brand)) s += 7;
+  if (find.lane === "tees" && /uniqlo|everlane|cos|arket|buck mason|stussy/i.test(find.brand)) s += 7;
+  if (/cotton/.test(fabric)) s += 5;
+  if (find.cotton100) s += 9;
+  if (find.minimalist) s += 5;
+  if (isSoft) s += 7;
+  if (isRelaxed) s += 8;
+  if (find.fillsGap && insight.gaps.some((gap) => gap.toLowerCase().includes(find.lane))) s += 5;
+  if (find.fillsGap) s += 3;
+  if (find.pairsWith && /jean|denim|raelynn/i.test(find.pairsWith)) s += 3;
+  if ((find.tags || []).includes("owned") || /\byou own\b/i.test(find.name)) s -= 32;
+  if (/scratchy|shiny|performance poly|poly shell/.test(fabric)) s -= 24;
+  if (find.price != null) {
+    const budget = MELANI_STYLE.budgetHints[find.lane as keyof typeof MELANI_STYLE.budgetHints];
+    if (budget && find.price >= budget.low && find.price <= budget.high) s += 4;
+    if (budget && find.price > budget.high * 1.35) s -= 8;
+  }
   const q = query.toLowerCase();
   if (q) {
-    if (find.name.toLowerCase().includes(q) || find.brand.toLowerCase().includes(q)) s += 10;
-    if (find.tags.some((t) => q.includes(t) || t.includes(q))) s += 6;
-    if (q.includes("cotton") && (find.cotton100 || (find.fabricNote && /cotton/i.test(find.fabricNote)))) s += 12;
-    if (/100\s*%?\s*cotton|pure cotton/.test(q) && find.cotton100) s += 10;
-    if (/minimal|understated|simple|uniform|billionaire|decision|quiet|blank/.test(q) && find.minimalist) s += 12;
-    if (q.includes("comfort") && find.lane === "sweats") s += 10;
+    if (find.name.toLowerCase().includes(q) || find.brand.toLowerCase().includes(q)) s += 8;
+    if (find.tags.some((tag) => q.includes(tag) || tag.includes(q))) s += 5;
+    if (q.includes("cotton") && (find.cotton100 || /cotton/.test(fabric))) s += 8;
+    if (/100\s*%?\s*cotton|pure cotton/.test(q) && find.cotton100) s += 7;
+    if (/minimal|understated|simple|uniform|decision|quiet|blank/.test(q) && find.minimalist) s += 7;
+    if (q.includes("comfort")) {
+      if (find.lane === "sweats") s += 8;
+      if (isSoft) s += 8;
+      if (isRelaxed) s += 7;
+      if (find.lane === "jeans" && /rigid/.test(fabric)) s -= 8;
+    }
     if (q.includes("hoodie") && find.lane === "hoodies") s += 8;
     if ((q.includes("jean") || q.includes("denim")) && find.lane === "jeans") s += 8;
     if (q.includes("sweat") && find.lane === "sweats") s += 8;
     if (/\btee|t-shirt|tshirt\b/.test(q) && find.lane === "tees") s += 10;
     // poly is a hard no for her everyday tees
-    if (/poly|performance|dri-?fit/.test(q) === false && find.fabricNote && /poly/i.test(find.fabricNote)) s -= 20;
+    if (/poly|performance|dri-?fit/.test(q) === false && /poly/.test(fabric)) s -= 16;
   }
   // de-boost if closet already heavy in that brand+lane
   const laneCount = insight.byLane[find.lane] || 0;
-  if (laneCount >= 5) s -= 6;
+  if (laneCount >= 5) s -= 10;
   // boost tees when closet is tee-poor
-  if (find.lane === "tees" && (insight.byLane.tees || 0) < 3) s += 8;
-  return Math.max(0, Math.min(100, s));
+  if (find.lane === "tees" && (insight.byLane.tees || 0) < 3) s += 7;
+  return Math.max(0, Math.min(98, s));
 }
 
 function brandSearchFinds(lane: StyleLane, query: string): ShopFind[] {
@@ -589,7 +606,7 @@ export function rankFinds(
     opts.cotton100Only || /100\s*%?\s*cotton|pure cotton|cotton only/i.test(q);
   const wantsMinimal =
     opts.minimalistOnly ||
-    /minimal|understated|simple|uniform|billionaire|decision\s*fatigue|quiet luxury|blank/i.test(q);
+    /minimal|understated|simple|uniform|decision\s*fatigue|quiet luxury|blank/i.test(q);
 
   let pool: ShopFind[] = CURATED.map((c) => ({
     ...c,
@@ -680,7 +697,7 @@ export function askShopper(text: string, items: ClosetPiece[]): ShopperReply {
   const low = q.toLowerCase() || "what should i buy";
 
   const wantsMinimal =
-    /minimal|understated|simple|uniform|billionaire|decision\s*fatigue|quiet|blank tee|blank top/i.test(
+    /minimal|understated|simple|uniform|decision\s*fatigue|quiet|blank tee|blank top/i.test(
       low
     );
   const wantsCotton = /100\s*%?\s*cotton|pure cotton|cotton only|cotton tee/i.test(low);
@@ -762,11 +779,11 @@ export function askShopper(text: string, items: ClosetPiece[]): ShopperReply {
 
   if (finds.length) {
     lines.push("");
-    lines.push("Top picks (Live web cards open Google Shopping — cotton-filtered):");
+    lines.push("Top picks:");
     finds.slice(0, 6).forEach((f, i) => {
       const price = f.price != null ? `$${f.price}` : "see site";
       const cotton = f.cotton100 ? " · 100% cotton" : "";
-      lines.push(`${i + 1}. ${f.name} · ${price} · fit ${f.score}${cotton}`);
+      lines.push(`${i + 1}. ${f.name} · ${price} · ${f.score}% fit${cotton}`);
       if (f.why[0]) lines.push(`   ${f.why[0]}`);
       if (f.pairsWith) lines.push(`   Pairs with: ${f.pairsWith}`);
     });
@@ -774,7 +791,7 @@ export function askShopper(text: string, items: ClosetPiece[]): ShopperReply {
 
   lines.push("");
   lines.push(
-    "Open a card to shop. On Live web: only buy if the product page says 100% cotton. Save winners to Want."
+    "Open a card to shop. On live results, only buy when the product page confirms the fabric. Save winners to Wishlist."
   );
 
   return { text: lines.join("\n"), finds, insight };
