@@ -312,6 +312,14 @@ const BRISTOL_LINE_COLORS: Record<1 | 2 | 3 | 4 | 5 | 6 | 7, string> = {
 type BristolType = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 const BRISTOL_TYPES: BristolType[] = [1, 2, 3, 4, 5, 6, 7];
 
+type BowelConsistencyPoint = {
+  day: string;
+  yes: number;
+  no: number;
+  logged: "yes" | "no";
+  look?: BowelLook;
+};
+
 /**
  * Lifetime Bristol multi-line graph — one cumulative line per type 1–7.
  * Same Recovery panel language (title · big n · soft lines · footer).
@@ -572,6 +580,270 @@ function BowelBristolLifetimeGraph({
       <footer className="wx-panel-foot">
         <span>
           n = {n} · cumulative count of each Bristol type over time
+        </span>
+      </footer>
+    </article>
+  );
+}
+
+/**
+ * Bowel consistency graph — cumulative Yes vs No.
+ * The health goal: Yes climbs, No stops climbing and becomes a flatline.
+ */
+function BowelConsistencyGraph({
+  points,
+  yes,
+  no,
+}: {
+  points: BowelConsistencyPoint[];
+  yes: number;
+  no: number;
+}) {
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const n = yes + no;
+
+  if (n < 1 || points.length < 1) {
+    return (
+      <p className="fx-bf-pie-empty">
+        Log bowel Yes or No — this becomes your consistency graph.
+      </p>
+    );
+  }
+
+  const w = 660;
+  const h = 220;
+  const padL = 42;
+  const padR = 18;
+  const padT = 26;
+  const padB = 34;
+  const plotW = w - padL - padR;
+  const plotH = h - padT - padB;
+  const maxY = Math.max(1, yes, no, ...points.map((p) => Math.max(p.yes, p.no)));
+  const yHi = maxY <= 2 ? 2 : maxY <= 5 ? 5 : Math.ceil(maxY * 1.12);
+  const yOf = (v: number) => padT + ((yHi - v) / yHi) * plotH;
+  const xOf = (i: number) =>
+    padL + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW);
+  const shortDay = (iso: string) => {
+    const m = iso.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return iso;
+    return `${Number(m[2])}/${Number(m[3])}`;
+  };
+  const stepPath = (key: "yes" | "no") => {
+    if (!points.length) return "";
+    const first = points[0];
+    let d = `M${xOf(0).toFixed(1)},${yOf(first[key]).toFixed(1)}`;
+    for (let i = 1; i < points.length; i++) {
+      const nextX = xOf(i);
+      const nextY = yOf(points[i][key]);
+      d += ` H${nextX.toFixed(1)} V${nextY.toFixed(1)}`;
+    }
+    return d;
+  };
+  const yTicks = [0, Math.round(yHi / 2), yHi].filter(
+    (v, i, a) => a.indexOf(v) === i
+  );
+  const xIdx =
+    points.length <= 4
+      ? points.map((_, i) => i)
+      : [
+          0,
+          Math.floor(points.length / 3),
+          Math.floor((points.length * 2) / 3),
+          points.length - 1,
+        ];
+  const noLastMovedAt = points.reduce(
+    (last, p, i) => (p.logged === "no" ? i : last),
+    -1
+  );
+  const noFlatFor =
+    noLastMovedAt < 0 ? points.length : Math.max(0, points.length - noLastMovedAt - 1);
+  const gap = yes - no;
+  const hover = hoverIndex == null ? null : points[hoverIndex];
+
+  function onMove(e: React.MouseEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const svgX = ((e.clientX - rect.left) / rect.width) * w;
+    let best = 0;
+    let bestD = Infinity;
+    for (let i = 0; i < points.length; i++) {
+      const d = Math.abs(xOf(i) - svgX);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    setHoverIndex(best);
+  }
+
+  return (
+    <article className="wx-panel fx-bm-consistency-graph">
+      <header className="wx-panel-head">
+        <div className="wx-panel-title-row">
+          <h3 className="wx-panel-title">BOWEL CONSISTENCY</h3>
+        </div>
+        <div className="wx-panel-nums">
+          <span className="wx-panel-v">
+            {yes}
+            <small>yes</small>
+          </span>
+          <span className="wx-panel-meta">
+            <span className="wx-panel-latest">
+              No {no} · gap {gap >= 0 ? "+" : ""}
+              {gap}
+            </span>
+            <span className="wx-panel-range">
+              No flat for {noFlatFor} log{noFlatFor === 1 ? "" : "s"}
+            </span>
+          </span>
+        </div>
+      </header>
+
+      <p className="fx-bm-consistency-note">
+        Goal: the green Yes line keeps climbing; the red No line stops moving
+        and becomes a flatline.
+      </p>
+
+      <div className="fx-bm-consistency-hover" aria-live="polite">
+        {hover ? (
+          <span>
+            {shortDay(hover.day)} · {hover.logged === "yes" ? "Yes" : "No"}{" "}
+            logged · Yes {hover.yes} · No {hover.no}
+            {hover.look ? ` · Type ${hover.look}` : ""}
+          </span>
+        ) : (
+          <span className="is-empty" aria-hidden="true">
+            Hover for the exact day
+          </span>
+        )}
+      </div>
+
+      <div className="wx-graph-wrap">
+        <svg
+          className="wx-graph is-interactive fx-bm-consistency-svg"
+          viewBox={`0 0 ${w} ${h}`}
+          role="img"
+          aria-label="Cumulative bowel movement Yes versus No count"
+          onMouseMove={onMove}
+          onMouseLeave={() => setHoverIndex(null)}
+        >
+          <text x={padL} y={16} className="fx-bm-axis-title">
+            Count
+          </text>
+          {yTicks.map((v) => (
+            <g key={v}>
+              <line
+                x1={padL}
+                x2={padL + plotW}
+                y1={yOf(v)}
+                y2={yOf(v)}
+                className="wx-grid-line"
+              />
+              <text
+                x={padL - 8}
+                y={yOf(v) + 4}
+                textAnchor="end"
+                className="wx-axis-y"
+              >
+                {v}
+              </text>
+            </g>
+          ))}
+          <line
+            x1={padL}
+            x2={padL + plotW}
+            y1={yOf(0)}
+            y2={yOf(0)}
+            className="fx-bm-axis-line"
+          />
+          <path
+            d={stepPath("no")}
+            fill="none"
+            stroke="rgba(239, 68, 68, 0.88)"
+            strokeWidth={2.35}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            pointerEvents="none"
+          />
+          <path
+            d={stepPath("yes")}
+            fill="none"
+            stroke="rgba(34, 197, 94, 0.96)"
+            strokeWidth={3}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            pointerEvents="none"
+          />
+          {points.map((p, i) => (
+            <g key={p.day} pointerEvents="none">
+              <circle
+                cx={xOf(i)}
+                cy={yOf(p.no)}
+                r={hoverIndex === i ? 4 : 2.6}
+                fill="rgba(239, 68, 68, 0.88)"
+              />
+              <circle
+                cx={xOf(i)}
+                cy={yOf(p.yes)}
+                r={hoverIndex === i ? 5 : 3}
+                fill="rgba(34, 197, 94, 0.96)"
+              />
+            </g>
+          ))}
+          {hoverIndex != null ? (
+            <line
+              x1={xOf(hoverIndex)}
+              x2={xOf(hoverIndex)}
+              y1={padT}
+              y2={padT + plotH}
+              stroke="rgba(148, 163, 184, 0.38)"
+              strokeDasharray="4 4"
+              pointerEvents="none"
+            />
+          ) : null}
+          {xIdx.map((i) => (
+            <text
+              key={points[i].day}
+              x={xOf(i)}
+              y={h - 10}
+              textAnchor="middle"
+              className="wx-axis-x"
+            >
+              {shortDay(points[i].day)}
+            </text>
+          ))}
+          <text
+            x={padL + plotW}
+            y={h - 10}
+            textAnchor="end"
+            className="fx-bm-axis-title"
+          >
+            Days
+          </text>
+          <rect
+            x={padL}
+            y={padT}
+            width={plotW}
+            height={plotH}
+            fill="transparent"
+          />
+        </svg>
+      </div>
+
+      <div className="fx-bm-line-legend" role="list">
+        <span className="fx-bm-consistency-leg is-yes" role="listitem">
+          <i aria-hidden />
+          Yes climbs · {yes}
+        </span>
+        <span className="fx-bm-consistency-leg is-no" role="listitem">
+          <i aria-hidden />
+          No flatlines · {no}
+        </span>
+      </div>
+      <footer className="wx-panel-foot">
+        <span>
+          Y-axis = cumulative count · wider green-over-red gap means the issue
+          is improving.
         </span>
       </footer>
     </article>
@@ -1366,6 +1638,26 @@ function MealsPanel() {
     () => buildBowelAudit(day, selectedBowelLook),
     [day, selectedBowelLook, usualDay]
   );
+  const bowelConsistency = useMemo(() => {
+    let yes = 0;
+    let no = 0;
+    const points = Object.entries(bowelDetail)
+      .filter(([, log]) => log?.had === true || log?.had === false)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([loggedDay, log]) => {
+        const logged = log!.had === true ? "yes" : "no";
+        if (logged === "yes") yes += 1;
+        else no += 1;
+        return {
+          day: loggedDay,
+          yes,
+          no,
+          logged,
+          look: log!.had === true ? log!.look : undefined,
+        } satisfies BowelConsistencyPoint;
+      });
+    return { points, yes, no };
+  }, [bowelDetail]);
   // Lifetime type tallies + cumulative multi-line series (one line per type)
   const bristolLife = useMemo(() => {
     const counts: Record<BristolType, number> = {
@@ -1808,6 +2100,11 @@ function MealsPanel() {
             );
           })}
         </div>
+        <BowelConsistencyGraph
+          points={bowelConsistency.points}
+          yes={bowelConsistency.yes}
+          no={bowelConsistency.no}
+        />
         {/* Lifetime Bristol 1–7 — sits where the “Went x of 7” line was */}
         <button
           type="button"

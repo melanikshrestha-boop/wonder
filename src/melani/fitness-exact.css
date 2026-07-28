@@ -849,6 +849,76 @@ html.theme-light .fx-page .fx-bm-leg-type {
 }
 
 /* Bristol multi-line lifetime graph (replaces type pie) */
+.fx-bm-consistency-graph {
+  margin: 8px 0 8px;
+  max-width: 46rem;
+}
+.fx-bm-consistency-graph .wx-panel-v {
+  color: #22c55e;
+}
+.fx-bm-consistency-note {
+  margin: 3px 0 6px;
+  max-width: 38rem;
+  color: var(--fx-muted);
+  font-size: 13px;
+  line-height: 1.18;
+}
+.fx-bm-consistency-hover {
+  min-height: 18px;
+  margin: 0 0 4px;
+  color: var(--fx-text);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.fx-bm-consistency-hover span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fx-bm-consistency-hover .is-empty {
+  visibility: hidden;
+}
+.fx-bm-consistency-graph .wx-graph-wrap {
+  position: relative;
+}
+.fx-bm-consistency-svg {
+  min-height: 210px;
+}
+.fx-bm-axis-title {
+  fill: var(--fx-muted);
+  font-size: 11px;
+  font-family: var(--fx-font);
+  letter-spacing: 0.02em;
+}
+.fx-bm-axis-line {
+  stroke: var(--fx-chart-grid);
+  stroke-width: 1.4;
+}
+.fx-bm-consistency-leg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fx-muted);
+  font-size: 12px;
+  line-height: 1;
+}
+.fx-bm-consistency-leg i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.fx-bm-consistency-leg.is-yes i {
+  background: #22c55e;
+}
+.fx-bm-consistency-leg.is-no i {
+  background: #ef4444;
+  opacity: 0.78;
+}
 .fx-bm-type-graph {
   margin: 8px 0 4px;
   max-width: 42rem;
@@ -858,6 +928,15 @@ html.theme-light .fx-page .fx-bm-leg-type {
 }
 html.theme-light .fx-page .fx-bm-type-graph .wx-panel-v {
   color: #15803d;
+}
+html.theme-light .fx-page .fx-bm-consistency-graph .wx-panel-v {
+  color: #15803d;
+}
+html.theme-light .fx-page .fx-bm-consistency-note,
+html.theme-light .fx-page .fx-bm-consistency-leg,
+html.theme-light .fx-page .fx-bm-axis-title {
+  color: rgba(26, 28, 34, 0.58);
+  fill: rgba(26, 28, 34, 0.58);
 }
 .fx-bm-line-legend {
   display: flex;
