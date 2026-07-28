@@ -202,6 +202,23 @@ assert.equal(
   ),
   "Uncategorized"
 );
+localStorage.setItem(
+  "wonder-finance-category-prefs-v1",
+  JSON.stringify({
+    income: ["Brand Deal"],
+    expense: ["Camera Gear"],
+    hidden: { income: [], expense: [] },
+  })
+);
+assert.equal(
+  normalizeTransactionCategory("Brand Deal", "Client deposit", "income"),
+  "Brand Deal"
+);
+assert.equal(
+  normalizeTransactionCategory("camera gear", "Best Buy", "expense"),
+  "Camera Gear"
+);
+localStorage.removeItem("wonder-finance-category-prefs-v1");
 
 const statementCsv = [
   "Date,Account,Type,Payee / Description,Category,Money In,Money Out,Amount (signed),Running Balance (statement),Notes",

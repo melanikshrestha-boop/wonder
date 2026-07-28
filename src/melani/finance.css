@@ -1105,6 +1105,11 @@ html body .wd strong {
   width: 100%;
 }
 
+.wd-table-wrap:has(.wd-ledger-cat-picker[open]),
+.wd-month-full:has(.wd-ledger-cat-picker[open]) {
+  overflow: visible;
+}
+
 .wd-table {
   width: 100%;
   max-width: 100%;
@@ -1266,6 +1271,222 @@ html body .wd strong {
   border-color: var(--wd-hairline) !important;
   background-color: var(--wd-panel-2) !important;
   box-shadow: none !important;
+}
+
+.wd-table.wd-edit td.wd-cat-cell {
+  position: relative;
+  overflow: visible;
+}
+
+.wd-ledger-cat-picker {
+  position: relative;
+  width: 100%;
+}
+
+.wd-ledger-cat-picker > summary {
+  list-style: none;
+}
+
+.wd-ledger-cat-picker > summary::-webkit-details-marker {
+  display: none;
+}
+
+.wd-ledger-cat-trigger {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: 26px;
+  width: 100%;
+  padding: 0 18px 0 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--wd-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'><path d='M1 1l3.5 3.5L8 1' fill='none' stroke='%23666' stroke-width='1.4' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.2rem center;
+  background-size: 9px 6px;
+}
+
+.wd-ledger-cat-trigger span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wd-ledger-cat-picker[open] .wd-ledger-cat-trigger,
+.wd-ledger-cat-trigger:hover,
+.wd-ledger-cat-trigger:focus-visible {
+  border-color: var(--wd-hairline);
+  background-color: var(--wd-panel-2);
+  outline: none;
+}
+
+.wd-ledger-cat-picker.is-review .wd-ledger-cat-trigger {
+  color: #a05a00;
+}
+
+.wd-ledger-cat-popover {
+  position: absolute;
+  z-index: 70;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  width: min(260px, 72vw);
+  max-height: 360px;
+  padding: 6px;
+  border: 1px solid rgba(26, 28, 34, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 42px rgba(24, 32, 44, 0.16);
+}
+
+.wd-ledger-cat-options {
+  display: grid;
+  gap: 1px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  max-height: 280px;
+  padding-bottom: 4px;
+}
+
+.wd-ledger-cat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  align-items: center;
+  min-height: 32px;
+  border-radius: 6px;
+}
+
+.wd-ledger-cat-row:hover,
+.wd-ledger-cat-row:focus-within,
+.wd-ledger-cat-row.is-selected {
+  background: rgba(15, 118, 110, 0.09);
+}
+
+.wd-ledger-cat-row.is-selected .wd-ledger-cat-choice {
+  color: #0f766e;
+  font-weight: 650;
+}
+
+.wd-ledger-cat-choice,
+.wd-ledger-cat-edit-btn,
+.wd-ledger-cat-plus,
+.wd-ledger-cat-edit button,
+.wd-ledger-cat-add button {
+  border: 0;
+  background: transparent;
+  color: var(--wd-text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.wd-ledger-cat-choice {
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 8px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wd-ledger-cat-edit-btn {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--wd-tertiary);
+  opacity: 0;
+}
+
+.wd-ledger-cat-row:hover .wd-ledger-cat-edit-btn,
+.wd-ledger-cat-row:focus-within .wd-ledger-cat-edit-btn {
+  opacity: 1;
+}
+
+.wd-ledger-cat-edit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px 24px;
+  gap: 2px;
+  align-items: center;
+  min-height: 34px;
+  padding: 2px;
+}
+
+.wd-ledger-cat-edit input,
+.wd-ledger-cat-add input {
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  border: 1px solid var(--wd-hairline);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--wd-text);
+  font: inherit;
+  font-size: 13px;
+  padding: 0 7px;
+  outline: none;
+}
+
+.wd-ledger-cat-edit button,
+.wd-ledger-cat-add button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.wd-ledger-cat-edit button:hover,
+.wd-ledger-cat-add button:hover,
+.wd-ledger-cat-edit button:focus-visible,
+.wd-ledger-cat-add button:focus-visible,
+.wd-ledger-cat-edit-btn:hover,
+.wd-ledger-cat-edit-btn:focus-visible {
+  background: rgba(26, 28, 34, 0.07);
+  outline: none;
+  opacity: 1;
+}
+
+.wd-ledger-cat-add {
+  display: grid;
+  min-height: 34px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(26, 28, 34, 0.08);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+.wd-ledger-cat-popover:hover .wd-ledger-cat-add,
+.wd-ledger-cat-popover:focus-within .wd-ledger-cat-add,
+.wd-ledger-cat-add.is-active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.wd-ledger-cat-plus {
+  justify-self: end;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #0f766e;
+}
+
+.wd-ledger-cat-add form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px 24px;
+  gap: 2px;
+  align-items: center;
 }
 
 .wd-table.wd-edit .num input {

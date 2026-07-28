@@ -69,6 +69,35 @@ export const EXPENSE_CATEGORIES = [
   "Other",
 ] as const;
 
+const CATEGORY_PREFS_KEY = "wonder-finance-category-prefs-v1";
+
+function storedCustomCategories(): string[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CATEGORY_PREFS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as {
+      income?: unknown;
+      expense?: unknown;
+    };
+    return [parsed.income, parsed.expense]
+      .flatMap((list) => (Array.isArray(list) ? list : []))
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function storedCategoryMatch(raw: string): string | null {
+  const low = raw.toLowerCase();
+  return (
+    storedCustomCategories().find(
+      (category) => category.toLowerCase() === low
+    ) || null
+  );
+}
+
 /**
  * Canonical category order for filters, reports, and Mel's finance tools.
  * The direction-specific arrays above drive the ledger picker.
@@ -174,6 +203,8 @@ export function normalizeCategory(
   if (!raw) return /\bzelle\b/.test(text) ? "Uncategorized" : "Other";
   if (ALIASES[raw]) return ALIASES[raw];
   if ((FINANCE_CATEGORIES as readonly string[]).includes(raw)) return raw;
+  const custom = storedCategoryMatch(raw);
+  if (custom) return custom;
   // Case-insensitive match against known labels
   const hit = FINANCE_CATEGORIES.find(
     (c) => c.toLowerCase() === raw.toLowerCase()

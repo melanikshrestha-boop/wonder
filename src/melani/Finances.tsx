@@ -10,7 +10,9 @@ import {
   useRef,
   useState,
   type ClipboardEvent,
+  type FormEvent,
 } from "react";
+import { Check, PencilSimple, Plus, X } from "@phosphor-icons/react";
 import { pushUndo } from "../undoStack";
 import "./finance.css";
 import "./whoop-lab.css"; // Recovery-panel graph chrome (wx-panel)
@@ -23,8 +25,6 @@ import {
 import {
   categoriesForKind,
   cleanMerchant,
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
   normalizeImportedTransactionCategory,
   normalizeTransactionCategory,
   zellePurposeCategory,
@@ -268,6 +268,117 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   },
 ];
 
+const CATEGORY_PREFS_KEY = "wonder-finance-category-prefs-v1";
+const LOCKED_CATEGORY_NAMES = new Set(["Uncategorized"]);
+
+type CategoryPrefs = {
+  income: string[];
+  expense: string[];
+  renamed: Record<TxKind, Record<string, string>>;
+};
+
+const EMPTY_CATEGORY_PREFS: CategoryPrefs = {
+  income: [],
+  expense: [],
+  renamed: { income: {}, expense: {} },
+};
+
+function cleanCategoryInput(raw: string): string {
+  return raw.replace(/\s+/g, " ").trim().slice(0, 48);
+}
+
+function dedupeCategories(categories: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const category of categories) {
+    const clean = cleanCategoryInput(category);
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(clean);
+  }
+  return out;
+}
+
+function cleanRenameMap(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, string> = {};
+  for (const [from, to] of Object.entries(raw)) {
+    const key = cleanCategoryInput(from);
+    const label = cleanCategoryInput(String(to || ""));
+    if (key && label) out[key] = label;
+  }
+  return out;
+}
+
+function loadCategoryPrefs(): CategoryPrefs {
+  if (typeof localStorage === "undefined") return EMPTY_CATEGORY_PREFS;
+  try {
+    const raw = localStorage.getItem(CATEGORY_PREFS_KEY);
+    if (!raw) return EMPTY_CATEGORY_PREFS;
+    const parsed = JSON.parse(raw) as Partial<CategoryPrefs>;
+    return {
+      income: dedupeCategories(
+        Array.isArray(parsed.income) ? parsed.income : []
+      ),
+      expense: dedupeCategories(
+        Array.isArray(parsed.expense) ? parsed.expense : []
+      ),
+      renamed: {
+        income: cleanRenameMap(parsed.renamed?.income),
+        expense: cleanRenameMap(parsed.renamed?.expense),
+      },
+    };
+  } catch {
+    return EMPTY_CATEGORY_PREFS;
+  }
+}
+
+function saveCategoryPrefs(prefs: CategoryPrefs) {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(
+      CATEGORY_PREFS_KEY,
+      JSON.stringify({
+        income: dedupeCategories(prefs.income),
+        expense: dedupeCategories(prefs.expense),
+        renamed: prefs.renamed,
+      })
+    );
+  } catch {
+    /* local-only preference; ignore storage failures */
+  }
+}
+
+function baseCategoriesForKind(kind: TxKind): string[] {
+  return categoriesForKind(kind).filter(
+    (category) => !(kind === "income" && category === "Other")
+  );
+}
+
+function categoryOptionsForPicker(
+  kind: TxKind,
+  prefs: CategoryPrefs,
+  current: string
+): string[] {
+  const currentCategory =
+    current && !(kind === "income" && current === "Other") ? [current] : [];
+  return dedupeCategories([
+    ...baseCategoriesForKind(kind),
+    ...prefs[kind],
+    ...currentCategory,
+  ]);
+}
+
+function displayCategoryName(
+  kind: TxKind,
+  category: string,
+  prefs: CategoryPrefs
+): string {
+  return prefs.renamed[kind][category] || category;
+}
+
 function normalizedLedgerCategory(tx: FinanceTx): string {
   return normalizeTransactionCategory(
     tx.category,
@@ -323,24 +434,31 @@ function LedgerFilterMenu({
 function LedgerCategoryFilter({
   kind,
   category,
+  incomeOptions,
+  expenseOptions,
+  labelFor,
   onChange,
 }: {
   kind: "all" | TxKind;
   category: string;
+  incomeOptions: string[];
+  expenseOptions: string[];
+  labelFor: (kind: TxKind, category: string) => string;
   onChange: (next: { kind: "all" | TxKind; category: string }) => void;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const [stage, setStage] = useState<"direction" | TxKind>("direction");
   const display =
     category !== "all"
-      ? category
+      ? kind === "all"
+        ? category
+        : labelFor(kind, category)
       : kind === "income"
         ? "All income"
         : kind === "expense"
           ? "All expenses"
           : "Categories";
-  const options =
-    stage === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const options = stage === "income" ? incomeOptions : expenseOptions;
 
   const choose = (next: { kind: "all" | TxKind; category: string }) => {
     onChange(next);
@@ -428,11 +546,201 @@ function LedgerCategoryFilter({
                 }
                 onClick={() => choose({ kind: stage, category: option })}
               >
-                {option}
+                {labelFor(stage, option)}
               </button>
             ))}
           </>
         )}
+      </div>
+    </details>
+  );
+}
+
+function LedgerCategoryPicker({
+  kind,
+  value,
+  options,
+  review,
+  labelFor,
+  onChange,
+  onAddCategory,
+  onRenameCategory,
+}: {
+  kind: TxKind;
+  value: string;
+  options: string[];
+  review: boolean;
+  labelFor: (category: string) => string;
+  onChange: (category: string) => void;
+  onAddCategory: (label: string) => string | null;
+  onRenameCategory: (from: string, to: string) => string | null;
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const [adding, setAdding] = useState(false);
+  const [addDraft, setAddDraft] = useState("");
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+
+  const close = () => {
+    setAdding(false);
+    setAddDraft("");
+    setEditing(null);
+    setEditDraft("");
+    if (detailsRef.current) detailsRef.current.open = false;
+  };
+
+  const startEdit = (category: string) => {
+    setAdding(false);
+    setEditing(category);
+    setEditDraft(labelFor(category));
+  };
+
+  const submitAdd = (event: FormEvent) => {
+    event.preventDefault();
+    const added = onAddCategory(addDraft);
+    if (!added) return;
+    onChange(added);
+    close();
+  };
+
+  const submitRename = (event: FormEvent) => {
+    event.preventDefault();
+    if (!editing) return;
+    const renamed = onRenameCategory(editing, editDraft);
+    if (!renamed) return;
+    close();
+  };
+
+  return (
+    <details
+      ref={detailsRef}
+      className={`wd-ledger-cat-picker${review ? " is-review" : ""}`}
+      onToggle={(event) => {
+        if (!event.currentTarget.open) close();
+      }}
+    >
+      <summary className="wd-ledger-cat-trigger">
+        <span>
+          {value === "Other" && kind === "income"
+            ? "Uncategorized"
+            : labelFor(value)}
+        </span>
+      </summary>
+      <div
+        className="wd-ledger-cat-popover"
+        role="menu"
+        aria-label={`${kind === "income" ? "Income" : "Expense"} category`}
+      >
+        <div className="wd-ledger-cat-options">
+          {options.map((option) => {
+            const selected = value === option;
+            const canRename = !LOCKED_CATEGORY_NAMES.has(option);
+            return editing === option ? (
+              <form
+                key={option}
+                className="wd-ledger-cat-edit"
+                onSubmit={submitRename}
+              >
+                <input
+                  value={editDraft}
+                  onChange={(event) => setEditDraft(event.target.value)}
+                  autoFocus
+                  aria-label={`Rename ${labelFor(option)}`}
+                />
+                <button type="submit" aria-label="Save category name">
+                  <Check size={13} weight="bold" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Cancel rename"
+                  onClick={() => {
+                    setEditing(null);
+                    setEditDraft("");
+                  }}
+                >
+                  <X size={13} aria-hidden />
+                </button>
+              </form>
+            ) : (
+              <div
+                key={option}
+                className={`wd-ledger-cat-row${selected ? " is-selected" : ""}`}
+                role="none"
+              >
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={selected}
+                    className="wd-ledger-cat-choice"
+                  onClick={() => {
+                    onChange(option);
+                    close();
+                  }}
+                >
+                  {labelFor(option)}
+                </button>
+                {canRename ? (
+                  <button
+                    type="button"
+                    className="wd-ledger-cat-edit-btn"
+                    aria-label={`Rename ${labelFor(option)}`}
+                    onClick={() => startEdit(option)}
+                  >
+                    <PencilSimple size={12} aria-hidden />
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+        <div className={`wd-ledger-cat-add${adding ? " is-active" : ""}`}>
+          {adding ? (
+            <form onSubmit={submitAdd}>
+              <input
+                value={addDraft}
+                onChange={(event) => setAddDraft(event.target.value)}
+                placeholder={
+                  kind === "income" ? "New income category" : "New category"
+                }
+                autoFocus
+                aria-label={
+                  kind === "income"
+                    ? "New income category"
+                    : "New expense category"
+                }
+              />
+              <button type="submit" aria-label="Add category">
+                <Check size={13} weight="bold" aria-hidden />
+              </button>
+              <button
+                type="button"
+                aria-label="Cancel add category"
+                onClick={() => {
+                  setAdding(false);
+                  setAddDraft("");
+                }}
+              >
+                <X size={13} aria-hidden />
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              className="wd-ledger-cat-plus"
+              aria-label={
+                kind === "income"
+                  ? "Add income category"
+                  : "Add expense category"
+              }
+              onClick={() => {
+                setEditing(null);
+                setAdding(true);
+              }}
+            >
+              <Plus size={15} weight="bold" aria-hidden />
+            </button>
+          )}
+        </div>
       </div>
     </details>
   );
@@ -493,6 +801,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     seedFinanceUndoBaseline(initial);
     return initial;
   });
+  const [categoryPrefs, setCategoryPrefs] =
+    useState<CategoryPrefs>(loadCategoryPrefs);
 
   // Global **U** undo restores ledger from outside (topbar / key U)
   useEffect(() => {
@@ -1788,6 +2098,94 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       ...s,
       txs: s.txs.map((t) => (t.id === id ? { ...t, ...patch } : t)),
     }));
+  }
+
+  function addLedgerCategory(kind: TxKind, label: string): string | null {
+    const clean = cleanCategoryInput(label);
+    if (!clean || /^(income|zelle|other)$/i.test(clean)) return null;
+    const low = clean.toLowerCase();
+    const existing = categoryOptionsForPicker(kind, categoryPrefs, clean).find(
+      (category) =>
+        category.toLowerCase() === low ||
+        displayCategoryName(kind, category, categoryPrefs).toLowerCase() === low
+    );
+    if (existing) return existing;
+
+    const next: CategoryPrefs = {
+      ...categoryPrefs,
+      [kind]: dedupeCategories([...categoryPrefs[kind], clean]),
+    };
+    setCategoryPrefs(next);
+    saveCategoryPrefs(next);
+    return clean;
+  }
+
+  function renameLedgerCategory(
+    kind: TxKind,
+    from: string,
+    to: string
+  ): string | null {
+    const clean = cleanCategoryInput(to);
+    if (!clean || clean.toLowerCase() === from.toLowerCase()) return null;
+    if (/^(income|zelle|other)$/i.test(clean)) return null;
+    const fromIsBuiltIn = baseCategoriesForKind(kind).some(
+      (category) => category.toLowerCase() === from.toLowerCase()
+    );
+    const existing = categoryOptionsForPicker(kind, categoryPrefs, from).find(
+      (category) =>
+        category.toLowerCase() !== from.toLowerCase() &&
+        (category.toLowerCase() === clean.toLowerCase() ||
+          displayCategoryName(kind, category, categoryPrefs).toLowerCase() ===
+            clean.toLowerCase())
+    );
+    if (existing) return null;
+
+    if (fromIsBuiltIn) {
+      const next: CategoryPrefs = {
+        ...categoryPrefs,
+        renamed: {
+          ...categoryPrefs.renamed,
+          [kind]: {
+            ...categoryPrefs.renamed[kind],
+            [from]: clean,
+          },
+        },
+      };
+      setCategoryPrefs(next);
+      saveCategoryPrefs(next);
+      return from;
+    }
+
+    setCategoryPrefs((prefs) => {
+      const customWithoutOld = prefs[kind].filter(
+        (category) => category.toLowerCase() !== from.toLowerCase()
+      );
+      const next = {
+        ...prefs,
+        [kind]: dedupeCategories([...customWithoutOld, clean]),
+      };
+      saveCategoryPrefs(next);
+      return next;
+    });
+
+    patchState((s) => ({
+      ...s,
+      txs: s.txs.map((t) => {
+        if (t.kind !== kind) return t;
+        const category = normalizeTransactionCategory(
+          t.category,
+          `${t.merchant || ""} ${t.note || ""}`,
+          t.kind
+        );
+        if (category.toLowerCase() !== from.toLowerCase()) return t;
+        return { ...t, category: clean, categoryReviewed: true };
+      }),
+    }));
+
+    if (filterKind === kind && filterCat.toLowerCase() === from.toLowerCase()) {
+      setFilterCat(clean);
+    }
+    return clean;
   }
 
   function onCsvFile(file: File | null) {
@@ -3490,6 +3888,19 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 <LedgerCategoryFilter
                   kind={filterKind}
                   category={filterCat}
+                  incomeOptions={categoryOptionsForPicker(
+                    "income",
+                    categoryPrefs,
+                    filterKind === "income" ? filterCat : ""
+                  )}
+                  expenseOptions={categoryOptionsForPicker(
+                    "expense",
+                    categoryPrefs,
+                    filterKind === "expense" ? filterCat : ""
+                  )}
+                  labelFor={(nextKind, nextCategory) =>
+                    displayCategoryName(nextKind, nextCategory, categoryPrefs)
+                  }
                   onChange={(next) => {
                     setFilterKind(next.kind);
                     setFilterCat(next.category);
@@ -3683,31 +4094,40 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                     }}
                                   />
                                 </td>
-                                <td>
-                                  <select
-                                    className={`wd-cat-select${
-                                      cat === "Uncategorized"
-                                        ? " is-review"
-                                        : ""
-                                    }`}
-                                    value={cat}
-                                    autoComplete="off"
-                                    data-lpignore="true"
-                                    data-1p-ignore="true"
-                                    data-form-type="other"
-                                    onChange={(e) =>
+                                <td className="wd-cat-cell">
+                                  <LedgerCategoryPicker
+                                    kind={t.kind}
+                                    value={
+                                      cat === "Other" && t.kind === "income"
+                                        ? "Uncategorized"
+                                        : cat
+                                    }
+                                    options={categoryOptionsForPicker(
+                                      t.kind,
+                                      categoryPrefs,
+                                      cat
+                                    )}
+                                    review={cat === "Uncategorized"}
+                                    labelFor={(category) =>
+                                      displayCategoryName(
+                                        t.kind,
+                                        category,
+                                        categoryPrefs
+                                      )
+                                    }
+                                    onChange={(category) =>
                                       patchTx(t.id, {
-                                        category: e.target.value,
+                                        category,
                                         categoryReviewed: true,
                                       })
                                     }
-                                  >
-                                    {categoriesForKind(t.kind).map((c) => (
-                                      <option key={c} value={c}>
-                                        {c}
-                                      </option>
-                                    ))}
-                                  </select>
+                                    onAddCategory={(label) =>
+                                      addLedgerCategory(t.kind, label)
+                                    }
+                                    onRenameCategory={(from, to) =>
+                                      renameLedgerCategory(t.kind, from, to)
+                                    }
+                                  />
                                 </td>
                                 <td className="num wd-amt-cell">
                                   <div
