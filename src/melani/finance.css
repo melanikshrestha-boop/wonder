@@ -3055,6 +3055,20 @@ html.theme-light .wd-cad-opt.on {
   margin: 0;
 }
 
+.wd-all-ledger-verdict {
+  margin: 10px 0 0;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.wd-all-ledger-caveat {
+  max-width: 62ch;
+  margin: 5px 0 0;
+  color: var(--wd-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .wd-all-ledger-head dl {
   margin: 0;
 }

@@ -1114,6 +1114,16 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     sortDir,
   ]);
 
+  const annualLedgerRows = useMemo(
+    () =>
+      txs.filter(
+        (transaction) =>
+          transaction.date.startsWith(String(filterYear)) &&
+          !transaction.pending
+      ),
+    [txs, filterYear]
+  );
+
   /**
    * Accountant month books: every line kept, grouped by YYYY-MM.
    * Summary on top; "..." expands to full detail (no cutoffs, no slice).
@@ -1226,32 +1236,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     }
     return map;
   }, [months, worth, worthVerified]);
-
-  const visibleLedgerSummary = useMemo(() => {
-    let rev = 0;
-    let exp = 0;
-    let cardPaid = 0;
-    let movement = 0;
-    for (const t of ledger) {
-      if (isLedgerMovement(t)) {
-        movement += t.amount;
-        if (
-          t.kind === "expense" &&
-          normalizedLedgerCategory(t) === "Credit card payment"
-        ) {
-          cardPaid += t.amount;
-        }
-      } else if (t.kind === "income") rev += t.amount;
-      else exp += t.amount;
-    }
-    return {
-      rev,
-      exp,
-      cardPaid,
-      movement,
-      netWorth: worthVerified ? worth : null,
-    };
-  }, [ledger, worth, worthVerified]);
 
   const maxBar = useMemo(() => {
     const m = Math.max(1, ...bars.map((b) => Math.abs(b.net)));
@@ -3354,39 +3338,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               ) : null}
 
               {filterMonth === "all" && monthBooks.length > 0 ? (
-                <div className="wd-ledger-all-summary" aria-label="All year ledger summary">
-                  <p className="wd-month-io">
-                    <span className="wd-io-label">ALL {filterYear}</span>
-                    <span className="wd-io-gap" />
-                    <span className="wd-io-label">REV</span>
-                    <strong className="is-pos">
-                      {moneyCents(visibleLedgerSummary.rev)}
-                    </strong>
-                    <span className="wd-io-gap" />
-                    <span className="wd-io-label">EXP</span>
-                    <strong className="is-neg">
-                      {moneyCents(visibleLedgerSummary.exp)}
-                    </strong>
-                    <span className="wd-io-gap" />
-                    <span className="wd-io-label">CARD PAID</span>
-                    <strong>{moneyCents(visibleLedgerSummary.cardPaid)}</strong>
-                    <span className="wd-io-gap" />
-                    <span className="wd-io-label">NET WORTH</span>
-                    <strong
-                      className={
-                        visibleLedgerSummary.netWorth == null
-                          ? "is-unavailable"
-                          : visibleLedgerSummary.netWorth >= 0
-                            ? "is-pos"
-                            : "is-neg"
-                      }
-                    >
-                      {visibleLedgerSummary.netWorth == null
-                        ? "—"
-                        : moneyCents(visibleLedgerSummary.netWorth)}
-                    </strong>
-                  </p>
-                </div>
+                <AllLedgerCharts
+                  rows={annualLedgerRows}
+                  title={`${filterYear} income and expenses`}
+                />
               ) : null}
 
               {/* Always full list — no ···, no hide */}
