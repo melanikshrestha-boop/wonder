@@ -270,6 +270,7 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
 
 const CATEGORY_PREFS_KEY = "wonder-finance-category-prefs-v1";
 const LOCKED_CATEGORY_NAMES = new Set(["Uncategorized"]);
+const RESERVED_CUSTOM_CATEGORY_NAMES = /^(income|zelle|other)$/i;
 
 type CategoryPrefs = {
   income: string[];
@@ -357,6 +358,20 @@ function baseCategoriesForKind(kind: TxKind): string[] {
   );
 }
 
+function categoryLabelExists(
+  kind: TxKind,
+  prefs: CategoryPrefs,
+  label: string
+): boolean {
+  const low = cleanCategoryInput(label).toLowerCase();
+  if (!low) return false;
+  return categoryOptionsForPicker(kind, prefs, "").some(
+    (category) =>
+      category.toLowerCase() === low ||
+      displayCategoryName(kind, category, prefs).toLowerCase() === low
+  );
+}
+
 function categoryOptionsForPicker(
   kind: TxKind,
   prefs: CategoryPrefs,
@@ -385,6 +400,46 @@ function normalizedLedgerCategory(tx: FinanceTx): string {
     `${tx.merchant || ""} ${tx.note || ""}`,
     tx.kind
   );
+}
+
+function isBuiltInLedgerCategory(kind: TxKind, category: string): boolean {
+  const low = category.toLowerCase();
+  return baseCategoriesForKind(kind).some(
+    (candidate) => candidate.toLowerCase() === low
+  );
+}
+
+function learnCategoryPrefsFromLedger(
+  prefs: CategoryPrefs,
+  txs: FinanceTx[]
+): CategoryPrefs {
+  let next = prefs;
+  let changed = false;
+
+  const addLearned = (kind: TxKind, label: string) => {
+    const clean = cleanCategoryInput(label);
+    if (!clean || RESERVED_CUSTOM_CATEGORY_NAMES.test(clean)) return;
+    if (isBuiltInLedgerCategory(kind, clean)) return;
+    if (categoryLabelExists(kind, next, clean)) return;
+    next = {
+      ...next,
+      [kind]: dedupeCategories([...next[kind], clean]),
+    };
+    changed = true;
+  };
+
+  for (const tx of txs) {
+    const raw = cleanCategoryInput(tx.category);
+    if (!raw || RESERVED_CUSTOM_CATEGORY_NAMES.test(raw)) continue;
+    const normalized = normalizedLedgerCategory(tx);
+    const learned =
+      normalized === "Other" || normalized === "Uncategorized"
+        ? raw
+        : normalized;
+    addLearned(tx.kind, learned);
+  }
+
+  return changed ? next : prefs;
 }
 
 function isLedgerMovement(tx: FinanceTx): boolean {
@@ -1105,6 +1160,15 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     filterMonth === "all" ? String(filterYear) : ym;
   const txs = state?.txs || [];
   const accounts = state?.accounts || [];
+  useEffect(() => {
+    if (!txs.length) return;
+    setCategoryPrefs((prefs) => {
+      const next = learnCategoryPrefsFromLedger(prefs, txs);
+      if (next === prefs) return prefs;
+      saveCategoryPrefs(next);
+      return next;
+    });
+  }, [txs]);
   const spentMap = useMemo(() => spentByCategory(txs, ym), [txs, ym]);
   const income = useMemo(() => monthIncome(txs, ym), [txs, ym]);
   const expense = useMemo(() => monthExpense(txs, ym), [txs, ym]);
@@ -2102,12 +2166,12 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
 
   function addLedgerCategory(kind: TxKind, label: string): string | null {
     const clean = cleanCategoryInput(label);
-    if (!clean || /^(income|zelle|other)$/i.test(clean)) return null;
-    const low = clean.toLowerCase();
-    const existing = categoryOptionsForPicker(kind, categoryPrefs, clean).find(
+    if (!clean || RESERVED_CUSTOM_CATEGORY_NAMES.test(clean)) return null;
+    const existing = categoryOptionsForPicker(kind, categoryPrefs, "").find(
       (category) =>
-        category.toLowerCase() === low ||
-        displayCategoryName(kind, category, categoryPrefs).toLowerCase() === low
+        category.toLowerCase() === clean.toLowerCase() ||
+        displayCategoryName(kind, category, categoryPrefs).toLowerCase() ===
+          clean.toLowerCase()
     );
     if (existing) return existing;
 
@@ -2127,7 +2191,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   ): string | null {
     const clean = cleanCategoryInput(to);
     if (!clean || clean.toLowerCase() === from.toLowerCase()) return null;
-    if (/^(income|zelle|other)$/i.test(clean)) return null;
+    if (RESERVED_CUSTOM_CATEGORY_NAMES.test(clean)) return null;
     const fromIsBuiltIn = baseCategoriesForKind(kind).some(
       (category) => category.toLowerCase() === from.toLowerCase()
     );
