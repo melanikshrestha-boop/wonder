@@ -22,7 +22,6 @@ import {
   newTx,
   saveFinance,
   type FinanceState,
-  type FinanceTx,
 } from "./financeStore";
 import {
   applyTransferPair,
@@ -137,6 +136,23 @@ function matchCategory(raw: string): string | null {
   if (/card\s*pay|payment to chase|credit card/.test(q))
     return "Credit card payment";
   return normalizeCategory(raw, raw);
+}
+
+function parseCashExpenseDetail(rest: string): {
+  isCash: boolean;
+  merchant: string;
+} {
+  const isCash = /\bcash\b/i.test(rest);
+  if (!isCash) return { isCash: false, merchant: rest.trim() };
+  const merchant = rest
+    .replace(/\b(?:paid\s+)?in\s+cash\b/gi, " ")
+    .replace(/\bwith\s+cash\b/gi, " ")
+    .replace(/\bcash\s+(?:for|on|at)\b/gi, " ")
+    .replace(/\bcash\b/gi, " ")
+    .replace(/^(?:for|on|at)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return { isCash: true, merchant: merchant || "Cash purchase" };
 }
 
 /** True cash flow / burn / keep — transfer-aware */
@@ -600,7 +616,7 @@ export function planFinanceCommands(q: string): string[] {
       /^(?:log|add|record)\s+(?:an?\s+)?(?:expense\s+)?\$?\s*([\d,]+(?:\.\d{1,2})?)\s+(?:at\s+|on\s+|for\s+|to\s+)?(.+)$/i
     ) ||
     raw.match(
-      /^(?:spent|paid)\s+\$?\s*([\d,]+(?:\.\d{1,2})?)\s+(?:at\s+|on\s+|for\s+)?(.+)$/i
+      /^(?:i\s+)?(?:spent|paid)\s+\$?\s*([\d,]+(?:\.\d{1,2})?)\s+(?:at\s+|on\s+|for\s+)?(.+)$/i
     ) ||
     raw.match(
       /^(?:log|add)\s+\$?\s*([\d,]+(?:\.\d{1,2})?)\s+(.+)$/i
@@ -614,10 +630,12 @@ export function planFinanceCommands(q: string): string[] {
       category = asCat[1].trim();
       rest = rest.slice(0, asCat.index).trim();
     }
+    const cash = parseCashExpenseDetail(rest);
+    if (cash.isCash) category = "Cash";
     out.push(
       finance_log_expense({
         amount,
-        merchant: rest,
+        merchant: cash.merchant,
         category,
         kind: "expense",
       })

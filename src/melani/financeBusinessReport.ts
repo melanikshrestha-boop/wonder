@@ -127,7 +127,7 @@ const EXPENSE_COLORS = [
 const NON_OPERATING_CATEGORY = new Set([
   "Transfers",
   "Credit card payment",
-  "Gifts",
+  "Parents",
 ]);
 
 const INVESTING_TEXT =

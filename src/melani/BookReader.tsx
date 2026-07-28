@@ -23,6 +23,10 @@ import ePub, {
 } from "epubjs";
 import { newQuote, type Book, type BookQuote } from "./booksStore";
 import {
+  buildBookPageBrief,
+  type BookPageBrief,
+} from "./bookPageBrief";
+import {
   readingFontStack,
   READING_FONT_OPTIONS,
   type BooksTheme,
@@ -435,6 +439,8 @@ export function BookReader({
   const readerQuotesRef = useRef(book.quotes);
   readerQuotesRef.current = readerQuotes;
   const [notesOpen, setNotesOpen] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(false);
+  const [pageBrief, setPageBrief] = useState<BookPageBrief | null>(null);
   const [notePopover, setNotePopover] = useState<ReaderNotePopover | null>(null);
   /**
    * Free page leaf: move anywhere (x/y), spin (rotZ for circles), tilt (rotX/rotY).
@@ -1051,7 +1057,15 @@ export function BookReader({
 
     chapterRangesRef.current = [];
     activeChapterRangeRef.current = null;
-    const epub = ePub(book.readerUrl);
+    // Local-books serves one EPUB archive at a route ending in `/file`.
+    // epub.js otherwise mistakes that extensionless URL for an unpacked
+    // directory and never finds the package metadata.
+    const epub = ePub(
+      book.readerUrl,
+      book.readerUrl.includes("/api/local-books/")
+        ? { openAs: "epub" }
+        : undefined
+    );
     const cleanReaderSource = (
       readerDocument: Document,
       section: MutableSpineSection
@@ -1254,6 +1268,8 @@ export function BookReader({
         : lastProgress.current;
       lastProgress.current = nextProgress;
       setProgress(nextProgress);
+      setPageBrief(null);
+      setBriefOpen(false);
       const activeRange = rangeForSection(
         chapterRangesRef.current,
         location.start.index
@@ -1313,6 +1329,16 @@ export function BookReader({
 
     void (async () => {
       try {
+        if (/^\/api\/(?:apple-books|local-books)\//.test(book.readerUrl || "")) {
+          const available = await withTimeout(
+            fetch(book.readerUrl as string, { method: "HEAD" }),
+            3_000,
+            "book-file-check-timeout"
+          );
+          if (!available.ok) {
+            throw new Error("book-file-missing");
+          }
+        }
         let opened = false;
         let navigation:
           | {
@@ -1481,8 +1507,14 @@ export function BookReader({
             { stroke: "#76b9ff", "stroke-opacity": "0.9" }
           );
         }
-      } catch {
-        if (!disposed) setMessage("This book could not be opened.");
+      } catch (error) {
+        if (!disposed) {
+          setMessage(
+            error instanceof Error && error.message === "book-file-missing"
+              ? "This file is no longer on this Mac. Re-download it in Apple Books or add the EPUB again."
+              : "This book could not be opened."
+          );
+        }
       }
     })();
 
@@ -1614,6 +1646,73 @@ export function BookReader({
     void displayTarget(quote.location)
       .then(() => setMessage(""))
       .catch(() => setMessage("That highlight could not be opened."));
+  }
+
+  function visibleReaderText(): string {
+    try {
+      const contents = renditionRef.current?.getContents?.() as
+        | ReaderContents[]
+        | ReaderContents
+        | undefined;
+      const list = Array.isArray(contents) ? contents : contents ? [contents] : [];
+      const visibleText: string[] = [];
+      for (const content of list) {
+        const frame = content.window?.frameElement as HTMLElement | null;
+        const frameRect = frame?.getBoundingClientRect();
+        if (
+          frameRect &&
+          (frameRect.bottom < 0 ||
+            frameRect.top > window.innerHeight ||
+            frameRect.right < 0 ||
+            frameRect.left > window.innerWidth)
+        ) {
+          continue;
+        }
+        const width = content.window.innerWidth;
+        const height = content.window.innerHeight;
+        const nodes = Array.from(
+          content.document.body.querySelectorAll(
+            "h1, h2, h3, h4, p, li, blockquote"
+          )
+        ) as HTMLElement[];
+        const inView = nodes
+          .filter((node) => {
+            const rect = node.getBoundingClientRect();
+            return (
+              rect.bottom >= 0 &&
+              rect.top <= height &&
+              rect.right >= 0 &&
+              rect.left <= width
+            );
+          })
+          .map((node) => node.innerText.trim())
+          .filter(Boolean);
+        visibleText.push(
+          ...(inView.length
+            ? inView
+            : [content.document.body.innerText || ""])
+        );
+      }
+      return visibleText.join(" ").replace(/\s+/g, " ").trim();
+    } catch {
+      return "";
+    }
+  }
+
+  function togglePageBrief() {
+    if (briefOpen) {
+      setBriefOpen(false);
+      return;
+    }
+    const text = visibleReaderText();
+    const heading =
+      activeChapterRangeRef.current?.label ||
+      chaptersRef.current.find((chapter) =>
+        sameDocument(chapter.href, locationHrefRef.current || chapterHref)
+      )?.label ||
+      "Current page";
+    setPageBrief(buildBookPageBrief(text, heading));
+    setBriefOpen(true);
   }
 
   const quoteGroups = Array.from(
@@ -1945,6 +2044,60 @@ export function BookReader({
                 <strong>Your margin is clear.</strong>
                 <span>Select a passage to highlight it or add a thought.</span>
               </div>
+            )}
+          </section>
+        ) : null}
+      </aside>
+
+      <aside className={`bl-brief-dock${briefOpen ? " is-open" : ""}`}>
+        <button
+          type="button"
+          className="bl-brief-edge"
+          aria-label="Brief the visible page"
+          aria-expanded={briefOpen}
+          onClick={togglePageBrief}
+        >
+          <BookOpenText size={18} weight="fill" aria-hidden />
+          <span>Brief</span>
+        </button>
+        {briefOpen ? (
+          <section className="bl-brief-drawer" aria-label="Visible page brief">
+            <header>
+              <div>
+                <span>From the visible text</span>
+                <h2>{pageBrief?.heading || "Page brief"}</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBriefOpen(false)}
+                aria-label="Close page brief"
+              >
+                <X size={16} aria-hidden />
+              </button>
+            </header>
+            {pageBrief?.takeaways.length ? (
+              <>
+                <ol>
+                  {pageBrief.takeaways.map((takeaway) => (
+                    <li key={takeaway}>{takeaway}</li>
+                  ))}
+                </ol>
+                {pageBrief.action ? (
+                  <div className="bl-brief-action">
+                    <span>Apply</span>
+                    <p>{pageBrief.action}</p>
+                  </div>
+                ) : null}
+                <small>
+                  Extractive brief · {pageBrief.sourceWords} visible words · no
+                  ideas added outside the page
+                </small>
+              </>
+            ) : (
+              <p className="bl-brief-empty">
+                No readable paragraph is visible yet. Open a page, then tap
+                Brief again.
+              </p>
             )}
           </section>
         ) : null}

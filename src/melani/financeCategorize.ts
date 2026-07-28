@@ -6,7 +6,9 @@
 /** Fixed colors for pie / legend — same category = same color every month */
 export const CATEGORY_COLORS: Record<string, string> = {
   Income: "#3d8f6e",
+  Parents: "#0f8f7d",
   Zelle: "#5b6ee1", // most P2P volume — distinct indigo
+  Cash: "#b56f38",
   Transfers: "#1f6f8b", // account / card moves — cool teal, not Zelle
   Groceries: "#5c8d5c",
   Restaurants: "#d64545", // "bad" discretionary — red
@@ -20,7 +22,6 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Travel: "#2f84a6",
   Business: "#586f92",
   Fees: "#a66b52",
-  Gifts: "#b66e91",
   "Credit card payment": "#6b8e9e",
   Other: "#8a8580",
   Uncategorized: "#6a6560",
@@ -35,7 +36,9 @@ export const BAD_CATEGORIES = new Set(["Restaurants"]);
  */
 export const FINANCE_CATEGORIES = [
   "Income",
+  "Parents",
   "Zelle",
+  "Cash",
   "Transfers",
   "Groceries",
   "Restaurants",
@@ -49,7 +52,6 @@ export const FINANCE_CATEGORIES = [
   "Travel",
   "Business",
   "Fees",
-  "Gifts",
   "Credit card payment",
   "Other",
 ] as const;
@@ -65,13 +67,15 @@ const ALIASES: Record<string, string> = {
   Coffee: "Restaurants",
   Shopping: "Clothing",
   "Rent / housing": "Housing",
-  Cash: "Other",
+  Cash: "Cash",
   Utilities: "Utilities",
   Health: "Health",
   "Build / tools": "Business",
   Travel: "Travel",
   "Education / school": "Education",
-  "Gifts received": "Gifts",
+  Gift: "Other",
+  Gifts: "Other",
+  "Gifts received": "Other",
   Fun: "Restaurants",
   Fees: "Fees",
   Uncategorized: "Other",
@@ -112,6 +116,22 @@ export function normalizeCategory(
   return ALIASES[raw] || "Other";
 }
 
+const PARENT_NAMES = /\b(bimala|umesh)\b/i;
+
+/**
+ * Normalize with transaction direction. A payment rail is not a source:
+ * incoming Zelle from Bimala or Umesh is parent funding, while outgoing
+ * Zelle to either name remains an expense/P2P payment.
+ */
+export function normalizeTransactionCategory(
+  category: string | null | undefined,
+  merchantOrNote = "",
+  kind: "income" | "expense" = "expense"
+): string {
+  if (kind === "income" && PARENT_NAMES.test(merchantOrNote)) return "Parents";
+  return normalizeCategory(category, merchantOrNote);
+}
+
 /** Stable color for a category (after normalize when possible) */
 export function categoryColor(name: string): string {
   const n = normalizeCategory(name);
@@ -129,10 +149,6 @@ const RULES: { category: string; match: RegExp }[] = [
     category: "Credit card payment",
     match:
       /\b(payment to chase card|chase credit card payment|loan_pmt|payment thank you|autopay)\b/i,
-  },
-  {
-    category: "Gifts",
-    match: /\b(gift|family support)\b/i,
   },
   // Zelle is its own bucket — most of your payment volume lives here
   { category: "Zelle", match: /\bzelle\b/i },

@@ -22,6 +22,7 @@ export type BookSource = "manual" | "apple-books" | "wonder-page" | "local-file"
 
 export type BookFormat = "epub" | "audiobook" | "cloud" | "archive" | "manual";
 export type ReadingFormat = "digital" | "physical+digital";
+export type BookMedium = "ebook" | "audiobook" | "physical";
 
 export type BookQuote = {
   id: string;
@@ -51,6 +52,8 @@ export type Book = {
   cloudOnly?: boolean;
   chapterCount?: number;
   readingFormat?: ReadingFormat;
+  /** User-owned formats. Multi-select because one title can overlap. */
+  readingFormats?: BookMedium[];
   wonderPageId?: string;
   readerCfi?: string;
   smartBookmark?: {
@@ -80,6 +83,7 @@ export type Book = {
 };
 
 const KEY = "wonder-books-library-v1";
+const DELETED_KEY = "wonder-books-deleted-v1";
 const OPEN_REQUEST_KEY = "wonder-books-open-request-v1";
 
 export const BOOK_OPEN_EVENT = "wonder-books-open";
@@ -322,6 +326,19 @@ function normalizeStoredBook(value: Partial<Book>, index: number): Book {
     : value.source === "apple-books" || value.source === "local-file"
       ? "epub"
       : "manual";
+  const validMedia = new Set<BookMedium>(["ebook", "audiobook", "physical"]);
+  const storedMedia = Array.isArray(value.readingFormats)
+    ? value.readingFormats.filter(
+        (medium): medium is BookMedium => validMedia.has(medium as BookMedium)
+      )
+    : [];
+  const readingFormats: BookMedium[] = storedMedia.length
+    ? Array.from(new Set(storedMedia))
+    : format === "audiobook"
+      ? ["audiobook"]
+      : value.readingFormat === "physical+digital"
+        ? ["physical", "ebook"]
+        : ["ebook"];
 
   return {
     id: typeof value.id === "string" ? value.id : uid(),
@@ -348,6 +365,7 @@ function normalizeStoredBook(value: Partial<Book>, index: number): Book {
     chapterCount: Math.max(0, Number(value.chapterCount) || 0),
     readingFormat:
       value.readingFormat === "physical+digital" ? "physical+digital" : "digital",
+    readingFormats,
     wonderPageId: value.wonderPageId,
     readerCfi: value.readerCfi,
     smartBookmark:
@@ -904,61 +922,6 @@ function bookTitleKey(title: string): string {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-/** Merge explicit Want picks into the shelf without duplicating title or stable id. */
-function ensureWantBooks(books: Book[]): Book[] {
-  let next = books;
-  let changed = false;
-  const now = Date.now();
-  for (const want of ENSURE_WANT_BOOKS) {
-    const keys = new Set([
-      bookTitleKey(want.title),
-      ...(want.alsoMatch || []).map(bookTitleKey),
-    ]);
-    const matchIndex = next.findIndex(
-      (b) => b.id === want.id || keys.has(bookTitleKey(b.title))
-    );
-    if (matchIndex >= 0) {
-      // Already on shelf — optionally refile into Nic’s exact section folder
-      if (want.refile && next[matchIndex].category !== want.category) {
-        const copy = [...next];
-        copy[matchIndex] = {
-          ...copy[matchIndex],
-          category: want.category,
-          categoryOverride: true,
-          updatedAt: now,
-          notes:
-            copy[matchIndex].notes?.includes("Nic Muñoz")
-              ? copy[matchIndex].notes
-              : want.notes,
-        };
-        next = copy;
-        changed = true;
-      }
-      continue;
-    }
-    const book = newBook({
-      id: want.id,
-      title: want.title,
-      author: want.author,
-      status: "want",
-      statusOverride: true,
-      category: want.category,
-      categoryOverride: true,
-      notes: want.notes,
-      description: want.description,
-      externalUrl: want.externalUrl,
-      source: "manual",
-      format: "manual",
-      createdAt: now,
-      updatedAt: now,
-    });
-    next = [book, ...next];
-    changed = true;
-  }
-  if (changed) saveBooks(next);
-  return next;
-}
-
 export function loadBooks(): Book[] {
   let books: Book[] = [];
   try {
@@ -974,10 +937,63 @@ export function loadBooks(): Book[] {
       }
     }
   } catch {
-    /* fall through to empty + ensure-want */
+    /* fall through to an empty real library */
   }
-  // Real library + Suicidal Empathy + full Nic Muñoz Top 50 (his section folders)
-  return ensureWantBooks(books);
+  // Remove the former auto-generated recommendation shelf. Real Apple/local
+  // copies use their own source ids and remain untouched.
+  const legacySeedIds = new Set(ENSURE_WANT_BOOKS.map((book) => book.id));
+  books = books.filter(
+    (book) => !(book.source === "manual" && legacySeedIds.has(book.id))
+  );
+
+  // The owner explicitly removed these stale titles. Persist tombstones so
+  // Apple/local background sync cannot resurrect them.
+  const unwantedTitles = new Set([
+    "the five people you meet in heaven",
+    "tuesdays with morrie",
+  ]);
+  const unwanted = books.filter((book) =>
+    unwantedTitles.has(bookTitleKey(book.title))
+  );
+  unwanted.forEach(markBookDeleted);
+  books = books.filter(
+    (book) => !unwantedTitles.has(bookTitleKey(book.title))
+  );
+  // Never silently seed recommendations. This shelf mirrors the user's
+  // actual library and explicit adds only.
+  return books;
+}
+
+function loadDeletedBookKeys(): Set<string> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DELETED_KEY) || "[]");
+    return new Set(
+      Array.isArray(parsed)
+        ? parsed.filter((value): value is string => typeof value === "string")
+        : []
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+export function isBookDeleted(...keys: Array<string | undefined>): boolean {
+  const deleted = loadDeletedBookKeys();
+  return keys.some((key) => Boolean(key && deleted.has(key)));
+}
+
+export function markBookDeleted(
+  book: Pick<Book, "id" | "sourceId" | "wonderPageId">
+): void {
+  const deleted = loadDeletedBookKeys();
+  deleted.add(book.id);
+  if (book.sourceId) deleted.add(book.sourceId);
+  if (book.wonderPageId) deleted.add(`wonder-${book.wonderPageId}`);
+  try {
+    localStorage.setItem(DELETED_KEY, JSON.stringify(Array.from(deleted)));
+  } catch {
+    /* In-memory removal still works if persistence is unavailable. */
+  }
 }
 
 export function keepBook(book: Pick<Book, "title" | "category">): boolean {
@@ -1040,6 +1056,7 @@ export function newBook(partial?: Partial<Book>): Book {
     source: "manual",
     format: "manual",
     readingFormat: "digital",
+    readingFormats: ["ebook"],
     appleProgress: 0,
     localReaderProgress: 0,
     statusOverride: Boolean(partial?.status),

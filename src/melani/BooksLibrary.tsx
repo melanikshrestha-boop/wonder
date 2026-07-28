@@ -47,12 +47,14 @@ import {
   BOOK_OPEN_EVENT,
   type Book,
   type BookCategory,
+  type BookMedium,
   type BookQuote,
   type BookStatus,
   STATUS_LABEL,
   STATUS_ORDER,
   categorizeBook,
   loadBooks,
+  markBookDeleted,
   newBook,
   newQuote,
   saveBooks,
@@ -89,13 +91,21 @@ const BookReader = lazy(async () => {
 
 /**
  * Library sections (top chips):
- * All · Books · Blogs · Reading · Next · Done
- * - All: book drives + blogs underneath
+ * All · Books · Audiobooks · Blogs · Finished
+ * - All: the complete real library + blogs underneath
  * - Books: book drives only
+ * - Audiobooks: any title marked as audiobook (including overlaps)
  * - Blogs: greats blogs/essays only
- * - Reading / Next (want) / Done: status-filtered books
+ * - Finished: completed books across all formats
  */
-type Filter = "all" | "books" | "blogs" | BookStatus;
+type Filter =
+  | "all"
+  | "books"
+  | "ebooks"
+  | "audiobooks"
+  | "physical"
+  | "blogs"
+  | BookStatus;
 type GroupMode = "subjects" | "status";
 type ShelfGroup = {
   id: string;
@@ -108,10 +118,11 @@ type ShelfGroup = {
 const LIBRARY_CHIPS: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "books", label: "Books" },
+  { id: "ebooks", label: "Ebooks" },
+  { id: "audiobooks", label: "Audiobooks" },
+  { id: "physical", label: "Physical" },
   { id: "blogs", label: "Blogs" },
-  { id: "reading", label: "Reading" },
-  { id: "want", label: "Next" },
-  { id: "finished", label: "Done" },
+  { id: "finished", label: "Finished" },
 ];
 
 const LIBRARY_VIEW_KEY = "wonder-bookshelf-view-v1";
@@ -680,6 +691,14 @@ export function BooksLibrary({
     () => ({
       all: books.length + GREATS_AUTHORS.length,
       books: books.length,
+      ebooks: books.filter((book) => book.readingFormats?.includes("ebook"))
+        .length,
+      audiobooks: books.filter((book) =>
+        book.readingFormats?.includes("audiobook")
+      ).length,
+      physical: books.filter((book) =>
+        book.readingFormats?.includes("physical")
+      ).length,
       blogs: GREATS_AUTHORS.length,
       reading: stats.reading,
       want: stats.want,
@@ -689,27 +708,24 @@ export function BooksLibrary({
     [books, stats.finished, stats.reading, stats.want]
   );
 
-  const resumeBook = useMemo(
-    () =>
-      [...books]
-        .filter(
-          (book) =>
-            Boolean(book.readerUrl) &&
-            book.status !== "finished" &&
-            (Boolean(book.smartBookmark) ||
-              (book.readerProgress || 0) > 0 ||
-              book.status === "reading")
-        )
-        .sort((left, right) => right.updatedAt - left.updatedAt)[0] || null,
-    [books]
-  );
-
   const filtered = useMemo(() => {
     // Blogs tab is essays only — no books in the list.
     if (filter === "blogs") return [] as Book[];
     const query = q.trim().toLowerCase();
     return books
       .filter((book) => {
+        const formatFilter: Partial<Record<Filter, BookMedium>> = {
+          ebooks: "ebook",
+          audiobooks: "audiobook",
+          physical: "physical",
+        };
+        const requiredFormat = formatFilter[filter];
+        if (
+          requiredFormat &&
+          !book.readingFormats?.includes(requiredFormat)
+        ) {
+          return false;
+        }
         // Status chips: Reading / Next (want) / Done / Paused
         if (isBookStatusFilter(filter) && book.status !== filter) return false;
         // all + books: every status (drives of books)
@@ -969,9 +985,10 @@ export function BooksLibrary({
     setDropFolderId(null);
   }
 
-  function removeBook(id: string) {
+  function removeBook(book: Book) {
     if (!window.confirm("Remove this book from your local Wonder library?")) return;
-    setBooks((current) => current.filter((book) => book.id !== id));
+    markBookDeleted(book);
+    setBooks((current) => current.filter((item) => item.id !== book.id));
     setOpenId(null);
   }
 
@@ -1322,6 +1339,39 @@ export function BooksLibrary({
               </div>
 
               <div className="bl-meta-line">
+                <span className="bl-meta-k">Formats</span>
+                <div className="bl-format-picks" role="group" aria-label="Book formats">
+                  {(
+                    [
+                      ["ebook", "Ebook"],
+                      ["audiobook", "Audiobook"],
+                      ["physical", "Physical"],
+                    ] as Array<[BookMedium, string]>
+                  ).map(([medium, label]) => {
+                    const selected = open.readingFormats?.includes(medium) || false;
+                    return (
+                      <button
+                        key={medium}
+                        type="button"
+                        className={selected ? "is-on" : ""}
+                        aria-pressed={selected}
+                        onClick={() => {
+                          const current = new Set(open.readingFormats || []);
+                          if (selected) current.delete(medium);
+                          else current.add(medium);
+                          patchBook(open.id, {
+                            readingFormats: Array.from(current),
+                          });
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bl-meta-line">
                 <span className="bl-meta-k">Pages</span>
                 <div className="bl-pages-quiet">
                   <input
@@ -1543,17 +1593,15 @@ export function BooksLibrary({
           />
         </section>
 
-        {open.source !== "apple-books" ? (
-          <div className="bl-footer-actions">
-            <button
-              type="button"
-              className="bl-btn bl-btn-danger"
-              onClick={() => removeBook(open.id)}
-            >
-              Remove
-            </button>
-          </div>
-        ) : null}
+        <div className="bl-footer-actions">
+          <button
+            type="button"
+            className="bl-btn bl-btn-danger"
+            onClick={() => removeBook(open)}
+          >
+            Remove
+          </button>
+        </div>
         </main>
         </div>
       </div>
@@ -1744,47 +1792,6 @@ export function BooksLibrary({
           {adding ? "Close" : "Add book"}
         </button>
       </div>
-      ) : null}
-
-      {resumeBook &&
-      !q.trim() &&
-      (filter === "all" || filter === "books" || filter === "reading") ? (
-        <section className="bl-resume" aria-label="Continue reading">
-          <BookCover
-            book={resumeBook}
-            className="bl-resume-cover"
-            folderLabel={folderById.get(resumeBook.category)?.label}
-          />
-          <div className="bl-resume-copy">
-            <span>Continue reading</span>
-            <strong>{resumeBook.title}</strong>
-            <small>
-              {resumeBook.author || folderById.get(resumeBook.category)?.label}
-              {(resumeBook.readerProgress || 0) > 0
-                ? ` · ${progressPercent(resumeBook.readerProgress || 0)}%`
-                : ""}
-            </small>
-            {resumeBook.smartBookmark?.text ? (
-              <q>{resumeBook.smartBookmark.text}</q>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            className="bl-btn bl-btn-primary bl-resume-action"
-            onClick={() => readBook(resumeBook.id)}
-          >
-            <BookOpen size={15} aria-hidden />
-            Continue
-            <CaretRight size={14} weight="bold" aria-hidden />
-          </button>
-          <span className="bl-resume-progress" aria-hidden>
-            <i
-              style={{
-                width: `${Math.max(1, (resumeBook.readerProgress || 0) * 100)}%`,
-              }}
-            />
-          </span>
-        </section>
       ) : null}
 
       {filter !== "blogs" && addingFolder ? (
@@ -2213,8 +2220,16 @@ export function BooksLibrary({
 }
 
 function sourceLabel(book: Book): string {
-  if (book.readingFormat === "physical+digital") return "Physical + digital";
-  if (book.format === "audiobook") return "Apple Books audiobook";
+  const formats = book.readingFormats || [];
+  if (formats.length) {
+    const labels: Record<BookMedium, string> = {
+      ebook: "Ebook",
+      audiobook: "Audiobook",
+      physical: "Physical",
+    };
+    return formats.map((format) => labels[format]).join(" + ");
+  }
+  if (book.format === "audiobook") return "Audiobook";
   if (book.format === "cloud") return "Apple Books · online";
   if (book.format === "archive") return "Apple Books · archived reading data";
   if (book.source === "apple-books") return "Apple Books · digital";
@@ -2303,8 +2318,9 @@ function BookCard({
           <span>{progressLabel}</span>
           {book.rating > 0 ? (
             <span className="bl-card-stars">{stars(book.rating)}</span>
-          ) : book.readingFormat === "physical+digital" ? (
-            <span>physical + digital</span>
+          ) : null}
+          {book.readingFormats?.length ? (
+            <span>{sourceLabel(book).toLowerCase()}</span>
           ) : null}
         </span>
         {progress > 0 ? (

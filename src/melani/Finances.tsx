@@ -22,7 +22,7 @@ import {
 import {
   FINANCE_CATEGORIES,
   cleanMerchant,
-  normalizeCategory,
+  normalizeTransactionCategory,
 } from "./financeCategorize";
 import { exportLedgerCsv, parseBankCsv } from "./financeCsv";
 import { importOfx, looksLikeOfx } from "./financeOfx";
@@ -72,6 +72,7 @@ import {
   type SubCadence,
 } from "./subscriptions";
 import {
+  AllLedgerCharts,
   MonthBookCharts,
   LabeledLineChart,
   InteractivePieChart,
@@ -198,9 +199,9 @@ type SortKey = "date" | "merchant" | "category" | "amount" | "kind";
 /** Bookkeeper desk — ledger is home, not a marketing dashboard */
 
 const NAV: { id: TabId; label: string; icon: string }[] = [
-  { id: "overview", label: "Books", icon: "◉" },
-  { id: "business", label: "Quarterly", icon: "▤" },
   { id: "transactions", label: "Ledger", icon: "☰" },
+  { id: "overview", label: "All", icon: "◉" },
+  { id: "business", label: "Quarterly", icon: "▤" },
   { id: "plan", label: "Plan", icon: "▦" },
   { id: "subscriptions", label: "Subscriptions", icon: "↻" },
   { id: "sql", label: "SQL", icon: "⌗" },
@@ -238,7 +239,7 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   {
     id: "lifestyle",
     label: "Lifestyle",
-    cats: ["Restaurants", "Clothing", "Subscriptions", "Travel"],
+    cats: ["Restaurants", "Clothing", "Subscriptions", "Travel", "Cash"],
   },
   {
     id: "moves",
@@ -248,7 +249,7 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   {
     id: "buffer",
     label: "Buffer",
-    cats: ["Education", "Business", "Fees", "Gifts", "Other"],
+    cats: ["Education", "Business", "Fees", "Other"],
   },
 ];
 
@@ -723,7 +724,11 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     for (const t of txs) {
       if (!t.category) continue;
       set.add(
-        normalizeCategory(t.category, `${t.merchant || ""} ${t.note || ""}`)
+        normalizeTransactionCategory(
+          t.category,
+          `${t.merchant || ""} ${t.note || ""}`,
+          t.kind
+        )
       );
     }
     // Keep the short list order; only show ones present in books
@@ -1338,17 +1343,19 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         date = new Date().toISOString().slice(0, 10);
       }
       const isNeg = amountRaw.trim().startsWith("-") || Number(amountRaw) < 0;
+      const kind: TxKind = isNeg ? "expense" : "income";
       added.push(
         newTx({
           date,
           merchant: merchant || "Pasted",
           note: merchant || "Pasted",
           amount,
-          category: normalizeCategory(
+          category: normalizeTransactionCategory(
             (cols[3] || "Other").trim() || "Other",
-            `${cols[1] || ""} ${cols[2] || ""}`
+            `${cols[1] || ""} ${cols[2] || ""}`,
+            kind
           ),
-          kind: isNeg ? "expense" : "expense",
+          kind,
           source: "import",
         })
       );
@@ -1759,9 +1766,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             date: t.date,
             kind: t.kind,
             amount: t.amount,
-            category: normalizeCategory(
+            category: normalizeTransactionCategory(
               t.category,
-              `${t.merchant || ""} ${t.note || ""}`
+              `${t.merchant || ""} ${t.note || ""}`,
+              t.kind
             ),
             note: t.note || t.merchant,
             merchant: t.merchant,
@@ -1938,6 +1946,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         {/* ════════ BOOKS — capital command (not budget theater) ════════ */}
         {tab === "overview" ? (
           <div className={`wd-overview${booksExpanded ? " is-expanded" : ""}`}>
+            <AllLedgerCharts rows={txs} />
             <section className="wd-panel wd-action-board" aria-label="Finance actions">
               <div className="wd-action-board-head">
                 <div>
@@ -3328,9 +3337,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                           </thead>
                           <tbody>
                             {book.rows.map((t) => {
-                              const cat = normalizeCategory(
+                              const cat = normalizeTransactionCategory(
                                 t.category,
-                                `${t.merchant || ""} ${t.note || ""}`
+                                `${t.merchant || ""} ${t.note || ""}`,
+                                t.kind
                               );
                               const payeeValue =
                                 cleanMerchant(t.merchant || t.note || "") ||

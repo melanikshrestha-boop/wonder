@@ -950,6 +950,35 @@ html.theme-light .sidebar .sidebar-search svg {
   box-sizing: border-box;
 }
 
+.wonder-page-quote {
+  width: calc(100% - 48px);
+  max-width: 1380px;
+  margin: 16px auto 8px;
+  padding: 0;
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.wonder-page-quote blockquote {
+  margin: 0;
+  font-size: clamp(16px, 1.25vw, 22px);
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+
+.wonder-page-quote figcaption {
+  margin-top: 2px;
+  color: #2767ef;
+  font-size: 14px;
+}
+
+@media (max-width: 560px) {
+  .wonder-page-quote {
+    width: calc(100% - 24px);
+    margin-top: 12px;
+  }
+}
+
 .main.is-fitness .main-scroll {
   overflow-x: hidden;
   overflow-y: auto;

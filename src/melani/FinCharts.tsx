@@ -5,7 +5,10 @@
 import { useId, useState, type MouseEvent } from "react";
 import type { FinanceTx } from "./financeStore";
 import { money, moneyCents } from "./financeStore";
-import { categoryColor, normalizeCategory } from "./financeCategorize";
+import {
+  categoryColor,
+  normalizeTransactionCategory,
+} from "./financeCategorize";
 
 const PALETTE = [
   "#1f6f8b", "#e8743b", "#4b8f6b", "#b5651d", "#7d5ba6",
@@ -650,21 +653,36 @@ export function monthChartData(rows: FinanceTx[], month: string) {
   const days = new Date(y, m, 0).getDate();
   const out = new Array<number>(days).fill(0);
   const inn = new Array<number>(days).fill(0);
-  const byCat = new Map<string, number>();
+  const expenseByCat = new Map<string, number>();
+  const incomeByCat = new Map<string, number>();
+  let movementIn = 0;
+  let movementOut = 0;
 
   for (const t of rows) {
     const d = Number(t.date.slice(8, 10));
     if (!d || d > days) continue;
+    const cat = normalizeTransactionCategory(
+      t.category,
+      `${t.merchant || ""} ${t.note || ""}`,
+      t.kind
+    );
+    const internal =
+      cat === "Transfers" || cat === "Credit card payment";
     if (t.kind === "expense") {
+      if (internal) {
+        movementOut += t.amount;
+        continue;
+      }
       out[d - 1] += t.amount;
-      const cat = normalizeCategory(
-        t.category,
-        `${t.merchant || ""} ${t.note || ""}`
-      );
       if (cat === "Income") continue;
-      byCat.set(cat, (byCat.get(cat) || 0) + t.amount);
+      expenseByCat.set(cat, (expenseByCat.get(cat) || 0) + t.amount);
     } else if (t.kind === "income") {
+      if (internal) {
+        movementIn += t.amount;
+        continue;
+      }
       inn[d - 1] += t.amount;
+      incomeByCat.set(cat, (incomeByCat.get(cat) || 0) + t.amount);
     }
   }
 
@@ -694,24 +712,34 @@ export function monthChartData(rows: FinanceTx[], month: string) {
     });
   }
 
-  const slices: PieSlice[] = Array.from(byCat.entries())
+  function topSlices(source: Map<string, number>): PieSlice[] {
+    const slices: PieSlice[] = Array.from(source.entries())
     .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
     .sort((a, b) => b.value - a.value);
 
-  const MAX = 9;
-  const top = slices.slice(0, MAX);
-  const rest = slices.slice(MAX);
-  if (rest.length) {
-    top.push({
-      name: `Other (${rest.length})`,
-      value: Math.round(rest.reduce((s, x) => s + x.value, 0) * 100) / 100,
-    });
+    const MAX = 9;
+    const top = slices.slice(0, MAX);
+    const rest = slices.slice(MAX);
+    if (rest.length) {
+      top.push({
+        name: `Other (${rest.length})`,
+        value: Math.round(rest.reduce((s, x) => s + x.value, 0) * 100) / 100,
+      });
+    }
+    return top;
   }
 
+  const expenseSlices = topSlices(expenseByCat);
+  const incomeSlices = topSlices(incomeByCat);
   return {
     spendPoints,
     netPoints,
-    slices: top,
+    /** Legacy alias retained for any existing callers. */
+    slices: expenseSlices,
+    expenseSlices,
+    incomeSlices,
+    movementIn: Math.round(movementIn * 100) / 100,
+    movementOut: Math.round(movementOut * 100) / 100,
     totalIn: Math.round(totalIn * 100) / 100,
     totalOut: Math.round(totalOut * 100) / 100,
     net: Math.round((totalIn - totalOut) * 100) / 100,
@@ -727,7 +755,16 @@ export function MonthBookCharts({
   month: string;
   monthLabel: string;
 }) {
-  const { spendPoints, slices, totalIn, totalOut, net } = monthChartData(
+  const {
+    spendPoints,
+    expenseSlices,
+    incomeSlices,
+    movementIn,
+    movementOut,
+    totalIn,
+    totalOut,
+    net,
+  } = monthChartData(
     rows,
     month
   );
@@ -800,21 +837,158 @@ export function MonthBookCharts({
               {moneyCents(totalIn)}
               {" · net "}
               {moneyCents(net)}
+              {movementIn + movementOut > 0
+                ? ` · internal movement ${moneyCents(movementIn + movementOut)}`
+                : ""}
             </span>
           </footer>
         </article>
       </div>
-      <div className="wd-month-charts-pie">
+      <div className="wd-month-charts-pies">
+        {expenseSlices.length ? (
+          <InteractivePieChart
+            title="Expenses by category"
+            slices={expenseSlices}
+            size={220}
+            holeRatio={0.58}
+            centerPrimary={moneyCents(totalOut)}
+            centerSecondary="total expenses"
+            showLegend
+          />
+        ) : null}
+        {incomeSlices.length ? (
+          <InteractivePieChart
+            title="Income by category"
+            slices={incomeSlices}
+            size={220}
+            holeRatio={0.58}
+            centerPrimary={moneyCents(totalIn)}
+            centerSecondary="total income"
+            showLegend
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function AllLedgerCharts({
+  rows,
+}: {
+  rows: FinanceTx[];
+}) {
+  if (!rows.length) return null;
+
+  const monthKeys = Array.from(
+    new Set(
+      rows
+        .map((row) => row.date.slice(0, 7))
+        .filter((month) => /^\d{4}-\d{2}$/.test(month))
+    )
+  ).sort();
+  const months = monthKeys.map((month) => {
+    const data = monthChartData(
+      rows.filter((row) => row.date.startsWith(month)),
+      month
+    );
+    return { month, data };
+  });
+  const totalIncome = months.reduce((sum, item) => sum + item.data.totalIn, 0);
+  const totalExpenses = months.reduce((sum, item) => sum + item.data.totalOut, 0);
+  const totalMovement = months.reduce(
+    (sum, item) => sum + item.data.movementIn + item.data.movementOut,
+    0
+  );
+  const expenseMap = new Map<string, number>();
+  const incomeMap = new Map<string, number>();
+  for (const row of rows) {
+    const name = normalizeTransactionCategory(
+      row.category,
+      `${row.merchant || ""} ${row.note || ""}`,
+      row.kind
+    );
+    const map = row.kind === "income" ? incomeMap : expenseMap;
+    if (name === "Transfers" || name === "Credit card payment") continue;
+    map.set(name, (map.get(name) || 0) + row.amount);
+  }
+  const toSlices = (map: Map<string, number>) =>
+    Array.from(map.entries())
+      .map(([name, value]) => ({
+        name,
+        value: Math.round(value * 100) / 100,
+      }))
+      .sort((left, right) => right.value - left.value);
+  const monthlyNet: LinePoint[] = months.map(({ month, data }) => ({
+    x: new Date(`${month}-01T12:00:00`).toLocaleString("en-US", {
+      month: "short",
+    }),
+    y: data.net,
+    label: `${month}: income ${moneyCents(data.totalIn)} · expenses ${moneyCents(data.totalOut)} · net ${moneyCents(data.net)}`,
+  }));
+
+  return (
+    <section className="wd-panel wd-all-ledger-charts" aria-label="All ledger data">
+      <header className="wd-all-ledger-head">
+        <div>
+          <p className="wd-section-kicker">
+            All posted data
+            {monthKeys.length
+              ? ` · ${monthKeys[0]} to ${monthKeys[monthKeys.length - 1]}`
+              : ""}
+          </p>
+          <h2>Income and expenses, separated</h2>
+        </div>
+        <dl>
+          <div>
+            <dt>Income</dt>
+            <dd className="is-pos">{moneyCents(totalIncome)}</dd>
+          </div>
+          <div>
+            <dt>Expenses</dt>
+            <dd className="is-neg">{moneyCents(totalExpenses)}</dd>
+          </div>
+          <div>
+            <dt>Net</dt>
+            <dd className={totalIncome - totalExpenses >= 0 ? "is-pos" : "is-neg"}>
+              {moneyCents(totalIncome - totalExpenses)}
+            </dd>
+          </div>
+          <div>
+            <dt>Internal movement</dt>
+            <dd>{moneyCents(totalMovement)}</dd>
+          </div>
+        </dl>
+      </header>
+      <div className="wd-all-ledger-grid">
+        <article className="wd-all-ledger-trend">
+          <LabeledLineChart
+            title="Monthly net"
+            xLabel=""
+            yLabel=""
+            points={monthlyNet}
+            color="#1f6f8b"
+            height={190}
+          />
+        </article>
         <InteractivePieChart
-          title="Spend by category"
-          slices={slices}
-          size={240}
+          title="All income by category"
+          slices={toSlices(incomeMap)}
+          size={220}
           holeRatio={0.58}
-          centerPrimary={moneyCents(totalOut)}
-          centerSecondary="total out"
+          centerPrimary={moneyCents(totalIncome)}
+          centerSecondary="income"
+          showLegend
+        />
+        <InteractivePieChart
+          title="All expenses by category"
+          slices={toSlices(expenseMap)}
+          size={220}
+          holeRatio={0.58}
+          centerPrimary={moneyCents(totalExpenses)}
+          centerSecondary="expenses"
           showLegend
         />
       </div>
-    </div>
+    </section>
   );
 }

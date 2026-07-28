@@ -5,7 +5,10 @@
  */
 
 import { pushUndo } from "../undoStack";
-import { normalizeCategory } from "./financeCategorize";
+import {
+  normalizeCategory,
+  normalizeTransactionCategory,
+} from "./financeCategorize";
 
 export type AccountKind =
   | "cash"
@@ -158,6 +161,7 @@ const KEY_V1 = "wonder-finance-v1";
 /** Budget lines for categories you actually use */
 const DEFAULT_BUDGET: BudgetLine[] = [
   { category: "Zelle", planned: 0 },
+  { category: "Cash", planned: 0 },
   { category: "Transfers", planned: 0 },
   { category: "Groceries", planned: 0 },
   { category: "Restaurants", planned: 0 },
@@ -171,7 +175,6 @@ const DEFAULT_BUDGET: BudgetLine[] = [
   { category: "Travel", planned: 0 },
   { category: "Business", planned: 0 },
   { category: "Fees", planned: 0 },
-  { category: "Gifts", planned: 0 },
   { category: "Credit card payment", planned: 0 },
   { category: "Other", planned: 0 },
 ];
@@ -217,13 +220,18 @@ function defaultState(): FinanceState {
 function migrateTx(raw: Partial<FinanceTx>): FinanceTx {
   const note = raw.note || "";
   const merchant = raw.merchant || raw.note || "";
+  const kind = raw.kind === "income" ? "income" : "expense";
   return {
     id: raw.id || uid("tx"),
     date: raw.date || new Date().toISOString().slice(0, 10),
-    kind: raw.kind === "income" ? "income" : "expense",
+    kind,
     amount: Math.abs(Number(raw.amount) || 0),
     // Fold legacy labels while preserving reviewed Transfers / card payments.
-    category: normalizeCategory(raw.category, `${merchant} ${note}`),
+    category: normalizeTransactionCategory(
+      raw.category,
+      `${merchant} ${note}`,
+      kind
+    ),
     note,
     merchant,
     accountId: raw.accountId ?? null,
@@ -327,9 +335,10 @@ export function loadFinance(): FinanceState {
     // Persist category migrations without undoing reviewed transfer decisions.
     const catsChanged = rawTxs.some((t) => {
       if (t.source === "manual") return false;
-      const nextCat = normalizeCategory(
+      const nextCat = normalizeTransactionCategory(
         t.category,
-        `${t.merchant || ""} ${t.note || ""}`
+        `${t.merchant || ""} ${t.note || ""}`,
+        t.kind === "income" ? "income" : "expense"
       );
       return (t.category || "") !== nextCat;
     });
@@ -634,12 +643,17 @@ export function newTx(partial?: Partial<FinanceTx>): FinanceTx {
   const today = new Date().toISOString().slice(0, 10);
   const note = partial?.note || "";
   const merchant = partial?.merchant || partial?.note || "";
+  const kind = partial?.kind || "expense";
   return {
     id: uid("tx"),
     date: partial?.date || today,
-    kind: partial?.kind || "expense",
+    kind,
     amount: partial?.amount ?? 0,
-    category: normalizeCategory(partial?.category || "Other", `${merchant} ${note}`),
+    category: normalizeTransactionCategory(
+      partial?.category || "Other",
+      `${merchant} ${note}`,
+      kind
+    ),
     note,
     merchant,
     accountId: partial?.accountId ?? null,

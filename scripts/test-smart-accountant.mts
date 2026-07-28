@@ -257,7 +257,7 @@ const {
   );
   const gift = journal.entries.find((entry) => entry.memo === "Zelle from Mom");
   const zelleOut = journal.entries.find((entry) => entry.memo === "Zelle to friend");
-  check("accounting: family Zelle income posts to gifts", gift?.creditCode === "4100", gift);
+  check("accounting: family Zelle income posts to parent support", gift?.creditCode === "4100", gift);
   check("accounting: outbound Zelle is expense, not transfer", zelleOut?.debitCode === "6900", zelleOut);
 
   const statements = buildStatements(accountingState, "2026-07");

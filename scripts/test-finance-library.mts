@@ -1,0 +1,85 @@
+import assert from "node:assert/strict";
+
+class MemoryStorage {
+  private values = new Map<string, string>();
+  getItem(key: string) {
+    return this.values.get(key) ?? null;
+  }
+  setItem(key: string, value: string) {
+    this.values.set(key, String(value));
+  }
+  removeItem(key: string) {
+    this.values.delete(key);
+  }
+  clear() {
+    this.values.clear();
+  }
+}
+
+Object.defineProperty(globalThis, "localStorage", {
+  value: new MemoryStorage(),
+  configurable: true,
+});
+
+const { normalizeTransactionCategory } = await import(
+  "../src/melani/financeCategorize.ts"
+);
+const { loadFinance } = await import("../src/melani/financeStore.ts");
+const { runFinancePlan } = await import("../src/melani/melFinanceTools.ts");
+const { buildBookPageBrief } = await import(
+  "../src/melani/bookPageBrief.ts"
+);
+const { loadBooks } = await import("../src/melani/booksStore.ts");
+
+assert.equal(
+  normalizeTransactionCategory("Zelle", "Zelle from Bimala Shrestha", "income"),
+  "Parents"
+);
+assert.equal(
+  normalizeTransactionCategory("Zelle", "Zelle to Bimala Shrestha", "expense"),
+  "Zelle"
+);
+
+runFinancePlan("I spent $6 cash for food");
+runFinancePlan("log income $100 from Umesh");
+const finance = loadFinance();
+assert.equal(finance.txs.length, 2);
+assert.equal(finance.txs[0].category, "Parents");
+assert.equal(finance.txs[1].category, "Cash");
+assert.equal(finance.txs[1].merchant, "food");
+
+localStorage.setItem(
+  "wonder-books-library-v1",
+  JSON.stringify([
+    {
+      id: "bk-nic-ent-01-walt-disney",
+      title: "Walt Disney",
+      source: "manual",
+    },
+    {
+      id: "apple-morrie",
+      sourceId: "MORRIE",
+      source: "apple-books",
+      title: "Tuesdays with Morrie",
+    },
+    {
+      id: "apple-real",
+      sourceId: "REAL",
+      source: "apple-books",
+      title: "The Innovators",
+      author: "Walter Isaacson",
+    },
+  ])
+);
+const books = loadBooks();
+assert.deepEqual(books.map((book) => book.title), ["The Innovators"]);
+
+const brief = buildBookPageBrief(
+  "The important lesson is that starting small removes the fear of beginning. You should choose one practical action and practice it every day. Because repetition makes the behavior easier, the habit eventually becomes automatic.",
+  "Habits"
+);
+assert.equal(brief.heading, "Habits");
+assert.ok(brief.takeaways.length >= 2);
+assert.match(brief.action || "", /choose|practice/i);
+
+console.log("finance + bookshelf integration checks passed");

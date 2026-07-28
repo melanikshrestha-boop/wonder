@@ -207,8 +207,8 @@ const CORE_RULES: AdeptRule[] = [
     why: "Adept people don't 'feel' rich — they read the books weekly.",
   },
   {
-    id: "gifts-vs-earned",
-    rule: "Label gift Zelle separate from earned income.",
+    id: "parents-vs-earned",
+    rule: "Label parent funding separate from earned income.",
     why: "Your independence plan needs truth about what YOU earn.",
   },
 ];
@@ -276,7 +276,7 @@ export function buildAdeptBrief(
   }
   if (runway.unstableIncome) {
     leaks.push(
-      "Income jumps around (gifts/Zelle). Adept move: thicker cash buffer + write down true personal burn."
+      "Income jumps around (parent funding/Zelle). Adept move: thicker cash buffer + write down true personal burn."
     );
   }
   if (runway.avgMonthlyBurn > 0 && runway.runwayMonths < 2) {
@@ -400,11 +400,11 @@ export function buildAdeptBrief(
   drills.push({
     id: "earn-line",
     when: "this_month",
-    title: "Separate gifts from earned money on the books",
-    why: "Zelle from family is love, not a salary. Independence needs earned lines.",
+    title: "Separate parent funding from earned money on the books",
+    why: "Zelle from parents is support, not a salary. Independence needs earned lines.",
     doExactly:
-      "Tag Zelle from family as Income/Gift. Track any freelance/job as Income/Earned. Know the ratio.",
-    doneWhen: "You can say 'I earned $X this month without gifts.'",
+      "Tag Zelle from Bimala or Umesh as Parents. Track freelance/job pay as Income. Know the ratio.",
+    doneWhen: "You can say 'I earned $X this month without parent funding.'",
   });
 
   drills.push({

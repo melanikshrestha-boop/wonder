@@ -5,6 +5,7 @@
 import {
   SPINE_COLORS,
   categorizeBook,
+  isBookDeleted,
   keepBook,
   newBook,
   type Book,
@@ -87,6 +88,8 @@ export function mergeLocalBooks(
   const addedTitles: string[] = [];
 
   for (const item of incoming) {
+    const stableId = `local-${item.id}`;
+    if (isBookDeleted(item.id, stableId)) continue;
     const category = categorizeBook(item.title, item.author);
     if (!keepBook({ title: item.title, category })) continue;
 
@@ -129,7 +132,7 @@ export function mergeLocalBooks(
     addedTitles.push(item.title);
     next.push(
       newBook({
-        id: `local-${item.id}`,
+        id: stableId,
         title: item.title,
         author: item.author || "Unknown",
         status: "want",
@@ -142,6 +145,7 @@ export function mergeLocalBooks(
         format: "epub",
         cloudOnly: false,
         readingFormat: "digital",
+        readingFormats: ["ebook"],
         description: item.fromOcean
           ? "Imported from your Downloads folder (local EPUB)."
           : "Imported from a local EPUB on this Mac.",

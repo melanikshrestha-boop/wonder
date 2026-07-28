@@ -32,6 +32,7 @@ import {
   categorizeMerchant,
   cleanMerchant,
   normalizeCategory,
+  normalizeTransactionCategory,
 } from "./financeCategorize";
 import {
   loadBooksExtra,
@@ -83,7 +84,7 @@ export const CHART_OF_ACCOUNTS: CoaAccount[] = [
   { code: "2100", name: "Other payables", type: "liability" },
   { code: "3000", name: "Owner equity / net worth", type: "equity" },
   { code: "4000", name: "Income", type: "income", category: "Income" },
-  { code: "4100", name: "Gifts received", type: "income", category: "Gifts" },
+  { code: "4100", name: "Parent support", type: "income", category: "Parents" },
   { code: "5000", name: "Housing", type: "expense", category: "Housing" },
   { code: "5100", name: "Utilities", type: "expense", category: "Utilities" },
   { code: "5200", name: "Groceries", type: "expense", category: "Groceries" },
@@ -115,9 +116,10 @@ export function coaForCategory(category: string): CoaAccount {
 }
 
 function coaForTransaction(tx: FinanceTx): CoaAccount {
-  const category = normalizeCategory(
+  const category = normalizeTransactionCategory(
     tx.category,
-    `${tx.merchant || ""} ${tx.note || ""}`
+    `${tx.merchant || ""} ${tx.note || ""}`,
+    tx.kind
   );
   const text = `${tx.merchant || ""} ${tx.note || ""}`.toLowerCase();
 
@@ -135,6 +137,7 @@ function coaForTransaction(tx: FinanceTx): CoaAccount {
       return CHART_OF_ACCOUNTS.find((a) => a.code === "6500")!;
     }
     if (
+      category === "Parents" ||
       category === "Gifts" ||
       (category === "Zelle" &&
         /\b(gift|family|mom|dad|parent|bimala|umesh|shrestha)\b/.test(text))

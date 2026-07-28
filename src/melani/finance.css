@@ -2874,7 +2874,7 @@ html.theme-light .wd-cad-opt.on {
 /* ── Month charts: line + pie side-by-side (sleep / Focus language) ── */
 .wd-month-charts {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(220px, 0.85fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, 1fr);
   gap: 1rem 1.5rem;
   align-items: start;
   width: 100%;
@@ -2885,9 +2885,15 @@ html.theme-light .wd-cad-opt.on {
   min-width: 0;
   width: 100%;
 }
-.wd-month-charts-pie {
+.wd-month-charts-pie,
+.wd-month-charts-pies {
   min-width: 0;
   width: 100%;
+}
+.wd-month-charts-pies {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
 }
 .wd-month-charts .wd-pie-block {
   min-width: 0;
@@ -2947,7 +2953,7 @@ html.theme-light .wd-cad-opt.on {
 /* Half-split / tablet: stay side-by-side if room */
 @media (max-width: 900px) {
   .wd-month-charts {
-    grid-template-columns: minmax(0, 1.2fr) minmax(200px, 0.9fr);
+    grid-template-columns: 1fr;
     gap: 0.85rem 1rem;
   }
 }
@@ -2955,6 +2961,81 @@ html.theme-light .wd-cad-opt.on {
 @media (max-width: 560px) {
   .wd-month-charts {
     grid-template-columns: 1fr;
+  }
+  .wd-month-charts-pies {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wd-all-ledger-charts {
+  display: block;
+}
+
+.wd-all-ledger-head,
+.wd-all-ledger-head dl {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.wd-all-ledger-head h2 {
+  margin: 0;
+}
+
+.wd-all-ledger-head dl {
+  margin: 0;
+}
+
+.wd-all-ledger-head dl div {
+  min-width: 92px;
+}
+
+.wd-all-ledger-head dt {
+  color: var(--wd-secondary);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wd-all-ledger-head dd {
+  margin: 3px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.wd-all-ledger-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.4fr) repeat(2, minmax(250px, 1fr));
+  gap: 28px;
+  align-items: start;
+  margin-top: 22px;
+}
+
+.wd-all-ledger-trend {
+  min-width: 0;
+}
+
+@media (max-width: 1120px) {
+  .wd-all-ledger-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .wd-all-ledger-trend {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 680px) {
+  .wd-all-ledger-head,
+  .wd-all-ledger-head dl {
+    flex-direction: column;
+  }
+  .wd-all-ledger-grid {
+    grid-template-columns: 1fr;
+  }
+  .wd-all-ledger-trend {
+    grid-column: auto;
   }
 }
 .wd-linechart {

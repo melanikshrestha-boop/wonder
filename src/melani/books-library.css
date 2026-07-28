@@ -166,6 +166,127 @@
   transform: translateY(-50%);
 }
 
+.bl-brief-dock {
+  position: fixed;
+  z-index: 21;
+  top: 64%;
+  right: 0;
+  display: flex;
+  align-items: center;
+  transform: translateY(-50%);
+}
+
+.bl-brief-edge {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  min-width: 46px;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid var(--reader-line, rgba(255, 255, 255, 0.16));
+  border-right: 0;
+  border-radius: 16px 0 0 16px;
+  background: var(--reader-control-on, rgba(18, 18, 20, 0.96));
+  color: var(--reader-strong, #fff);
+  box-shadow: 0 14px 36px var(--reader-shadow, rgba(0, 0, 0, 0.5));
+}
+
+.bl-brief-edge > span {
+  max-width: 0;
+  overflow: hidden;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0;
+  transition: max-width 0.18s ease, opacity 0.15s ease;
+}
+
+.bl-brief-dock:hover .bl-brief-edge > span,
+.bl-brief-dock.is-open .bl-brief-edge > span,
+.bl-brief-edge:focus-visible > span {
+  max-width: 54px;
+  opacity: 1;
+}
+
+.bl-brief-drawer {
+  position: absolute;
+  top: 50%;
+  right: 58px;
+  width: min(420px, calc(100vw - 86px));
+  max-height: min(72vh, 680px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--reader-line, rgba(255, 255, 255, 0.14));
+  border-radius: 20px;
+  background: var(--reader-paper, #111);
+  color: var(--reader-ink, #fff);
+  box-shadow: 0 18px 48px var(--reader-shadow, rgba(0, 0, 0, 0.5));
+  transform: translateY(-50%);
+  box-sizing: border-box;
+}
+
+.bl-brief-drawer header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.bl-brief-drawer header span,
+.bl-brief-action span {
+  color: #b57f92;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.bl-brief-drawer h2 {
+  margin: 3px 0 0;
+  font: 700 20px/1.15 var(--reader-font, Georgia, serif);
+}
+
+.bl-brief-drawer header button {
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.bl-brief-drawer ol {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0;
+  padding-left: 22px;
+}
+
+.bl-brief-drawer li,
+.bl-brief-action p,
+.bl-brief-empty {
+  font: 400 15px/1.5 var(--reader-font, Georgia, serif);
+}
+
+.bl-brief-action {
+  padding-top: 14px;
+  border-top: 1px solid var(--reader-line, rgba(255, 255, 255, 0.14));
+}
+
+.bl-brief-action p {
+  margin: 5px 0 0;
+}
+
+.bl-brief-drawer > small {
+  display: block;
+  margin-top: 18px;
+  color: var(--reader-muted, #888);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+}
+
 .bl-notes-edge {
   position: relative;
   z-index: 2;
@@ -3528,13 +3649,13 @@ html.theme-light .bl-reader[data-reader-theme="light"] {
 }
 
 .bl-filter {
-  gap: 6px;
-  margin: 0 0 10px;
-  padding: 3px;
+  gap: 26px;
+  margin: 0 0 18px;
+  padding: 0;
   overflow-x: auto;
-  border: 1px solid var(--books-line);
-  border-radius: 13px;
-  background: var(--books-surface);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   scrollbar-width: none;
 }
 
@@ -3548,22 +3669,23 @@ html.theme-light .bl-reader[data-reader-theme="light"] {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  padding: 5px 11px;
-  border: 1px solid transparent;
-  border-radius: 9px;
+  gap: 6px;
+  padding: 3px 0 7px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--books-muted);
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 .bl-chip em {
-  display: grid;
-  min-width: 18px;
-  height: 18px;
-  place-items: center;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--books-text) 7%, transparent);
+  display: inline;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--books-faint);
   font-size: 9px;
   font-style: normal;
@@ -3573,13 +3695,35 @@ html.theme-light .bl-reader[data-reader-theme="light"] {
 
 .bl-chip:hover,
 .bl-chip.is-on {
-  border-color: var(--books-line);
-  background: var(--books-surface-strong);
+  border-color: currentColor;
+  background: transparent;
   color: var(--books-text);
 }
 
 .bl-chip.is-on em {
-  background: color-mix(in srgb, var(--bl-accent) 22%, transparent);
+  background: transparent;
+  color: var(--books-text);
+}
+
+.bl-format-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.bl-format-picks button {
+  padding: 2px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--books-faint);
+  font: inherit;
+}
+
+.bl-format-picks button:hover,
+.bl-format-picks button.is-on {
+  border-color: currentColor;
   color: var(--books-text);
 }
 

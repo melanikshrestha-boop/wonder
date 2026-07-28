@@ -18,6 +18,7 @@
     "test:care": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-care-concierge.mts",
     "preview": "vite preview",
     "test:finance": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-smart-accountant.mts",
+    "test:finance-library": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-finance-library.mts",
     "test:business-report": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-business-report.mts",
     "test:tax": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-tax-knowledge.mts",
     "test:habits": "node --experimental-strip-types --experimental-loader ./scripts/ts-extension-loader.mjs scripts/test-habits.mts",

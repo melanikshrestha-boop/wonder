@@ -3,6 +3,7 @@ import {
   SPINE_COLORS,
   categorizeBook,
   isMichaelJacksonBook,
+  isBookDeleted,
   newBook,
   keepBook,
   type Book,
@@ -125,6 +126,8 @@ export function mergeAppleBooks(
 ): Book[] {
   const next = [...current];
   for (const item of incoming) {
+    const stableId = `apple-${item.id.toLowerCase()}`;
+    if (isBookDeleted(item.id, stableId)) continue;
     const incomingCategory = categorizeBook(item.title, item.author, item.genre, item.description);
     if (!keepBook({ title: item.title, category: incomingCategory })) continue;
     const index = next.findIndex(
@@ -154,9 +157,6 @@ export function mergeAppleBooks(
         format: item.format,
         cloudOnly: item.cloudOnly,
         chapterCount: item.chapterCount,
-        readingFormat: hasPhysicalCopy(item.title)
-          ? "physical+digital"
-          : "digital",
         appleProgress: item.progress || 0,
         localReaderProgress,
         readerProgress: Math.max(localReaderProgress, item.progress || 0),
@@ -184,7 +184,7 @@ export function mergeAppleBooks(
 
     next.push(
       newBook({
-        id: `apple-${item.id.toLowerCase()}`,
+        id: stableId,
         title: item.title,
         author: item.author,
         status: statusFromProgress(item.progress, item.isFinished),
@@ -207,6 +207,12 @@ export function mergeAppleBooks(
         readingFormat: hasPhysicalCopy(item.title)
           ? "physical+digital"
           : "digital",
+        readingFormats:
+          item.format === "audiobook"
+            ? ["audiobook"]
+            : hasPhysicalCopy(item.title)
+              ? ["physical", "ebook"]
+              : ["ebook"],
         readerCfi: item.readerCfi || undefined,
         readerProgress: item.progress || 0,
         appleProgress: item.progress || 0,
@@ -266,6 +272,7 @@ export function mergeWonderBookPages(current: Book[], pages: Page[]): Book[] {
 
   const next = [...current];
   for (const page of libraryPages) {
+    if (isBookDeleted(`wonder-${page.id}`)) continue;
     const title = page.title.trim() || "Untitled book";
     const notes = pageNotes(page, pages);
     const match = next.findIndex(

@@ -21,10 +21,11 @@ import { PageEditor } from "./components/PageEditor";
 import { SearchModal } from "./components/SearchModal";
 import { iconForPage, MinimalIcon } from "./components/MinimalIcon";
 import { isMelaniRichPage, MelaniRichPage } from "./melani/MelaniViews";
-import { isHygienePage } from "./melani/pageRoutes";
+import { isFitnessPage, isHygienePage } from "./melani/pageRoutes";
 import { isWardrobePage } from "./melani/wardrobe/route";
 import { MelaniAI } from "./melani/MelaniAI";
 import { SelectionResearch } from "./melani/SelectionResearch";
+import { UniversalQuote } from "./melani/UniversalQuote";
 import { FocusOverlay } from "./melani/FocusOverlay";
 import {
   MEL_NAVIGATE_EVENT,
@@ -574,6 +575,7 @@ export default function App() {
 
         {/* Page body scrolls here — Notion pages OR Melani content inside page */}
         <div ref={mainScrollRef} className="main-scroll">
+          {!isFitnessPage(activePage.id) ? <UniversalQuote /> : null}
           {melaniMode ? (
             /* Sleep / Meals / Gym live in the SIDEBAR only */
             <div className="notion-melani-page">
