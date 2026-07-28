@@ -217,6 +217,8 @@ export function categorizeMerchant(text: string): string {
 export function cleanMerchant(raw: string): string {
   return (raw || "")
     .replace(/\s+/g, " ")
+    .replace(/\b(Zelle\s+(?:from|to)\s+.+?)\s+BAC\b/gi, "$1")
+    .replace(/\b(?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{8,}\b/gi, " ")
     .replace(/\d{4,}/g, " ")
     .replace(/\b(POS|ACH|DEBIT|CREDIT|PURCHASE|CARD|ONLINE)\b/gi, " ")
     .replace(/\s+/g, " ")

@@ -23,6 +23,7 @@ const { parseOfx, importOfx, looksLikeOfx } = await import(
 const { parseBankCsv, txFingerprint } = await import(
   "../src/melani/financeCsv.ts"
 );
+const { cleanMerchant } = await import("../src/melani/financeCategorize.ts");
 const { mergeTxs, newTx } = await import("../src/melani/financeStore.ts");
 const {
   detectTransferPairs,
@@ -83,6 +84,24 @@ check("re-import fully deduped", dup.added.length === 0 && dup.skipped === 2, du
 const fpA = txFingerprint({ date: "2026-07-01", amount: -5, merchant: "A  B" });
 const fpB = txFingerprint({ date: "2026-07-01", amount: -5, merchant: "a b" });
 check("fingerprint normalizes whitespace/case", fpA === fpB);
+check(
+  "merchant cleaner removes Zelle confirmation tail",
+  cleanMerchant("Zelle from Yuetong Liu 0Jx01B91Kkf8") ===
+    "Zelle from Yuetong Liu"
+);
+check(
+  "merchant cleaner removes mixed trailing bank token",
+  cleanMerchant("Zelle from JINGTONG LUO BAClxqw9147f") ===
+    "Zelle from JINGTONG LUO"
+);
+check(
+  "merchant cleaner removes stale Zelle BAC tail",
+  cleanMerchant("Zelle from JINGTONG LUO BAC") === "Zelle from JINGTONG LUO"
+);
+check(
+  "merchant cleaner preserves names without references",
+  cleanMerchant("Zelle from Bimala Shrestha") === "Zelle from Bimala Shrestha"
+);
 
 // ── OFX import ──────────────────────────────────────────────
 console.log("ofx import");

@@ -21,6 +21,7 @@ import {
 } from "./financeCredit";
 import {
   FINANCE_CATEGORIES,
+  cleanMerchant,
   normalizeCategory,
 } from "./financeCategorize";
 import { exportLedgerCsv, parseBankCsv } from "./financeCsv";
@@ -109,8 +110,6 @@ import {
   newAccount,
   newGoal,
   newTx,
-  runningBalanceMap,
-  ledgerOpeningBalance,
   txTypeOf,
   saveFinance,
   seedFinanceUndoBaseline,
@@ -373,12 +372,12 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     },
     []
   );
-  // Books is the Finance home; the ledger remains one click away.
+  // Ledger All is the Finance home: open the full year's books first.
   const [tab, setTab] = useState<TabId>(() => {
-    if (typeof window === "undefined") return "overview";
+    if (typeof window === "undefined") return "transactions";
     const t = new URLSearchParams(window.location.search).get("tab");
     if (t && ALL_TAB_IDS.includes(t as TabId)) return t as TabId;
-    return "overview";
+    return "transactions";
   });
   const [businessQuarter, setBusinessQuarter] =
     useState<BusinessQuarterKey>(() => {
@@ -425,8 +424,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const [filterCat, setFilterCat] = useState("all");
   // Accountant period: year first, then Jan → current month (grows automatically)
   const [filterYear, setFilterYear] = useState(() => new Date().getFullYear());
-  /** Month dropdown: live month by default (rolls with the calendar) · "all" = whole year */
-  const [filterMonth, setFilterMonth] = useState<string>(() => monthKey());
+  /** Month dropdown: All year first; individual months stay one click away. */
+  const [filterMonth, setFilterMonth] = useState<string>("all");
   const [filterKind, setFilterKind] = useState<"all" | TxKind>("all");
   const [filterTxType, setFilterTxType] = useState("all");
   const [reviewFilter, setReviewFilter] = useState<{
@@ -1119,15 +1118,23 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       });
   }, [ledger]);
 
-  /**
-   * Running balance after each tx — seeded so the series ends on real net worth
-   * (assets − credit debt), not a fake −$8k from starting at $0 with no income history.
-   */
-  const balanceById = useMemo(() => {
-    if (!state) return new Map<string, number>();
-    const opening = ledgerOpeningBalance(state.accounts, txs);
-    return runningBalanceMap(txs, opening);
-  }, [state, txs]);
+  const monthNetWorthByMonth = useMemo(() => {
+    const map = new Map<string, number | null>();
+    for (const month of months) map.set(month, null);
+    const currentMonth = monthKey();
+    if (months.includes(currentMonth)) map.set(currentMonth, worth);
+    return map;
+  }, [months, worth]);
+
+  const visibleLedgerSummary = useMemo(() => {
+    let rev = 0;
+    let exp = 0;
+    for (const t of ledger) {
+      if (t.kind === "income") rev += t.amount;
+      else exp += t.amount;
+    }
+    return { rev, exp, netWorth: worth };
+  }, [ledger, worth]);
 
   const maxBar = useMemo(() => {
     const m = Math.max(1, ...bars.map((b) => Math.abs(b.net)));
@@ -2790,10 +2797,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             </section>
 
             <div className="wd-grid-2">
-              {/* Money in and out */}
+              {/* Revenue and expense */}
               <section className="wd-panel">
                 <div className="wd-panel-head">
-                  <h2>Money in and out</h2>
+                  <h2>Revenue and expense</h2>
                   <span className="wd-muted">{ym}</span>
                 </div>
                 <div className="wd-chart" aria-hidden>
@@ -3169,9 +3176,9 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                     setFilterKind(e.target.value as "all" | TxKind)
                   }
                 >
-                  <option value="expense">Money out</option>
-                  <option value="income">Money in</option>
-                  <option value="all">All in/out</option>
+                  <option value="expense">EXP</option>
+                  <option value="income">REV</option>
+                  <option value="all">All REV/EXP</option>
                 </select>
                 {txTypes.length > 0 ? (
                   <LedgerFilterMenu
@@ -3223,6 +3230,33 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 <p className="wd-muted wd-pad">Import a bank CSV to start.</p>
               ) : null}
 
+              {filterMonth === "all" && monthBooks.length > 0 ? (
+                <div className="wd-ledger-all-summary" aria-label="All year ledger summary">
+                  <p className="wd-month-io">
+                    <span className="wd-io-label">ALL {filterYear}</span>
+                    <span className="wd-io-gap" />
+                    <span className="wd-io-label">REV</span>
+                    <strong className="is-pos">
+                      {moneyCents(visibleLedgerSummary.rev)}
+                    </strong>
+                    <span className="wd-io-gap" />
+                    <span className="wd-io-label">EXP</span>
+                    <strong className="is-neg">
+                      {moneyCents(visibleLedgerSummary.exp)}
+                    </strong>
+                    <span className="wd-io-gap" />
+                    <span className="wd-io-label">NET WORTH</span>
+                    <strong
+                      className={
+                        visibleLedgerSummary.netWorth >= 0 ? "is-pos" : "is-neg"
+                      }
+                    >
+                      {moneyCents(visibleLedgerSummary.netWorth)}
+                    </strong>
+                  </p>
+                </div>
+              ) : null}
+
               {/* Always full list — no ···, no hide */}
               <div
                 className="wd-month-books"
@@ -3232,6 +3266,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 {monthBooks.map((book) => {
                   const monthOnly = monthLabelLong(book.month);
                   const yearOnly = book.month.slice(0, 4);
+                  const monthNetWorth = monthNetWorthByMonth.get(book.month);
                   return (
                     <section key={book.month} className="wd-month-book">
                       <header className="wd-month-book-head">
@@ -3246,14 +3281,34 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                             </span>
                           </h3>
                           <p className="wd-month-io">
-                            <span className="wd-io-label">IN</span>
+                            <span className="wd-io-label">REV</span>
                             <strong className="is-pos">
                               {moneyCents(book.moneyIn)}
                             </strong>
                             <span className="wd-io-gap" />
-                            <span className="wd-io-label">OUT</span>
+                            <span className="wd-io-label">EXP</span>
                             <strong className="is-neg">
                               {moneyCents(book.moneyOut)}
+                            </strong>
+                            <span className="wd-io-gap" />
+                            <span className="wd-io-label">NET WORTH</span>
+                            <strong
+                              className={
+                                monthNetWorth == null
+                                  ? "is-unavailable"
+                                  : monthNetWorth >= 0
+                                  ? "is-pos"
+                                  : "is-neg"
+                              }
+                              title={
+                                monthNetWorth == null
+                                  ? "Historical net worth needs statement balance evidence for that month."
+                                  : "Current net worth from accounts."
+                              }
+                            >
+                              {monthNetWorth == null
+                                ? "—"
+                                : moneyCents(monthNetWorth)}
                             </strong>
                           </p>
                         </div>
@@ -3267,7 +3322,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                               <th>Payee</th>
                               <th>Category</th>
                               <th className="num">Amount</th>
-                              <th className="num">Balance</th>
+                              <th className="num">Stmt bal</th>
                               <th />
                             </tr>
                           </thead>
@@ -3277,6 +3332,11 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                 t.category,
                                 `${t.merchant || ""} ${t.note || ""}`
                               );
+                              const payeeValue =
+                                cleanMerchant(t.merchant || t.note || "") ||
+                                t.merchant ||
+                                t.note ||
+                                "";
                               return (
                               <tr
                                 key={t.id}
@@ -3301,7 +3361,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                   <input
                                     type="text"
                                     className="wd-payee-input"
-                                    value={t.merchant || t.note || ""}
+                                    value={payeeValue}
                                     placeholder="Payee"
                                     title={
                                       (() => {
@@ -3341,7 +3401,14 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                   </select>
                                 </td>
                                 <td className="num wd-amt-cell">
-                                  <div className="wd-amt-inner">
+                                  <div
+                                    className={`wd-amt-inner ${
+                                      t.kind === "income" ? "is-pos" : "is-neg"
+                                    }`}
+                                  >
+                                    <span className="wd-amt-sign" aria-hidden>
+                                      {t.kind === "income" ? "+" : "-"}
+                                    </span>
                                     <span className="wd-amt-prefix" aria-hidden>
                                       $
                                     </span>
@@ -3350,8 +3417,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                       inputMode="decimal"
                                       title={
                                         t.kind === "income"
-                                          ? "Money in — green"
-                                          : "Money out — red"
+                                          ? "REV - green"
+                                          : "EXP - red"
                                       }
                                       className={
                                         t.kind === "income"
@@ -3381,13 +3448,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                   </div>
                                 </td>
                                 <td
-                                  className={`num wd-balance ${
-                                    (balanceById.get(t.id) || 0) >= 0
-                                      ? "is-pos"
-                                      : "is-neg"
-                                  }`}
+                                  className="num wd-balance is-unavailable"
+                                  title="Statement balance is unavailable for this row. Import statement balances before Wonder prints historical balances."
                                 >
-                                  {moneyCents(balanceById.get(t.id) || 0)}
+                                  —
                                 </td>
                                 <td>
                                   <button

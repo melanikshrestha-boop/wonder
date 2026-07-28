@@ -363,6 +363,11 @@ html body .wd strong {
   white-space: nowrap;
   color: var(--wd-secondary);
 }
+.wd-balance.is-unavailable,
+.wd-month-io .is-unavailable {
+  color: var(--wd-tertiary) !important;
+  font-weight: 600;
+}
 
 .wd-quick-label {
   font-size: 11px;
@@ -2108,9 +2113,9 @@ html body .wd strong {
   max-width: none;
   overflow-x: auto;
 }
-/* Date · Payee · Category · Amount · Balance · × */
+/* Date · Payee · Category · Amount · Stmt bal · × */
 .wd-table.wd-ledger-full th:nth-child(1),
-.wd-table.wd-ledger-full td:nth-child(1) { width: 7rem; }
+.wd-table.wd-ledger-full td:nth-child(1) { width: 8.75rem; }
 .wd-table.wd-ledger-full th:nth-child(2),
 .wd-table.wd-ledger-full td:nth-child(2) { width: auto; }
 .wd-table.wd-ledger-full th:nth-child(3),
@@ -2172,6 +2177,12 @@ html body .wd strong {
   min-width: 0;
   font-size: 13px;
 }
+.wd-table.wd-ledger-full td:first-child input[type="date"] {
+  min-width: 8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--wd-text) !important;
+  -webkit-text-fill-color: var(--wd-text) !important;
+}
 .wd-table.wd-ledger-full td.num input {
   white-space: nowrap !important;
   min-width: 0;
@@ -2189,23 +2200,43 @@ html body .wd strong {
   gap: 1px;
   width: 100%;
 }
+.wd-table.wd-ledger-full .wd-amt-sign {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  user-select: none;
+}
+.wd-table.wd-ledger-full .wd-amt-inner.is-pos .wd-amt-sign,
+.wd-table.wd-ledger-full .wd-amt-inner.is-pos .wd-amt-prefix,
+.wd-table.wd-ledger-full .wd-amt-inner.is-pos .wd-amt-input {
+  color: var(--wd-green, #0b8f77) !important;
+  -webkit-text-fill-color: var(--wd-green, #0b8f77) !important;
+  caret-color: var(--wd-green, #0b8f77);
+}
+.wd-table.wd-ledger-full .wd-amt-inner.is-neg .wd-amt-sign,
+.wd-table.wd-ledger-full .wd-amt-inner.is-neg .wd-amt-prefix,
+.wd-table.wd-ledger-full .wd-amt-inner.is-neg .wd-amt-input {
+  color: var(--wd-red, #d21919) !important;
+  -webkit-text-fill-color: var(--wd-red, #d21919) !important;
+  caret-color: var(--wd-red, #d21919);
+}
 .wd-table.wd-ledger-full .wd-amt-prefix {
   flex: 0 0 auto;
   font-size: 12px;
   font-weight: 500;
-  color: var(--wd-tertiary);
   line-height: 1;
   user-select: none;
 }
 .wd-table.wd-ledger-full .wd-amt-input {
   flex: 0 1 auto;
-  width: 4.5rem !important;
-  min-width: 3.25rem !important;
-  max-width: 5.25rem;
-  text-align: right !important;
+  width: 7ch !important;
+  min-width: 2ch !important;
+  max-width: 8ch;
+  text-align: left !important;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   padding: 0 2px !important;
 }
 /* Kill native number spinners anywhere they leak in */
