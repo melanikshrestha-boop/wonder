@@ -10,7 +10,7 @@ import {
   type FinanceState,
   type FinanceTx,
 } from "./financeStore";
-import { normalizeCategory } from "./financeCategorize";
+import { normalizeTransactionCategory } from "./financeCategorize";
 
 export type BusinessQuarterKey =
   `${number}-Q${1 | 2 | 3 | 4}`;
@@ -192,6 +192,7 @@ const NON_OPERATING_CATEGORY = new Set([
   "Credit card payment",
   "Family",
   "Gifts",
+  "Reimbursements",
 ]);
 
 const INVESTING_TEXT =
@@ -280,7 +281,7 @@ function inRange(tx: FinanceTx, startDate: string, endDate: string): boolean {
 }
 
 function normalizedCategory(tx: FinanceTx): string {
-  return normalizeCategory(tx.category, txText(tx));
+  return normalizeTransactionCategory(tx.category, txText(tx), tx.kind);
 }
 
 function isExplicitTransfer(tx: FinanceTx): boolean {
@@ -419,7 +420,9 @@ function needsClassification(
   if (
     tx.kind === "income" &&
     tx.categoryReviewed &&
-    (category === "Family" || category === "Gifts")
+    (category === "Family" ||
+      category === "Gifts" ||
+      category === "Reimbursements")
   ) {
     return false;
   }

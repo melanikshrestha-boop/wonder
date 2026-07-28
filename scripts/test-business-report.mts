@@ -360,6 +360,12 @@ console.log("Quarterly money report");
   assert("unknown Zelle inflow blocks the report", q1.integrity.status === "blocked");
   assert("unknown Zelle still appears in personal money in", q1.personal.moneyIn === 300);
   assert("unknown Zelle is available to the income drilldown", q1.personal.moneyInTransactionIds.includes("zelle"));
+  assert(
+    "unknown Zelle appears as Reimbursements in the income category pie",
+    q1.personal.incomeBreakdown.some(
+      (slice) => slice.label === "Reimbursements" && slice.amount === 300,
+    ),
+  );
 }
 
 {
@@ -443,6 +449,32 @@ console.log("Quarterly money report");
   );
   assert("generic Income category alone is not called revenue", q1.metrics.revenue === 0);
   assert("unknown generic inflow remains in classification work", q1.integrity.openClassificationCount === 1);
+}
+
+{
+  const q1 = report(
+    [
+      {
+        ...tx(
+          "zelle-payback",
+          "2026-01-12",
+          "income",
+          62,
+          "Reimbursements",
+          "Zelle from friend paying back dinner",
+        ),
+        categoryReviewed: true,
+      },
+    ],
+    "2026-Q1",
+    "2026-03-31",
+  );
+  assert("Zelle payback is visible money-in", q1.personal.moneyIn === 62);
+  assert("Zelle payback is not business revenue", q1.metrics.revenue === 0);
+  assert(
+    "reviewed reimbursement is resolved classification work",
+    q1.integrity.openClassificationCount === 0,
+  );
 }
 
 {

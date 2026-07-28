@@ -239,6 +239,21 @@ check(
   monthTrueIncome(applied, ymT) === 0
 );
 check(
+  "true income excludes reimbursements/paybacks",
+  monthTrueIncome(
+    [
+      newTx({
+        date: "2026-07-12",
+        kind: "income",
+        amount: 40,
+        category: "Reimbursements",
+        merchant: "Zelle from friend paying me back",
+      }),
+    ],
+    ymT
+  ) === 0
+);
+check(
   "true spend excludes transfers, keeps coffee",
   monthTrueSpend(applied, ymT) === 6.75
 );
@@ -668,13 +683,14 @@ const {
       newTx({ date: "2026-07-01", kind: "income", amount: 100, category: "Income", merchant: "Real income" }),
       newTx({ date: "2026-07-02", kind: "income", amount: 1000, category: "Transfers", merchant: "Transfer from savings" }),
       newTx({ date: "2026-07-03", kind: "income", amount: 400, category: "Credit card payment", merchant: "Card payment credit" }),
+      newTx({ date: "2026-07-03", kind: "income", amount: 60, category: "Reimbursements", merchant: "Zelle payback" }),
       newTx({ date: "2026-07-04", kind: "expense", amount: 500, category: "Transfers", merchant: "Transfer to savings" }),
       newTx({ date: "2026-07-05", kind: "expense", amount: 20, category: "Groceries", merchant: "Grocer" }),
       newTx({ date: "2026-07-06", kind: "expense", amount: 10, category: "Zelle", merchant: "Zelle to barber" }),
     ],
   });
   check(
-    "accounting: runway excludes transfer/card-payment credits but counts external Zelle spend",
+    "accounting: runway excludes transfer/card-payment/reimbursement credits but counts external Zelle spend",
     runway.avgMonthlyIncome === 100 && runway.avgMonthlyBurn === 30,
     runway
   );

@@ -127,8 +127,8 @@ assert.equal(
     "Zelle from Cedric Hong",
     "income"
   ),
-  "Uncategorized",
-  "incoming concert money has no confirmed earned-income source"
+  "Reimbursements",
+  "incoming Zelle payback defaults to reimbursement, not earned income"
 );
 assert.equal(
   normalizeImportedTransactionCategory(
@@ -152,8 +152,8 @@ assert.equal(
     "Zelle from Madison Aikins Nav0Jhdzhkdf",
     "income"
   ),
-  "Uncategorized",
-  "Madison remains unclassified until the owner supplies a purpose"
+  "Reimbursements",
+  "unknown incoming Zelle defaults to payback instead of pretending Zelle is income"
 );
 assert.equal(
   normalizeImportedTransactionCategory(
@@ -177,9 +177,11 @@ assert.ok(FINANCE_CATEGORIES.includes("Photography"));
 assert.ok(FINANCE_CATEGORIES.includes("Experiences"));
 assert.ok(FINANCE_CATEGORIES.includes("Gifts"));
 assert.ok(FINANCE_CATEGORIES.includes("Reselling"));
+assert.ok(FINANCE_CATEGORIES.includes("Reimbursements"));
 assert.ok(FINANCE_CATEGORIES.includes("Repayment"));
 assert.ok(INCOME_CATEGORIES.includes("Gifts"));
 assert.ok(INCOME_CATEGORIES.includes("Reselling"));
+assert.ok(INCOME_CATEGORIES.includes("Reimbursements"));
 assert.ok(!(INCOME_CATEGORIES as readonly string[]).includes("Income"));
 assert.ok(!(INCOME_CATEGORIES as readonly string[]).includes("Experiences"));
 assert.ok(!(EXPENSE_CATEGORIES as readonly string[]).includes("Gifts"));
@@ -277,9 +279,9 @@ assert.deepEqual(
 );
 assert.deepEqual(
   categoriesFor("Zelle from Madison Aikins Nav0Jhdzhkdf"),
-  ["Uncategorized"]
+  ["Reimbursements"]
 );
-assert.deepEqual(categoriesFor("Zelle from Cedric Hong"), ["Uncategorized"]);
+assert.deepEqual(categoriesFor("Zelle from Cedric Hong"), ["Reimbursements"]);
 assert.ok(
   categorizedChase
     .filter((transaction) => transaction.kind === "income")

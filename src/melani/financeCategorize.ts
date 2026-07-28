@@ -7,6 +7,7 @@
 export const CATEGORY_COLORS: Record<string, string> = {
   Income: "#3d8f6e",
   Family: "#0f8f7d",
+  Reimbursements: "#4f8f88",
   Gifts: "#d58a9a",
   Photography: "#7158a6",
   Reselling: "#2f7f91",
@@ -39,6 +40,7 @@ export const BAD_CATEGORIES = new Set(["Restaurants"]);
 export const INCOME_CATEGORIES = [
   "Uncategorized",
   "Family",
+  "Reimbursements",
   "Gifts",
   "Photography",
   "Reselling",
@@ -106,6 +108,7 @@ export const FINANCE_CATEGORIES = [
   "Uncategorized",
   "Income",
   "Family",
+  "Reimbursements",
   "Gifts",
   "Photography",
   "Reselling",
@@ -164,6 +167,10 @@ const ALIASES: Record<string, string> = {
   Repayment: "Repayment",
   "Family repayment": "Repayment",
   "Loan payment": "Repayment",
+  Reimbursement: "Reimbursements",
+  Reimbursements: "Reimbursements",
+  Refund: "Reimbursements",
+  Refunds: "Reimbursements",
   Zelle: "Uncategorized",
   Fun: "Experiences",
   Leisure: "Experiences",
@@ -296,14 +303,15 @@ export function normalizeTransactionCategory(
     /\bzelle\b/i.test(merchantOrNote) &&
     (!raw || /^(zelle|income|other|uncategorized)$/i.test(raw))
   )
-    return "Uncategorized";
+    return kind === "income" ? "Reimbursements" : "Uncategorized";
   return normalizeCategory(category, merchantOrNote);
 }
 
 /**
  * Import boundary: bank-provided "Zelle", "Transfer", and generic "Income"
- * labels are not accounting categories. Known owner rules are applied; every
- * other Zelle row waits in Uncategorized for a manual or Mel review.
+ * labels are not accounting categories. Known owner rules are applied; other
+ * incoming Zelle rows default to Reimbursements so paybacks are visible without
+ * pretending the rail itself is an income source.
  */
 export function normalizeImportedTransactionCategory(
   category: string | null | undefined,
@@ -311,7 +319,10 @@ export function normalizeImportedTransactionCategory(
   kind: "income" | "expense" = "expense"
 ): string {
   if (/\bzelle\b/i.test(merchantOrNote)) {
-    return zellePurposeCategory(merchantOrNote, kind) || "Uncategorized";
+    return (
+      zellePurposeCategory(merchantOrNote, kind) ||
+      (kind === "income" ? "Reimbursements" : "Uncategorized")
+    );
   }
   return normalizeTransactionCategory(category, merchantOrNote, kind);
 }

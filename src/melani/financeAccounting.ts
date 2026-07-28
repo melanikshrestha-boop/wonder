@@ -41,7 +41,10 @@ import {
   type Receivable,
   type ReceiptItem,
 } from "./financeBooksStore";
-import { isTransferLike } from "./financeTransfers";
+import {
+  isIncomeRecoveryLike,
+  isTransferLike,
+} from "./financeTransfers";
 import { detectSubscriptions, type SubCadence } from "./subscriptions";
 
 function isAnnualPeriod(period: string): boolean {
@@ -103,6 +106,12 @@ export const CHART_OF_ACCOUNTS: CoaAccount[] = [
     name: "Reselling revenue",
     type: "income",
     category: "Reselling",
+  },
+  {
+    code: "4350",
+    name: "Reimbursements / paid back",
+    type: "income",
+    category: "Reimbursements",
   },
   { code: "5000", name: "Housing", type: "expense", category: "Housing" },
   { code: "5100", name: "Utilities", type: "expense", category: "Utilities" },
@@ -172,6 +181,9 @@ function coaForTransaction(tx: FinanceTx): CoaAccount {
     }
     if (category === "Reselling") {
       return CHART_OF_ACCOUNTS.find((a) => a.code === "4300")!;
+    }
+    if (category === "Reimbursements") {
+      return CHART_OF_ACCOUNTS.find((a) => a.code === "4350")!;
     }
     // Direction is authoritative: an unknown inflow must never credit an
     // expense account merely because its category is Other/Uncategorized.
@@ -776,7 +788,12 @@ function isTrueBurn(t: FinanceTx): boolean {
 }
 
 function isTrueIncome(t: FinanceTx): boolean {
-  return !t.pending && t.kind === "income" && !isTransferLike(t);
+  return (
+    !t.pending &&
+    t.kind === "income" &&
+    !isTransferLike(t) &&
+    !isIncomeRecoveryLike(t)
+  );
 }
 
 export function buildRunway(state: FinanceState): RunwayReport {

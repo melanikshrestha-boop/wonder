@@ -14,8 +14,24 @@ export const TRANSFER_CATEGORIES = new Set([
   "Credit card payment",
 ]);
 
+/**
+ * Money that came back after Melani already paid something.
+ * Keep this out of TRANSFER_CATEGORIES so it can still appear in the
+ * money-in/category pie as a visible reimbursement lane.
+ */
+export const INCOME_RECOVERY_CATEGORIES = new Set([
+  "Reimbursements",
+  "Reimbursement",
+  "Refund",
+  "Refunds",
+]);
+
 export function isTransferLike(tx: FinanceTx): boolean {
   return TRANSFER_CATEGORIES.has(tx.category);
+}
+
+export function isIncomeRecoveryLike(tx: FinanceTx): boolean {
+  return tx.kind === "income" && INCOME_RECOVERY_CATEGORIES.has(tx.category);
 }
 
 export type TransferPair = {
@@ -143,7 +159,12 @@ export function applyTransferPair(
 export function monthTrueIncome(txs: FinanceTx[], ym: string): number {
   let s = 0;
   for (const t of txs) {
-    if (t.kind === "income" && t.date.startsWith(ym) && !isTransferLike(t))
+    if (
+      t.kind === "income" &&
+      t.date.startsWith(ym) &&
+      !isTransferLike(t) &&
+      !isIncomeRecoveryLike(t)
+    )
       s += t.amount;
   }
   return Math.round(s * 100) / 100;
