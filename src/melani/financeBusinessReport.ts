@@ -23,7 +23,7 @@ export type BusinessQuarterOption = {
 export type BusinessReportPriority = "high" | "medium" | "low";
 
 export type BusinessQuarterReport = {
-  title: "Quarterly operating review";
+  title: "Quarterly money review";
   quarter: {
     key: BusinessQuarterKey;
     label: string;
@@ -44,6 +44,55 @@ export type BusinessQuarterReport = {
     operatingMarginPct: number | null;
     priorRevenue: number;
     priorOperatingExpenses: number;
+  };
+  personal: {
+    moneyIn: number;
+    moneyOut: number;
+    net: number;
+    keepRatePct: number | null;
+    priorMoneyIn: number;
+    priorMoneyOut: number;
+    moneyInChangePct: number | null;
+    moneyOutChangePct: number | null;
+    reviewAmount: number;
+    incomeBreakdown: Array<{
+      id: string;
+      label: string;
+      amount: number;
+      percent: number;
+      color: string;
+    }>;
+    expenseBreakdown: Array<{
+      id: string;
+      label: string;
+      amount: number;
+      percent: number;
+      color: string;
+    }>;
+    trend: Array<{
+      key: BusinessQuarterKey;
+      label: string;
+      moneyIn: number;
+      moneyOut: number;
+      isPartial: boolean;
+    }>;
+    months: Array<{
+      key: string;
+      label: string;
+      moneyIn: number;
+      moneyOut: number;
+      net: number;
+      transactionCount: number;
+    }>;
+    movement: {
+      income: number;
+      spending: number;
+      investing: number;
+      financing: number;
+      cardSettlements: number;
+      transfers: number;
+      netCashChange: number;
+    };
   };
   trend: Array<{
     key: BusinessQuarterKey;
@@ -115,7 +164,16 @@ type ClassifiedQuarter = {
   unassignedAccount: FinanceTx[];
 };
 
-const EXPENSE_COLORS = [
+type PersonalQuarter = {
+  moneyIn: FinanceTx[];
+  moneyOut: FinanceTx[];
+  investing: FinanceTx[];
+  financing: FinanceTx[];
+  cardSettlements: FinanceTx[];
+  transfers: FinanceTx[];
+};
+
+const BREAKDOWN_COLORS = [
   "#2f6f5e",
   "#3559a8",
   "#df5a54",
@@ -229,6 +287,13 @@ function isExplicitTransfer(tx: FinanceTx): boolean {
   );
 }
 
+function isCardSettlement(tx: FinanceTx): boolean {
+  return (
+    normalizedCategory(tx) === "Credit card payment" ||
+    CARD_SETTLEMENT_TEXT.test(txText(tx))
+  );
+}
+
 function isEarnedOperatingIncome(tx: FinanceTx): boolean {
   if (tx.kind !== "income" || tx.pending) return false;
   const category = normalizedCategory(tx);
@@ -296,6 +361,47 @@ function isOperatingExpense(
     return false;
   }
   return true;
+}
+
+/**
+ * Personal cash-book view.
+ *
+ * Every complete posted row is assigned to exactly one lane. Money in/out is
+ * deliberately broader than business P&L: family support, gifts, refunds,
+ * unknown credits, and uncategorized purchases remain visible instead of
+ * disappearing from the report. Transfers, investments, borrowing, and card
+ * settlements stay outside income/spending so they cannot be counted twice.
+ */
+function classifyPersonalQuarter(
+  posted: FinanceTx[],
+  accounts: FinanceAccount[],
+): PersonalQuarter {
+  const result: PersonalQuarter = {
+    moneyIn: [],
+    moneyOut: [],
+    investing: [],
+    financing: [],
+    cardSettlements: [],
+    transfers: [],
+  };
+
+  for (const tx of posted) {
+    if (isInvestingMovement(tx, accounts)) {
+      result.investing.push(tx);
+    } else if (isFinancingMovement(tx)) {
+      result.financing.push(tx);
+    } else if (isCardSettlement(tx)) {
+      result.cardSettlements.push(tx);
+    } else if (isExplicitTransfer(tx)) {
+      result.transfers.push(tx);
+    } else if (tx.kind === "income") {
+      result.moneyIn.push(tx);
+    } else {
+      result.moneyOut.push(tx);
+    }
+  }
+
+  return result;
 }
 
 function needsClassification(
@@ -643,22 +749,22 @@ function percentChange(current: number, prior: number): number | null {
   return ((current - prior) / Math.abs(prior)) * 100;
 }
 
-function expenseBreakdown(
-  operatingExpenses: FinanceTx[],
-): BusinessQuarterReport["expenseBreakdown"] {
+function categoryBreakdown(
+  transactions: FinanceTx[],
+): BusinessQuarterReport["personal"]["expenseBreakdown"] {
   const byCategory = new Map<string, number>();
-  for (const tx of operatingExpenses) {
+  for (const tx of transactions) {
     const category = normalizedCategory(tx);
     byCategory.set(category, (byCategory.get(category) || 0) + tx.amount);
   }
-  const total = sum(operatingExpenses);
+  const total = sum(transactions);
   if (!(total > 0)) return [];
   const sorted = [...byCategory.entries()].sort((a, b) => b[1] - a[1]);
-  const visible = sorted.slice(0, 4);
-  if (sorted.length > 4) {
+  const visible = sorted.slice(0, 5);
+  if (sorted.length > 5) {
     visible.push([
-      "Other operating",
-      sorted.slice(4).reduce((amount, [, value]) => amount + value, 0),
+      "Other",
+      sorted.slice(5).reduce((amount, [, value]) => amount + value, 0),
     ]);
   }
   return visible.map(([label, amount], index) => ({
@@ -666,8 +772,55 @@ function expenseBreakdown(
     label,
     amount,
     percent: (amount / total) * 100,
-    color: EXPENSE_COLORS[index % EXPENSE_COLORS.length],
+    color: BREAKDOWN_COLORS[index % BREAKDOWN_COLORS.length],
   }));
+}
+
+function expenseBreakdown(
+  operatingExpenses: FinanceTx[],
+): BusinessQuarterReport["expenseBreakdown"] {
+  return categoryBreakdown(operatingExpenses);
+}
+
+function personalMonthRows(
+  state: FinanceState,
+  range: QuarterRange,
+  asOfDate: string,
+): BusinessQuarterReport["personal"]["months"] {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  return quarterMonths(range)
+    .filter((month) => `${month}-01` <= asOfDate)
+    .map((month) => {
+      const monthStart = `${month}-01`;
+      const monthDate = utcDate(monthStart);
+      const monthEnd = minDate(
+        asOfDate,
+        new Date(
+          Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() + 1, 0),
+        )
+          .toISOString()
+          .slice(0, 10),
+      );
+      const classified = classifyQuarter(state, monthStart, monthEnd);
+      const personal = classifyPersonalQuarter(
+        classified.posted,
+        state.accounts,
+      );
+      const moneyIn = sum(personal.moneyIn);
+      const moneyOut = sum(personal.moneyOut);
+      return {
+        key: month,
+        label: formatter.format(monthDate),
+        moneyIn,
+        moneyOut,
+        net: moneyIn - moneyOut,
+        transactionCount: classified.posted.length,
+      };
+    });
 }
 
 function reconciliationCount(reports: ReconReport[]): number {
@@ -684,39 +837,38 @@ function quarterMonths(range: QuarterRange): string[] {
   );
 }
 
-function buildHighlights(
-  report: Pick<
-    BusinessQuarterReport,
-    "metrics" | "expenseBreakdown" | "quarter"
-  >,
+function buildPersonalHighlights(
+  report: Pick<BusinessQuarterReport, "personal" | "quarter">,
   classified: ClassifiedQuarter,
 ): string[] {
   const highlights: string[] = [];
   highlights.push(
-    `${report.quarter.label} operating surplus is ${moneyCents(
-      report.metrics.netProfit,
-    )} on ${moneyCents(report.metrics.revenue)} of recognized operating income.`,
+    `${report.quarter.label} net kept is ${moneyCents(
+      report.personal.net,
+    )}: ${moneyCents(report.personal.moneyIn)} in and ${moneyCents(
+      report.personal.moneyOut,
+    )} out.`,
   );
-  if (report.metrics.revenueGrowthPct != null) {
-    const direction = report.metrics.revenueGrowthPct >= 0 ? "up" : "down";
+  if (report.personal.moneyInChangePct != null) {
+    const direction = report.personal.moneyInChangePct >= 0 ? "up" : "down";
     const qualifier =
       report.quarter.comparisonStatus === "preliminary"
         ? "Preliminary comparison: "
         : "";
     highlights.push(
-      `${qualifier}operating income is ${direction} ${Math.abs(
-        report.metrics.revenueGrowthPct,
+      `${qualifier}money in is ${direction} ${Math.abs(
+        report.personal.moneyInChangePct,
       ).toFixed(1)}% ${report.quarter.comparisonLabel}.`,
     );
   } else {
     highlights.push(
-      `Income growth is unavailable because the comparable prior period has no recognized operating income.`,
+      "Money-in change is unavailable because the comparable prior period has no recorded inflow.",
     );
   }
-  const largest = report.expenseBreakdown[0];
+  const largest = report.personal.expenseBreakdown[0];
   if (largest) {
     highlights.push(
-      `${largest.label} is the largest recognized operating cost at ${moneyCents(
+      `${largest.label} is the largest spending category at ${moneyCents(
         largest.amount,
       )} (${largest.percent.toFixed(0)}%).`,
     );
@@ -725,7 +877,7 @@ function buildHighlights(
     highlights.push(
       `${classified.unclassified.length} posted movement${
         classified.unclassified.length === 1 ? "" : "s"
-      } remain outside operating results until classified.`,
+      } are already included in money flow but still need a reviewed purpose.`,
     );
   }
   return highlights.slice(0, 4);
@@ -774,7 +926,7 @@ function buildNextSteps(args: {
     steps.push({
       id: "classify-movements",
       title: "Classify open money movements",
-      detail: `Assign purpose to ${args.classified.unclassified.length} inflow, unknown expense, refund, P2P, card-settlement, or transfer movement before treating it as revenue, cost, investing, or financing.`,
+      detail: `Assign purpose to ${args.classified.unclassified.length} inflow, unknown expense, refund, P2P, card-settlement, or transfer movement so category totals and reconciliation are exact.`,
       priority: "high",
     });
   }
@@ -803,17 +955,17 @@ function buildNextSteps(args: {
   ) {
     steps.push({
       id: "restore-surplus",
-      title: "Restore operating surplus",
-      detail: `Review ${args.largestExpense.label}, the largest recognized operating cost, before adding discretionary commitments.`,
+      title: "Restore positive cash kept",
+      detail: `Review ${args.largestExpense.label}, the largest spending category, before adding commitments.`,
       priority: "medium",
     });
   }
   if (!steps.length) {
     steps.push({
       id: "retain-surplus",
-      title: "Allocate the quarter surplus",
+      title: "Allocate what you kept",
       detail:
-        "All report controls passed. Assign the operating surplus to cash reserves, investing, taxes, or an explicit owner draw.",
+        "All report controls passed. Assign the net kept to cash reserves, investing, taxes, or a named goal.",
       priority: "low",
     });
   }
@@ -837,6 +989,14 @@ export function buildBusinessQuarterReport(
     comparable.range.startDate,
     comparable.endDate,
   );
+  const personalCurrent = classifyPersonalQuarter(
+    current.posted,
+    state.accounts,
+  );
+  const personalPrior = classifyPersonalQuarter(
+    prior.posted,
+    state.accounts,
+  );
 
   const revenue = sum(current.operatingIncome);
   const operatingExpenses = sum(current.operatingExpenses);
@@ -850,6 +1010,21 @@ export function buildBusinessQuarterReport(
   );
   const operatingMarginPct =
     revenue > 0 ? (netProfit / revenue) * 100 : null;
+  const personalMoneyIn = sum(personalCurrent.moneyIn);
+  const personalMoneyOut = sum(personalCurrent.moneyOut);
+  const personalNet = personalMoneyIn - personalMoneyOut;
+  const priorPersonalMoneyIn = sum(personalPrior.moneyIn);
+  const priorPersonalMoneyOut = sum(personalPrior.moneyOut);
+  const personalKeepRatePct =
+    personalMoneyIn > 0 ? (personalNet / personalMoneyIn) * 100 : null;
+  const personalMoneyInChangePct = percentChange(
+    personalMoneyIn,
+    priorPersonalMoneyIn,
+  );
+  const personalMoneyOutChangePct = percentChange(
+    personalMoneyOut,
+    priorPersonalMoneyOut,
+  );
   const months = quarterMonths(selected);
   const priorMonths = quarterMonths(comparable.range);
   const monthsClosed = months.filter((month) =>
@@ -866,7 +1041,7 @@ export function buildBusinessQuarterReport(
     classified.incomplete.length +
     classified.unassignedAccount.length;
   const hasPriorComparisonBasis =
-    priorRevenue > 0 || priorOperatingExpenses > 0;
+    priorPersonalMoneyIn > 0 || priorPersonalMoneyOut > 0;
   const comparisonStatus: BusinessQuarterReport["quarter"]["comparisonStatus"] =
     !hasPriorComparisonBasis
       ? "unavailable"
@@ -899,6 +1074,20 @@ export function buildBusinessQuarterReport(
       isPartial: trendKey === key && isPartial,
     };
   });
+  const personalTrend = [-3, -2, -1, 0].map((offset) => {
+    const trendKey = shiftQuarter(key, offset);
+    const range = businessQuarterRange(trendKey);
+    const trendEnd = trendKey === key ? asOfDate : range.endDate;
+    const data = classifyQuarter(state, range.startDate, trendEnd);
+    const personal = classifyPersonalQuarter(data.posted, state.accounts);
+    return {
+      key: trendKey,
+      label: quarterLabel(trendKey, trendKey === key && isPartial),
+      moneyIn: sum(personal.moneyIn),
+      moneyOut: sum(personal.moneyOut),
+      isPartial: trendKey === key && isPartial,
+    };
+  });
 
   const operating = operatingCashFlow(current, state.accounts);
   const investing = cashSideMovement(current.investing, state.accounts);
@@ -906,6 +1095,26 @@ export function buildBusinessQuarterReport(
   const unclassified = unclassifiedCashFlow(current, state.accounts);
   const netChange = operating + investing + financing + unclassified;
   const breakdown = expenseBreakdown(current.operatingExpenses);
+  const personalIncomeBreakdown = categoryBreakdown(personalCurrent.moneyIn);
+  const personalExpenseBreakdown = categoryBreakdown(personalCurrent.moneyOut);
+  const personalMovement = {
+    income: cashSideMovement(personalCurrent.moneyIn, state.accounts),
+    spending: cashSideMovement(personalCurrent.moneyOut, state.accounts),
+    investing: cashSideMovement(personalCurrent.investing, state.accounts),
+    financing: cashSideMovement(personalCurrent.financing, state.accounts),
+    cardSettlements: cashSideMovement(
+      personalCurrent.cardSettlements,
+      state.accounts,
+    ),
+    transfers: cashSideMovement(personalCurrent.transfers, state.accounts),
+  };
+  const personalNetCashChange =
+    personalMovement.income +
+    personalMovement.spending +
+    personalMovement.investing +
+    personalMovement.financing +
+    personalMovement.cardSettlements +
+    personalMovement.transfers;
   const warnings: string[] = [];
   if (!current.posted.length) {
     warnings.push(
@@ -928,7 +1137,7 @@ export function buildBusinessQuarterReport(
     warnings.push(
       `${current.unclassified.length} posted movement${
         current.unclassified.length === 1 ? "" : "s"
-      } need purpose/classification before entering operating results.`,
+      } are included in recorded money flow but still need a reviewed purpose.`,
     );
   }
   if (current.duplicates.length) {
@@ -965,7 +1174,7 @@ export function buildBusinessQuarterReport(
     );
   }
   warnings.push(
-    "The ledger does not yet separate personal, business, and mixed-use activity; this is a consolidated transaction-basis operating view.",
+    "This view is personal cash control: purchases are counted when posted, while transfers, card settlements, investing, and financing remain visible in separate movement lanes.",
   );
 
   const hasPostedEvidence = current.posted.length > 0;
@@ -1001,9 +1210,9 @@ export function buildBusinessQuarterReport(
   );
   const label = `${
     integrityStatus === "ready" ? "Final" : "Preliminary"
-  } · ${monthsClosed}/3 months closed · ${current.pending.length} pending · ${
+  } · ${current.posted.length} posted tracked · ${monthsClosed}/3 months closed · ${current.pending.length} pending · ${
     current.unclassified.length
-  } classifications open · ${dataControlCount} ledger exceptions · ${unreconciled} accounts unreconciled`;
+  } need purpose · ${dataControlCount} ledger exceptions · ${unreconciled} accounts unreconciled`;
 
   const reportBase = {
     quarter: {
@@ -1029,10 +1238,30 @@ export function buildBusinessQuarterReport(
     },
     expenseBreakdown: breakdown,
   };
+  const personal: BusinessQuarterReport["personal"] = {
+    moneyIn: personalMoneyIn,
+    moneyOut: personalMoneyOut,
+    net: personalNet,
+    keepRatePct: personalKeepRatePct,
+    priorMoneyIn: priorPersonalMoneyIn,
+    priorMoneyOut: priorPersonalMoneyOut,
+    moneyInChangePct: personalMoneyInChangePct,
+    moneyOutChangePct: personalMoneyOutChangePct,
+    reviewAmount: sum(current.unclassified),
+    incomeBreakdown: personalIncomeBreakdown,
+    expenseBreakdown: personalExpenseBreakdown,
+    trend: personalTrend,
+    months: personalMonthRows(state, selected, asOfDate),
+    movement: {
+      ...personalMovement,
+      netCashChange: personalNetCashChange,
+    },
+  };
 
   return {
-    title: "Quarterly operating review",
+    title: "Quarterly money review",
     ...reportBase,
+    personal,
     trend,
     cashFlow: {
       operating,
@@ -1041,13 +1270,19 @@ export function buildBusinessQuarterReport(
       unclassified,
       netChange,
     },
-    highlights: buildHighlights(reportBase, current),
+    highlights: buildPersonalHighlights(
+      {
+        quarter: reportBase.quarter,
+        personal,
+      },
+      current,
+    ),
     nextSteps: buildNextSteps({
       classified: current,
       unreconciled,
       monthsClosed,
-      netProfit,
-      largestExpense: breakdown[0],
+      netProfit: personalNet,
+      largestExpense: personalExpenseBreakdown[0],
     }),
     integrity: {
       status: integrityStatus,
@@ -1066,9 +1301,9 @@ export function buildBusinessQuarterReport(
     },
     supportingTransactionIds: current.all.map((tx) => tx.id),
     basisNote:
-      "Transaction basis · recognized external earned income minus classified operating expenses · matched internal transfers, card payments, investing, financing, refunds, unknown-purpose P2P, externally identified duplicates, incomplete rows, and pending items excluded from operating results; possible duplicates remain in totals until reviewed.",
+      "Personal transaction basis · every complete posted external inflow and purchase enters Money in or Money out, even when its purpose still needs review. Transfers, card settlements, investing, and financing are tracked separately so they never inflate income or spending. Pending, incomplete, and confirmed duplicate rows stay outside actuals.",
     ebitdaNote:
-      "EBITDA unavailable until business-only books separately record interest, tax, depreciation, amortization, and capitalized assets.",
+      "This is a personal cash-control report, not a tax return or business income statement. Statement reconciliation and reviewed transaction purposes are required before a quarter is final.",
   };
 }
 
@@ -1081,41 +1316,59 @@ export function businessQuarterReportCsv(
   report: BusinessQuarterReport,
 ): string {
   const rows: Array<Array<string | number>> = [
-    ["Quarterly operating review", report.quarter.label],
+    ["Quarterly money review", report.quarter.label],
     ["Basis", report.basisNote],
     ["Integrity", report.integrity.label],
     [],
     ["Metric", "Value", "Comparison"],
-    ["Operating income", report.metrics.revenue, report.quarter.comparisonLabel],
+    ["Money in", report.personal.moneyIn, report.quarter.comparisonLabel],
     [
-      "Operating spend",
-      report.metrics.operatingExpenses,
+      "Money out",
+      report.personal.moneyOut,
       report.quarter.comparisonLabel,
     ],
-    ["Operating surplus", report.metrics.netProfit, ""],
+    ["Net kept", report.personal.net, ""],
     [
-      "Income growth %",
-      report.metrics.revenueGrowthPct ?? "Unavailable",
+      "Money-in change %",
+      report.personal.moneyInChangePct ?? "Unavailable",
       report.quarter.comparisonLabel,
     ],
     [
-      "Operating margin %",
-      report.metrics.operatingMarginPct ?? "Unavailable",
+      "Keep rate %",
+      report.personal.keepRatePct ?? "Unavailable",
       "",
     ],
     [],
-    ["Cash flow class", "Amount"],
-    ["Operating", report.cashFlow.operating],
-    ["Investing", report.cashFlow.investing],
-    ["Financing", report.cashFlow.financing],
-    ["Unclassified", report.cashFlow.unclassified],
-    ["Net known + unclassified movement", report.cashFlow.netChange],
+    ["Cash-account movement", "Amount"],
+    ["Income", report.personal.movement.income],
+    ["Spending", report.personal.movement.spending],
+    ["Investing", report.personal.movement.investing],
+    ["Financing", report.personal.movement.financing],
+    ["Card settlements", report.personal.movement.cardSettlements],
+    ["Transfers", report.personal.movement.transfers],
+    ["Net cash movement", report.personal.movement.netCashChange],
     [],
     ["Expense category", "Amount", "Percent"],
-    ...report.expenseBreakdown.map((slice) => [
+    ...report.personal.expenseBreakdown.map((slice) => [
       slice.label,
       slice.amount,
       slice.percent,
+    ]),
+    [],
+    ["Income category", "Amount", "Percent"],
+    ...report.personal.incomeBreakdown.map((slice) => [
+      slice.label,
+      slice.amount,
+      slice.percent,
+    ]),
+    [],
+    ["Month", "Money in", "Money out", "Net", "Posted transactions"],
+    ...report.personal.months.map((month) => [
+      month.label,
+      month.moneyIn,
+      month.moneyOut,
+      month.net,
+      month.transactionCount,
     ]),
     [],
     ["Control warnings"],

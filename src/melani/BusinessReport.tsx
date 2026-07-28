@@ -16,6 +16,9 @@ type BusinessReportProps = {
   onReviewLedger: () => void;
 };
 
+type BreakdownRow =
+  BusinessQuarterReport["personal"]["expenseBreakdown"][number];
+
 function dollars(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -35,13 +38,18 @@ function compactDollars(value: number): string {
   return dollars(value).replace("-", "−");
 }
 
-function percent(value: number | null): string {
-  if (value == null || !Number.isFinite(value)) return "Unavailable";
+function signedDollars(value: number): string {
+  if (Math.abs(value) < 0.005) return "$0.00";
+  return `${value > 0 ? "+" : "−"}${dollars(Math.abs(value))}`;
+}
+
+function changePercent(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "No baseline";
   return `${value >= 0 ? "+" : "−"}${Math.abs(value).toFixed(1)}%`;
 }
 
-function margin(value: number | null): string {
-  if (value == null || !Number.isFinite(value)) return "Unavailable";
+function rate(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "—";
   return `${value.toFixed(1)}%`;
 }
 
@@ -60,17 +68,16 @@ function TrendNote({
   const favorable = inverse ? value <= 0 : value >= 0;
   return (
     <span className={`wbr-kpi-note ${favorable ? "is-good" : "is-bad"}`}>
-      <span aria-hidden="true">{value >= 0 ? "▲" : "▼"}</span>{" "}
-      {Math.abs(value).toFixed(1)}% {comparison}
+      {value >= 0 ? "↑" : "↓"} {Math.abs(value).toFixed(1)}% {comparison}
     </span>
   );
 }
 
-function KpiCard({
+function Kpi({
   label,
   value,
   children,
-  tone,
+  tone = "neutral",
 }: {
   label: string;
   value: string;
@@ -80,7 +87,7 @@ function KpiCard({
   return (
     <article className="wbr-kpi">
       <h3>{label}</h3>
-      <strong className={tone ? `is-${tone}` : undefined}>{value}</strong>
+      <strong className={`is-${tone}`}>{value}</strong>
       {children}
     </article>
   );
@@ -89,28 +96,32 @@ function KpiCard({
 function TrendChart({
   rows,
 }: {
-  rows: BusinessQuarterReport["trend"];
+  rows: BusinessQuarterReport["personal"]["trend"];
 }) {
-  const width = 620;
-  const height = 250;
-  const left = 58;
-  const right = 20;
-  const top = 24;
-  const bottom = 44;
+  const width = 720;
+  const height = 270;
+  const left = 62;
+  const right = 24;
+  const top = 22;
+  const bottom = 46;
   const innerWidth = width - left - right;
   const innerHeight = height - top - bottom;
   const maxValue = Math.max(
     1,
-    ...rows.flatMap((row) => [row.revenue, row.operatingExpenses]),
+    ...rows.flatMap((row) => [row.moneyIn, row.moneyOut]),
   );
   const x = (index: number) =>
-    left + (rows.length <= 1 ? innerWidth / 2 : (index / (rows.length - 1)) * innerWidth);
-  const y = (value: number) => top + innerHeight - (value / maxValue) * innerHeight;
-  const revenuePoints = rows
-    .map((row, index) => `${x(index)},${y(row.revenue)}`)
+    left +
+    (rows.length <= 1
+      ? innerWidth / 2
+      : (index / (rows.length - 1)) * innerWidth);
+  const y = (value: number) =>
+    top + innerHeight - (value / maxValue) * innerHeight;
+  const inPoints = rows
+    .map((row, index) => `${x(index)},${y(row.moneyIn)}`)
     .join(" ");
-  const expensePoints = rows
-    .map((row, index) => `${x(index)},${y(row.operatingExpenses)}`)
+  const outPoints = rows
+    .map((row, index) => `${x(index)},${y(row.moneyOut)}`)
     .join(" ");
 
   return (
@@ -118,9 +129,9 @@ function TrendChart({
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label="Quarterly operating income and spend trend"
+        aria-label="Money in and money out by quarter"
       >
-        <title>Operating income and spend by quarter</title>
+        <title>Money in and money out by quarter</title>
         {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
           const gridY = top + innerHeight * ratio;
           const value = maxValue * (1 - ratio);
@@ -134,17 +145,29 @@ function TrendChart({
                 className="wbr-grid-line"
               />
               <text x={left - 10} y={gridY + 4} textAnchor="end">
-                {value >= 1_000 ? `$${Math.round(value / 1_000)}k` : `$${Math.round(value)}`}
+                {value >= 1_000
+                  ? `$${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}k`
+                  : `$${Math.round(value)}`}
               </text>
             </g>
           );
         })}
-        <polyline points={revenuePoints} className="wbr-line is-income" />
-        <polyline points={expensePoints} className="wbr-line is-expense" />
+        <polyline points={inPoints} className="wbr-line is-income" />
+        <polyline points={outPoints} className="wbr-line is-expense" />
         {rows.map((row, index) => (
           <g key={row.key}>
-            <circle cx={x(index)} cy={y(row.revenue)} r="4" className="wbr-dot is-income" />
-            <circle cx={x(index)} cy={y(row.operatingExpenses)} r="4" className="wbr-dot is-expense" />
+            <circle
+              cx={x(index)}
+              cy={y(row.moneyIn)}
+              r="4"
+              className="wbr-dot is-income"
+            />
+            <circle
+              cx={x(index)}
+              cy={y(row.moneyOut)}
+              r="4"
+              className="wbr-dot is-expense"
+            />
             <text
               x={x(index)}
               y={height - 14}
@@ -157,59 +180,28 @@ function TrendChart({
         ))}
       </svg>
       <div className="wbr-chart-legend" aria-label="Chart legend">
-        <span><i className="is-income" />Operating income</span>
-        <span><i className="is-expense" />Operating spend</span>
+        <span>
+          <i className="is-income" />
+          Money in
+        </span>
+        <span>
+          <i className="is-expense" />
+          Money out
+        </span>
         <em>* QTD</em>
       </div>
     </div>
   );
 }
 
-function CashFlowBars({
-  cashFlow,
-}: {
-  cashFlow: BusinessQuarterReport["cashFlow"];
-}) {
-  const rows = [
-    { label: "Operating", value: cashFlow.operating },
-    { label: "Investing", value: cashFlow.investing },
-    { label: "Financing", value: cashFlow.financing },
-    ...(cashFlow.unclassified
-      ? [{ label: "Unclassified", value: cashFlow.unclassified }]
-      : []),
-  ];
-  const max = Math.max(1, ...rows.map((row) => Math.abs(row.value)));
-  return (
-    <div className="wbr-cash-bars" aria-label="Cash flow by class">
-      {rows.map((row) => {
-        const width = Math.max(2, (Math.abs(row.value) / max) * 48);
-        const style = { "--wbr-bar-size": `${width}%` } as CSSProperties;
-        return (
-          <div className="wbr-cash-row" key={row.label}>
-            <span>{row.label}</span>
-            <div className="wbr-cash-track">
-              <i className="wbr-cash-axis" />
-              <i
-                className={`wbr-cash-bar ${row.value >= 0 ? "is-positive" : "is-negative"}`}
-                style={style}
-              />
-            </div>
-            <strong>{compactDollars(row.value)}</strong>
-          </div>
-        );
-      })}
-      <p>
-        Net known + unclassified cash movement{" "}
-        <strong>{compactDollars(cashFlow.netChange)}</strong>
-      </p>
-    </div>
-  );
-}
-
-function ExpenseDonut({
+function Mix({
   rows,
+  total,
+  centerLabel,
 }: {
-  rows: BusinessQuarterReport["expenseBreakdown"];
+  rows: BreakdownRow[];
+  total: number;
+  centerLabel: string;
 }) {
   let cursor = 0;
   const segments = rows.map((row) => {
@@ -217,29 +209,29 @@ function ExpenseDonut({
     cursor += row.percent;
     return `${row.color} ${start}% ${cursor}%`;
   });
-  const donutStyle = {
+  const style = {
     background: rows.length
       ? `conic-gradient(${segments.join(",")})`
       : "conic-gradient(var(--wbr-empty-ring) 0 100%)",
   };
-  const total = rows.reduce((sum, row) => sum + row.amount, 0);
+
   return (
-    <div className="wbr-expense-mix">
+    <div className="wbr-mix">
       <div
         className="wbr-donut"
-        style={donutStyle}
+        style={style}
         role="img"
         aria-label={
           rows.length
             ? rows
                 .map((row) => `${row.label} ${row.percent.toFixed(0)} percent`)
                 .join(", ")
-            : "No recognized operating expenses"
+            : `No ${centerLabel.toLowerCase()} recorded`
         }
       >
         <div>
           <strong>{compactDollars(total)}</strong>
-          <span>recognized spend</span>
+          <span>{centerLabel}</span>
         </div>
       </div>
       <ul>
@@ -247,32 +239,118 @@ function ExpenseDonut({
           rows.map((row) => (
             <li key={row.id}>
               <i style={{ background: row.color }} />
-              <span>{row.label}</span>
+              <span title={row.label}>{row.label}</span>
               <strong>{row.percent.toFixed(0)}%</strong>
               <em>{compactDollars(row.amount)}</em>
             </li>
           ))
         ) : (
-          <li className="is-empty">No recognized operating expenses this period.</li>
+          <li className="is-empty">Nothing recorded in this lane.</li>
         )}
       </ul>
     </div>
   );
 }
 
-function Panel({
+function Movement({
+  movement,
+}: {
+  movement: BusinessQuarterReport["personal"]["movement"];
+}) {
+  const rows = [
+    { label: "Income & support", value: movement.income },
+    { label: "Cash spending", value: movement.spending },
+    { label: "Investing", value: movement.investing },
+    { label: "Borrowing / principal", value: movement.financing },
+    { label: "Card settlements", value: movement.cardSettlements },
+    { label: "Transfers between accounts", value: movement.transfers },
+  ];
+  const max = Math.max(1, ...rows.map((row) => Math.abs(row.value)));
+
+  return (
+    <div className="wbr-movement">
+      {rows.map((row) => {
+        const width = Math.max(1.5, (Math.abs(row.value) / max) * 48);
+        const style = { "--wbr-bar-size": `${width}%` } as CSSProperties;
+        return (
+          <div className="wbr-movement-row" key={row.label}>
+            <span>{row.label}</span>
+            <div className="wbr-movement-track">
+              <i className="wbr-movement-axis" />
+              <i
+                className={`wbr-movement-bar ${
+                  row.value >= 0 ? "is-positive" : "is-negative"
+                }`}
+                style={style}
+              />
+            </div>
+            <strong className={row.value >= 0 ? "is-positive" : "is-negative"}>
+              {signedDollars(row.value)}
+            </strong>
+          </div>
+        );
+      })}
+      <p>
+        Net change across cash, checking, and savings
+        <strong
+          className={
+            movement.netCashChange >= 0 ? "is-positive" : "is-negative"
+          }
+        >
+          {signedDollars(movement.netCashChange)}
+        </strong>
+      </p>
+    </div>
+  );
+}
+
+function MonthlyBook({
+  rows,
+}: {
+  rows: BusinessQuarterReport["personal"]["months"];
+}) {
+  return (
+    <div className="wbr-month-book">
+      <div className="wbr-month-row is-head" aria-hidden="true">
+        <span>Month</span>
+        <span>In</span>
+        <span>Out</span>
+        <span>Kept</span>
+        <span>Rows</span>
+      </div>
+      {rows.map((row) => (
+        <div className="wbr-month-row" key={row.key}>
+          <strong>{row.label}</strong>
+          <span className="is-positive">{compactDollars(row.moneyIn)}</span>
+          <span className="is-negative">{compactDollars(row.moneyOut)}</span>
+          <span className={row.net >= 0 ? "is-positive" : "is-negative"}>
+            {signedDollars(row.net)}
+          </span>
+          <span>{row.transactionCount}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Section({
   title,
+  detail,
   children,
   className = "",
 }: {
   title: string;
+  detail?: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <section className={`wbr-panel ${className}`.trim()}>
-      <h2>{title}</h2>
-      <div className="wbr-panel-body">{children}</div>
+    <section className={`wbr-section ${className}`.trim()}>
+      <header>
+        <h2>{title}</h2>
+        {detail ? <p>{detail}</p> : null}
+      </header>
+      {children}
     </section>
   );
 }
@@ -286,12 +364,6 @@ export function BusinessReport({
   onPrint,
   onReviewLedger,
 }: BusinessReportProps) {
-  const priorProfit =
-    report.metrics.priorRevenue - report.metrics.priorOperatingExpenses;
-  const profitChange =
-    priorProfit > 0
-      ? ((report.metrics.netProfit - priorProfit) / Math.abs(priorProfit)) * 100
-      : null;
   const integrityTone =
     report.integrity.status === "ready"
       ? "is-ready"
@@ -302,9 +374,9 @@ export function BusinessReport({
   return (
     <section className="wbr" aria-labelledby="wbr-title">
       <header className="wbr-header">
-        <div>
-          <p>Personal enterprise · transaction basis</p>
-          <h1 id="wbr-title">Quarterly operating review</h1>
+        <div className="wbr-heading">
+          <p>Personal cash book · every dollar accounted for</p>
+          <h1 id="wbr-title">Quarterly money review</h1>
           <span>
             {report.quarter.label} · through {report.quarter.asOfDate} ·{" "}
             {report.quarter.comparisonLabel}
@@ -312,7 +384,7 @@ export function BusinessReport({
         </div>
         <div className="wbr-controls">
           <label>
-            Quarter
+            <span>Quarter</span>
             <select
               value={selectedQuarter}
               onChange={(event) =>
@@ -327,79 +399,114 @@ export function BusinessReport({
             </select>
           </label>
           <button type="button" onClick={onReviewLedger}>
-            Supporting ledger
+            Open ledger
           </button>
           <button type="button" onClick={onExport}>
             Export CSV
           </button>
-          <button type="button" className="is-primary" onClick={onPrint}>
+          <button type="button" onClick={onPrint}>
             Print / PDF
           </button>
         </div>
       </header>
 
       <div className={`wbr-integrity ${integrityTone}`}>
-        <strong>{report.integrity.label}</strong>
-        <span>Control score {report.integrity.score}/100</span>
+        <span>{report.integrity.label}</span>
+        <strong>Records {report.integrity.score}/100</strong>
+      </div>
+
+      <div className="wbr-kpis">
+        <Kpi label="Money in" value={compactDollars(report.personal.moneyIn)} tone="good">
+          <TrendNote
+            value={report.personal.moneyInChangePct}
+            comparison={report.quarter.comparisonLabel}
+          />
+        </Kpi>
+        <Kpi label="Money out" value={compactDollars(report.personal.moneyOut)} tone="bad">
+          <TrendNote
+            value={report.personal.moneyOutChangePct}
+            comparison={report.quarter.comparisonLabel}
+            inverse
+          />
+        </Kpi>
+        <Kpi
+          label="Net kept"
+          value={signedDollars(report.personal.net)}
+          tone={report.personal.net >= 0 ? "good" : "bad"}
+        >
+          <span className="wbr-kpi-note is-neutral">Money in − money out</span>
+        </Kpi>
+        <Kpi
+          label="Keep rate"
+          value={rate(report.personal.keepRatePct)}
+          tone={
+            report.personal.keepRatePct == null
+              ? "neutral"
+              : report.personal.keepRatePct >= 0
+                ? "good"
+                : "bad"
+          }
+        >
+          <span className="wbr-kpi-note is-neutral">Net kept ÷ money in</span>
+        </Kpi>
+        <Kpi
+          label="Needs purpose"
+          value={String(report.integrity.openClassificationCount)}
+          tone={report.integrity.openClassificationCount ? "bad" : "good"}
+        >
+          <span className="wbr-kpi-note is-neutral">
+            {report.integrity.openClassificationCount
+              ? `${compactDollars(report.personal.reviewAmount)} to review`
+              : "Every posted row named"}
+          </span>
+        </Kpi>
       </div>
 
       <div className="wbr-grid">
-        <div className="wbr-kpis">
-          <KpiCard label="Operating income" value={compactDollars(report.metrics.revenue)}>
-            <TrendNote
-              value={report.metrics.revenueGrowthPct}
-              comparison={report.quarter.comparisonLabel}
-            />
-          </KpiCard>
-          <KpiCard label="Operating spend" value={compactDollars(report.metrics.operatingExpenses)}>
-            <TrendNote
-              value={report.metrics.expenseChangePct}
-              comparison={report.quarter.comparisonLabel}
-              inverse
-            />
-          </KpiCard>
-          <KpiCard
-            label="Operating surplus"
-            value={compactDollars(report.metrics.netProfit)}
-            tone={report.metrics.netProfit >= 0 ? "good" : "bad"}
-          >
-            <TrendNote value={profitChange} comparison={report.quarter.comparisonLabel} />
-          </KpiCard>
-          <KpiCard label="Income growth" value={percent(report.metrics.revenueGrowthPct)}>
-            <span className="wbr-kpi-note is-neutral">
-              {report.quarter.comparisonBasis === "matched-qtd"
-                ? "Matched-day QTD comparison"
-                : "Full calendar-quarter comparison"}
-            </span>
-          </KpiCard>
-          <KpiCard label="Operating margin" value={margin(report.metrics.operatingMarginPct)}>
-            <span className="wbr-kpi-note is-neutral">
-              Surplus ÷ recognized income
-            </span>
-          </KpiCard>
-        </div>
+        <Section
+          title="Money in and out"
+          detail="All posted external inflows and purchases; transfers and settlements cannot inflate these lines."
+          className="wbr-trend"
+        >
+          <TrendChart rows={report.personal.trend} />
+        </Section>
 
-        <Panel title="Expense breakdown" className="wbr-expenses">
-          <ExpenseDonut rows={report.expenseBreakdown} />
-        </Panel>
+        <Section title="Where money went" className="wbr-expenses">
+          <Mix
+            rows={report.personal.expenseBreakdown}
+            total={report.personal.moneyOut}
+            centerLabel="money out"
+          />
+        </Section>
 
-        <Panel title="Income & expense trend" className="wbr-trend">
-          <TrendChart rows={report.trend} />
-        </Panel>
+        <Section title="Where money came from" className="wbr-income">
+          <Mix
+            rows={report.personal.incomeBreakdown}
+            total={report.personal.moneyIn}
+            centerLabel="money in"
+          />
+        </Section>
 
-        <Panel title="Cash flow" className="wbr-cash">
-          <CashFlowBars cashFlow={report.cashFlow} />
-        </Panel>
+        <Section
+          title="Cash-account movement"
+          detail="The bank view: checking, savings, and physical cash only."
+          className="wbr-cash"
+        >
+          <Movement movement={report.personal.movement} />
+        </Section>
 
-        <Panel title="Highlights" className="wbr-highlights">
-          <ul>
-            {report.highlights.map((highlight) => (
-              <li key={highlight}>{highlight}</li>
-            ))}
-          </ul>
-        </Panel>
+        <Section
+          title="Month book"
+          detail="Every complete posted row in the selected quarter."
+          className="wbr-months"
+        >
+          <MonthlyBook rows={report.personal.months} />
+        </Section>
 
-        <Panel title="Outlook / next steps" className="wbr-next">
+        <Section
+          title="What requires attention"
+          className="wbr-next"
+        >
           <ol>
             {report.nextSteps.map((step) => (
               <li key={step.id} className={`is-${step.priority}`}>
@@ -408,12 +515,12 @@ export function BusinessReport({
               </li>
             ))}
           </ol>
-        </Panel>
+        </Section>
       </div>
 
       <footer className="wbr-footer">
         <div>
-          <strong>Report basis</strong>
+          <strong>How this report counts money</strong>
           <p>{report.basisNote}</p>
           <p>{report.ebitdaNote}</p>
         </div>

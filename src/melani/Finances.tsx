@@ -1492,7 +1492,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `wonder-quarterly-operating-review-${businessReport.quarter.key}.csv`;
+    anchor.download = `wonder-quarterly-money-review-${businessReport.quarter.key}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
   }

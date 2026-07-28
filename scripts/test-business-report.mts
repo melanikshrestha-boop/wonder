@@ -108,7 +108,7 @@ function report(
   );
 }
 
-console.log("Quarterly operating report");
+console.log("Quarterly money report");
 
 {
   const txs = [
@@ -136,6 +136,9 @@ console.log("Quarterly operating report");
   assert("card purchase is a Q1 operating expense", q1.metrics.operatingExpenses === 100);
   assert("Q2 card settlement is not a second expense", q2.metrics.operatingExpenses === 0);
   assert("card settlement remains an open classification", q2.integrity.openClassificationCount === 1);
+  assert("personal spending counts the purchase once", q1.personal.moneyOut === 100);
+  assert("personal spending does not count the card payment twice", q2.personal.moneyOut === 0);
+  assert("card settlement remains visible in cash movement", q2.personal.movement.cardSettlements === -100);
 }
 
 {
@@ -163,6 +166,7 @@ console.log("Quarterly operating report");
   assert("checking-to-savings transfer is not revenue", q1.metrics.revenue === 0);
   assert("checking-to-savings transfer is not expense", q1.metrics.operatingExpenses === 0);
   assert("checking-to-savings transfer vanishes from consolidated cash flow", q1.cashFlow.netChange === 0);
+  assert("internal transfer does not inflate personal money in or out", q1.personal.moneyIn === 0 && q1.personal.moneyOut === 0);
 }
 
 {
@@ -248,6 +252,7 @@ console.log("Quarterly operating report");
   );
   assert("family gift is excluded from operating income", q1.metrics.revenue === 900);
   assert("gift remains visible as an open classification", q1.integrity.openClassificationCount === 1);
+  assert("personal money in includes both support and payroll", q1.personal.moneyIn === 1_500);
 }
 
 {
@@ -331,6 +336,7 @@ console.log("Quarterly operating report");
   );
   assert("unknown Zelle inflow is not called revenue", q1.metrics.revenue === 0);
   assert("unknown Zelle inflow blocks the report", q1.integrity.status === "blocked");
+  assert("unknown Zelle still appears in personal money in", q1.personal.moneyIn === 300);
 }
 
 {
@@ -481,6 +487,7 @@ console.log("Quarterly operating report");
   );
   assert("unknown Other expense is excluded from operating spend", q1.metrics.operatingExpenses === 0);
   assert("unknown Other expense remains a blocking classification", q1.integrity.openClassificationCount === 1 && q1.integrity.status === "blocked");
+  assert("unknown expense still appears in personal money out", q1.personal.moneyOut === 100);
 }
 
 {
@@ -618,6 +625,7 @@ console.log("Quarterly operating report");
   );
   assert("unlinked refund is neither revenue nor automatic expense reduction", q1.metrics.revenue === 0 && q1.metrics.operatingExpenses === 0);
   assert("unlinked refund remains open for reviewed matching", q1.integrity.openClassificationCount === 1);
+  assert("unlinked refund remains visible as money in", q1.personal.moneyIn === 30);
 }
 
 {
@@ -654,8 +662,10 @@ console.log("Quarterly operating report");
     "2026-03-31",
   );
   const csv = businessQuarterReportCsv(q1);
-  assert("CSV names the operating report", csv.includes("Quarterly operating review"));
-  assert("CSV includes operating margin and controls", csv.includes("Operating margin %") && csv.includes("Control warnings"));
+  assert("CSV names the personal money report", csv.includes("Quarterly money review"));
+  assert("CSV includes keep rate and controls", csv.includes("Keep rate %") && csv.includes("Control warnings"));
+  assert("CSV exports both income and expense categories", csv.includes("Income category") && csv.includes("Expense category"));
+  assert("month book reconciles personal totals", q1.personal.months.reduce((total, month) => total + month.moneyIn, 0) === q1.personal.moneyIn && q1.personal.months.reduce((total, month) => total + month.moneyOut, 0) === q1.personal.moneyOut);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
