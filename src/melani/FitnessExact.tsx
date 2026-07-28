@@ -19,6 +19,7 @@ import {
   NUTRITION_EVENT,
   removeEntry,
   totalsFor as nutriTotalsFor,
+  type NutriEntry,
 } from "./nutrition/nutritionStore";
 import { GymExact } from "./GymExact";
 import { ScreenTime } from "./ScreenTime";
@@ -1156,6 +1157,150 @@ function loadUsualDay(day: string): UsualDayLog {
   }
 }
 
+function shiftIsoDay(iso: string, delta: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d + delta);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+}
+
+function shortIsoLabel(iso: string): string {
+  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return iso;
+  return `${Number(match[2])}/${Number(match[3])}`;
+}
+
+function mealNames(entries: NutriEntry[]): string {
+  if (!entries.length) return "No food logged yet";
+  return entries
+    .slice(0, 4)
+    .map((e) => e.name)
+    .join(" · ")
+    .concat(entries.length > 4 ? ` · +${entries.length - 4} more` : "");
+}
+
+function mealAuditLine(day: string): string {
+  const entries = loadNutriDay(day);
+  const totals = nutriTotalsFor(day);
+  return `${shortIsoLabel(day)} · ${Math.round(totals.calories)} cal · ${Math.round(
+    totals.fiber_g * 10
+  ) / 10}g fiber · ${mealNames(entries)}`;
+}
+
+function waterAuditLine(day: string): string {
+  const ml = loadWater(day);
+  const drinks = loadWaterHist(day).length;
+  const liters = Math.round((ml / 1000) * 10) / 10;
+  return `${shortIsoLabel(day)} · ${liters}L${drinks ? ` · ${drinks} water taps` : ""}`;
+}
+
+function sleepAuditLine(day: string): string {
+  const sleep = resolveSleepForDay(day);
+  if (sleep.hours == null) return `${shortIsoLabel(day)} · no sleep logged`;
+  return `${shortIsoLabel(day)} · ${Math.round(sleep.hours * 10) / 10}h sleep · ${sleep.source}`;
+}
+
+function activityAuditLine(day: string): string {
+  const whoop = loadWhoopDay(day);
+  const workouts = whoop?.workouts || [];
+  const workoutBits = workouts
+    .slice(0, 2)
+    .map((w) =>
+      [
+        w.activity,
+        w.durationMin != null ? `${Math.round(w.durationMin)}m` : null,
+        w.strain != null ? `strain ${Math.round(w.strain * 10) / 10}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    );
+  const bodyBits = [
+    whoop?.strain != null ? `day strain ${Math.round(whoop.strain * 10) / 10}` : null,
+    whoop?.recoveryPct != null ? `recovery ${Math.round(whoop.recoveryPct)}%` : null,
+  ].filter(Boolean);
+  const bits = [...workoutBits, ...bodyBits];
+  return `${shortIsoLabel(day)} · ${bits.length ? bits.join(" · ") : "no workout/strain logged"}`;
+}
+
+type BowelAudit = {
+  tone: "hard" | "loose";
+  title: string;
+  summary: string;
+  suspects: string[];
+  checks: { label: string; value: string }[];
+  experiment: string[];
+};
+
+function buildBowelAudit(day: string, look: BowelLook | undefined): BowelAudit | null {
+  if (look == null || (look >= 3 && look <= 5)) return null;
+  const yesterday = shiftIsoDay(day, -1);
+  const todayTotals = nutriTotalsFor(day);
+  const yesterdayTotals = nutriTotalsFor(yesterday);
+  const todayWater = loadWater(day);
+  const yesterdayWater = loadWater(yesterday);
+  const todaySleep = resolveSleepForDay(day);
+  const yesterdaySleep = resolveSleepForDay(yesterday);
+  const todayWhoop = loadWhoopDay(day);
+  const yesterdayWhoop = loadWhoopDay(yesterday);
+  const hard = look <= 2;
+
+  const suspects: string[] = [];
+  if (hard) {
+    if (todayWater < 2500 && yesterdayWater < 2500) {
+      suspects.push("Water looks low across today/yesterday, so stool may have dried out.");
+    }
+    if (todayTotals.fiber_g < 18 && yesterdayTotals.fiber_g < 18) {
+      suspects.push("Fiber looks low in the logged meals, which can slow transit.");
+    }
+    if ((todaySleep.hours ?? 8) < 7 || (yesterdaySleep.hours ?? 8) < 7) {
+      suspects.push("Short sleep can mess with gut rhythm and morning movement.");
+    }
+  } else {
+    if (todayTotals.fiber_g < 15 || yesterdayTotals.fiber_g < 15) {
+      suspects.push("Logged fiber is light, so stool may be less formed.");
+    }
+    if ((todayWhoop?.strain ?? 0) >= 12 || (yesterdayWhoop?.strain ?? 0) >= 12) {
+      suspects.push("High strain/training can push stress chemistry and gut speed.");
+    }
+    if ((todaySleep.hours ?? 8) < 7 || (yesterdaySleep.hours ?? 8) < 7) {
+      suspects.push("Short sleep is a plausible fast-transit trigger.");
+    }
+  }
+  if (!loadNutriDay(day).length && !loadNutriDay(yesterday).length) {
+    suspects.push("No meals are logged yet, so Wonder cannot explain the food side.");
+  }
+  if (!suspects.length) {
+    suspects.push(
+      hard
+        ? "No obvious single cause in the logs yet — run one variable at a time."
+        : "No obvious single cause in the logs yet — treat it as a trigger hunt, not proof."
+    );
+  }
+
+  return {
+    tone: hard ? "hard" : "loose",
+    title: hard ? "Type outside 3–5: slow-transit audit" : "Type outside 3–5: fast-transit audit",
+    summary: hard
+      ? "We’re checking hydration, fiber, sleep, and movement before guessing."
+      : "We’re checking food changes, sleep, stress/strain, and hydration before guessing.",
+    suspects,
+    checks: [
+      { label: "Food", value: `${mealAuditLine(yesterday)} / ${mealAuditLine(day)}` },
+      { label: "Water", value: `${waterAuditLine(yesterday)} / ${waterAuditLine(day)}` },
+      { label: "Sleep", value: `${sleepAuditLine(yesterday)} / ${sleepAuditLine(day)}` },
+      { label: "Activity", value: `${activityAuditLine(yesterday)} / ${activityAuditLine(day)}` },
+    ],
+    experiment: hard
+      ? [
+          "Tomorrow: hit 3.5L water, add a real fiber anchor, and walk 10 minutes.",
+          "Keep the rest normal so we can tell if fiber + water moved Type 1/2 toward 3–4.",
+        ]
+      : [
+          "Next 24h: keep food simple, hydrate, and avoid surprise spicy/greasy/dairy-heavy changes.",
+          "If it repeats, compare the exact meals + sleep against the last Type 3–5 day.",
+        ],
+  };
+}
+
 function MealsPanel() {
   // Track calendar day so midnight clears "logged today" and starts a fresh log
   const [day, setDay] = useState(() => todayKey());
@@ -1212,6 +1357,15 @@ function MealsPanel() {
   const todayLog = bowelDetail[day];
   const todayBowel = todayLog?.had === true;
   const todayBowelNo = todayLog?.had === false;
+  const selectedBowelLook = todayBowel && todayLog?.look ? todayLog.look : undefined;
+  const selectedBowelGuide = selectedBowelLook
+    ? BOWEL_LOOK_GUIDE.find((g) => g.look === selectedBowelLook)
+    : undefined;
+  const selectedBowelTip = selectedBowelLook ? BOWEL_TYPE_POPUP[selectedBowelLook] : null;
+  const bowelAudit = useMemo(
+    () => buildBowelAudit(day, selectedBowelLook),
+    [day, selectedBowelLook, usualDay]
+  );
   // Lifetime type tallies + cumulative multi-line series (one line per type)
   const bristolLife = useMemo(() => {
     const counts: Record<BristolType, number> = {
@@ -1720,7 +1874,6 @@ function MealsPanel() {
                   aria-label="Bristol type for today"
                 >
                   {BOWEL_LOOK_GUIDE.map((g) => {
-                    const tip = BOWEL_TYPE_POPUP[g.look];
                     const isLogged = todayLog?.look === g.look;
                     return (
                       <div
@@ -1744,34 +1897,72 @@ function MealsPanel() {
                             <BowelLookIcon look={g.look} />
                           </span>
                         </button>
-                        <div className="fx-bm-tip" role="tooltip">
-                          <p className="fx-bm-tip-title">
-                            Type {g.look}
-                            <span> · {g.bandLabel}</span>
-                          </p>
-                          <p>
-                            <strong>How it looks</strong>
-                            {tip.looks}
-                          </p>
-                          <p>
-                            <strong>What happened</strong>
-                            {tip.stool}
-                          </p>
-                          <p>
-                            <strong>What’s off</strong>
-                            {tip.wrong}
-                          </p>
-                          <p>
-                            <strong>How it feels</strong>
-                            {tip.feels}
-                          </p>
-                        </div>
                       </div>
                     );
                   })}
                 </div>
               </>
             )}
+            {selectedBowelTip && selectedBowelGuide ? (
+              <div className="fx-bm-readout" aria-live="polite">
+                <p className="fx-bm-tip-title">
+                  Type {selectedBowelLook}
+                  <span> · {selectedBowelGuide.bandLabel}</span>
+                </p>
+                <p>
+                  <strong>How it looks</strong>
+                  {selectedBowelTip.looks}
+                </p>
+                <p>
+                  <strong>What happened</strong>
+                  {selectedBowelTip.stool}
+                </p>
+                <p>
+                  <strong>What’s off</strong>
+                  {selectedBowelTip.wrong}
+                </p>
+                <p>
+                  <strong>How it feels</strong>
+                  {selectedBowelTip.feels}
+                </p>
+              </div>
+            ) : null}
+            {bowelAudit ? (
+              <div className={`fx-bm-audit is-${bowelAudit.tone}`}>
+                <div>
+                  <p className="fx-bm-audit-kicker">TRIGGER AUDIT</p>
+                  <h3>{bowelAudit.title}</h3>
+                  <p>{bowelAudit.summary}</p>
+                </div>
+                <div className="fx-bm-audit-grid">
+                  {bowelAudit.checks.map((check) => (
+                    <p key={check.label}>
+                      <strong>{check.label}</strong>
+                      <span>{check.value}</span>
+                    </p>
+                  ))}
+                </div>
+                <div className="fx-bm-audit-suspects">
+                  <strong>Most likely suspects from your logs</strong>
+                  <ul>
+                    {bowelAudit.suspects.map((s) => (
+                      <li key={s}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="fx-bm-audit-experiment">
+                  <strong>Next experiment</strong>
+                  {bowelAudit.experiment.map((step) => (
+                    <p key={step}>{step}</p>
+                  ))}
+                  <small>
+                    Not a diagnosis. Blood/black stool, fever, severe pain,
+                    dehydration signs, or repeated Type 7 means don’t
+                    experiment — get medical help.
+                  </small>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </section>
