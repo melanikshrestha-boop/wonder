@@ -3338,10 +3338,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               ) : null}
 
               {filterMonth === "all" && monthBooks.length > 0 ? (
-                <AllLedgerCharts
-                  rows={annualLedgerRows}
-                  title={`${filterYear} income and expenses`}
-                />
+                <AllLedgerCharts rows={annualLedgerRows} />
               ) : null}
 
               {/* Always full list — no ···, no hide */}

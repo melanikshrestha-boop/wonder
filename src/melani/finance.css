@@ -3043,30 +3043,10 @@ html.theme-light .wd-cad-opt.on {
   display: block;
 }
 
-.wd-all-ledger-head,
 .wd-all-ledger-head dl {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.wd-all-ledger-head h2 {
-  margin: 0;
-}
-
-.wd-all-ledger-verdict {
-  margin: 10px 0 0;
-  font-size: 17px;
-  font-weight: 650;
-}
-
-.wd-all-ledger-caveat {
-  max-width: 62ch;
-  margin: 5px 0 0;
-  color: var(--wd-secondary);
-  font-size: 12px;
-  line-height: 1.4;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 32px;
 }
 
 .wd-all-ledger-head dl {
@@ -3113,9 +3093,9 @@ html.theme-light .wd-cad-opt.on {
 }
 
 @media (max-width: 680px) {
-  .wd-all-ledger-head,
   .wd-all-ledger-head dl {
-    flex-direction: column;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
   }
   .wd-all-ledger-grid {
     grid-template-columns: 1fr;

@@ -835,13 +835,7 @@ export function MonthBookCharts({
   );
 }
 
-export function AllLedgerCharts({
-  rows,
-  title = "Income and expenses, separated",
-}: {
-  rows: FinanceTx[];
-  title?: string;
-}) {
+export function AllLedgerCharts({ rows }: { rows: FinanceTx[] }) {
   if (!rows.length) return null;
 
   const monthKeys = Array.from(
@@ -866,7 +860,6 @@ export function AllLedgerCharts({
   );
   const expenseMap = new Map<string, number>();
   const incomeMap = new Map<string, number>();
-  let hasCardPayments = false;
   for (const row of rows) {
     if (row.pending) continue;
     const name = normalizeTransactionCategory(
@@ -874,7 +867,6 @@ export function AllLedgerCharts({
       `${row.merchant || ""} ${row.note || ""}`,
       row.kind
     );
-    if (name === "Credit card payment") hasCardPayments = true;
     const map = row.kind === "income" ? incomeMap : expenseMap;
     if (name === "Transfers" || name === "Credit card payment") continue;
     map.set(name, (map.get(name) || 0) + row.amount);
@@ -893,40 +885,10 @@ export function AllLedgerCharts({
     y: data.net,
     label: `${month}: income ${moneyCents(data.totalIn)} · expenses ${moneyCents(data.totalOut)} · net ${moneyCents(data.net)}`,
   }));
-  const incomeAfterSpending =
-    Math.round((totalIncome - totalExpenses) * 100) / 100;
 
   return (
     <section className="wd-panel wd-all-ledger-charts" aria-label="All ledger data">
       <header className="wd-all-ledger-head">
-        <div>
-          <p className="wd-section-kicker">
-            All posted data
-            {monthKeys.length
-              ? ` · ${monthKeys[0]} to ${monthKeys[monthKeys.length - 1]}`
-              : ""}
-          </p>
-          <h2>{title}</h2>
-          <p
-            className={`wd-all-ledger-verdict ${
-              incomeAfterSpending >= 0 ? "is-pos" : "is-neg"
-            }`}
-          >
-            {incomeAfterSpending >= 0
-              ? `Income exceeded recorded expenses by ${moneyCents(
-                  incomeAfterSpending
-                )}.`
-              : `You spent ${moneyCents(
-                  Math.abs(incomeAfterSpending)
-                )} more than recorded income.`}
-          </p>
-          {hasCardPayments ? (
-            <p className="wd-all-ledger-caveat">
-              Card payments are excluded. This comparison becomes complete
-              after the underlying card purchases are imported.
-            </p>
-          ) : null}
-        </div>
         <dl>
           <div>
             <dt>Income</dt>
