@@ -811,8 +811,25 @@ const { txTypeOf } = await import("../src/melani/financeStore.ts");
 
 
 // ── Subscription detection ─────────────────────────────────────────
-const { detectSubscriptions } = await import("../src/melani/subscriptions.ts");
+const { detectSubscriptions, mergeConfirmedSubscriptions } = await import(
+  "../src/melani/subscriptions.ts"
+);
 {
+  const confirmedAi = mergeConfirmedSubscriptions(
+    detectSubscriptions([])
+  );
+  check(
+    "subs: confirmed AI stack appears without repeated bank charges",
+    confirmedAi.count === 4 &&
+      confirmedAi.subs.every((subscription) => subscription.source === "confirmed"),
+    confirmedAi
+  );
+  check(
+    "subs: AI stack totals $360/mo and $4,320/yr",
+    confirmedAi.monthlyTotal === 360 && confirmedAi.yearlyTotal === 4320,
+    confirmedAi
+  );
+
   const stxs = [
     // Netflix: 3 monthly charges → detected, monthly
     newTx({ date: "2026-04-15", kind: "expense", amount: 15.49, merchant: "NETFLIX.COM", category: "Entertainment" }),
@@ -878,6 +895,15 @@ const { detectSubscriptions } = await import("../src/melani/subscriptions.ts");
   check("subs: Claude detected", realScan.subs.some((s) => /claude/i.test(s.merchant)), realScan.subs);
   check("subs: Cursor detected", realScan.subs.some((s) => s.merchant === "Cursor"), realScan.subs);
   check("subs: identical same-day unknown detected", realScan.subs.some((s) => /acme/i.test(s.merchant)), realScan.subs);
+  const realPlusConfirmed = mergeConfirmedSubscriptions(realScan);
+  check(
+    "subs: confirmed plans replace detected duplicates instead of double-counting",
+    realPlusConfirmed.subs.filter((subscription) => subscription.key === "claude code")
+      .length === 1 &&
+      realPlusConfirmed.subs.filter((subscription) => subscription.key === "cursor")
+        .length === 1,
+    realPlusConfirmed.subs
+  );
 
   const adversarialRecurring = [
     // Habitual same-month coffee is not a fixed contract.

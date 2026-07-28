@@ -68,7 +68,9 @@ import {
   CADENCE_LABEL,
   applySubPrefs,
   dismissSubscription,
+  mergeConfirmedSubscriptions,
   setSubscriptionCadence,
+  setSubscriptionAmount,
   TOGGLE_CADENCES,
   type SubCadence,
 } from "./subscriptions";
@@ -785,8 +787,28 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const [subTick, setSubTick] = useState(0);
   const subscriptionScan = useMemo(() => {
     void subTick;
-    return applySubPrefs(detectSubscriptions(txs));
+    return applySubPrefs(
+      mergeConfirmedSubscriptions(detectSubscriptions(txs))
+    );
   }, [txs, subTick]);
+
+  const aiSubscriptionStack = useMemo(() => {
+    const plans = subscriptionScan.subs.filter((subscription) =>
+      /^(grok|claude code|chatgpt|cursor)$/.test(
+        subscription.key.toLowerCase()
+      )
+    );
+    const monthlyTotal =
+      Math.round(
+        plans.reduce((sum, subscription) => sum + subscription.monthlyCost, 0) *
+          100
+      ) / 100;
+    return {
+      plans,
+      monthlyTotal,
+      yearlyTotal: Math.round(monthlyTotal * 12 * 100) / 100,
+    };
+  }, [subscriptionScan]);
 
   useEffect(() => {
     const on = () => setSubTick((n) => n + 1);
@@ -4046,6 +4068,59 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               </section>
             ) : (
               <>
+                {aiSubscriptionStack.plans.length ? (
+                  <section
+                    className="wd-panel wd-ai-subscriptions"
+                    aria-label="AI subscription comparison"
+                  >
+                    <div className="wd-ai-sub-head">
+                      <div>
+                        <div className="wd-kicker">AI PLAN TRIAL</div>
+                        <h2>Four plans now. Keep the one that earns its place.</h2>
+                      </div>
+                      <div className="wd-ai-sub-total">
+                        <strong>{money(aiSubscriptionStack.monthlyTotal)}</strong>
+                        <span>
+                          /mo · {money(aiSubscriptionStack.yearlyTotal)}/yr
+                        </span>
+                      </div>
+                    </div>
+                    <p className="wd-muted">
+                      User-confirmed costs, separate from the incomplete card
+                      ledger. Choosing one $20 plan would cut this stack by
+                      {` ${money(
+                        Math.max(0, aiSubscriptionStack.monthlyTotal - 20)
+                      )}/mo`}.
+                    </p>
+                    <div className="wd-ai-sub-list">
+                      {aiSubscriptionStack.plans.map((subscription) => (
+                        <div className="wd-ai-sub-line" key={subscription.key}>
+                          <div>
+                            <strong>{subscription.merchant}</strong>
+                            <span>Confirmed this month</span>
+                          </div>
+                          <div>
+                            <strong>{money(subscription.monthlyCost)}/mo</strong>
+                            <span>
+                              Keep only this → save{" "}
+                              {money(
+                                aiSubscriptionStack.monthlyTotal -
+                                  subscription.monthlyCost
+                              )}
+                              /mo
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="wd-sub-hint">
+                      Compare them on the same real tasks before cancelling:
+                      correctness, speed, coding workflow, research, and how
+                      often you actually reach for each one.
+                    </p>
+                  </section>
+                ) : null}
+
                 <section className="wd-panel" aria-label="Subscriptions total">
                   <div className="wd-stat-grid">
                     <div className="wd-stat-tile">
@@ -4157,7 +4232,29 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                               </div>
                             </div>
                           </td>
-                          <td className="wd-num">{money(s.amount)}</td>
+                          <td className="wd-num">
+                            {s.source === "confirmed" ? (
+                              <label className="wd-sub-amount-edit">
+                                <span>$</span>
+                                <input
+                                  aria-label={`${s.merchant} charge`}
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  value={s.amount}
+                                  onChange={(event) => {
+                                    setSubscriptionAmount(
+                                      s.key,
+                                      Number(event.target.value) || 0
+                                    );
+                                    setSubTick((n) => n + 1);
+                                  }}
+                                />
+                              </label>
+                            ) : (
+                              money(s.amount)
+                            )}
+                          </td>
                           <td className="wd-num">{money(s.monthlyCost)}</td>
                           <td className="wd-num">{money(s.yearlyCost)}</td>
                           <td className="wd-date wd-muted">{formatDateMDY(s.nextDate)}</td>

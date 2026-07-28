@@ -36,6 +36,12 @@ export type Subscription = {
   category: string;
   /** Matched a well-known subscription brand */
   known: boolean;
+  /**
+   * Detected = inferred from repeated ledger charges.
+   * Confirmed = explicitly supplied by the user, so it can appear on month one
+   * without creating a fake bank transaction.
+   */
+  source?: "detected" | "confirmed";
 };
 
 export type SubscriptionScan = {
@@ -44,6 +50,54 @@ export type SubscriptionScan = {
   yearlyTotal: number;
   count: number;
 };
+
+export type ConfirmedSubscription = {
+  merchant: string;
+  key: string;
+  amount: number;
+  cadence: SubCadence;
+  startedMonth: string; // YYYY-MM
+  category: string;
+};
+
+/**
+ * User-confirmed July 2026 AI stack. These are planning records, not ledger
+ * entries: the checking CSV does not include the underlying card purchases.
+ */
+export const USER_CONFIRMED_SUBSCRIPTIONS: ConfirmedSubscription[] = [
+  {
+    merchant: "Grok Premium",
+    key: "grok",
+    amount: 300,
+    cadence: "monthly",
+    startedMonth: "2026-07",
+    category: "Subscriptions",
+  },
+  {
+    merchant: "Claude Code",
+    key: "claude code",
+    amount: 20,
+    cadence: "monthly",
+    startedMonth: "2026-07",
+    category: "Subscriptions",
+  },
+  {
+    merchant: "ChatGPT",
+    key: "chatgpt",
+    amount: 20,
+    cadence: "monthly",
+    startedMonth: "2026-07",
+    category: "Subscriptions",
+  },
+  {
+    merchant: "Cursor",
+    key: "cursor",
+    amount: 20,
+    cadence: "monthly",
+    startedMonth: "2026-07",
+    category: "Subscriptions",
+  },
+];
 
 /** Well-known recurring brands — names help classification, not proof. */
 const KNOWN: { match: RegExp; name: string }[] = [
@@ -358,6 +412,7 @@ export function detectSubscriptions(txs: FinanceTx[]): SubscriptionScan {
       nextDate,
       category: last.category,
       known: isKnown,
+      source: "detected",
     });
   }
 
@@ -370,6 +425,66 @@ export function detectSubscriptions(txs: FinanceTx[]): SubscriptionScan {
     yearlyTotal: Math.round(monthlyTotal * 12 * 100) / 100,
     count: subs.length,
   };
+}
+
+function nextMonthDate(startedMonth: string): string {
+  const [year, month] = startedMonth.split("-").map(Number);
+  if (!year || !month) return "";
+  const next = new Date(Date.UTC(year, month, 1));
+  return next.toISOString().slice(0, 10);
+}
+
+function totalsFor(subs: Subscription[]): SubscriptionScan {
+  const sorted = [...subs].sort((a, b) => b.monthlyCost - a.monthlyCost);
+  const monthlyTotal =
+    Math.round(
+      sorted.reduce((sum, subscription) => sum + subscription.monthlyCost, 0) *
+        100
+    ) / 100;
+  return {
+    subs: sorted,
+    monthlyTotal,
+    yearlyTotal: Math.round(monthlyTotal * 12 * 100) / 100,
+    count: sorted.length,
+  };
+}
+
+/**
+ * Add plans the user explicitly confirmed. A confirmed record wins over an
+ * inferred record with the same normalized key, preventing double counting.
+ */
+export function mergeConfirmedSubscriptions(
+  scan: SubscriptionScan,
+  confirmed: ConfirmedSubscription[] = USER_CONFIRMED_SUBSCRIPTIONS
+): SubscriptionScan {
+  const byKey = new Map(
+    scan.subs.map((subscription) => [
+      subscription.key.toLowerCase(),
+      subscription,
+    ])
+  );
+  for (const plan of confirmed) {
+    const { monthlyCost, yearlyCost } = costsForCadence(
+      plan.amount,
+      plan.cadence
+    );
+    byKey.set(plan.key.toLowerCase(), {
+      merchant: plan.merchant,
+      key: plan.key.toLowerCase(),
+      cadence: plan.cadence,
+      amount: plan.amount,
+      monthlyCost,
+      yearlyCost,
+      count: 1,
+      monthsSeen: 1,
+      lastDate: `${plan.startedMonth}-01`,
+      nextDate: nextMonthDate(plan.startedMonth),
+      category: plan.category,
+      known: true,
+      source: "confirmed",
+    });
+  }
+  return totalsFor([...byKey.values()]);
 }
 
 export const CADENCE_LABEL: Record<SubCadence, string> = {
@@ -390,12 +505,14 @@ export type SubPrefs = {
   dismissed: string[];
   /** Override detected cadence per key */
   cadence: Record<string, SubCadence>;
+  /** User-corrected charge amount per key */
+  amount: Record<string, number>;
 };
 
 export function loadSubPrefs(): SubPrefs {
   try {
     const raw = localStorage.getItem(SUB_PREFS_KEY);
-    if (!raw) return { dismissed: ["squarespace"], cadence: {} };
+    if (!raw) return { dismissed: ["squarespace"], cadence: {}, amount: {} };
     const p = JSON.parse(raw) as Partial<SubPrefs>;
     const dismissed = Array.isArray(p.dismissed) ? [...p.dismissed] : [];
     // Always keep Squarespace out after cancel
@@ -405,9 +522,10 @@ export function loadSubPrefs(): SubPrefs {
     return {
       dismissed,
       cadence: p.cadence && typeof p.cadence === "object" ? p.cadence : {},
+      amount: p.amount && typeof p.amount === "object" ? p.amount : {},
     };
   } catch {
-    return { dismissed: ["squarespace"], cadence: {} };
+    return { dismissed: ["squarespace"], cadence: {}, amount: {} };
   }
 }
 
@@ -431,6 +549,13 @@ export function dismissSubscription(key: string) {
 export function setSubscriptionCadence(key: string, cadence: SubCadence) {
   const prefs = loadSubPrefs();
   prefs.cadence[key.toLowerCase()] = cadence;
+  saveSubPrefs(prefs);
+}
+
+export function setSubscriptionAmount(key: string, amount: number) {
+  const prefs = loadSubPrefs();
+  const cleanAmount = Math.round(Math.max(0, amount) * 100) / 100;
+  prefs.amount[key.toLowerCase()] = cleanAmount;
   saveSubPrefs(prefs);
 }
 
@@ -485,10 +610,15 @@ export function applySubPrefs(scan: SubscriptionScan): SubscriptionScan {
       return true;
     })
     .map((s) => {
-      const override = prefs.cadence[s.key.toLowerCase()];
+      const normalizedKey = s.key.toLowerCase();
+      const override = prefs.cadence[normalizedKey];
       const cadence = override || s.cadence;
-      const { monthlyCost, yearlyCost } = costsForCadence(s.amount, cadence);
-      return { ...s, cadence, monthlyCost, yearlyCost };
+      const amount =
+        prefs.amount[normalizedKey] != null
+          ? prefs.amount[normalizedKey]
+          : s.amount;
+      const { monthlyCost, yearlyCost } = costsForCadence(amount, cadence);
+      return { ...s, amount, cadence, monthlyCost, yearlyCost };
     })
     .sort((a, b) => b.monthlyCost - a.monthlyCost);
 
