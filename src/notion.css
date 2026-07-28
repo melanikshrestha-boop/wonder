@@ -1187,15 +1187,17 @@ html.theme-light .sidebar .sidebar-search svg {
   .page-inner {
     padding: 0 24px clamp(56px, 9vh, 88px);
   }
-  /* On phones the sidebar overlays the page instead of crushing its width. */
+  /* On phones the sidebar overlays the page instead of crushing its width.
+     !important beats the desktop resize inline width so the drawer never
+     spills past 280px or leaves a stuck half-dim scrim gap. */
   .sidebar {
-    position: fixed;
+    position: fixed !important;
     inset: 0 auto 0 0;
-    z-index: 20;
+    z-index: 40;
     height: 100%;
-    width: min(84vw, 280px);
-    min-width: min(84vw, 280px);
-    max-width: min(84vw, 280px);
+    width: min(84vw, 280px) !important;
+    min-width: min(84vw, 280px) !important;
+    max-width: min(84vw, 280px) !important;
     box-shadow: var(--shadow-menu);
     transform: translateX(0);
     transition:
@@ -1205,23 +1207,30 @@ html.theme-light .sidebar .sidebar-search svg {
   }
 
   .sidebar.is-closed {
-    width: min(84vw, 280px);
-    min-width: min(84vw, 280px);
-    max-width: min(84vw, 280px);
+    width: min(84vw, 280px) !important;
+    min-width: min(84vw, 280px) !important;
+    max-width: min(84vw, 280px) !important;
     transform: translateX(-102%);
     box-shadow: none;
+    pointer-events: none;
+  }
+
+  /* Hide resize handle in drawer mode — width is capped */
+  .sidebar-resize {
+    display: none !important;
   }
 
   .sidebar-backdrop {
     position: fixed;
-    inset: 0 0 0 min(84vw, 280px);
-    z-index: 15;
+    inset: 0;
+    z-index: 35;
     display: block;
     padding: 0;
     border: 0;
-    background: rgba(0, 0, 0, 0.48);
-    backdrop-filter: blur(2px);
+    /* Full-screen hit target; light enough that Finances still reads as a page */
+    background: rgba(0, 0, 0, 0.32);
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .topbar {
@@ -1240,16 +1249,19 @@ html.theme-light .sidebar .sidebar-search svg {
 /* Desktop: never dim the page with a drawer scrim (even if the node is present) */
 .sidebar-backdrop {
   display: none;
+  pointer-events: none;
 }
 @media (max-width: 768px) {
   .sidebar-backdrop {
     display: block;
+    pointer-events: auto;
   }
 }
 @media (min-width: 769px) {
   .sidebar-backdrop {
     display: none !important;
     pointer-events: none !important;
+    visibility: hidden !important;
   }
 }
 

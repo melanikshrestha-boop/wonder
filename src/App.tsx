@@ -103,6 +103,36 @@ export default function App() {
     return () => query.removeEventListener("change", onChange);
   }, []);
 
+  // Escape always dismisses the mobile drawer scrim (and never leaves Finances dimmed)
+  useEffect(() => {
+    if (!compactLayout || !compactSidebarOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setCompactSidebarOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [compactLayout, compactSidebarOpen]);
+
+  // Clicking the main column closes the drawer so the grey scrim cannot trap the page
+  useEffect(() => {
+    if (!compactLayout || !compactSidebarOpen) return;
+    const main = mainScrollRef.current?.closest("main");
+    if (!main) return;
+    const onPointer = (event: Event) => {
+      // Don't fight the ☰ toggle in the topbar — only content / scroll surface
+      const target = event.target as HTMLElement | null;
+      if (target?.closest?.(".topbar-btn, .sidebar, .sidebar-backdrop, .mai-root, .mai-panel, .mai-bubble")) {
+        return;
+      }
+      setCompactSidebarOpen(false);
+    };
+    main.addEventListener("pointerdown", onPointer);
+    return () => main.removeEventListener("pointerdown", onPointer);
+  }, [compactLayout, compactSidebarOpen]);
+
   /** Save a restore point, then apply a change (drag, delete, Mel, etc.) */
   function commitWorkspace(mutator: (current: Workspace) => Workspace) {
     setWs((current) => {
@@ -373,8 +403,13 @@ export default function App() {
         <button
           type="button"
           className="sidebar-backdrop"
-          aria-label="Close sidebar"
+          aria-label="Close menu and return to page"
           onClick={() => setCompactSidebarOpen(false)}
+          onPointerDown={(event) => {
+            // pointerdown closes immediately — don't wait for a full click
+            event.preventDefault();
+            setCompactSidebarOpen(false);
+          }}
         />
       ) : null}
       <Sidebar
