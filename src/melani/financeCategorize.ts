@@ -5,33 +5,52 @@
 
 /** Fixed colors for pie / legend — same category = same color every month */
 export const CATEGORY_COLORS: Record<string, string> = {
-  Income: "#3d8f6e",
-  Family: "#0f8f7d",
-  Reimbursements: "#4f8f88",
-  Gifts: "#d58a9a",
-  Photography: "#7158a6",
-  Reselling: "#2f7f91",
-  Cash: "#b56f38",
-  Transfers: "#1f6f8b", // account / card moves — cool teal, not Zelle
-  Repayment: "#496b7a",
-  Groceries: "#5c8d5c",
-  Restaurants: "#d64545", // "bad" discretionary — red
-  Experiences: "#c4832f",
-  Housing: "#8b6f47",
-  Utilities: "#4f7b8f",
-  Laundry: "#4f8f88",
-  Health: "#3f8f7b",
-  Subscriptions: "#7d5ba6",
-  Clothing: "#c94f7c",
-  Transport: "#e8743b",
-  Education: "#7766b8",
-  Travel: "#2f84a6",
-  Business: "#586f92",
-  Fees: "#a66b52",
-  "Credit card payment": "#6b8e9e",
-  Other: "#8a8580",
-  Uncategorized: "#6a6560",
+  Income: "#16a34a",
+  Family: "#0d9488",
+  Reimbursements: "#2563eb",
+  Gifts: "#db2777",
+  Photography: "#7c3aed",
+  Reselling: "#f59e0b",
+  Cash: "#a16207",
+  Transfers: "#64748b", // account / card moves — neutral slate, not Zelle
+  Repayment: "#475569",
+  Groceries: "#22c55e",
+  Restaurants: "#ef4444", // "bad" discretionary — red
+  Experiences: "#f97316",
+  Housing: "#8b5cf6",
+  Utilities: "#06b6d4",
+  Laundry: "#3b82f6",
+  Health: "#14b8a6",
+  Subscriptions: "#a855f7",
+  Clothing: "#ec4899",
+  Transport: "#eab308",
+  Education: "#6366f1",
+  Travel: "#0ea5e9",
+  Business: "#334155",
+  Fees: "#b45309",
+  "Credit card payment": "#94a3b8",
+  Other: "#78716c",
+  Uncategorized: "#57534e",
 };
+
+const CUSTOM_CATEGORY_COLORS = [
+  "#7c3aed",
+  "#0891b2",
+  "#f97316",
+  "#16a34a",
+  "#db2777",
+  "#2563eb",
+  "#ca8a04",
+  "#dc2626",
+  "#0d9488",
+  "#9333ea",
+  "#ea580c",
+  "#4f46e5",
+  "#059669",
+  "#be185d",
+  "#0284c7",
+  "#b45309",
+];
 
 /** Categories treated as lifestyle leaks (red cue in UI) */
 export const BAD_CATEGORIES = new Set(["Restaurants"]);
@@ -330,7 +349,13 @@ export function normalizeImportedTransactionCategory(
 /** Stable color for a category (after normalize when possible) */
 export function categoryColor(name: string): string {
   const n = normalizeCategory(name);
-  return CATEGORY_COLORS[n] || CATEGORY_COLORS.Other;
+  if (CATEGORY_COLORS[n]) return CATEGORY_COLORS[n];
+  let hash = 0;
+  const seed = (n || name || "Other").toLowerCase();
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return CUSTOM_CATEGORY_COLORS[hash % CUSTOM_CATEGORY_COLORS.length];
 }
 
 /** Ordered rules — first match wins. Payment rails never become categories. */

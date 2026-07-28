@@ -1990,14 +1990,17 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
 
   function filterLedgerFromChart(
     kind: "income" | "expense",
-    category: string
+    category: string,
+    scope?: { month?: string }
   ) {
+    if (/^Other \(\d+\)$/.test(category)) return;
     const previous = {
       reviewFilter,
       filterQ,
       filterCat,
       filterKind,
       filterTxType,
+      filterYear,
       filterMonth,
       tab,
     };
@@ -2007,15 +2010,22 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       setFilterCat(previous.filterCat);
       setFilterKind(previous.filterKind);
       setFilterTxType(previous.filterTxType);
+      setFilterYear(previous.filterYear);
       setFilterMonth(previous.filterMonth);
       setTab(previous.tab);
     });
+    const scopedMonth = scope?.month ?? filterMonth;
+    if (/^\d{4}-\d{2}$/.test(scopedMonth)) {
+      setFilterYear(Number(scopedMonth.slice(0, 4)));
+      setFilterMonth(scopedMonth);
+    } else {
+      setFilterMonth(scopedMonth);
+    }
     setReviewFilter(null);
     setFilterQ("");
     setFilterCat(category);
     setFilterKind(kind);
     setFilterTxType("all");
-    setFilterMonth("all");
     setTab("transactions");
   }
 
@@ -4362,6 +4372,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                         rows={book.rows}
                         month={book.month}
                         monthLabel={`${monthOnly} ${yearOnly}`}
+                        onCategoryDoubleClick={filterLedgerFromChart}
                       />
                     </section>
                   );

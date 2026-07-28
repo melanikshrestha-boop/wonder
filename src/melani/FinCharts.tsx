@@ -16,9 +16,18 @@ import {
 import { pieSlicePath } from "./pieGeometry";
 
 const PALETTE = [
-  "#1f6f8b", "#e8743b", "#4b8f6b", "#b5651d", "#7d5ba6",
-  "#c94f7c", "#3a7d99", "#d1a13a", "#5c8d5c", "#a0522d",
-  "#6b8e9e", "#9e6b8e",
+  "#7c3aed",
+  "#0891b2",
+  "#f97316",
+  "#16a34a",
+  "#db2777",
+  "#2563eb",
+  "#ca8a04",
+  "#dc2626",
+  "#0d9488",
+  "#9333ea",
+  "#ea580c",
+  "#475569",
 ];
 
 export type LinePoint = { x: string; y: number; label: string };
@@ -357,6 +366,12 @@ export type PieSlice = {
   /** Optional fixed color; otherwise category palette */
   color?: string;
 };
+
+type CategoryDrilldown = (
+  kind: "income" | "expense",
+  category: string,
+  scope?: { month?: string }
+) => void;
 
 /**
  * Interactive pie / donut — every chart should use this.
@@ -766,10 +781,12 @@ export function MonthBookCharts({
   rows,
   month,
   monthLabel,
+  onCategoryDoubleClick,
 }: {
   rows: FinanceTx[];
   month: string;
   monthLabel: string;
+  onCategoryDoubleClick?: CategoryDrilldown;
 }) {
   const {
     spendPoints,
@@ -870,6 +887,9 @@ export function MonthBookCharts({
             centerPrimary={moneyCents(totalOut)}
             centerSecondary="total expenses"
             showLegend
+            onSliceDoubleClick={(slice) =>
+              onCategoryDoubleClick?.("expense", slice.name, { month })
+            }
           />
         ) : null}
         {incomeSlices.length ? (
@@ -881,6 +901,9 @@ export function MonthBookCharts({
             centerPrimary={moneyCents(totalIn)}
             centerSecondary="total income"
             showLegend
+            onSliceDoubleClick={(slice) =>
+              onCategoryDoubleClick?.("income", slice.name, { month })
+            }
           />
         ) : null}
       </div>
@@ -895,7 +918,8 @@ export function AllLedgerCharts({
   rows: FinanceTx[];
   onCategoryDoubleClick?: (
     kind: "income" | "expense",
-    category: string
+    category: string,
+    scope?: { month?: string }
   ) => void;
 }) {
   if (!rows.length) return null;
