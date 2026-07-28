@@ -862,21 +862,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     return Array.from(types).sort();
   }, [txs]);
 
-  const zelleReviewCount = useMemo(
-    () =>
-      txs.filter(
-        (transaction) =>
-          transaction.date.startsWith(`${filterYear}-`) &&
-          (filterMonth === "all" ||
-            transaction.date.startsWith(filterMonth)) &&
-          /\bzelle\b/i.test(
-            `${transaction.merchant || ""} ${transaction.note || ""}`
-          ) &&
-          normalizedLedgerCategory(transaction) === "Uncategorized"
-      ).length,
-    [filterMonth, filterYear, txs]
-  );
-
   /** Owner's hard monthly spending limit */
   const MONTHLY_LIMIT = 500;
   const budgetAnalysis = useMemo(
@@ -1238,14 +1223,19 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     sortDir,
   ]);
 
-  const annualLedgerRows = useMemo(
+  const ledgerChartRows = useMemo(
+    () => ledger.filter((transaction) => !transaction.pending),
+    [ledger]
+  );
+  const zelleReviewCount = useMemo(
     () =>
-      txs.filter(
+      ledger.filter(
         (transaction) =>
-          transaction.date.startsWith(String(filterYear)) &&
-          !transaction.pending
-      ),
-    [txs, filterYear]
+          /\bzelle\b/i.test(
+            `${transaction.merchant || ""} ${transaction.note || ""}`
+          ) && normalizedLedgerCategory(transaction) === "Uncategorized"
+      ).length,
+    [ledger]
   );
 
   /**
@@ -1510,6 +1500,34 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     setFilterYear(Number(businessReport.quarter.key.slice(0, 4)));
     setFilterMonth("all");
     setTab("transactions");
+  }
+
+  function reviewBusinessSlice(slice: {
+    kind: "income" | "expense";
+    category: string | null;
+    label: string;
+    transactionIds: string[];
+  }) {
+    if (!businessReport) return;
+    setReviewFilter({
+      label: `${businessReport.quarter.label} · ${slice.label}`,
+      txIds: slice.transactionIds,
+    });
+    setFilterQ("");
+    setFilterCat(slice.category || "all");
+    setFilterKind(slice.kind);
+    setFilterTxType("all");
+    setFilterYear(Number(businessReport.quarter.key.slice(0, 4)));
+    setFilterMonth("all");
+    setTab("transactions");
+  }
+
+  function clearLedgerReview() {
+    setReviewFilter(null);
+    setFilterQ("");
+    setFilterCat("all");
+    setFilterKind("all");
+    setFilterTxType("all");
   }
 
   function recordCredit() {
@@ -2167,6 +2185,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             onExport={downloadBusinessCsv}
             onPrint={() => window.print()}
             onReviewLedger={reviewBusinessLedger}
+            onReviewSlice={reviewBusinessSlice}
           />
         ) : null}
 
@@ -3357,16 +3376,16 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
             {reviewFilter ? (
               <div className="wd-review-filter" role="status">
                 <span>
-                  Accountant review · <strong>{reviewFilter.label}</strong> ·{" "}
+                  Ledger filter · <strong>{reviewFilter.label}</strong> ·{" "}
                   {reviewFilter.txIds.length} line
                   {reviewFilter.txIds.length === 1 ? "" : "s"}
                 </span>
                 <button
                   type="button"
                   className="wd-link"
-                  onClick={() => setReviewFilter(null)}
+                  onClick={clearLedgerReview}
                 >
-                  Clear review
+                  Clear filter
                 </button>
               </div>
             ) : null}
@@ -3471,7 +3490,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               ) : null}
 
               {filterMonth === "all" && monthBooks.length > 0 ? (
-                <AllLedgerCharts rows={annualLedgerRows} />
+                <AllLedgerCharts rows={ledgerChartRows} />
               ) : null}
 
               {/* Always full list — no ···, no hide */}

@@ -61,6 +61,7 @@ export type BusinessQuarterReport = {
       amount: number;
       percent: number;
       color: string;
+      transactionIds: string[];
     }>;
     expenseBreakdown: Array<{
       id: string;
@@ -68,7 +69,10 @@ export type BusinessQuarterReport = {
       amount: number;
       percent: number;
       color: string;
+      transactionIds: string[];
     }>;
+    moneyInTransactionIds: string[];
+    moneyOutTransactionIds: string[];
     trend: Array<{
       key: BusinessQuarterKey;
       label: string;
@@ -752,27 +756,35 @@ function percentChange(current: number, prior: number): number | null {
 function categoryBreakdown(
   transactions: FinanceTx[],
 ): BusinessQuarterReport["personal"]["expenseBreakdown"] {
-  const byCategory = new Map<string, number>();
+  const byCategory = new Map<string, FinanceTx[]>();
   for (const tx of transactions) {
     const category = normalizedCategory(tx);
-    byCategory.set(category, (byCategory.get(category) || 0) + tx.amount);
+    byCategory.set(category, [...(byCategory.get(category) || []), tx]);
   }
   const total = sum(transactions);
   if (!(total > 0)) return [];
-  const sorted = [...byCategory.entries()].sort((a, b) => b[1] - a[1]);
+  const sorted = [...byCategory.entries()]
+    .map(
+      ([label, rows]) =>
+        [label, rows, sum(rows)] as const,
+    )
+    .sort((a, b) => b[2] - a[2]);
   const visible = sorted.slice(0, 5);
   if (sorted.length > 5) {
+    const otherRows = sorted.slice(5).flatMap(([, rows]) => rows);
     visible.push([
       "Other",
-      sorted.slice(5).reduce((amount, [, value]) => amount + value, 0),
+      otherRows,
+      sum(otherRows),
     ]);
   }
-  return visible.map(([label, amount], index) => ({
+  return visible.map(([label, rows, amount], index) => ({
     id: label.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
     label,
     amount,
     percent: (amount / total) * 100,
     color: BREAKDOWN_COLORS[index % BREAKDOWN_COLORS.length],
+    transactionIds: rows.map((tx) => tx.id),
   }));
 }
 
@@ -1250,6 +1262,8 @@ export function buildBusinessQuarterReport(
     reviewAmount: sum(current.unclassified),
     incomeBreakdown: personalIncomeBreakdown,
     expenseBreakdown: personalExpenseBreakdown,
+    moneyInTransactionIds: personalCurrent.moneyIn.map((tx) => tx.id),
+    moneyOutTransactionIds: personalCurrent.moneyOut.map((tx) => tx.id),
     trend: personalTrend,
     months: personalMonthRows(state, selected, asOfDate),
     movement: {

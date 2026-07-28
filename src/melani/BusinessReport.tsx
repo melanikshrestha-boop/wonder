@@ -14,6 +14,12 @@ type BusinessReportProps = {
   onExport: () => void;
   onPrint: () => void;
   onReviewLedger: () => void;
+  onReviewSlice: (slice: {
+    kind: "income" | "expense";
+    category: string | null;
+    label: string;
+    transactionIds: string[];
+  }) => void;
 };
 
 type BreakdownRow =
@@ -78,18 +84,34 @@ function Kpi({
   value,
   children,
   tone = "neutral",
+  onClick,
 }: {
   label: string;
   value: string;
   children: React.ReactNode;
   tone?: "good" | "bad" | "neutral";
+  onClick?: () => void;
 }) {
-  return (
-    <article className="wbr-kpi">
+  const content = (
+    <>
       <h3>{label}</h3>
       <strong className={`is-${tone}`}>{value}</strong>
       {children}
-    </article>
+      {onClick ? <span className="wbr-open-cue">View ledger →</span> : null}
+    </>
+  );
+  if (!onClick) {
+    return <article className="wbr-kpi">{content}</article>;
+  }
+  return (
+    <button
+      type="button"
+      className="wbr-kpi is-clickable"
+      onClick={onClick}
+      aria-label={`Open ${label.toLowerCase()} transactions`}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -198,10 +220,14 @@ function Mix({
   rows,
   total,
   centerLabel,
+  kind,
+  onSelect,
 }: {
   rows: BreakdownRow[];
   total: number;
   centerLabel: string;
+  kind: "income" | "expense";
+  onSelect: (row: BreakdownRow) => void;
 }) {
   let cursor = 0;
   const segments = rows.map((row) => {
@@ -238,10 +264,18 @@ function Mix({
         {rows.length ? (
           rows.map((row) => (
             <li key={row.id}>
-              <i style={{ background: row.color }} />
-              <span title={row.label}>{row.label}</span>
-              <strong>{row.percent.toFixed(0)}%</strong>
-              <em>{compactDollars(row.amount)}</em>
+              <button
+                type="button"
+                onClick={() => onSelect(row)}
+                aria-label={`Open ${row.label} ${kind} transactions`}
+              >
+                <i style={{ background: row.color }} />
+                <span title={row.label}>{row.label}</span>
+                <strong>{row.percent.toFixed(0)}%</strong>
+                <em>
+                  {compactDollars(row.amount)} <span aria-hidden>→</span>
+                </em>
+              </button>
             </li>
           ))
         ) : (
@@ -363,6 +397,7 @@ export function BusinessReport({
   onExport,
   onPrint,
   onReviewLedger,
+  onReviewSlice,
 }: BusinessReportProps) {
   const integrityTone =
     report.integrity.status === "ready"
@@ -416,13 +451,37 @@ export function BusinessReport({
       </div>
 
       <div className="wbr-kpis">
-        <Kpi label="Money in" value={compactDollars(report.personal.moneyIn)} tone="good">
+        <Kpi
+          label="Money in"
+          value={compactDollars(report.personal.moneyIn)}
+          tone="good"
+          onClick={() =>
+            onReviewSlice({
+              kind: "income",
+              category: null,
+              label: "all money in",
+              transactionIds: report.personal.moneyInTransactionIds,
+            })
+          }
+        >
           <TrendNote
             value={report.personal.moneyInChangePct}
             comparison={report.quarter.comparisonLabel}
           />
         </Kpi>
-        <Kpi label="Money out" value={compactDollars(report.personal.moneyOut)} tone="bad">
+        <Kpi
+          label="Money out"
+          value={compactDollars(report.personal.moneyOut)}
+          tone="bad"
+          onClick={() =>
+            onReviewSlice({
+              kind: "expense",
+              category: null,
+              label: "all money out",
+              transactionIds: report.personal.moneyOutTransactionIds,
+            })
+          }
+        >
           <TrendNote
             value={report.personal.moneyOutChangePct}
             comparison={report.quarter.comparisonLabel}
@@ -476,6 +535,15 @@ export function BusinessReport({
             rows={report.personal.expenseBreakdown}
             total={report.personal.moneyOut}
             centerLabel="money out"
+            kind="expense"
+            onSelect={(row) =>
+              onReviewSlice({
+                kind: "expense",
+                category: row.label === "Other" ? null : row.label,
+                label: `${row.label} expenses`,
+                transactionIds: row.transactionIds,
+              })
+            }
           />
         </Section>
 
@@ -484,6 +552,15 @@ export function BusinessReport({
             rows={report.personal.incomeBreakdown}
             total={report.personal.moneyIn}
             centerLabel="money in"
+            kind="income"
+            onSelect={(row) =>
+              onReviewSlice({
+                kind: "income",
+                category: row.label === "Other" ? null : row.label,
+                label: `${row.label} income`,
+                transactionIds: row.transactionIds,
+              })
+            }
           />
         </Section>
 

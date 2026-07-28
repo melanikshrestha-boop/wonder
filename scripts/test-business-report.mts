@@ -253,6 +253,7 @@ console.log("Quarterly money report");
   assert("family gift is excluded from operating income", q1.metrics.revenue === 900);
   assert("gift remains visible as an open classification", q1.integrity.openClassificationCount === 1);
   assert("personal money in includes both support and payroll", q1.personal.moneyIn === 1_500);
+  assert("money-in drilldown keeps the exact source rows", q1.personal.moneyInTransactionIds.length === 2 && q1.personal.moneyInTransactionIds.includes("gift") && q1.personal.moneyInTransactionIds.includes("payroll"));
 }
 
 {
@@ -326,6 +327,7 @@ console.log("Quarterly money report");
   assert("expense slices equal operating spend", amount === q1.metrics.operatingExpenses);
   assert("expense slice percentages total 100", closeTo(percent, 100));
   assert("transfers are absent from expense mix", q1.expenseBreakdown.every((row) => row.label !== "Transfers"));
+  assert("each personal expense slice carries its exact ledger rows", q1.personal.expenseBreakdown.flatMap((row) => row.transactionIds).sort().join(",") === "food,software");
 }
 
 {
@@ -337,6 +339,7 @@ console.log("Quarterly money report");
   assert("unknown Zelle inflow is not called revenue", q1.metrics.revenue === 0);
   assert("unknown Zelle inflow blocks the report", q1.integrity.status === "blocked");
   assert("unknown Zelle still appears in personal money in", q1.personal.moneyIn === 300);
+  assert("unknown Zelle is available to the income drilldown", q1.personal.moneyInTransactionIds.includes("zelle"));
 }
 
 {
