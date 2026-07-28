@@ -5,7 +5,12 @@
  * of the same statement never duplicate rows.
  */
 
-import { categorizeMerchant, cleanMerchant } from "./financeCategorize";
+import {
+  categorizeMerchant,
+  cleanMerchant,
+  normalizeImportedTransactionCategory,
+  zellePurposeCategory,
+} from "./financeCategorize";
 import { parseCents, fromCents } from "./financeMoney";
 import type { FinanceTx, TxKind } from "./financeStore";
 
@@ -153,8 +158,14 @@ export function ofxRowsToTxs(
     const kind: TxKind = row.amount < 0 ? "expense" : "income";
     const rawName = row.name || row.memo || "Transaction";
     const merchant = cleanMerchant(rawName) || "Transaction";
-    const category =
+    const categoryRaw =
       kind === "income" ? "Income" : categorizeMerchant(`${row.name} ${row.memo}`);
+    const categoryText = `${merchant} ${row.memo}`;
+    const category = normalizeImportedTransactionCategory(
+      categoryRaw,
+      categoryText,
+      kind
+    );
 
     added.push({
       id: uid(),
@@ -162,6 +173,7 @@ export function ofxRowsToTxs(
       kind,
       amount: Math.abs(row.amount),
       category,
+      categoryReviewed: zellePurposeCategory(categoryText, kind) != null,
       note: row.memo || merchant,
       merchant,
       accountId: opts?.accountId || null,

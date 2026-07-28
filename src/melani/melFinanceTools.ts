@@ -89,7 +89,11 @@ function planRowsFromState(state: FinanceState, ym: string) {
       label: "Lifestyle",
       cats: ["Restaurants", "Subscriptions", "Clothing"],
     },
-    { id: "other", label: "Other", cats: ["Other", "Zelle"] },
+    {
+      id: "other",
+      label: "Other",
+      cats: ["Experiences", "Other", "Uncategorized"],
+    },
   ];
   return groups.map((g) => {
     const planned = g.cats.reduce((s, c) => {
@@ -130,7 +134,7 @@ function matchCategory(raw: string): string | null {
     return "Restaurants";
   if (/grocery|grocer|trader|whole foods|costco|target/.test(q))
     return "Groceries";
-  if (/transfer|zelle|venmo|wire/.test(q)) return "Transfers";
+  if (/transfer|venmo|wire/.test(q)) return "Transfers";
   if (/sub|netflix|spotify|openai|claude|cursor/.test(q)) return "Subscriptions";
   if (/uber|lyft|gas|parking|transit/.test(q)) return "Transport";
   if (/card\s*pay|payment to chase|credit card/.test(q))
@@ -252,6 +256,7 @@ export function finance_log_expense(opts: {
     merchant,
     note: opts.note || merchant,
     category,
+    categoryReviewed: true,
     date: opts.date,
     source: "mel",
   });
@@ -294,7 +299,7 @@ export function finance_recategorize(
       const blob = `${t.merchant || ""} ${t.note || ""}`.toLowerCase();
       if (!blob.includes(q.toLowerCase())) return t;
       count++;
-      return { ...t, category: cat };
+      return { ...t, category: cat, categoryReviewed: true };
     });
     return { ...s, txs: nextTxs };
   });
@@ -601,12 +606,44 @@ export function planFinanceCommands(q: string): string[] {
     return out;
   }
 
-  // Recategorize X to Y
-  const recat = raw.match(
-    /\b(?:recategor(?:y|ize)|reclass(?:ify)?|set\s+category)\s+(.+?)\s+(?:to|as)\s+(.+)$/i
+  // Recategorize X as/to Y. Split from the category at the end so a payee
+  // such as "Zelle to Sean" is not accidentally truncated at its first "to".
+  const recatBody = raw.match(
+    /\b(?:recategor(?:y|ize)|reclass(?:ify)?|set\s+category)\s+(.+)$/i
+  )?.[1];
+  if (recatBody) {
+    const asSplit = recatBody.match(/^(.+)\s+as\s+(.+)$/i);
+    if (asSplit) {
+      out.push(finance_recategorize(asSplit[1].trim(), asSplit[2].trim()));
+      return out;
+    }
+    const categorySuffix = [...FINANCE_CATEGORIES]
+      .sort((left, right) => right.length - left.length)
+      .find((category) =>
+        recatBody.toLowerCase().endsWith(` to ${category.toLowerCase()}`)
+      );
+    if (categorySuffix) {
+      out.push(
+        finance_recategorize(
+          recatBody.slice(0, -(categorySuffix.length + 4)).trim(),
+          categorySuffix
+        )
+      );
+      return out;
+    }
+  }
+
+  // Natural shorthand: "Zelle to Sean Filimon was Travel."
+  const naturalRecat = raw.match(
+    /^(zelle\s+(?:to|from)\s+.+?)\s+(?:was|is)\s+(.+?)[.!]?$/i
   );
-  if (recat) {
-    out.push(finance_recategorize(recat[1].trim(), recat[2].trim()));
+  if (naturalRecat) {
+    out.push(
+      finance_recategorize(
+        naturalRecat[1].trim(),
+        naturalRecat[2].trim()
+      )
+    );
     return out;
   }
 

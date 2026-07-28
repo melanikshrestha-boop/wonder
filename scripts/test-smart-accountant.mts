@@ -263,7 +263,7 @@ const {
       newTx({ date: "2026-07-02", kind: "income", amount: 500, category: "Transfers", merchant: "From checking", accountId: "savings" }),
       newTx({ date: "2026-07-03", kind: "expense", amount: 500, category: "Transfers", merchant: "To savings", accountId: "checking" }),
       newTx({ date: "2026-07-04", kind: "expense", amount: 100, category: "Groceries", merchant: "Trader Joes", accountId: "card" }),
-      newTx({ date: "2026-07-05", kind: "income", amount: 80, category: "Zelle", merchant: "Zelle from Mom", note: "family gift", accountId: "checking" }),
+      newTx({ date: "2026-07-05", kind: "income", amount: 80, category: "Family", merchant: "Zelle from Bimala Shrestha", note: "family support", accountId: "checking", categoryReviewed: true }),
       newTx({ date: "2026-07-06", kind: "expense", amount: 30, category: "Zelle", merchant: "Zelle to friend", accountId: "checking" }),
       newTx({ date: "2026-07-07", kind: "expense", amount: 12, category: "Other", merchant: "Unknown", accountId: null }),
     ],
@@ -279,10 +279,14 @@ const {
     cardPurchase?.debitCode === "5200" && cardPurchase?.creditCode === "2000",
     cardPurchase
   );
-  const gift = journal.entries.find((entry) => entry.memo === "Zelle from Mom");
+  const gift = journal.entries.find((entry) => entry.memo === "Zelle from Bimala Shrestha");
   const zelleOut = journal.entries.find((entry) => entry.memo === "Zelle to friend");
   check("accounting: family Zelle income posts to family support", gift?.creditCode === "4100", gift);
-  check("accounting: outbound Zelle is expense, not transfer", zelleOut?.debitCode === "6900", zelleOut);
+  check(
+    "accounting: unknown outbound Zelle is an expense awaiting purpose",
+    zelleOut?.debitCode === "6999",
+    zelleOut
+  );
 
   const statements = buildStatements(accountingState, "2026-07");
   check(
@@ -311,7 +315,7 @@ const {
   const review = buildAccountantReview(accountingState, "2026-07", emptyBooks);
   check(
     "accounting: review finds weak and unassigned lines",
-    review.weakCategoryLines === 1 &&
+    review.weakCategoryLines === 2 &&
       review.unassignedLines === 1 &&
       review.items.some((item) => item.id === "review-categories"),
     review
@@ -641,6 +645,7 @@ const {
           kind: "expense",
           amount: 200,
           category: "Transfers",
+          categoryReviewed: true,
           merchant: "Zelle to savings",
           note: "Approved own-account pair",
           accountId: "checking",
@@ -652,6 +657,7 @@ const {
           kind: "income",
           amount: 200,
           category: "Transfers",
+          categoryReviewed: true,
           merchant: "Zelle from checking",
           note: "Approved own-account pair",
           accountId: "savings",

@@ -68,6 +68,8 @@ export type FinanceTx = {
   kind: TxKind;
   amount: number; // always positive; kind decides direction
   category: string;
+  /** True after the owner or Mel deliberately assigns the purpose. */
+  categoryReviewed?: boolean;
   note: string;
   /** Cleaned merchant / payee */
   merchant?: string;
@@ -170,11 +172,11 @@ const KEY_V1 = "wonder-finance-v1";
 
 /** Budget lines for categories you actually use */
 const DEFAULT_BUDGET: BudgetLine[] = [
-  { category: "Zelle", planned: 0 },
   { category: "Cash", planned: 0 },
   { category: "Transfers", planned: 0 },
   { category: "Groceries", planned: 0 },
   { category: "Restaurants", planned: 0 },
+  { category: "Experiences", planned: 0 },
   { category: "Housing", planned: 0 },
   { category: "Utilities", planned: 0 },
   { category: "Laundry", planned: 0 },
@@ -243,6 +245,7 @@ function migrateTx(raw: Partial<FinanceTx>): FinanceTx {
       `${merchant} ${note}`,
       kind
     ),
+    categoryReviewed: !!raw.categoryReviewed,
     note,
     merchant,
     accountId: raw.accountId ?? null,
@@ -673,6 +676,7 @@ export function newTx(partial?: Partial<FinanceTx>): FinanceTx {
       `${merchant} ${note}`,
       kind
     ),
+    categoryReviewed: !!partial?.categoryReviewed,
     note,
     merchant,
     accountId: partial?.accountId ?? null,

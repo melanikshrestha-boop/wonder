@@ -22,7 +22,9 @@ import {
 import {
   FINANCE_CATEGORIES,
   cleanMerchant,
+  normalizeImportedTransactionCategory,
   normalizeTransactionCategory,
+  zellePurposeCategory,
 } from "./financeCategorize";
 import { exportLedgerCsv, parseBankCsv } from "./financeCsv";
 import { importOfx, looksLikeOfx } from "./financeOfx";
@@ -242,17 +244,24 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   {
     id: "lifestyle",
     label: "Lifestyle",
-    cats: ["Restaurants", "Clothing", "Subscriptions", "Travel", "Cash"],
+    cats: [
+      "Restaurants",
+      "Experiences",
+      "Clothing",
+      "Subscriptions",
+      "Travel",
+      "Cash",
+    ],
   },
   {
     id: "moves",
     label: "Money moves",
-    cats: ["Zelle", "Transfers", "Credit card payment"],
+    cats: ["Transfers", "Credit card payment"],
   },
   {
     id: "buffer",
     label: "Buffer",
-    cats: ["Education", "Business", "Fees", "Other"],
+    cats: ["Education", "Business", "Fees", "Other", "Uncategorized"],
   },
 ];
 
@@ -752,6 +761,20 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     // Keep the short list order; only show ones present in books
     return FINANCE_CATEGORIES.filter((c) => set.has(c));
   }, [txs]);
+  const zelleReviewCount = useMemo(
+    () =>
+      txs.filter(
+        (transaction) =>
+          transaction.date.startsWith(`${filterYear}-`) &&
+          (filterMonth === "all" ||
+            transaction.date.startsWith(filterMonth)) &&
+          /\bzelle\b/i.test(
+            `${transaction.merchant || ""} ${transaction.note || ""}`
+          ) &&
+          normalizedLedgerCategory(transaction) === "Uncategorized"
+      ).length,
+    [filterMonth, filterYear, txs]
+  );
 
   /** Owner's hard monthly spending limit */
   const MONTHLY_LIMIT = 500;
@@ -1440,17 +1463,19 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
       }
       const isNeg = amountRaw.trim().startsWith("-") || Number(amountRaw) < 0;
       const kind: TxKind = isNeg ? "expense" : "income";
+      const categoryText = `${cols[1] || ""} ${cols[2] || ""}`;
       added.push(
         newTx({
           date,
           merchant: merchant || "Pasted",
           note: merchant || "Pasted",
           amount,
-          category: normalizeTransactionCategory(
+          category: normalizeImportedTransactionCategory(
             (cols[3] || "Other").trim() || "Other",
-            `${cols[1] || ""} ${cols[2] || ""}`,
+            categoryText,
             kind
           ),
+          categoryReviewed: zellePurposeCategory(categoryText, kind) != null,
           kind,
           source: "import",
         })
@@ -1860,15 +1885,18 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         const incoming: FinanceTx[] = (data.transactions || []).map((t) => {
           const acc =
             accounts.find((a) => a.plaidAccountId === t.accountId) || null;
+          const categoryText = `${t.merchant || ""} ${t.note || ""}`;
           return newTx({
             date: t.date,
             kind: t.kind,
             amount: t.amount,
-            category: normalizeTransactionCategory(
+            category: normalizeImportedTransactionCategory(
               t.category,
-              `${t.merchant || ""} ${t.note || ""}`,
+              categoryText,
               t.kind
             ),
+            categoryReviewed:
+              zellePurposeCategory(categoryText, t.kind) != null,
             note: t.note || t.merchant,
             merchant: t.merchant,
             accountId: acc?.id || null,
@@ -3269,6 +3297,20 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               </section>
             ) : null}
             <section className="wd-panel">
+              {zelleReviewCount > 0 ? (
+                <p className="wd-category-review" role="status">
+                  <strong>{zelleReviewCount} Zelle import{zelleReviewCount === 1 ? "" : "s"} need a purpose.</strong>{" "}
+                  Choose a Category below, or tell Mel “recategorize [payee] to
+                  [category].”{" "}
+                  <button
+                    type="button"
+                    className="wd-link"
+                    onClick={() => setFilterCat("Uncategorized")}
+                  >
+                    Review now
+                  </button>
+                </p>
+              ) : null}
               {/* One compact filter row — every control is a dropdown */}
               <div className="wd-filters wd-filters-ledger">
                 <input
@@ -3454,6 +3496,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                 className={
                                   !cat ||
                                   cat === "Other" ||
+                                  cat === "Uncategorized" ||
                                   !(t.merchant || t.note || "").trim()
                                     ? "is-gap"
                                     : undefined
@@ -3492,7 +3535,11 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                 </td>
                                 <td>
                                   <select
-                                    className="wd-cat-select"
+                                    className={`wd-cat-select${
+                                      cat === "Uncategorized"
+                                        ? " is-review"
+                                        : ""
+                                    }`}
                                     value={cat}
                                     autoComplete="off"
                                     data-lpignore="true"
@@ -3501,6 +3548,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                     onChange={(e) =>
                                       patchTx(t.id, {
                                         category: e.target.value,
+                                        categoryReviewed: true,
                                       })
                                     }
                                   >

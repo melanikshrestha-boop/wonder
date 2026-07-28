@@ -9,10 +9,14 @@ import {
   BOFA_STATEMENT_META,
   BOFA_STATEMENT_TXS,
 } from "./bofaStatementData";
+import {
+  normalizeImportedTransactionCategory,
+  zellePurposeCategory,
+} from "./financeCategorize";
 import type { FinanceAccount, FinanceState, FinanceTx } from "./financeStore";
 
 /** Bump when BofA re-extract should force re-merge */
-export const BOFA_IMPORT_VERSION = "bofa-v2-8804-mar2026-jun2026-nohousing";
+export const BOFA_IMPORT_VERSION = "bofa-v3-zelle-purpose-review";
 
 const FLAG_KEY = "wonder-finance-bofa-import-version";
 
@@ -71,8 +75,35 @@ export function applyBofaStatements(state: FinanceState): {
   added: number;
   keptOther: number;
 } {
+  const priorStatementRows = new Map(
+    state.txs
+      .filter(isBofaImportTx)
+      .map((transaction) => [
+        transaction.externalId || transaction.id,
+        transaction,
+      ])
+  );
   const keep = state.txs.filter((t) => !isBofaImportTx(t));
-  const statementTxs: FinanceTx[] = BOFA_STATEMENT_TXS.map((t) => ({ ...t }));
+  const statementTxs: FinanceTx[] = BOFA_STATEMENT_TXS.map((t) => {
+    const previous = priorStatementRows.get(t.externalId || t.id);
+    if (previous?.categoryReviewed) {
+      return {
+        ...t,
+        category: previous.category,
+        categoryReviewed: true,
+      };
+    }
+    const categoryText = `${t.merchant || ""} ${t.note || ""}`;
+    return {
+      ...t,
+      category: normalizeImportedTransactionCategory(
+        t.category,
+        categoryText,
+        t.kind
+      ),
+      categoryReviewed: zellePurposeCategory(categoryText, t.kind) != null,
+    };
+  });
   const txs = [...keep, ...statementTxs].sort((a, b) =>
     a.date < b.date ? 1 : a.date > b.date ? -1 : 0
   );

@@ -241,6 +241,7 @@ function isEarnedOperatingIncome(tx: FinanceTx): boolean {
   ) {
     return false;
   }
+  if (category === "Photography") return true;
   // The existing importer sometimes assigns a generic "Income" category to
   // unknown credits. A business-style report needs positive earned-income
   // evidence; the category alone is not enough to call a credit revenue.
@@ -288,12 +289,9 @@ function isOperatingExpense(
   ) {
     return false;
   }
-  // P2P purpose is not inferable from the rail alone.
-  if (
-    category === "Zelle" ||
-    txTypeOf(tx) === "P2P payment" ||
-    /\b(zelle|venmo|cash app|cashapp)\b/i.test(text)
-  ) {
+  // A rail is not a purpose. Weak P2P rows are stopped above; a reviewed
+  // Restaurants/Groceries/Travel/etc. category is usable accounting evidence.
+  if (category === "Zelle" || txTypeOf(tx) === "P2P payment") {
     return false;
   }
   return true;

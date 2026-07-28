@@ -52,8 +52,12 @@ export function detectTransferPairs(
   const pairs: TransferPair[] = [];
   const used = new Set<string>();
 
-  const outs = txs.filter((t) => t.kind === "expense" && !isTransferLike(t));
-  const ins = txs.filter((t) => t.kind === "income" && !isTransferLike(t));
+  const outs = txs.filter(
+    (t) => t.kind === "expense" && !isTransferLike(t) && !t.categoryReviewed
+  );
+  const ins = txs.filter(
+    (t) => t.kind === "income" && !isTransferLike(t) && !t.categoryReviewed
+  );
 
   // Index incomes by cent amount for quick lookup
   const byAmount = new Map<number, FinanceTx[]>();
@@ -129,7 +133,7 @@ export function applyTransferPair(
 ): FinanceTx[] {
   return txs.map((t) =>
     t.id === pair.outTx.id || t.id === pair.inTx.id
-      ? { ...t, category: "Transfers" }
+      ? { ...t, category: "Transfers", categoryReviewed: true }
       : t
   );
 }

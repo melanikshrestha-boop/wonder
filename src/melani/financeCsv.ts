@@ -6,7 +6,8 @@
 import {
   categorizeMerchant,
   cleanMerchant,
-  normalizeTransactionCategory,
+  normalizeImportedTransactionCategory,
+  zellePurposeCategory,
 } from "./financeCategorize";
 import type { FinanceTx, TxKind } from "./financeStore";
 
@@ -216,9 +217,12 @@ export function parseBankCsv(
     const categoryRaw =
       (catRaw && catRaw.trim()) ||
       (kind === "income" ? "Income" : categorizeMerchant(merchant));
-    const category = normalizeTransactionCategory(
+    const categoryText = `${merchant} ${
+      col.desc != null ? cells[col.desc] || "" : ""
+    }`;
+    const category = normalizeImportedTransactionCategory(
       categoryRaw,
-      `${merchant} ${col.desc != null ? cells[col.desc] || "" : ""}`,
+      categoryText,
       kind
     );
     const statementBalance =
@@ -244,6 +248,7 @@ export function parseBankCsv(
       kind,
       amount: abs,
       category,
+      categoryReviewed: zellePurposeCategory(categoryText, kind) != null,
       note: merchant,
       merchant,
       accountId: opts?.accountId || null,

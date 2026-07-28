@@ -21,12 +21,19 @@ Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
 });
 
-const { normalizeTransactionCategory } = await import(
+const {
+  FINANCE_CATEGORIES,
+  normalizeImportedTransactionCategory,
+  normalizeTransactionCategory,
+} = await import(
   "../src/melani/financeCategorize.ts"
 );
 const { parseBankCsv } = await import("../src/melani/financeCsv.ts");
 const { CHASE_STATEMENT_ACCOUNTS, CHASE_STATEMENT_TXS } = await import(
   "../src/melani/chaseStatementData.ts"
+);
+const { applyChaseStatements } = await import(
+  "../src/melani/chaseStatementImport.ts"
 );
 const { loadFinance } = await import("../src/melani/financeStore.ts");
 const { buildReconciliation } = await import(
@@ -53,8 +60,81 @@ assert.equal(
 );
 assert.equal(
   normalizeTransactionCategory("Zelle", "Zelle to Bimala Shrestha", "expense"),
-  "Zelle"
+  "Uncategorized"
 );
+assert.equal(
+  normalizeImportedTransactionCategory(
+    "Transfers",
+    "Zelle to Sean Filimon",
+    "expense"
+  ),
+  "Travel"
+);
+assert.equal(
+  normalizeImportedTransactionCategory(
+    "Transfers",
+    "Zelle to Ricky (Coding Guy)",
+    "expense"
+  ),
+  "Restaurants"
+);
+for (const payee of [
+  "Zelle to Ronni Wieman",
+  "Zelle to Sam Peterson",
+  "Zelle to Ani",
+  "Zelle to Ella Will",
+]) {
+  assert.equal(
+    normalizeImportedTransactionCategory("Transfers", payee, "expense"),
+    "Groceries"
+  );
+}
+for (const payee of [
+  "Zelle to Sofia USC",
+  "Zelle to Zeba",
+  "Zelle to Ziyu Gao",
+]) {
+  assert.equal(
+    normalizeImportedTransactionCategory("Transfers", payee, "expense"),
+    "Restaurants"
+  );
+}
+assert.equal(
+  normalizeImportedTransactionCategory(
+    "Income",
+    "Zelle from Audrey Davis",
+    "income"
+  ),
+  "Photography"
+);
+assert.equal(
+  normalizeImportedTransactionCategory(
+    "Income",
+    "Zelle from Cedric Hong",
+    "income"
+  ),
+  "Experiences"
+);
+assert.equal(
+  normalizeImportedTransactionCategory(
+    "Transfers",
+    "Zelle to Unknown Friend",
+    "expense"
+  ),
+  "Uncategorized"
+);
+assert.equal(
+  normalizeTransactionCategory(
+    "Groceries",
+    "Zelle to Sean Filimon",
+    "expense"
+  ),
+  "Groceries",
+  "manual purpose overrides the built-in payee default"
+);
+assert.ok(!(FINANCE_CATEGORIES as readonly string[]).includes("Zelle"));
+assert.ok(FINANCE_CATEGORIES.includes("Photography"));
+assert.ok(FINANCE_CATEGORIES.includes("Experiences"));
 assert.equal(
   normalizeTransactionCategory("Shopping", "Wash Kiosk Mobile", "expense"),
   "Laundry"
@@ -95,6 +175,44 @@ const finalStatementRow = [...CHASE_STATEMENT_TXS].sort(
     (right.statementOrder ?? -1) - (left.statementOrder ?? -1)
 )[0];
 assert.equal(finalStatementRow.statementBalance, 0.03);
+const categorizedChase = applyChaseStatements({
+  ...loadFinance(),
+  txs: [],
+}).state.txs;
+const categoriesFor = (merchant: string) =>
+  categorizedChase
+    .filter((transaction) => transaction.merchant === merchant)
+    .map((transaction) => transaction.category);
+assert.deepEqual(categoriesFor("Zelle to Sean Filimon"), ["Travel"]);
+assert.deepEqual(categoriesFor("Zelle to Ricky (Coding Guy)"), ["Restaurants"]);
+assert.ok(
+  categoriesFor("Zelle from Audrey Davis 0CA0QBJ17YG4").every(
+    (category) => category === "Photography"
+  )
+);
+assert.ok(
+  categorizedChase
+    .filter((transaction) =>
+      /Zelle to (Ronni Wieman|Sam Peterson|Ani|Ella Will)/.test(
+        transaction.merchant || ""
+      )
+    )
+    .every((transaction) => transaction.category === "Groceries")
+);
+assert.ok(
+  categorizedChase
+    .filter((transaction) =>
+      /Zelle to (Sofia USC|Zeba|Ziyu Gao)/.test(transaction.merchant || "")
+    )
+    .every((transaction) => transaction.category === "Restaurants")
+);
+assert.ok(
+  categorizedChase
+    .filter((transaction) =>
+      /\bZelle\b/.test(`${transaction.merchant} ${transaction.note}`)
+    )
+    .every((transaction) => transaction.category !== "Zelle")
+);
 const statementReconciliation = buildReconciliation({
   ...loadFinance(),
   accounts: CHASE_STATEMENT_ACCOUNTS,
@@ -115,6 +233,14 @@ assert.equal(finance.txs.length, 2);
 assert.equal(finance.txs[0].category, "Family");
 assert.equal(finance.txs[1].category, "Cash");
 assert.equal(finance.txs[1].merchant, "food");
+runFinancePlan("log $12 Zelle to Sean Filimon");
+runFinancePlan("recategorize Zelle to Sean Filimon to Travel");
+let melReviewedFinance = loadFinance();
+assert.equal(melReviewedFinance.txs[0].category, "Travel");
+assert.equal(melReviewedFinance.txs[0].categoryReviewed, true);
+runFinancePlan("Zelle to Sean Filimon was Experiences");
+melReviewedFinance = loadFinance();
+assert.equal(melReviewedFinance.txs[0].category, "Experiences");
 
 localStorage.setItem(
   "wonder-books-library-v1",

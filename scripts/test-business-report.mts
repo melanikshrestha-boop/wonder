@@ -337,6 +337,36 @@ console.log("Quarterly operating report");
   const q1 = report(
     [
       tx(
+        "photo",
+        "2026-02-17",
+        "income",
+        480,
+        "Photography",
+        "Zelle from Audrey Davis",
+      ),
+      tx(
+        "restaurant",
+        "2026-03-09",
+        "expense",
+        10.98,
+        "Restaurants",
+        "Zelle to Sofia USC",
+      ),
+    ],
+    "2026-Q1",
+    "2026-03-31",
+  );
+  assert("Photography Zelle is earned revenue", q1.metrics.revenue === 480);
+  assert(
+    "purpose-labeled Zelle expense is operating spend",
+    q1.metrics.operatingExpenses === 10.98,
+  );
+}
+
+{
+  const q1 = report(
+    [
+      tx(
         "unknown-income",
         "2026-01-07",
         "income",

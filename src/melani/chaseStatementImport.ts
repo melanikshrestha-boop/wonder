@@ -9,13 +9,16 @@ import {
   CHASE_STATEMENT_META,
   CHASE_STATEMENT_TXS,
 } from "./chaseStatementData";
-import { normalizeTransactionCategory } from "./financeCategorize";
+import {
+  normalizeImportedTransactionCategory,
+  zellePurposeCategory,
+} from "./financeCategorize";
 import type { FinanceAccount, FinanceState, FinanceTx } from "./financeStore";
 
 /** Bump when re-extracted statements should force re-merge */
 /** Bump when Chase CSV/PDF re-import should force re-merge into local books */
 export const CHASE_IMPORT_VERSION =
-  "chase-v4-statement-balances-laundry-card-movements";
+  "chase-v5-zelle-purpose-review";
 
 const FLAG_KEY = "wonder-finance-chase-import-version";
 
@@ -90,19 +93,39 @@ export function applyChaseStatements(state: FinanceState): {
 } {
   // Keep Plaid/other bank imports; drop prior Chase PDF rows and demo/manual filler
   // so the daybook is the real statement history.
+  const priorStatementRows = new Map(
+    state.txs
+      .filter(isChaseImportTx)
+      .map((transaction) => [
+        transaction.externalId || transaction.id,
+        transaction,
+      ])
+  );
   const keep = state.txs.filter(
     (t) =>
       !isChaseImportTx(t) &&
       (t.source === "plaid" || t.source === "csv")
   );
-  const statementTxs: FinanceTx[] = CHASE_STATEMENT_TXS.map((t) => ({
-    ...t,
-    category: normalizeTransactionCategory(
-      t.category,
-      `${t.merchant || ""} ${t.note || ""}`,
-      t.kind
-    ),
-  }));
+  const statementTxs: FinanceTx[] = CHASE_STATEMENT_TXS.map((t) => {
+    const previous = priorStatementRows.get(t.externalId || t.id);
+    if (previous?.categoryReviewed) {
+      return {
+        ...t,
+        category: previous.category,
+        categoryReviewed: true,
+      };
+    }
+    const categoryText = `${t.merchant || ""} ${t.note || ""}`;
+    return {
+      ...t,
+      category: normalizeImportedTransactionCategory(
+        t.category,
+        categoryText,
+        t.kind
+      ),
+      categoryReviewed: zellePurposeCategory(categoryText, t.kind) != null,
+    };
+  });
   const txs = [...keep, ...statementTxs].sort((a, b) =>
     a.date < b.date ? 1 : a.date > b.date ? -1 : 0
   );

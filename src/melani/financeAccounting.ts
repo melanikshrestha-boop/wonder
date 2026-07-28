@@ -85,6 +85,12 @@ export const CHART_OF_ACCOUNTS: CoaAccount[] = [
   { code: "3000", name: "Owner equity / net worth", type: "equity" },
   { code: "4000", name: "Income", type: "income", category: "Income" },
   { code: "4100", name: "Family support", type: "income", category: "Family" },
+  {
+    code: "4200",
+    name: "Photography revenue",
+    type: "income",
+    category: "Photography",
+  },
   { code: "5000", name: "Housing", type: "expense", category: "Housing" },
   { code: "5100", name: "Utilities", type: "expense", category: "Utilities" },
   { code: "5150", name: "Laundry", type: "expense", category: "Laundry" },
@@ -97,7 +103,12 @@ export const CHART_OF_ACCOUNTS: CoaAccount[] = [
   { code: "5800", name: "Business / tools", type: "expense", category: "Business" },
   { code: "5900", name: "Travel", type: "expense", category: "Travel" },
   { code: "6000", name: "Education / tuition", type: "expense", category: "Education" },
-  { code: "6100", name: "Fun", type: "expense" },
+  {
+    code: "6100",
+    name: "Experiences",
+    type: "expense",
+    category: "Experiences",
+  },
   { code: "6200", name: "Fees", type: "expense", category: "Fees" },
   { code: "6300", name: "Credit card payment", type: "transfer", category: "Credit card payment" },
   { code: "6400", name: "Transfers", type: "transfer", category: "Transfers" },
@@ -144,6 +155,9 @@ function coaForTransaction(tx: FinanceTx): CoaAccount {
         /\b(gift|family|mom|dad|parent|bimala|umesh|millennium|shrestha)\b/.test(text))
     ) {
       return CHART_OF_ACCOUNTS.find((a) => a.code === "4100")!;
+    }
+    if (category === "Photography") {
+      return CHART_OF_ACCOUNTS.find((a) => a.code === "4200")!;
     }
     // Direction is authoritative: an unknown inflow must never credit an
     // expense account merely because its category is Other/Uncategorized.

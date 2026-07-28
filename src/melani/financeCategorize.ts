@@ -7,11 +7,12 @@
 export const CATEGORY_COLORS: Record<string, string> = {
   Income: "#3d8f6e",
   Family: "#0f8f7d",
-  Zelle: "#5b6ee1", // most P2P volume — distinct indigo
+  Photography: "#7158a6",
   Cash: "#b56f38",
   Transfers: "#1f6f8b", // account / card moves — cool teal, not Zelle
   Groceries: "#5c8d5c",
   Restaurants: "#d64545", // "bad" discretionary — red
+  Experiences: "#c4832f",
   Housing: "#8b6f47",
   Utilities: "#4f7b8f",
   Laundry: "#4f8f88",
@@ -36,13 +37,15 @@ export const BAD_CATEGORIES = new Set(["Restaurants"]);
  * No dead options for bills you don't currently track.
  */
 export const FINANCE_CATEGORIES = [
+  "Uncategorized",
   "Income",
   "Family",
-  "Zelle",
+  "Photography",
   "Cash",
   "Transfers",
   "Groceries",
   "Restaurants",
+  "Experiences",
   "Housing",
   "Utilities",
   "Laundry",
@@ -80,9 +83,11 @@ const ALIASES: Record<string, string> = {
   Gifts: "Other",
   "Gifts received": "Other",
   Parents: "Family",
-  Fun: "Restaurants",
+  Zelle: "Uncategorized",
+  Fun: "Experiences",
+  Leisure: "Experiences",
+  Entertainment: "Experiences",
   Fees: "Fees",
-  Uncategorized: "Other",
 };
 
 /**
@@ -111,11 +116,8 @@ export function normalizeCategory(
   // Wash Kiosk is a laundromat service. Bank exports called it Shopping,
   // which previously pushed every historical wash into Clothing.
   if (/\b(wash kiosk|laundromat|laundry)\b/.test(text)) return "Laundry";
-  // Zelle wins over unreviewed bank noise, but never over an explicit
-  // Transfers / Credit card payment decision above.
-  if (/\bzelle\b/.test(text)) return "Zelle";
-
-  if (!raw) return "Other";
+  if (raw.toLowerCase() === "zelle") return "Uncategorized";
+  if (!raw) return /\bzelle\b/.test(text) ? "Uncategorized" : "Other";
   if (ALIASES[raw]) return ALIASES[raw];
   if ((FINANCE_CATEGORIES as readonly string[]).includes(raw)) return raw;
   // Case-insensitive match against known labels
@@ -129,6 +131,48 @@ export function normalizeCategory(
 const FAMILY_NAMES = /\b(bimala|umesh|millennium)\b/i;
 
 /**
+ * Owner-confirmed Zelle purposes. Zelle is the rail in the payee/type fields;
+ * the category must describe why the money moved.
+ */
+export function zellePurposeCategory(
+  merchantOrNote: string,
+  kind: "income" | "expense"
+): string | null {
+  const text = merchantOrNote.replace(/\s+/g, " ");
+  if (!/\bzelle\b/i.test(text)) return null;
+
+  if (kind === "income" && FAMILY_NAMES.test(text)) return "Family";
+  if (kind === "income" && /\bzelle\s+from\s+audrey\b/i.test(text))
+    return "Photography";
+  if (kind === "income" && /\bzelle\s+from\s+cedric\s+hong\b/i.test(text))
+    return "Experiences";
+
+  if (kind === "expense") {
+    if (/\bzelle\s+to\s+sean\s+(?:filimon|philemon)\b/i.test(text))
+      return "Travel";
+    if (/\bzelle\s+to\s+ricky\b/i.test(text)) return "Restaurants";
+    if (
+      /\bzelle\s+to\s+(?:ronni\s+wieman|sam\s+peterson|ani\b|ella\s+will)\b/i.test(
+        text
+      )
+    )
+      return "Groceries";
+    if (
+      /\bzelle\s+to\s+(?:sofia\s+usc|zeba(?:\s+attar)?|ziyu\s+gao)\b/i.test(
+        text
+      )
+    )
+      return "Restaurants";
+    if (/\bzelle\s+to\s+(?:sunsent\s+chickne|taco)\b/i.test(text))
+      return "Restaurants";
+    if (/\bzelle\s+to\s+nepa\s+fashion\s+house\b/i.test(text))
+      return "Clothing";
+  }
+
+  return null;
+}
+
+/**
  * Normalize with transaction direction. A payment rail is not a source:
  * incoming payments from Bimala, Umesh, or Millennium are family funding,
  * while outgoing payments to a family member remain an expense/P2P payment.
@@ -138,8 +182,41 @@ export function normalizeTransactionCategory(
   merchantOrNote = "",
   kind: "income" | "expense" = "expense"
 ): string {
+  const raw = (category || "").trim();
+  if (
+    /\bzelle\b/i.test(merchantOrNote) &&
+    raw &&
+    !/^(zelle|income|other|uncategorized)$/i.test(raw)
+  ) {
+    // A deliberate purpose (including an approved Transfers pair) always
+    // beats the built-in merchant defaults.
+    return normalizeCategory(raw, merchantOrNote);
+  }
+  const zellePurpose = zellePurposeCategory(merchantOrNote, kind);
+  if (zellePurpose) return zellePurpose;
+  if (
+    /\bzelle\b/i.test(merchantOrNote) &&
+    (!raw || /^(zelle|income|other|uncategorized)$/i.test(raw))
+  )
+    return "Uncategorized";
   if (kind === "income" && FAMILY_NAMES.test(merchantOrNote)) return "Family";
   return normalizeCategory(category, merchantOrNote);
+}
+
+/**
+ * Import boundary: bank-provided "Zelle", "Transfer", and generic "Income"
+ * labels are not accounting categories. Known owner rules are applied; every
+ * other Zelle row waits in Uncategorized for a manual or Mel review.
+ */
+export function normalizeImportedTransactionCategory(
+  category: string | null | undefined,
+  merchantOrNote = "",
+  kind: "income" | "expense" = "expense"
+): string {
+  if (/\bzelle\b/i.test(merchantOrNote)) {
+    return zellePurposeCategory(merchantOrNote, kind) || "Uncategorized";
+  }
+  return normalizeTransactionCategory(category, merchantOrNote, kind);
 }
 
 /** Stable color for a category (after normalize when possible) */
@@ -148,7 +225,7 @@ export function categoryColor(name: string): string {
   return CATEGORY_COLORS[n] || CATEGORY_COLORS.Other;
 }
 
-/** Ordered rules — first match wins. Zelle before generic Transfers. */
+/** Ordered rules — first match wins. Payment rails never become categories. */
 const RULES: { category: string; match: RegExp }[] = [
   {
     category: "Income",
@@ -160,8 +237,7 @@ const RULES: { category: string; match: RegExp }[] = [
     match:
       /\b(payment to chase card|chase credit card payment|loan_pmt|payment thank you|autopay)\b/i,
   },
-  // Zelle is its own bucket — most of your payment volume lives here
-  { category: "Zelle", match: /\bzelle\b/i },
+  { category: "Uncategorized", match: /\bzelle\b/i },
   {
     category: "Transfers",
     match:
@@ -176,6 +252,11 @@ const RULES: { category: string; match: RegExp }[] = [
     category: "Restaurants",
     match:
       /\b(starbucks|dunkin|mcdonald|chipotle|cava|doordash|uber eats|grubhub|seamless|restaurant|cafe|coffee|pizza|sushi|bagel|blue bottle|insomnia|bruxie|kobunga|wingstop|yogurtland|subway|himalayan|dulce|eats)\b/i,
+  },
+  {
+    category: "Experiences",
+    match:
+      /\b(concert|ticketmaster|live nation|cinema|movie theater|museum|festival|show ticket)\b/i,
   },
   {
     category: "Transport",

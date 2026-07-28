@@ -85,7 +85,7 @@ export function buildAnnualBook(txs: FinanceTx[], year: number): AnnualBook {
       incomeMap.get(label)![m] += t.amount;
     } else if (
       t.kind === "expense" &&
-      (t.category === "Transfers" || t.category === "Zelle")
+      t.category === "Transfers"
     ) {
       const label = (t.merchant || t.note || t.category).trim() || t.category;
       if (!savingsMap.has(label)) savingsMap.set(label, new Array(12).fill(0));
