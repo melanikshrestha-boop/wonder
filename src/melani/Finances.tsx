@@ -79,6 +79,14 @@ import { FinanceCopilot } from "./FinanceCopilot";
 import type { CopilotContext } from "./financeCopilotEngine";
 import { FinanceSqlEditor } from "./FinanceSqlEditor";
 import { Spend3D } from "./Spend3D";
+import { BusinessReport } from "./BusinessReport";
+import {
+  availableBusinessQuarters,
+  buildBusinessQuarterReport,
+  businessQuarterReportCsv,
+  currentBusinessQuarter,
+  type BusinessQuarterKey,
+} from "./financeBusinessReport";
 import {
   answerFromBrief,
   buildSmartBrief,
@@ -175,6 +183,7 @@ type PlaidStatus = {
 
 type TabId =
   | "overview"
+  | "business"
   | "worth"
   | "transactions"
   | "credit"
@@ -191,6 +200,7 @@ type SortKey = "date" | "merchant" | "category" | "amount" | "kind";
 
 const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "overview", label: "Books", icon: "◉" },
+  { id: "business", label: "Quarterly", icon: "▤" },
   { id: "transactions", label: "Ledger", icon: "☰" },
   { id: "plan", label: "Plan", icon: "▦" },
   { id: "subscriptions", label: "Subscriptions", icon: "↻" },
@@ -199,6 +209,7 @@ const NAV: { id: TabId; label: string; icon: string }[] = [
 
 const ALL_TAB_IDS: TabId[] = [
   "overview",
+  "business",
   "worth",
   "transactions",
   "credit",
@@ -369,6 +380,18 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     if (t && ALL_TAB_IDS.includes(t as TabId)) return t as TabId;
     return "overview";
   });
+  const [businessQuarter, setBusinessQuarter] =
+    useState<BusinessQuarterKey>(() => {
+      if (typeof window !== "undefined") {
+        const quarter = new URLSearchParams(window.location.search).get(
+          "quarter",
+        );
+        if (/^\d{4}-Q[1-4]$/.test(quarter || "")) {
+          return quarter as BusinessQuarterKey;
+        }
+      }
+      return currentBusinessQuarter();
+    });
   // Open quant desk from URL (?desk=1 or ?copilot=1)
   const [copilotOpen, setCopilotOpen] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -391,8 +414,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     const url = new URL(window.location.href);
     if (tab === "overview") url.searchParams.delete("tab");
     else url.searchParams.set("tab", tab);
+    if (tab === "business") {
+      url.searchParams.set("quarter", businessQuarter);
+    } else {
+      url.searchParams.delete("quarter");
+    }
     window.history.replaceState({}, "", url.toString());
-  }, [tab]);
+  }, [tab, businessQuarter]);
   const [filterQ, setFilterQ] = useState("");
   const [filterCat, setFilterCat] = useState("all");
   // Accountant period: year first, then Jan → current month (grows automatically)
@@ -799,6 +827,21 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     (check) => check.critical && !check.ok
   );
   const periodOpenItems = accounting.review.items.length + closeBlockers.length;
+  const businessQuarterOptions = useMemo(
+    () => (state ? availableBusinessQuarters(state) : []),
+    [state],
+  );
+  const businessReport = useMemo(
+    () =>
+      state
+        ? buildBusinessQuarterReport(
+            state,
+            businessQuarter,
+            booksExtra,
+          )
+        : null,
+    [state, businessQuarter, booksExtra],
+  );
 
   const copilotCtx: CopilotContext | null = useMemo(
     () =>
@@ -1207,6 +1250,34 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     a.download = `wonder-books-${annualBook.year}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function downloadBusinessCsv() {
+    if (!businessReport) return;
+    const blob = new Blob([businessQuarterReportCsv(businessReport)], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `wonder-quarterly-operating-review-${businessReport.quarter.key}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function reviewBusinessLedger() {
+    if (!businessReport) return;
+    setReviewFilter({
+      label: `${businessReport.quarter.label} supporting ledger`,
+      txIds: businessReport.supportingTransactionIds,
+    });
+    setFilterQ("");
+    setFilterCat("all");
+    setFilterKind("all");
+    setFilterTxType("all");
+    setFilterYear(Number(businessReport.quarter.key.slice(0, 4)));
+    setFilterMonth("all");
+    setTab("transactions");
   }
 
   function recordCredit() {
@@ -1845,6 +1916,18 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
           onChange={(e) => onCsvFile(e.target.files?.[0] || null)}
         />
 
+        {tab === "business" && businessReport ? (
+          <BusinessReport
+            report={businessReport}
+            availableQuarters={businessQuarterOptions}
+            selectedQuarter={businessQuarter}
+            onQuarterChange={setBusinessQuarter}
+            onExport={downloadBusinessCsv}
+            onPrint={() => window.print()}
+            onReviewLedger={reviewBusinessLedger}
+          />
+        ) : null}
+
         {/* ════════ BOOKS — capital command (not budget theater) ════════ */}
         {tab === "overview" ? (
           <div className={`wd-overview${booksExpanded ? " is-expanded" : ""}`}>
@@ -2095,6 +2178,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   onClick={() => setCopilotOpen(true)}
                 >
                   Ask Mel
+                </button>
+                <button
+                  type="button"
+                  className="wd-btn"
+                  onClick={() => setTab("business")}
+                >
+                  Quarterly report
                 </button>
                 <button
                   type="button"
