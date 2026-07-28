@@ -30,6 +30,7 @@ const { buildBookPageBrief } = await import(
   "../src/melani/bookPageBrief.ts"
 );
 const { loadBooks } = await import("../src/melani/booksStore.ts");
+const { pieSlicePath } = await import("../src/melani/pieGeometry.ts");
 
 assert.equal(
   normalizeTransactionCategory("Zelle", "Zelle from Bimala Shrestha", "income"),
@@ -81,5 +82,21 @@ const brief = buildBookPageBrief(
 assert.equal(brief.heading, "Habits");
 assert.ok(brief.takeaways.length >= 2);
 assert.match(brief.action || "", /choose|practice/i);
+
+const singleCategoryDonut = pieSlicePath(
+  110,
+  110,
+  96,
+  56,
+  -Math.PI / 2,
+  Math.PI * 1.5,
+  true
+);
+assert.equal(
+  singleCategoryDonut.match(/\bA/g)?.length,
+  4,
+  "a one-category donut must draw both the outside and inside circles"
+);
+assert.match(singleCategoryDonut, /A56,56/);
 
 console.log("finance + bookshelf integration checks passed");
