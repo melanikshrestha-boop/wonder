@@ -356,7 +356,7 @@ function isOperatingExpense(
     return false;
   }
   if (
-    !tx.category.trim() ||
+    !category ||
     category === "Other" ||
     category === "Uncategorized"
   ) {
@@ -442,7 +442,7 @@ function needsClassification(
   }
   if (
     tx.kind === "expense" &&
-    (!tx.category.trim() ||
+    (!category ||
       category === "Other" ||
       category === "Uncategorized")
   ) {
@@ -774,16 +774,9 @@ function categoryBreakdown(
         [label, rows, sum(rows)] as const,
     )
     .sort((a, b) => b[2] - a[2]);
-  const visible = sorted.slice(0, 5);
-  if (sorted.length > 5) {
-    const otherRows = sorted.slice(5).flatMap(([, rows]) => rows);
-    visible.push([
-      "Other",
-      otherRows,
-      sum(otherRows),
-    ]);
-  }
-  return visible.map(([label, rows, amount], index) => ({
+  return sorted
+    .filter(([label, , amount]) => Boolean(label) && amount > 0)
+    .map(([label, rows, amount], index) => ({
     id: label.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
     label,
     amount,

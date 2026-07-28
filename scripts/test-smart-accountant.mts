@@ -97,9 +97,9 @@ check("chase-style rows parsed", csvRes.added.length === 2, csvRes.errors);
 const coffee = csvRes.added.find((t) => t.kind === "expense");
 check("expense amount positive w/ kind", coffee?.amount === 6.75);
 check(
-  "unknown income waits for source classification",
+  "unknown income waits for source classification without a catch-all label",
   csvRes.added.some(
-    (t) => t.kind === "income" && t.category === "Uncategorized"
+    (t) => t.kind === "income" && t.category === ""
   )
 );
 

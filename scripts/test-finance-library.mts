@@ -161,7 +161,8 @@ assert.equal(
     "Zelle to Unknown Friend",
     "expense"
   ),
-  "Uncategorized"
+  "",
+  "unknown outgoing Zelle stays in review without inventing a category"
 );
 assert.equal(
   normalizeTransactionCategory(
@@ -194,7 +195,8 @@ assert.equal(
 );
 assert.equal(
   normalizeTransactionCategory("Income", "Unknown deposit", "income"),
-  "Uncategorized"
+  "",
+  "direction-only Income labels remain in review without a fake purpose"
 );
 assert.equal(
   normalizeTransactionCategory(
@@ -202,8 +204,15 @@ assert.equal(
     "Concert reimbursement",
     "income"
   ),
-  "Uncategorized"
+  "Reimbursements",
+  "expense labels on income rows do not invent Uncategorized"
 );
+assert.ok(!(INCOME_CATEGORIES as readonly string[]).includes("Uncategorized"));
+assert.ok(!(EXPENSE_CATEGORIES as readonly string[]).includes("Uncategorized"));
+assert.ok(!(INCOME_CATEGORIES as readonly string[]).includes("Other"));
+assert.ok(!(EXPENSE_CATEGORIES as readonly string[]).includes("Other"));
+assert.ok(!(FINANCE_CATEGORIES as readonly string[]).includes("Uncategorized"));
+assert.ok(!(FINANCE_CATEGORIES as readonly string[]).includes("Other"));
 localStorage.setItem(
   "wonder-finance-category-prefs-v1",
   JSON.stringify({

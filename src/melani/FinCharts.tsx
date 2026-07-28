@@ -705,7 +705,7 @@ export function monthChartData(rows: FinanceTx[], month: string) {
         continue;
       }
       out[d - 1] += t.amount;
-      if (cat === "Income") continue;
+      if (!cat || cat === "Income") continue;
       expenseByCat.set(cat, (expenseByCat.get(cat) || 0) + t.amount);
     } else if (t.kind === "income") {
       if (movement) {
@@ -713,7 +713,7 @@ export function monthChartData(rows: FinanceTx[], month: string) {
         continue;
       }
       inn[d - 1] += t.amount;
-      incomeByCat.set(cat, (incomeByCat.get(cat) || 0) + t.amount);
+      if (cat) incomeByCat.set(cat, (incomeByCat.get(cat) || 0) + t.amount);
     }
   }
 
@@ -744,20 +744,13 @@ export function monthChartData(rows: FinanceTx[], month: string) {
   }
 
   function topSlices(source: Map<string, number>): PieSlice[] {
-    const slices: PieSlice[] = Array.from(source.entries())
-    .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
-    .sort((a, b) => b.value - a.value);
-
-    const MAX = 9;
-    const top = slices.slice(0, MAX);
-    const rest = slices.slice(MAX);
-    if (rest.length) {
-      top.push({
-        name: `Other (${rest.length})`,
-        value: Math.round(rest.reduce((s, x) => s + x.value, 0) * 100) / 100,
-      });
-    }
-    return top;
+    return Array.from(source.entries())
+      .filter(([name, value]) => Boolean(name) && value > 0)
+      .map(([name, value]) => ({
+        name,
+        value: Math.round(value * 100) / 100,
+      }))
+      .sort((a, b) => b.value - a.value);
   }
 
   const expenseSlices = topSlices(expenseByCat);
@@ -954,11 +947,12 @@ export function AllLedgerCharts({
       row.kind
     );
     const map = row.kind === "income" ? incomeMap : expenseMap;
-    if (isTransferLike({ ...row, category: name })) continue;
+    if (!name || isTransferLike({ ...row, category: name })) continue;
     map.set(name, (map.get(name) || 0) + row.amount);
   }
   const toSlices = (map: Map<string, number>) =>
     Array.from(map.entries())
+      .filter(([name, value]) => Boolean(name) && value > 0)
       .map(([name, value]) => ({
         name,
         value: Math.round(value * 100) / 100,

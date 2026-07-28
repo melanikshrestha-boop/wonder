@@ -29,8 +29,6 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Business: "#334155",
   Fees: "#b45309",
   "Credit card payment": "#94a3b8",
-  Other: "#78716c",
-  Uncategorized: "#57534e",
 };
 
 const CUSTOM_CATEGORY_COLORS = [
@@ -55,20 +53,22 @@ const CUSTOM_CATEGORY_COLORS = [
 /** Categories treated as lifestyle leaks (red cue in UI) */
 export const BAD_CATEGORIES = new Set(["Restaurants"]);
 
-/** Income and expense purposes stay separate in every category picker. */
+/**
+ * Income and expense purposes stay separate in every category picker.
+ * There is no "Uncategorized" purpose — every row needs a real why
+ * (Family / Reimbursements / Housing / …). Payment rails (Zelle) are never
+ * categories.
+ */
 export const INCOME_CATEGORIES = [
-  "Uncategorized",
   "Family",
   "Reimbursements",
   "Gifts",
   "Photography",
   "Reselling",
   "Transfers",
-  "Other",
 ] as const;
 
 export const EXPENSE_CATEGORIES = [
-  "Uncategorized",
   "Cash",
   "Transfers",
   "Repayment",
@@ -87,7 +87,6 @@ export const EXPENSE_CATEGORIES = [
   "Business",
   "Fees",
   "Credit card payment",
-  "Other",
 ] as const;
 
 const CATEGORY_PREFS_KEY = "wonder-finance-category-prefs-v1";
@@ -124,7 +123,6 @@ function storedCategoryMatch(raw: string): string | null {
  * The direction-specific arrays above drive the ledger picker.
  */
 export const FINANCE_CATEGORIES = [
-  "Uncategorized",
   "Income",
   "Family",
   "Reimbursements",
@@ -149,7 +147,6 @@ export const FINANCE_CATEGORIES = [
   "Business",
   "Fees",
   "Credit card payment",
-  "Other",
 ] as const;
 
 export type FinanceCategory = (typeof FINANCE_CATEGORIES)[number] | string;
@@ -190,11 +187,16 @@ const ALIASES: Record<string, string> = {
   Reimbursements: "Reimbursements",
   Refund: "Reimbursements",
   Refunds: "Reimbursements",
-  Zelle: "Uncategorized",
+  Zelle: "Reimbursements",
+  Uncategorized: "",
+  Other: "",
   Fun: "Experiences",
   Leisure: "Experiences",
   Entertainment: "Experiences",
   Fees: "Fees",
+  "Cash Redemption": "Reimbursements",
+  "Chase CashBack": "Reimbursements",
+  CashBack: "Reimbursements",
 };
 
 /**
@@ -225,8 +227,20 @@ export function normalizeCategory(
   // Wash Kiosk is a laundromat service. Bank exports called it Shopping,
   // which previously pushed every historical wash into Clothing.
   if (/\b(wash kiosk|laundromat|laundry)\b/.test(text)) return "Laundry";
-  if (raw.toLowerCase() === "zelle") return "Uncategorized";
-  if (!raw) return /\bzelle\b/.test(text) ? "Uncategorized" : "Other";
+  // Cash-back / rewards redemptions are money returned — not a mystery bucket
+  if (/\b(cash redemption|cashback|cash back|chase cashback)\b/i.test(`${raw} ${text}`))
+    return "Reimbursements";
+  // Zelle is a rail — never a category. Default purpose without more signal:
+  // incoming paybacks read as reimbursements in owner books.
+  if (
+    raw.toLowerCase() === "zelle" ||
+    raw.toLowerCase() === "uncategorized" ||
+    raw.toLowerCase() === "other"
+  )
+    return /\bzelle\b/.test(text) || raw.toLowerCase() === "zelle"
+      ? "Reimbursements"
+      : "";
+  if (!raw) return /\bzelle\b/.test(text) ? "Reimbursements" : "";
   if (ALIASES[raw]) return ALIASES[raw];
   if ((FINANCE_CATEGORIES as readonly string[]).includes(raw)) return raw;
   const custom = storedCategoryMatch(raw);
@@ -236,7 +250,10 @@ export function normalizeCategory(
     (c) => c.toLowerCase() === raw.toLowerCase()
   );
   if (hit) return hit;
-  return ALIASES[raw] || "Other";
+  // Legacy catch-all labels become an empty review state. They are never a
+  // selectable purpose and never enter charts.
+  if (/^(uncategorized|other)$/i.test(raw)) return "";
+  return ALIASES[raw] || "";
 }
 
 const FAMILY_NAMES = /\b(mom|dad|mother|father|bimala|umesh|millennium)\b/i;
@@ -261,6 +278,9 @@ export function zellePurposeCategory(
     return "Gifts";
   if (kind === "income" && /\bzelle\s+from\s+grace\s+rose\b/i.test(text))
     return "Reselling";
+  // Friend/peer Zelle in without a known purpose → reimbursements (paybacks)
+  if (kind === "income" && /\bzelle\s+from\s+ziyu\s+gao\b/i.test(text))
+    return "Reimbursements";
   if (kind === "expense") {
     const recipient = text.match(/\bzelle\s+to\s+(.+)$/i)?.[1] || "";
     if (FAMILY_REPAYMENT_NAMES.test(recipient)) return "Repayment";
@@ -316,14 +336,21 @@ export function normalizeTransactionCategory(
   // expense purpose. Neither identifies how income was earned. Retire both
   // labels at the normalization boundary so stored, imported, and Mel-entered
   // rows all return to the review queue.
-  if (kind === "income" && /^(income|experiences)$/i.test(raw))
-    return "Uncategorized";
+  if (kind === "income" && /^experiences$/i.test(raw))
+    return /\breimburse(?:ment|d)?\b/i.test(merchantOrNote)
+      ? "Reimbursements"
+      : "";
+  if (kind === "income" && /^(income|uncategorized|other)$/i.test(raw))
+    return "";
   if (
     /\bzelle\b/i.test(merchantOrNote) &&
     (!raw || /^(zelle|income|other|uncategorized)$/i.test(raw))
   )
-    return kind === "income" ? "Reimbursements" : "Uncategorized";
-  return normalizeCategory(category, merchantOrNote);
+    return kind === "income" ? "Reimbursements" : "";
+  const normalized = normalizeCategory(category, merchantOrNote);
+  // Never surface the retired bucket in UI / pies
+  if (!normalized || /^(uncategorized|other)$/i.test(normalized)) return "";
+  return normalized;
 }
 
 /**
@@ -340,7 +367,7 @@ export function normalizeImportedTransactionCategory(
   if (/\bzelle\b/i.test(merchantOrNote)) {
     return (
       zellePurposeCategory(merchantOrNote, kind) ||
-      (kind === "income" ? "Reimbursements" : "Uncategorized")
+      (kind === "income" ? "Reimbursements" : "")
     );
   }
   return normalizeTransactionCategory(category, merchantOrNote, kind);
@@ -351,7 +378,7 @@ export function categoryColor(name: string): string {
   const n = normalizeCategory(name);
   if (CATEGORY_COLORS[n]) return CATEGORY_COLORS[n];
   let hash = 0;
-  const seed = (n || name || "Other").toLowerCase();
+  const seed = (n || name || "review").toLowerCase();
   for (let i = 0; i < seed.length; i++) {
     hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
   }
@@ -370,7 +397,7 @@ const RULES: { category: string; match: RegExp }[] = [
     match:
       /\b(payment to chase card|chase credit card payment|loan_pmt|payment thank you|autopay)\b/i,
   },
-  { category: "Uncategorized", match: /\bzelle\b/i },
+  // Zelle is handled by zellePurposeCategory / Reimbursements — never a category
   {
     category: "Transfers",
     match:
@@ -450,11 +477,11 @@ const RULES: { category: string; match: RegExp }[] = [
 /** Guess category from merchant / description text */
 export function categorizeMerchant(text: string): string {
   const t = (text || "").trim();
-  if (!t) return "Other";
+  if (!t) return "";
   for (const rule of RULES) {
     if (rule.match.test(t)) return rule.category;
   }
-  return "Other";
+  return "";
 }
 
 /** Clean bank noise from merchant names for display */

@@ -264,13 +264,14 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   {
     id: "buffer",
     label: "Buffer",
-    cats: ["Education", "Business", "Fees", "Other", "Uncategorized"],
+    cats: ["Education", "Business", "Fees"],
   },
 ];
 
 const CATEGORY_PREFS_KEY = "wonder-finance-category-prefs-v1";
-const LOCKED_CATEGORY_NAMES = new Set(["Uncategorized"]);
-const RESERVED_CUSTOM_CATEGORY_NAMES = /^(income|zelle|other)$/i;
+/** Retired catch-all labels never reappear as editable category rows. */
+const LOCKED_CATEGORY_NAMES = new Set(["Uncategorized", "Other"]);
+const RESERVED_CUSTOM_CATEGORY_NAMES = /^(income|zelle|other|uncategorized)$/i;
 
 type CategoryPrefs = {
   income: string[];
@@ -322,10 +323,10 @@ function loadCategoryPrefs(): CategoryPrefs {
     return {
       income: dedupeCategories(
         Array.isArray(parsed.income) ? parsed.income : []
-      ),
+      ).filter((category) => !RESERVED_CUSTOM_CATEGORY_NAMES.test(category)),
       expense: dedupeCategories(
         Array.isArray(parsed.expense) ? parsed.expense : []
-      ),
+      ).filter((category) => !RESERVED_CUSTOM_CATEGORY_NAMES.test(category)),
       renamed: {
         income: cleanRenameMap(parsed.renamed?.income),
         expense: cleanRenameMap(parsed.renamed?.expense),
@@ -342,8 +343,12 @@ function saveCategoryPrefs(prefs: CategoryPrefs) {
     localStorage.setItem(
       CATEGORY_PREFS_KEY,
       JSON.stringify({
-        income: dedupeCategories(prefs.income),
-        expense: dedupeCategories(prefs.expense),
+        income: dedupeCategories(prefs.income).filter(
+          (category) => !RESERVED_CUSTOM_CATEGORY_NAMES.test(category)
+        ),
+        expense: dedupeCategories(prefs.expense).filter(
+          (category) => !RESERVED_CUSTOM_CATEGORY_NAMES.test(category)
+        ),
         renamed: prefs.renamed,
       })
     );
@@ -353,9 +358,7 @@ function saveCategoryPrefs(prefs: CategoryPrefs) {
 }
 
 function baseCategoriesForKind(kind: TxKind): string[] {
-  return categoriesForKind(kind).filter(
-    (category) => !(kind === "income" && category === "Other")
-  );
+  return [...categoriesForKind(kind)];
 }
 
 function categoryLabelExists(
@@ -378,7 +381,7 @@ function categoryOptionsForPicker(
   current: string
 ): string[] {
   const currentCategory =
-    current && !(kind === "income" && current === "Other") ? [current] : [];
+    current && !LOCKED_CATEGORY_NAMES.has(current) ? [current] : [];
   return dedupeCategories([
     ...baseCategoriesForKind(kind),
     ...prefs[kind],
@@ -432,10 +435,7 @@ function learnCategoryPrefsFromLedger(
     const raw = cleanCategoryInput(tx.category);
     if (!raw || RESERVED_CUSTOM_CATEGORY_NAMES.test(raw)) continue;
     const normalized = normalizedLedgerCategory(tx);
-    const learned =
-      normalized === "Other" || normalized === "Uncategorized"
-        ? raw
-        : normalized;
+    const learned = normalized || raw;
     addLearned(tx.kind, learned);
   }
 
@@ -495,7 +495,7 @@ function visibleCategoryOptionsForFilter(
     rows
       .filter((tx) => tx.kind === kind)
       .map((tx) => normalizedLedgerCategory(tx))
-      .filter((category) => !(kind === "income" && category === "Other"))
+      .filter(Boolean)
   );
   if (present.size === 0) return [];
   const known = dedupeCategories([
@@ -702,11 +702,7 @@ function LedgerCategoryPicker({
       }}
     >
       <summary className="wd-ledger-cat-trigger">
-        <span>
-          {value === "Other" && kind === "income"
-            ? "Uncategorized"
-            : labelFor(value)}
-        </span>
+        <span>{value ? labelFor(value) : "Choose purpose"}</span>
       </summary>
       <div
         className="wd-ledger-cat-popover"
@@ -1684,13 +1680,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     () => ledger.filter((transaction) => !transaction.pending),
     [ledger]
   );
-  const zelleReviewCount = useMemo(
+  const purposeReviewCount = useMemo(
     () =>
       ledgerScopeRows.filter(
-        (transaction) =>
-          /\bzelle\b/i.test(
-            `${transaction.merchant || ""} ${transaction.note || ""}`
-          ) && normalizedLedgerCategory(transaction) === "Uncategorized"
+        (transaction) => !normalizedLedgerCategory(transaction)
       ).length,
     [ledgerScopeRows]
   );
@@ -1993,7 +1986,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     category: string,
     scope?: { month?: string }
   ) {
-    if (/^Other \(\d+\)$/.test(category)) return;
+    if (!category) return;
     const previous = {
       reviewFilter,
       filterQ,
@@ -2089,7 +2082,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
           note: merchant || "Pasted",
           amount,
           category: normalizeImportedTransactionCategory(
-            (cols[3] || "Other").trim() || "Other",
+            (cols[3] || "").trim(),
             categoryText,
             kind
           ),
@@ -4007,21 +4000,11 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               </section>
             ) : null}
             <section className="wd-panel">
-              {zelleReviewCount > 0 ? (
+              {purposeReviewCount > 0 ? (
                 <p className="wd-category-review" role="status">
-                  <strong>{zelleReviewCount} Zelle import{zelleReviewCount === 1 ? "" : "s"} need a purpose.</strong>{" "}
+                  <strong>{purposeReviewCount} ledger line{purposeReviewCount === 1 ? "" : "s"} need a real purpose.</strong>{" "}
                   Choose a Category below, or tell Mel “recategorize [payee] to
-                  [category].”{" "}
-                  <button
-                    type="button"
-                    className="wd-link"
-                    onClick={() => {
-                      setFilterKind("all");
-                      setFilterCat("Uncategorized");
-                    }}
-                  >
-                    Review now
-                  </button>
+                  [category].”
                 </p>
               ) : null}
               {/* One compact filter row — every control is a dropdown */}
@@ -4214,8 +4197,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                 key={t.id}
                                 className={
                                   !cat ||
-                                  cat === "Other" ||
-                                  cat === "Uncategorized" ||
                                   !(t.merchant || t.note || "").trim()
                                     ? "is-gap"
                                     : undefined
@@ -4255,17 +4236,13 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                 <td className="wd-cat-cell">
                                   <LedgerCategoryPicker
                                     kind={t.kind}
-                                    value={
-                                      cat === "Other" && t.kind === "income"
-                                        ? "Uncategorized"
-                                        : cat
-                                    }
+                                    value={cat}
                                     options={categoryOptionsForPicker(
                                       t.kind,
                                       categoryPrefs,
                                       cat
                                     )}
-                                    review={cat === "Uncategorized"}
+                                    review={!cat}
                                     labelFor={(category) =>
                                       displayCategoryName(
                                         t.kind,
