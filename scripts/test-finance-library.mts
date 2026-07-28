@@ -22,7 +22,10 @@ Object.defineProperty(globalThis, "localStorage", {
 });
 
 const {
+  EXPENSE_CATEGORIES,
   FINANCE_CATEGORIES,
+  INCOME_CATEGORIES,
+  categoriesForKind,
   normalizeImportedTransactionCategory,
   normalizeTransactionCategory,
 } = await import(
@@ -117,6 +120,31 @@ assert.equal(
 );
 assert.equal(
   normalizeImportedTransactionCategory(
+    "Income",
+    "Zelle from Jasis Shrestha",
+    "income"
+  ),
+  "Gifts"
+);
+assert.equal(
+  normalizeImportedTransactionCategory(
+    "Income",
+    "Zelle from Grace Rose Wfct0Z94G69C",
+    "income"
+  ),
+  "Reselling"
+);
+assert.equal(
+  normalizeImportedTransactionCategory(
+    "Income",
+    "Zelle from Madison Aikins Nav0Jhdzhkdf",
+    "income"
+  ),
+  "Uncategorized",
+  "Madison remains unclassified until the owner supplies a purpose"
+);
+assert.equal(
+  normalizeImportedTransactionCategory(
     "Transfers",
     "Zelle to Unknown Friend",
     "expense"
@@ -135,6 +163,14 @@ assert.equal(
 assert.ok(!(FINANCE_CATEGORIES as readonly string[]).includes("Zelle"));
 assert.ok(FINANCE_CATEGORIES.includes("Photography"));
 assert.ok(FINANCE_CATEGORIES.includes("Experiences"));
+assert.ok(FINANCE_CATEGORIES.includes("Gifts"));
+assert.ok(FINANCE_CATEGORIES.includes("Reselling"));
+assert.ok(INCOME_CATEGORIES.includes("Gifts"));
+assert.ok(INCOME_CATEGORIES.includes("Reselling"));
+assert.ok(!(EXPENSE_CATEGORIES as readonly string[]).includes("Gifts"));
+assert.ok(!(EXPENSE_CATEGORIES as readonly string[]).includes("Reselling"));
+assert.deepEqual(categoriesForKind("income"), INCOME_CATEGORIES);
+assert.deepEqual(categoriesForKind("expense"), EXPENSE_CATEGORIES);
 assert.equal(
   normalizeTransactionCategory("Shopping", "Wash Kiosk Mobile", "expense"),
   "Laundry"
@@ -189,6 +225,15 @@ assert.ok(
   categoriesFor("Zelle from Audrey Davis 0CA0QBJ17YG4").every(
     (category) => category === "Photography"
   )
+);
+assert.deepEqual(categoriesFor("Zelle from Jasis Shrestha"), ["Gifts"]);
+assert.deepEqual(
+  categoriesFor("Zelle from Grace Rose Wfct0Z94G69C"),
+  ["Reselling"]
+);
+assert.deepEqual(
+  categoriesFor("Zelle from Madison Aikins Nav0Jhdzhkdf"),
+  ["Uncategorized"]
 );
 assert.ok(
   categorizedChase

@@ -18,7 +18,7 @@ import type { FinanceAccount, FinanceState, FinanceTx } from "./financeStore";
 /** Bump when re-extracted statements should force re-merge */
 /** Bump when Chase CSV/PDF re-import should force re-merge into local books */
 export const CHASE_IMPORT_VERSION =
-  "chase-v5-zelle-purpose-review";
+  "chase-v6-income-expense-categories";
 
 const FLAG_KEY = "wonder-finance-chase-import-version";
 
@@ -108,10 +108,14 @@ export function applyChaseStatements(state: FinanceState): {
   );
   const statementTxs: FinanceTx[] = CHASE_STATEMENT_TXS.map((t) => {
     const previous = priorStatementRows.get(t.externalId || t.id);
-    if (previous?.categoryReviewed) {
+    const previousCategory = (previous?.category || "").trim();
+    const previousHasPurpose =
+      !!previous?.categoryReviewed &&
+      !/^(zelle|income|other|uncategorized)$/i.test(previousCategory);
+    if (previousHasPurpose) {
       return {
         ...t,
-        category: previous.category,
+        category: previousCategory,
         categoryReviewed: true,
       };
     }

@@ -7,7 +7,9 @@
 export const CATEGORY_COLORS: Record<string, string> = {
   Income: "#3d8f6e",
   Family: "#0f8f7d",
+  Gifts: "#d58a9a",
   Photography: "#7158a6",
+  Reselling: "#2f7f91",
   Cash: "#b56f38",
   Transfers: "#1f6f8b", // account / card moves — cool teal, not Zelle
   Groceries: "#5c8d5c",
@@ -32,15 +34,52 @@ export const CATEGORY_COLORS: Record<string, string> = {
 /** Categories treated as lifestyle leaks (red cue in UI) */
 export const BAD_CATEGORIES = new Set(["Restaurants"]);
 
+/** Income and expense purposes stay separate in every category picker. */
+export const INCOME_CATEGORIES = [
+  "Uncategorized",
+  "Income",
+  "Family",
+  "Gifts",
+  "Photography",
+  "Reselling",
+  "Experiences",
+  "Transfers",
+  "Other",
+] as const;
+
+export const EXPENSE_CATEGORIES = [
+  "Uncategorized",
+  "Cash",
+  "Transfers",
+  "Groceries",
+  "Restaurants",
+  "Experiences",
+  "Housing",
+  "Utilities",
+  "Laundry",
+  "Health",
+  "Subscriptions",
+  "Clothing",
+  "Transport",
+  "Education",
+  "Travel",
+  "Business",
+  "Fees",
+  "Credit card payment",
+  "Other",
+] as const;
+
 /**
- * The only categories in the ledger picker.
- * No dead options for bills you don't currently track.
+ * Canonical category order for filters, reports, and Mel's finance tools.
+ * The direction-specific arrays above drive the ledger picker.
  */
 export const FINANCE_CATEGORIES = [
   "Uncategorized",
   "Income",
   "Family",
+  "Gifts",
   "Photography",
+  "Reselling",
   "Cash",
   "Transfers",
   "Groceries",
@@ -63,6 +102,12 @@ export const FINANCE_CATEGORIES = [
 
 export type FinanceCategory = (typeof FINANCE_CATEGORIES)[number] | string;
 
+export function categoriesForKind(
+  kind: "income" | "expense"
+): readonly string[] {
+  return kind === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+}
+
 /** Map legacy / bank-noise labels onto the short list */
 const ALIASES: Record<string, string> = {
   "Food / groceries": "Groceries",
@@ -79,9 +124,12 @@ const ALIASES: Record<string, string> = {
   "Build / tools": "Business",
   Travel: "Travel",
   "Education / school": "Education",
-  Gift: "Other",
-  Gifts: "Other",
-  "Gifts received": "Other",
+  Gift: "Gifts",
+  Gifts: "Gifts",
+  "Gifts received": "Gifts",
+  Resale: "Reselling",
+  Reselling: "Reselling",
+  "Resale income": "Reselling",
   Parents: "Family",
   Zelle: "Uncategorized",
   Fun: "Experiences",
@@ -144,6 +192,10 @@ export function zellePurposeCategory(
   if (kind === "income" && FAMILY_NAMES.test(text)) return "Family";
   if (kind === "income" && /\bzelle\s+from\s+audrey\b/i.test(text))
     return "Photography";
+  if (kind === "income" && /\bzelle\s+from\s+jasis\s+shrestha\b/i.test(text))
+    return "Gifts";
+  if (kind === "income" && /\bzelle\s+from\s+grace\s+rose\b/i.test(text))
+    return "Reselling";
   if (kind === "income" && /\bzelle\s+from\s+cedric\s+hong\b/i.test(text))
     return "Experiences";
 

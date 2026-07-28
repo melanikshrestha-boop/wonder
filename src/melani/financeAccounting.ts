@@ -85,11 +85,18 @@ export const CHART_OF_ACCOUNTS: CoaAccount[] = [
   { code: "3000", name: "Owner equity / net worth", type: "equity" },
   { code: "4000", name: "Income", type: "income", category: "Income" },
   { code: "4100", name: "Family support", type: "income", category: "Family" },
+  { code: "4150", name: "Gifts received", type: "income", category: "Gifts" },
   {
     code: "4200",
     name: "Photography revenue",
     type: "income",
     category: "Photography",
+  },
+  {
+    code: "4300",
+    name: "Reselling revenue",
+    type: "income",
+    category: "Reselling",
   },
   { code: "5000", name: "Housing", type: "expense", category: "Housing" },
   { code: "5100", name: "Utilities", type: "expense", category: "Utilities" },
@@ -148,16 +155,17 @@ function coaForTransaction(tx: FinanceTx): CoaAccount {
     ) {
       return CHART_OF_ACCOUNTS.find((a) => a.code === "6500")!;
     }
-    if (
-      category === "Family" ||
-      category === "Gifts" ||
-      (category === "Zelle" &&
-        /\b(gift|family|mom|dad|parent|bimala|umesh|millennium|shrestha)\b/.test(text))
-    ) {
+    if (category === "Family") {
       return CHART_OF_ACCOUNTS.find((a) => a.code === "4100")!;
+    }
+    if (category === "Gifts") {
+      return CHART_OF_ACCOUNTS.find((a) => a.code === "4150")!;
     }
     if (category === "Photography") {
       return CHART_OF_ACCOUNTS.find((a) => a.code === "4200")!;
+    }
+    if (category === "Reselling") {
+      return CHART_OF_ACCOUNTS.find((a) => a.code === "4300")!;
     }
     // Direction is authoritative: an unknown inflow must never credit an
     // expense account merely because its category is Other/Uncategorized.

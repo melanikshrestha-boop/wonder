@@ -287,6 +287,45 @@ const {
     zelleOut?.debitCode === "6999",
     zelleOut
   );
+  const incomePurposeJournal = buildJournal({
+    ...accountingState,
+    txs: [
+      newTx({
+        date: "2026-07-08",
+        kind: "income",
+        amount: 100,
+        category: "Gifts",
+        merchant: "Zelle from Jasis Shrestha",
+        accountId: "checking",
+        categoryReviewed: true,
+      }),
+      newTx({
+        date: "2026-07-09",
+        kind: "income",
+        amount: 55,
+        category: "Reselling",
+        merchant: "Zelle from Grace Rose",
+        accountId: "checking",
+        categoryReviewed: true,
+      }),
+    ],
+  });
+  const birthdayGift = incomePurposeJournal.entries.find(
+    (entry) => entry.memo === "Zelle from Jasis Shrestha"
+  );
+  const resaleIncome = incomePurposeJournal.entries.find(
+    (entry) => entry.memo === "Zelle from Grace Rose"
+  );
+  check(
+    "accounting: birthday gift posts separately from earned income",
+    birthdayGift?.creditCode === "4150",
+    birthdayGift
+  );
+  check(
+    "accounting: reselling income posts to resale revenue",
+    resaleIncome?.creditCode === "4300",
+    resaleIncome
+  );
 
   const statements = buildStatements(accountingState, "2026-07");
   check(

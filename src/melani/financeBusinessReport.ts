@@ -128,6 +128,7 @@ const NON_OPERATING_CATEGORY = new Set([
   "Transfers",
   "Credit card payment",
   "Family",
+  "Gifts",
 ]);
 
 const INVESTING_TEXT =
@@ -241,7 +242,7 @@ function isEarnedOperatingIncome(tx: FinanceTx): boolean {
   ) {
     return false;
   }
-  if (category === "Photography") return true;
+  if (category === "Photography" || category === "Reselling") return true;
   // The existing importer sometimes assigns a generic "Income" category to
   // unknown credits. A business-style report needs positive earned-income
   // evidence; the category alone is not enough to call a credit revenue.
@@ -303,6 +304,13 @@ function needsClassification(
 ): boolean {
   if (tx.pending) return false;
   const category = normalizedCategory(tx);
+  if (
+    tx.kind === "income" &&
+    tx.categoryReviewed &&
+    (category === "Family" || category === "Gifts")
+  ) {
+    return false;
+  }
   if (
     isOperatingExpense(tx, accounts) ||
     isEarnedOperatingIncome(tx) ||

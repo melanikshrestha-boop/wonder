@@ -366,6 +366,40 @@ console.log("Quarterly operating report");
 {
   const q1 = report(
     [
+      {
+        ...tx(
+          "birthday-gift",
+          "2026-01-08",
+          "income",
+          100,
+          "Gifts",
+          "Zelle from Jasis Shrestha",
+        ),
+        categoryReviewed: true,
+      },
+      tx(
+        "resale",
+        "2026-01-09",
+        "income",
+        55,
+        "Reselling",
+        "Zelle from Grace Rose",
+      ),
+    ],
+    "2026-Q1",
+    "2026-03-31",
+  );
+  assert("birthday gift is not business revenue", q1.metrics.revenue === 55);
+  assert("reselling is recognized as earned revenue", q1.metrics.revenue === 55);
+  assert(
+    "owner-confirmed gift is resolved, not an open classification",
+    q1.integrity.openClassificationCount === 0,
+  );
+}
+
+{
+  const q1 = report(
+    [
       tx(
         "unknown-income",
         "2026-01-07",

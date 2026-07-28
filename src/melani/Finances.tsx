@@ -20,8 +20,10 @@ import {
   type CreditProfile,
 } from "./financeCredit";
 import {
-  FINANCE_CATEGORIES,
+  categoriesForKind,
   cleanMerchant,
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
   normalizeImportedTransactionCategory,
   normalizeTransactionCategory,
   zellePurposeCategory,
@@ -312,6 +314,124 @@ function LedgerFilterMenu({
             </button>
           );
         })}
+      </div>
+    </details>
+  );
+}
+
+function LedgerCategoryFilter({
+  kind,
+  category,
+  onChange,
+}: {
+  kind: "all" | TxKind;
+  category: string;
+  onChange: (next: { kind: "all" | TxKind; category: string }) => void;
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const [stage, setStage] = useState<"direction" | TxKind>("direction");
+  const display =
+    category !== "all"
+      ? category
+      : kind === "income"
+        ? "All income"
+        : kind === "expense"
+          ? "All expenses"
+          : "Categories";
+  const options =
+    stage === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  const choose = (next: { kind: "all" | TxKind; category: string }) => {
+    onChange(next);
+    setStage("direction");
+    if (detailsRef.current) detailsRef.current.open = false;
+  };
+
+  return (
+    <details
+      ref={detailsRef}
+      className="wd-filter-menu wd-category-filter"
+      onToggle={(event) => {
+        if (!event.currentTarget.open) setStage("direction");
+      }}
+    >
+      <summary>{display}</summary>
+      <div
+        className="wd-filter-popover wd-category-filter-popover"
+        role="menu"
+        aria-label="Income or expense categories"
+      >
+        {stage === "direction" ? (
+          <>
+            <button
+              type="button"
+              role="menuitemradio"
+              aria-checked={kind === "all" && category === "all"}
+              className={
+                kind === "all" && category === "all" ? "is-selected" : undefined
+              }
+              onClick={() => choose({ kind: "all", category: "all" })}
+            >
+              <span>All categories</span>
+              <small>Income and expenses</small>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="is-income-choice"
+              onClick={() => setStage("income")}
+            >
+              <span>Income</span>
+              <small>Money coming in →</small>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="is-expense-choice"
+              onClick={() => setStage("expense")}
+            >
+              <span>Expenses</span>
+              <small>Money going out →</small>
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="wd-category-back"
+              onClick={() => setStage("direction")}
+            >
+              ← {stage === "income" ? "Income" : "Expenses"}
+            </button>
+            <button
+              type="button"
+              role="menuitemradio"
+              aria-checked={kind === stage && category === "all"}
+              className={
+                kind === stage && category === "all" ? "is-selected" : undefined
+              }
+              onClick={() => choose({ kind: stage, category: "all" })}
+            >
+              All {stage === "income" ? "income" : "expenses"}
+            </button>
+            {options.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="menuitemradio"
+                aria-checked={kind === stage && category === option}
+                className={
+                  kind === stage && category === option
+                    ? "is-selected"
+                    : undefined
+                }
+                onClick={() => choose({ kind: stage, category: option })}
+              >
+                {option}
+              </button>
+            ))}
+          </>
+        )}
       </div>
     </details>
   );
@@ -736,31 +856,12 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
   const bars = useMemo(() => dailyBars(txs, ym), [txs, ym]);
 
   const budget = state?.budget || [];
-  /** Short picker list only — not every legacy junk label ever seen */
-  const categories = useMemo(() => [...FINANCE_CATEGORIES], []);
-
   const txTypes = useMemo(() => {
     const types = new Set<string>();
     for (const t of txs) types.add(txTypeOf(t));
     return Array.from(types).sort();
   }, [txs]);
 
-  /** Filter chips: only categories that appear after normalize */
-  const usedCategories = useMemo(() => {
-    const set = new Set<string>();
-    for (const t of txs) {
-      if (!t.category) continue;
-      set.add(
-        normalizeTransactionCategory(
-          t.category,
-          `${t.merchant || ""} ${t.note || ""}`,
-          t.kind
-        )
-      );
-    }
-    // Keep the short list order; only show ones present in books
-    return FINANCE_CATEGORIES.filter((c) => set.has(c));
-  }, [txs]);
   const zelleReviewCount = useMemo(
     () =>
       txs.filter(
@@ -3305,7 +3406,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   <button
                     type="button"
                     className="wd-link"
-                    onClick={() => setFilterCat("Uncategorized")}
+                    onClick={() => {
+                      setFilterKind("all");
+                      setFilterCat("Uncategorized");
+                    }}
                   >
                     Review now
                   </button>
@@ -3319,16 +3423,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   value={filterQ}
                   onChange={(e) => setFilterQ(e.target.value)}
                 />
-                <select
-                  value={filterKind}
-                  onChange={(e) =>
-                    setFilterKind(e.target.value as "all" | TxKind)
-                  }
-                >
-                  <option value="expense">EXP</option>
-                  <option value="income">REV</option>
-                  <option value="all">All REV/EXP</option>
-                </select>
                 {txTypes.length > 0 ? (
                   <LedgerFilterMenu
                     value={filterTxType}
@@ -3337,17 +3431,14 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                     onChange={setFilterTxType}
                   />
                 ) : null}
-                <select
-                  value={filterCat}
-                  onChange={(e) => setFilterCat(e.target.value)}
-                >
-                  {usedCategories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                  <option value="all">All categories</option>
-                </select>
+                <LedgerCategoryFilter
+                  kind={filterKind}
+                  category={filterCat}
+                  onChange={(next) => {
+                    setFilterKind(next.kind);
+                    setFilterCat(next.category);
+                  }}
+                />
                 <select
                   value={filterYear}
                   onChange={(e) => {
@@ -3552,7 +3643,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                                       })
                                     }
                                   >
-                                    {categories.map((c) => (
+                                    {categoriesForKind(t.kind).map((c) => (
                                       <option key={c} value={c}>
                                         {c}
                                       </option>

@@ -4286,6 +4286,36 @@ svg.wd-linechart {
   color: #0f766e;
 }
 
+.wd-category-filter-popover {
+  min-width: 224px;
+}
+
+.wd-category-filter-popover button {
+  display: grid;
+  gap: 2px;
+}
+
+.wd-category-filter-popover button small {
+  color: var(--wd-tertiary);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.wd-category-filter-popover .is-income-choice span {
+  color: var(--wd-green);
+}
+
+.wd-category-filter-popover .is-expense-choice span {
+  color: var(--wd-red);
+}
+
+.wd-category-filter-popover button.wd-category-back {
+  color: var(--wd-secondary);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 /* Finance month charts — Whoop Recovery panel language */
 .wd-fin-metric.wx-panel {
   margin: 0;

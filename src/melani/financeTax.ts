@@ -181,7 +181,7 @@ function isPayrollLike(tx: FinanceTx): boolean {
 }
 
 function isSelfEmploymentLike(tx: FinanceTx): boolean {
-  return /\b(1099[- ]?nec|schedule c|self[- ]employ(?:ed|ment)?|freelanc(?:e|er|ing)?|contractor|consult(?:ant|ing|ancy)?|client payment|invoice|photography|photo shoot|stripe|youtube|sponsor(?:ship|ed)?|ad revenue|substack|creator revenue|business income)\b/.test(
+  return /\b(1099[- ]?nec|schedule c|self[- ]employ(?:ed|ment)?|freelanc(?:e|er|ing)?|contractor|consult(?:ant|ing|ancy)?|client payment|invoice|photography|photo shoot|resale|reselling|stripe|youtube|sponsor(?:ship|ed)?|ad revenue|substack|creator revenue|business income)\b/.test(
     transactionText(tx)
   );
 }
