@@ -853,15 +853,25 @@ html.theme-light .fx-page .fx-bm-leg-type {
   margin: 8px 0 8px;
   max-width: 46rem;
 }
-.fx-bm-consistency-graph .wx-panel-v {
-  color: #22c55e;
+.fx-bm-consistency-graph .wx-panel-head {
+  margin-bottom: 2px;
 }
-.fx-bm-consistency-note {
-  margin: 3px 0 6px;
-  max-width: 38rem;
+.fx-bm-consistency-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 14px;
   color: var(--fx-muted);
   font-size: 13px;
-  line-height: 1.18;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.fx-bm-consistency-stats .is-yes {
+  color: #22c55e;
+}
+.fx-bm-consistency-stats .is-no {
+  color: #ef4444;
 }
 .fx-bm-consistency-hover {
   min-height: 18px;
@@ -929,10 +939,15 @@ html.theme-light .fx-page .fx-bm-leg-type {
 html.theme-light .fx-page .fx-bm-type-graph .wx-panel-v {
   color: #15803d;
 }
-html.theme-light .fx-page .fx-bm-consistency-graph .wx-panel-v {
+html.theme-light .fx-page .fx-bm-consistency-stats {
+  color: rgba(26, 28, 34, 0.58);
+}
+html.theme-light .fx-page .fx-bm-consistency-stats .is-yes {
   color: #15803d;
 }
-html.theme-light .fx-page .fx-bm-consistency-note,
+html.theme-light .fx-page .fx-bm-consistency-stats .is-no {
+  color: #dc2626;
+}
 html.theme-light .fx-page .fx-bm-consistency-leg,
 html.theme-light .fx-page .fx-bm-axis-title {
   color: rgba(26, 28, 34, 0.58);
@@ -1102,6 +1117,39 @@ html.theme-light .fx-page .fx-bf-pie-hole {
 
 .fx-bowel {
   overflow: visible;
+}
+.fx-bowel-head {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin: 0 0 2px;
+}
+.fx-bowel-head .fx-h2 {
+  margin: 0;
+}
+.fx-bm-logs-toggle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  color: var(--fx-muted);
+  font-family: var(--fx-font);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fx-bm-logs-toggle:hover,
+.fx-bm-logs-toggle.is-on {
+  color: var(--fx-strong);
+}
+html.theme-light .fx-page .fx-bm-logs-toggle {
+  color: rgba(26, 28, 34, 0.52);
+}
+html.theme-light .fx-page .fx-bm-logs-toggle:hover,
+html.theme-light .fx-page .fx-bm-logs-toggle.is-on {
+  color: #111827;
 }
 .fx-bowel-meta {
   margin: 0 0 2px;
