@@ -387,7 +387,13 @@ localStorage.setItem(
   ])
 );
 const books = loadBooks();
-assert.deepEqual(books.map((book) => book.title), ["The Innovators"]);
+const bookTitles = books.map((book) => book.title);
+assert.ok(bookTitles.includes("The Innovators"));
+assert.ok(bookTitles.includes("Atomic Accidents"));
+assert.ok(bookTitles.includes("Never Split the Difference"));
+assert.ok(!bookTitles.includes("Walt Disney"));
+assert.ok(!bookTitles.includes("Tuesdays with Morrie"));
+assert.equal(new Set(bookTitles).size, bookTitles.length);
 
 const brief = buildBookPageBrief(
   "The important lesson is that starting small removes the fear of beginning. You should choose one practical action and practice it every day. Because repetition makes the behavior easier, the habit eventually becomes automatic.",

@@ -918,8 +918,200 @@ const ENSURE_WANT_BOOKS: EnsureWantBook[] = [
   },
 ];
 
+/** User-requested adds from the 2026-07-29 shelf screenshot. */
+const SCREENSHOT_WANT_BOOKS: EnsureWantBook[] = [
+  {
+    id: "bk-shelf-oathbringer",
+    title: "Oathbringer",
+    author: "Brandon Sanderson",
+    category: "Literature & Fiction",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-atomic-accidents",
+    title: "Atomic Accidents",
+    author: "James Mahaffey",
+    category: "Physics & Science",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-a-fine-balance",
+    title: "A Fine Balance",
+    author: "Rohinton Mistry",
+    category: "Literature & Fiction",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-building-machine-learning-powered-applications",
+    title: "Building Machine Learning Powered Applications",
+    author: "Emmanuel Ameisen",
+    category: "Technology & Innovation",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-art-of-happiness",
+    title: "The Art of Happiness",
+    author: "His Holiness the Dalai Lama and Howard C. Cutler",
+    category: "Philosophy & Spirituality",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-the-maniac",
+    title: "The Maniac",
+    author: "Benjamin Labatut",
+    category: "Technology & Innovation",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-the-diamond-age",
+    title: "The Diamond Age",
+    author: "Neal Stephenson",
+    category: "Technology & Innovation",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-nuclear-war-scenario",
+    title: "Nuclear War: A Scenario",
+    author: "Annie Jacobsen",
+    category: "Physics & Science",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-fourth-dimension",
+    title: "The Fourth Dimension: Toward a Geometry of Higher Reality",
+    author: "Rudy Rucker",
+    category: "Physics & Science",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-inventing-temperature",
+    title: "Inventing Temperature",
+    author: "Hasok Chang",
+    category: "Physics & Science",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-15-commitments-conscious-leadership",
+    title: "The 15 Commitments of Conscious Leadership",
+    author: "Jim Dethmer, Diana Chapman, and Kaley Warner Klemp",
+    category: "Business & Money",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-wretched-of-the-earth",
+    title: "The Wretched of the Earth",
+    author: "Frantz Fanon",
+    category: "Literature & Fiction",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-unreasonable-hospitality",
+    title: "Unreasonable Hospitality",
+    author: "Will Guidara",
+    category: "Business & Money",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-influence",
+    title: "Influence",
+    author: "Robert B. Cialdini",
+    category: "Business & Money",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-alignment-problem",
+    title: "The Alignment Problem",
+    author: "Brian Christian",
+    category: "Technology & Innovation",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-real-world-bug-hunting",
+    title: "Real-World Bug Hunting",
+    author: "Peter Yaworski",
+    category: "Technology & Innovation",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-smart-enough-animals",
+    title: "Are We Smart Enough to Know How Smart Animals Are?",
+    author: "Frans de Waal",
+    category: "Physics & Science",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-surely-joking-feynman",
+    title: "Surely You're Joking, Mr. Feynman!",
+    author: "Richard P. Feynman",
+    category: "Physics & Science",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+    alsoMatch: [
+      "surely you re joking mr feynman",
+      "surely youre joking mr feynman",
+      "surely you are joking mr feynman",
+    ],
+  },
+  {
+    id: "bk-shelf-different-de-waal",
+    title: "Different: Gender Through the Eyes of a Primatologist",
+    author: "Frans de Waal",
+    category: "Physics & Science",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-never-split-difference",
+    title: "Never Split the Difference",
+    author: "Chris Voss",
+    category: "Business & Money",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-the-information",
+    title: "The Information: A History, a Theory, a Flood",
+    author: "James Gleick",
+    category: "Technology & Innovation",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+  {
+    id: "bk-shelf-from-dawn-to-decadence",
+    title: "From Dawn to Decadence",
+    author: "Jacques Barzun",
+    category: "Literature & Fiction",
+    notes: "Added from shelf screenshot · Want page · not downloaded.",
+  },
+];
+
 function bookTitleKey(title: string): string {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function ensureWantBooks(books: Book[], wants: EnsureWantBook[]): Book[] {
+  const next = [...books];
+  const existingKeys = new Set(next.map((book) => bookTitleKey(book.title)));
+  for (const item of wants) {
+    const keys = [item.title, ...(item.alsoMatch || [])].map(bookTitleKey);
+    if (isBookDeleted(item.id) || keys.some((key) => existingKeys.has(key))) {
+      continue;
+    }
+    const book = newBook({
+      id: item.id,
+      title: item.title,
+      author: item.author,
+      category: item.category,
+      categoryOverride: false,
+      status: "want",
+      statusOverride: true,
+      source: "manual",
+      format: "manual",
+      readingFormats: ["physical"],
+      notes: item.notes,
+      description: item.description,
+      externalUrl: item.externalUrl,
+    });
+    next.unshift(book);
+    existingKeys.add(bookTitleKey(book.title));
+  }
+  return next;
 }
 
 export function loadBooks(): Book[] {
@@ -960,8 +1152,8 @@ export function loadBooks(): Book[] {
     (book) => !unwantedTitles.has(bookTitleKey(book.title))
   );
   // Never silently seed recommendations. This shelf mirrors the user's
-  // actual library and explicit adds only.
-  return books;
+  // actual library plus explicit adds the owner requested.
+  return ensureWantBooks(books, SCREENSHOT_WANT_BOOKS);
 }
 
 function loadDeletedBookKeys(): Set<string> {
