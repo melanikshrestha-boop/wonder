@@ -1192,6 +1192,10 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
     filterMonth === "all" ? String(filterYear) : ym;
   const txs = state?.txs || [];
   const accounts = state?.accounts || [];
+  const overviewRows = useMemo(
+    () => txs.filter((tx) => tx.date.startsWith(`${filterYear}-`)),
+    [txs, filterYear],
+  );
   useEffect(() => {
     if (!txs.length) return;
     setCategoryPrefs((prefs) => {
@@ -2782,7 +2786,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         {tab === "overview" ? (
           <div className={`wd-overview${booksExpanded ? " is-expanded" : ""}`}>
             <AllLedgerCharts
-              rows={txs}
+              rows={overviewRows}
+              scopeLabel={String(filterYear)}
               onCategoryDoubleClick={filterLedgerFromChart}
             />
             <section className="wd-panel wd-action-board" aria-label="Finance actions">
@@ -4090,6 +4095,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               {filterMonth === "all" && monthBooks.length > 0 ? (
                 <AllLedgerCharts
                   rows={ledgerChartRows}
+                  scopeLabel={String(filterYear)}
                   onCategoryDoubleClick={filterLedgerFromChart}
                 />
               ) : null}
@@ -4371,7 +4377,7 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         {/* ════════ PLAN ════════ */}
         {tab === "plan" ? (
           <div className="wd-page">
-            <RockefellerDesk state={state} actualYm={ym} />
+            <RockefellerDesk />
 
             {/* Smart budget engine — $500/mo hard limit */}
             <section className="wd-panel" aria-label="Smart budget">

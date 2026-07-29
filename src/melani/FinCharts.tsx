@@ -906,9 +906,11 @@ export function MonthBookCharts({
 
 export function AllLedgerCharts({
   rows,
+  scopeLabel,
   onCategoryDoubleClick,
 }: {
   rows: FinanceTx[];
+  scopeLabel?: string;
   onCategoryDoubleClick?: (
     kind: "income" | "expense",
     category: string,
@@ -933,10 +935,6 @@ export function AllLedgerCharts({
   });
   const totalIncome = months.reduce((sum, item) => sum + item.data.totalIn, 0);
   const totalExpenses = months.reduce((sum, item) => sum + item.data.totalOut, 0);
-  const totalMovement = months.reduce(
-    (sum, item) => sum + item.data.movementIn + item.data.movementOut,
-    0
-  );
   const expenseMap = new Map<string, number>();
   const incomeMap = new Map<string, number>();
   for (const row of rows) {
@@ -958,6 +956,30 @@ export function AllLedgerCharts({
         value: Math.round(value * 100) / 100,
       }))
       .sort((left, right) => right.value - left.value);
+  const earnedNames = new Set([
+    "Online income",
+    "Technology income",
+    "Photography",
+    "Reselling",
+  ]);
+  const earnedIncome = Array.from(incomeMap.entries()).reduce(
+    (sum, [name, value]) => sum + (earnedNames.has(name) ? value : 0),
+    0,
+  );
+  const supportAndRepayments = Math.max(0, totalIncome - earnedIncome);
+  const breakdown = (entries: [string, number][]) =>
+    entries
+      .filter(([, value]) => value > 0)
+      .sort((left, right) => right[1] - left[1])
+      .map(([name, value]) => `${name} ${moneyCents(value)}`)
+      .join(" + ") || "$0.00";
+  const earnedBreakdown = breakdown(
+    Array.from(incomeMap.entries()).filter(([name]) => earnedNames.has(name)),
+  );
+  const supportBreakdown = breakdown(
+    Array.from(incomeMap.entries()).filter(([name]) => !earnedNames.has(name)),
+  );
+  const spendingBreakdown = breakdown(Array.from(expenseMap.entries()));
   const monthlyNet: LinePoint[] = months.map(({ month, data }) => ({
     x: new Date(`${month}-01T12:00:00`).toLocaleString("en-US", {
       month: "short",
@@ -969,31 +991,49 @@ export function AllLedgerCharts({
   return (
     <section className="wd-panel wd-all-ledger-charts" aria-label="All ledger data">
       <header className="wd-all-ledger-head">
+        <p className="wd-ledger-scope">{scopeLabel || "Selected period"}</p>
         <dl>
-          <div>
-            <dt>Income</dt>
-            <dd className="is-pos">{moneyCents(totalIncome)}</dd>
+          <div className="wd-math-metric" tabIndex={0}>
+            <dt>Earned</dt>
+            <dd className="is-pos">{moneyCents(earnedIncome)}</dd>
+            <span className="wd-math-popover">
+              <strong>Earned income</strong>
+              {earnedBreakdown}
+            </span>
           </div>
-          <div>
-            <dt>Expenses</dt>
+          <div className="wd-math-metric" tabIndex={0}>
+            <dt>Support + repayments</dt>
+            <dd>{moneyCents(supportAndRepayments)}</dd>
+            <span className="wd-math-popover">
+              <strong>Money received, but not earned</strong>
+              {supportBreakdown}
+            </span>
+          </div>
+          <div className="wd-math-metric" tabIndex={0}>
+            <dt>Spent</dt>
             <dd className="is-neg">{moneyCents(totalExpenses)}</dd>
+            <span className="wd-math-popover">
+              <strong>Posted expenses</strong>
+              {spendingBreakdown}
+            </span>
           </div>
-          <div>
-            <dt>Net</dt>
+          <div className="wd-math-metric" tabIndex={0}>
+            <dt>Net cash</dt>
             <dd className={totalIncome - totalExpenses >= 0 ? "is-pos" : "is-neg"}>
               {moneyCents(totalIncome - totalExpenses)}
             </dd>
-          </div>
-          <div>
-            <dt>Money movement</dt>
-            <dd>{moneyCents(totalMovement)}</dd>
+            <span className="wd-math-popover">
+              <strong>Received − spent</strong>
+              {moneyCents(totalIncome)} − {moneyCents(totalExpenses)} ={" "}
+              {moneyCents(totalIncome - totalExpenses)}
+            </span>
           </div>
         </dl>
       </header>
       <div className="wd-all-ledger-grid">
         <article className="wd-all-ledger-trend">
           <LabeledLineChart
-            title="Monthly net"
+            title="Monthly cash net"
             xLabel=""
             yLabel=""
             points={monthlyNet}
@@ -1002,12 +1042,12 @@ export function AllLedgerCharts({
           />
         </article>
         <InteractivePieChart
-          title="All income by category"
+          title="Money received by source"
           slices={toSlices(incomeMap)}
           size={220}
           holeRatio={0.58}
           centerPrimary={moneyCents(totalIncome)}
-          centerSecondary="income"
+          centerSecondary="received"
           showLegend
           onSliceDoubleClick={(slice) =>
             onCategoryDoubleClick?.("income", slice.name)

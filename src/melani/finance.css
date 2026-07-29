@@ -2003,6 +2003,232 @@ html body .wd strong {
   }
 }
 
+/* All is one truthful visual summary. Detailed accounting stays in Ledger. */
+.wd-overview > * {
+  display: none !important;
+}
+
+.wd-overview > .wd-all-ledger-charts {
+  display: block !important;
+}
+
+.wd-ledger-scope {
+  margin: 0 0 10px;
+  color: var(--wd-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.wd-math-metric {
+  position: relative;
+  outline: none;
+}
+
+.wd-math-popover {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 9px);
+  left: 0;
+  display: none;
+  width: min(320px, 74vw);
+  padding: 12px 14px;
+  border: 1px solid rgba(26, 28, 34, 0.09);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 38px rgba(24, 32, 44, 0.16);
+  color: var(--wd-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.wd-math-popover strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--wd-text);
+  font-size: 12px;
+}
+
+.wd-math-metric:hover .wd-math-popover,
+.wd-math-metric:focus .wd-math-popover,
+.wd-math-metric:focus-within .wd-math-popover {
+  display: block;
+}
+
+/* Plan is intentionally one chart. The underlying engines still power reports. */
+.wd-page > .wd-rockefeller ~ * {
+  display: none !important;
+}
+
+/* The year summary belongs to All. Ledger stays a transaction workspace. */
+.wd-page > .wd-panel > .wd-all-ledger-charts {
+  display: none !important;
+}
+
+.wd-all-ledger-charts .wd-pie-legend li {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.wd-all-ledger-charts .wd-sub-legend-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wd-all-ledger-charts .wd-sub-legend-val {
+  white-space: nowrap;
+}
+
+.wd-all-ledger-charts {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-x: clip;
+  padding-right: 24px !important;
+}
+
+.wd-all-ledger-charts .wd-pie-legend {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding-right: 4px;
+}
+
+@media (max-width: 900px) {
+  .wd-all-ledger-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wd-all-ledger-trend {
+    grid-column: auto;
+  }
+
+  .wd-all-ledger-charts .wd-pie-wrap {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .wd-all-ledger-charts .wd-pie-disk {
+    justify-self: center;
+  }
+
+  .wd-allocation-pie {
+    grid-template-columns: 1fr;
+  }
+
+  .wd-allocation-pie .wd-pie-wrap {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .wd-allocation-pie .wd-pie-disk {
+    justify-self: center;
+  }
+
+  .wd-cap-choice {
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: flex-start !important;
+    gap: 10px 18px;
+  }
+
+  .wd-cap-choice > span {
+    flex-basis: 100%;
+  }
+
+  .wd-allocation-pie .wd-pie-legend {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding-right: 24px;
+  }
+
+  .wd-allocation-pie .wd-pie-legend li {
+    box-sizing: border-box;
+  }
+}
+
+.wd-allocation-only {
+  display: grid;
+  gap: 22px;
+  min-height: 0;
+  padding: clamp(20px, 4vw, 44px);
+}
+
+.wd-allocation-title {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.wd-allocation-title h2 {
+  margin: 2px 0 0;
+  font-size: clamp(25px, 4vw, 42px);
+  letter-spacing: -0.035em;
+}
+
+.wd-allocation-pie {
+  display: grid;
+  grid-template-columns: minmax(270px, 0.85fr) minmax(260px, 1fr);
+  align-items: center;
+  gap: clamp(24px, 6vw, 80px);
+  width: min(880px, 100%);
+  margin: 0 auto;
+}
+
+.wd-allocation-pie .wd-pie-disk {
+  justify-self: center;
+}
+
+.wd-allocation-pie .wd-pie-legend {
+  gap: 12px;
+}
+
+.wd-allocation-pie .wd-pie-legend li {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(26, 28, 34, 0.07);
+}
+
+.wd-restaurant-zero {
+  justify-self: center;
+  color: #c92f3d;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wd-restaurant-zero strong {
+  margin-left: 10px;
+}
+
+@media (max-width: 720px) {
+  .wd-allocation-title,
+  .wd-allocation-pie {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .wd-owner-target {
+    justify-self: start;
+  }
+
+  .wd-allocation-pie {
+    gap: 18px;
+  }
+
+  .wd-all-ledger-head dl {
+    gap: 18px;
+  }
+}
+
 .wd-bank-card {
   padding: 8px 0 12px;
   border-radius: 0;
@@ -5144,4 +5370,17 @@ svg.wd-linechart {
     grid-template-columns: 1fr;
     gap: 4px;
   }
+}
+
+/* Final visibility contract: All is charts only; Plan is the allocation pie only. */
+.wd-overview > :not(.wd-all-ledger-charts) {
+  display: none !important;
+}
+
+.wd-overview > .wd-all-ledger-charts {
+  display: block !important;
+}
+
+.wd-page > .wd-rockefeller ~ * {
+  display: none !important;
 }
