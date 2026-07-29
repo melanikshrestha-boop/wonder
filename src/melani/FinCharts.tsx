@@ -2,18 +2,31 @@
  * Finance charts — soft Habits fill + real X/Y axes + clear title.
  * Cursor-follow hover (no precise click targets). Fluid width.
  */
-import { useId, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
 import type { FinanceTx } from "./financeStore";
 import { money, moneyCents } from "./financeStore";
 import {
+  CATEGORY_COLOR_EVENT,
   categoryColor,
+  clearCategoryColorOverride,
+  defaultCategoryColor,
+  getCategoryColorOverride,
   normalizeTransactionCategory,
+  setCategoryColorOverride,
+  toColorInputValue,
 } from "./financeCategorize";
 import { isTransferLike } from "./financeTransfers";
 import {
   fitChartHoverLabel,
 } from "./chartLayout";
 import { pieSlicePath } from "./pieGeometry";
+import { pushUndo } from "../undoStack";
 
 const PALETTE = [
   "#7c3aed",
@@ -403,6 +416,54 @@ export function InteractivePieChart({
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const [selectedName, setSelectedName] = useState<string | null>(null);
+  // Bumps when user saves a category color so slice + legend re-read categoryColor()
+  const [colorRev, setColorRev] = useState(0);
+  const [colorPick, setColorPick] = useState<{
+    name: string;
+    color: string;
+  } | null>(null);
+  const colorInputRef = useRef<HTMLInputElement | null>(null);
+  const blockRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const onColor = () => setColorRev((n) => n + 1);
+    window.addEventListener(CATEGORY_COLOR_EVENT, onColor);
+    return () => window.removeEventListener(CATEGORY_COLOR_EVENT, onColor);
+  }, []);
+
+  // Open system color UI as soon as the popover mounts
+  useEffect(() => {
+    if (!colorPick) return;
+    const t = window.setTimeout(() => {
+      try {
+        colorInputRef.current?.focus();
+        colorInputRef.current?.click();
+      } catch {
+        /* some browsers block programmatic open after double-click — panel still works */
+      }
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [colorPick?.name]);
+
+  useEffect(() => {
+    if (!colorPick) return;
+    const onDoc = (event: Event) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (blockRef.current?.contains(target)) return;
+      setColorPick(null);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setColorPick(null);
+    };
+    document.addEventListener("pointerdown", onDoc, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDoc, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [colorPick]);
+
   const total = slices.reduce((s, x) => s + Math.max(0, x.value), 0);
   if (!slices.length || total <= 0) return null;
 
@@ -416,6 +477,8 @@ export function InteractivePieChart({
   const popDist = holeRatio > 0 ? 6 : 9;
 
   let angle = -Math.PI / 2;
+  // colorRev forces recompute after localStorage color change
+  void colorRev;
   const arcs = slices.map((s, i) => {
     const frac = Math.max(0, s.value) / total;
     const a0 = angle;
@@ -424,6 +487,10 @@ export function InteractivePieChart({
     const mid = (a0 + a1) / 2;
     const full = frac >= 0.999;
     const d = pieSlicePath(CX, CY, R, rInner, a0, a1, full);
+    const live =
+      colorPick && colorPick.name === s.name
+        ? colorPick.color
+        : s.color || categoryColor(s.name) || PALETTE[i % PALETTE.length];
     return {
       d,
       a0,
@@ -431,7 +498,7 @@ export function InteractivePieChart({
       mid,
       frac,
       slice: s,
-      color: s.color || categoryColor(s.name) || PALETTE[i % PALETTE.length],
+      color: live,
     };
   });
 
@@ -477,11 +544,55 @@ export function InteractivePieChart({
     if (!name) return;
     setSelectedName((previous) => (previous === name ? null : name));
   };
+  /** Old double-click job — still available via Shift+double-click */
   const filterToSlice = (index: number) => {
     const slice = arcs[index]?.slice;
     if (!slice) return;
     setSelectedName(null);
     onSliceDoubleClick?.(slice);
+  };
+  const openColorPick = (index: number) => {
+    const arc = arcs[index];
+    if (!arc) return;
+    const name = arc.slice.name;
+    setColorPick({
+      name,
+      color: toColorInputValue(arc.color || categoryColor(name)),
+    });
+  };
+  const applyColor = (name: string, next: string, commit: boolean) => {
+    const hex = toColorInputValue(next);
+    setColorPick((prev) =>
+      prev && prev.name === name ? { ...prev, color: hex } : prev
+    );
+    if (!commit) return;
+    const previous = getCategoryColorOverride(name);
+    const hadOverride = Boolean(previous);
+    pushUndo(`Color · ${name}`, () => {
+      if (hadOverride && previous) setCategoryColorOverride(name, previous);
+      else clearCategoryColorOverride(name);
+    });
+    setCategoryColorOverride(name, hex);
+    setColorRev((n) => n + 1);
+  };
+  const resetColor = (name: string) => {
+    const previous = getCategoryColorOverride(name);
+    if (!previous) {
+      setColorPick({
+        name,
+        color: toColorInputValue(defaultCategoryColor(name)),
+      });
+      return;
+    }
+    pushUndo(`Reset color · ${name}`, () => {
+      setCategoryColorOverride(name, previous);
+    });
+    clearCategoryColorOverride(name);
+    setColorPick({
+      name,
+      color: toColorInputValue(defaultCategoryColor(name)),
+    });
+    setColorRev((n) => n + 1);
   };
   const valueLine = (v: number, frac: number) =>
     formatValue
@@ -506,8 +617,12 @@ export function InteractivePieChart({
     : null;
 
   return (
-    <div className={`wd-pie-block ${className}`.trim()}>
-      {title ? <div className="wd-hab-chart-title">{title}</div> : null}
+    <div className={`wd-pie-block ${className}`.trim()} ref={blockRef}>
+      {title ? (
+        <div className="wd-hab-chart-title" title={title}>
+          {title}
+        </div>
+      ) : null}
       <div className="wd-pie-wrap">
         {/* SVG + optional HTML chip share one box so the chip centers on the pie, not the legend */}
         <div className="wd-pie-disk">
@@ -527,12 +642,19 @@ export function InteractivePieChart({
               if (index != null) toggleSelected(index);
             }}
             onDoubleClick={(event) => {
+              event.preventDefault();
               const index = sliceAtPointer(
                 event.clientX,
                 event.clientY,
                 event.currentTarget
               );
-              if (index != null) filterToSlice(index);
+              if (index == null) return;
+              // Shift+double-click keeps ledger filter for power users
+              if (event.shiftKey && onSliceDoubleClick) {
+                filterToSlice(index);
+                return;
+              }
+              openColorPick(index);
             }}
           >
             {arcs.map((a, i) => {
@@ -628,7 +750,14 @@ export function InteractivePieChart({
                 onMouseEnter={() => setHover(i)}
                 onMouseLeave={() => setHover(null)}
                 onClick={() => toggleSelected(i)}
-                onDoubleClick={() => filterToSlice(i)}
+                onDoubleClick={(event) => {
+                  event.preventDefault();
+                  if (event.shiftKey && onSliceDoubleClick) {
+                    filterToSlice(i);
+                    return;
+                  }
+                  openColorPick(i);
+                }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
@@ -639,7 +768,7 @@ export function InteractivePieChart({
                 role="button"
                 tabIndex={0}
                 aria-pressed={selectedIndex === i}
-                title="Click to highlight · double-click to filter the ledger"
+                title="Click to highlight · double-click to recolor · Shift+double-click to filter ledger"
               >
                 <span
                   className="wd-sub-dot"
@@ -654,6 +783,68 @@ export function InteractivePieChart({
           </ul>
         ) : null}
       </div>
+      {colorPick ? (
+        <div
+          className="wd-pie-color-pop"
+          role="dialog"
+          aria-label={`Color for ${colorPick.name}`}
+        >
+          <div className="wd-pie-color-pop-head">
+            <strong className="wd-pie-color-pop-name">{colorPick.name}</strong>
+            <button
+              type="button"
+              className="wd-pie-color-pop-close"
+              onClick={() => setColorPick(null)}
+              aria-label="Close color picker"
+            >
+              ×
+            </button>
+          </div>
+          <p className="wd-pie-color-pop-hint">
+            Drag around the color field — no codes to remember. Legend updates
+            with the slice.
+          </p>
+          <label className="wd-pie-color-pop-field">
+            <span className="wd-pie-color-pop-swatch" style={{ background: colorPick.color }} />
+            <input
+              ref={colorInputRef}
+              type="color"
+              value={colorPick.color}
+              /* Live preview only — commit when the OS picker closes (change) or Done */
+              onInput={(event) =>
+                applyColor(
+                  colorPick.name,
+                  (event.target as HTMLInputElement).value,
+                  false
+                )
+              }
+              onChange={(event) =>
+                applyColor(colorPick.name, event.target.value, true)
+              }
+              aria-label={`Pick color for ${colorPick.name}`}
+            />
+          </label>
+          <div className="wd-pie-color-pop-actions">
+            <button
+              type="button"
+              className="wd-pie-color-pop-btn"
+              onClick={() => {
+                applyColor(colorPick.name, colorPick.color, true);
+                setColorPick(null);
+              }}
+            >
+              Done
+            </button>
+            <button
+              type="button"
+              className="wd-pie-color-pop-btn is-quiet"
+              onClick={() => resetColor(colorPick.name)}
+            >
+              Use default
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

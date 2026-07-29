@@ -2888,6 +2888,24 @@ html body .wd strong {
   border: 0;
   border-bottom: 0;
   background: transparent;
+  /* Never float outside the cell grid */
+  position: static;
+}
+/* Opaque header row so labels never look like body text sitting on rows */
+.wd-table.wd-ledger-full thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--wd-panel, #f7f7fa) !important;
+  box-shadow: 0 1px 0 rgba(26, 28, 34, 0.08);
+}
+html:not(.theme-light) .wd-table.wd-ledger-full thead th,
+html:not(.theme-light) .main.is-finances .wd-table.wd-ledger-full thead th {
+  background: var(--wd-panel, #0a0a0c) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.main.is-finances .wd-table.wd-ledger-full thead th {
+  background: var(--wd-panel, #f7f7fa) !important;
 }
 .wd-table.wd-ledger-full .wd-payee-cell {
   min-width: 0;
@@ -3911,18 +3929,33 @@ html.theme-light .wd-cad-opt.on {
   gap: 8px;
   min-width: 0;
   width: 100%;
+  /* Isolate title/hover/legend so one pie never paints over a sibling */
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
 }
 .wd-pie-block .wd-hab-chart-title {
   margin: 0;
-  max-width: none;
+  max-width: 100%;
+  min-width: 0;
+  /* Title stays in flow above its own chart — never absolute over neighbors */
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.15;
+  padding-right: 4px;
 }
 .wd-pie-wrap {
   display: flex;
   gap: 14px 18px;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   width: 100%;
+  min-width: 0;
   position: relative;
+  z-index: 0;
 }
 
 /* Pie disk only — keeps hover label centered on the circle, not the legend */
@@ -3932,6 +3965,10 @@ html.theme-light .wd-cad-opt.on {
   width: min(220px, 100%);
   aspect-ratio: 1 / 1;
   max-width: 100%;
+  /* Clip hover chip to the disk so it never covers the legend or next pie */
+  overflow: hidden;
+  contain: layout paint;
+  z-index: 0;
 }
 
 .wd-pie-disk .wd-pie-svg {
@@ -3992,11 +4029,17 @@ html:not(.theme-light) .wd-pie-hover-val {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 9rem;
   flex: 1 1 8rem;
+  min-width: 0;
+  max-width: 100%;
+  position: relative;
+  z-index: 1;
+  /* Own stacking context — sibling pie titles cannot sit on top of rows */
+  isolation: isolate;
 }
 .wd-pie-legend li {
-  display: flex;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   font-size: 12px;
@@ -4004,7 +4047,133 @@ html:not(.theme-light) .wd-pie-hover-val {
   cursor: pointer;
   border-radius: 6px;
   padding: 4px 6px;
+  min-width: 0;
   transition: background 0.15s ease, transform 0.15s ease;
+}
+.wd-pie-legend .wd-sub-legend-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wd-pie-legend .wd-sub-legend-val {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Double-click color popover — sits in the pie block, not over the table */
+.wd-pie-color-pop {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 8px;
+  z-index: 30;
+  width: min(260px, calc(100vw - 32px));
+  padding: 12px 12px 10px;
+  border-radius: 10px;
+  background: var(--wd-panel, #fff);
+  border: 1px solid rgba(26, 28, 34, 0.12);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.14);
+  color: var(--wd-text, #1a1c22);
+  box-sizing: border-box;
+}
+html:not(.theme-light) .wd-pie-color-pop {
+  background: #141418;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.94);
+}
+.wd-pie-color-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.wd-pie-color-pop-name {
+  font-size: 13px;
+  font-weight: 650;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wd-pie-color-pop-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.55;
+}
+.wd-pie-color-pop-close:hover {
+  opacity: 1;
+}
+.wd-pie-color-pop-hint {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--wd-secondary, rgba(26, 28, 34, 0.55));
+}
+html:not(.theme-light) .wd-pie-color-pop-hint {
+  color: rgba(255, 255, 255, 0.5);
+}
+.wd-pie-color-pop-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.wd-pie-color-pop-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  flex: 0 0 auto;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+.wd-pie-color-pop-field input[type="color"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.wd-pie-color-pop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.wd-pie-color-pop-btn {
+  border: 1px solid rgba(26, 28, 34, 0.14);
+  background: rgba(26, 28, 34, 0.04);
+  color: inherit;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wd-pie-color-pop-btn.is-quiet {
+  background: transparent;
+  font-weight: 500;
+  opacity: 0.8;
+}
+.wd-pie-color-pop-btn:hover {
+  background: rgba(26, 28, 34, 0.08);
+}
+html:not(.theme-light) .wd-pie-color-pop-btn {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+html:not(.theme-light) .wd-pie-color-pop-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 .wd-pie-legend li:hover,
 .wd-pie-legend li.is-hot {
@@ -4511,10 +4680,33 @@ svg.wd-linechart {
   font-size: 11px !important;
   font-weight: 600 !important;
   letter-spacing: 0.03em !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 3 !important;
+  background: var(--wd-panel, #f7f7fa) !important;
+}
+html:not(.theme-light) .main.is-finances .wd-table.wd-ledger-full thead th {
+  background: var(--wd-panel, #0a0a0c) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
 }
 .main.is-finances .wd-table.wd-ledger-full tbody td {
   padding-top: 0.35rem !important;
   padding-bottom: 0.35rem !important;
+  position: static !important;
+  z-index: 0 !important;
+}
+/* Category cells stay one line inside the column — no stacked ghost labels */
+.main.is-finances .wd-table.wd-ledger-full td.wd-cat-cell,
+.main.is-finances .wd-table.wd-ledger-full .wd-cat-cell {
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+.main.is-finances .wd-table.wd-ledger-full .wd-cat-cell select,
+.main.is-finances .wd-table.wd-ledger-full .wd-cat-select {
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 .main.is-finances .wd-table.wd-ledger-full .wd-balance {
   font-variant-numeric: tabular-nums;
@@ -4541,11 +4733,20 @@ svg.wd-linechart {
 }
 .main.is-finances .wd-month-charts {
   display: grid !important;
-  grid-template-columns: minmax(0, 1.45fr) minmax(200px, 0.85fr) !important;
+  /* Give each pie its own column so titles never collide with the other legend */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 20px 28px !important;
   width: 100% !important;
   max-width: none !important;
+  align-items: start !important;
 }
-@media (max-width: 1280px) {
+.main.is-finances .wd-month-charts > * {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  position: relative;
+  z-index: 0;
+}
+@media (max-width: 1100px) {
   .main.is-finances .wd-month-charts {
     grid-template-columns: 1fr !important;
   }

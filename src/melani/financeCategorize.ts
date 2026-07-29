@@ -400,8 +400,75 @@ export function normalizeImportedTransactionCategory(
   return normalizeTransactionCategory(category, merchantOrNote, kind);
 }
 
-/** Stable color for a category (after normalize when possible) */
-export function categoryColor(name: string): string {
+/** User-picked pie/legend colors — same key drives every chart surface */
+const CATEGORY_COLORS_KEY = "wonder-finance-category-colors-v1";
+/** Charts listen so slice + legend re-render when a color is saved */
+export const CATEGORY_COLOR_EVENT = "wonder-finance-category-colors-changed";
+
+type ColorMap = Record<string, string>;
+
+/** #rgb / #rrggbb / rgb() → #rrggbb for <input type="color"> */
+export function toColorInputValue(raw: string): string {
+  const s = (raw || "").trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(s)) return s.toLowerCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(s)) {
+    const r = s[1];
+    const g = s[2];
+    const b = s[3];
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+  }
+  const m = s.match(
+    /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i
+  );
+  if (m) {
+    const hex = (n: string) =>
+      Math.max(0, Math.min(255, Number(n))).toString(16).padStart(2, "0");
+    return `#${hex(m[1])}${hex(m[2])}${hex(m[3])}`;
+  }
+  return "#888888";
+}
+
+function loadColorOverrides(): ColorMap {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(CATEGORY_COLORS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    const out: ColorMap = {};
+    for (const [k, v] of Object.entries(parsed as ColorMap)) {
+      if (typeof k === "string" && typeof v === "string" && v.trim()) {
+        out[k] = toColorInputValue(v);
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function saveColorOverrides(map: ColorMap): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(CATEGORY_COLORS_KEY, JSON.stringify(map));
+  } catch {
+    /* quota / private mode */
+  }
+  try {
+    window.dispatchEvent(
+      new CustomEvent(CATEGORY_COLOR_EVENT, { detail: { map } })
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+function colorKey(name: string): string {
+  return normalizeCategory(name) || name.trim() || "review";
+}
+
+/** Built-in color only (ignores user overrides) — used for “Reset” */
+export function defaultCategoryColor(name: string): string {
   const n = normalizeCategory(name);
   if (CATEGORY_COLORS[n]) return CATEGORY_COLORS[n];
   let hash = 0;
@@ -410,6 +477,38 @@ export function categoryColor(name: string): string {
     hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
   }
   return CUSTOM_CATEGORY_COLORS[hash % CUSTOM_CATEGORY_COLORS.length];
+}
+
+export function getCategoryColorOverride(name: string): string | null {
+  const map = loadColorOverrides();
+  const key = colorKey(name);
+  return map[key] || map[name] || null;
+}
+
+/** Persist a user color; empty string clears the override */
+export function setCategoryColorOverride(
+  name: string,
+  color: string | null
+): void {
+  const key = colorKey(name);
+  const map = loadColorOverrides();
+  if (!color || !color.trim()) {
+    delete map[key];
+  } else {
+    map[key] = toColorInputValue(color);
+  }
+  saveColorOverrides(map);
+}
+
+export function clearCategoryColorOverride(name: string): void {
+  setCategoryColorOverride(name, null);
+}
+
+/** Stable color for a category (user override → default map → hash) */
+export function categoryColor(name: string): string {
+  const override = getCategoryColorOverride(name);
+  if (override) return override;
+  return defaultCategoryColor(name);
 }
 
 /** Ordered rules — first match wins. Payment rails never become categories. */
