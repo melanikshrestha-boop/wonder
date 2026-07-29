@@ -2103,29 +2103,30 @@ html body .wd strong {
 }
 
 .wd-budget-ledger {
-  max-width: 980px;
+  max-width: 860px;
   padding-top: 0 !important;
+  line-height: 1;
 }
 
 .wd-budget-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 18px;
+  gap: 18px;
+  margin-bottom: 12px;
 }
 
 .wd-budget-head h2 {
   margin: 0;
-  font-size: clamp(30px, 4vw, 46px);
+  font-size: clamp(28px, 3.5vw, 40px);
   line-height: 0.95;
 }
 
 .wd-budget-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
-  gap: 18px 28px;
-  margin: 0 0 24px;
+  gap: 10px 20px;
+  margin: 0 0 14px;
 }
 
 .wd-budget-metrics div {
@@ -2143,8 +2144,8 @@ html body .wd strong {
 }
 
 .wd-budget-metrics dd {
-  margin: 4px 0 0;
-  font-size: 25px;
+  margin: 3px 0 0;
+  font-size: 22px;
   font-weight: 750;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -2152,14 +2153,97 @@ html body .wd strong {
 
 .wd-budget-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
-  gap: 36px;
+  grid-template-columns: minmax(220px, 0.72fr) minmax(320px, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.wd-budget-donut {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.wd-budget-donut-disk {
+  position: relative;
+  width: min(220px, 100%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  margin: 0 auto;
+  contain: layout paint;
+}
+
+.wd-budget-donut-disk::after {
+  content: "";
+  position: absolute;
+  inset: 31%;
+  border-radius: 50%;
+  background: var(--wd-bg);
+}
+
+.wd-budget-donut-disk span {
+  position: absolute;
+  inset: 31%;
+  z-index: 1;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  line-height: 1;
+}
+
+.wd-budget-donut-disk strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wd-budget-donut-disk small {
+  margin-top: 4px;
+  color: var(--wd-secondary);
+  font-size: 11px;
+}
+
+.wd-budget-donut-legend {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wd-budget-donut-legend li {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(24, 28, 35, 0.08);
+  line-height: 1;
+}
+
+.wd-budget-donut-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+}
+
+.wd-budget-donut-legend span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wd-budget-donut-legend strong {
+  color: var(--wd-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .wd-budget-table-wrap {
   display: grid;
-  gap: 20px;
+  gap: 10px;
 }
 
 .wd-budget-table {
@@ -2170,7 +2254,7 @@ html body .wd strong {
 
 .wd-budget-table th,
 .wd-budget-table td {
-  padding: 9px 0;
+  padding: 7px 0;
   border-bottom: 1px solid rgba(24, 28, 35, 0.08);
   text-align: left;
   vertical-align: baseline;
@@ -2182,7 +2266,7 @@ html body .wd strong {
 }
 
 .wd-budget-table td {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 650;
 }
 
@@ -2192,11 +2276,11 @@ html body .wd strong {
 }
 
 .wd-reinvest-list {
-  margin-top: 28px;
+  margin-top: 14px;
 }
 
 .wd-reinvest-title {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .wd-reinvest-list ul {
@@ -2212,7 +2296,7 @@ html body .wd strong {
   grid-template-columns: 34px minmax(0, 1fr) 28px;
   gap: 10px;
   align-items: center;
-  min-height: 38px;
+  min-height: 32px;
   border-bottom: 1px solid rgba(24, 28, 35, 0.08);
 }
 
@@ -2247,7 +2331,7 @@ html body .wd strong {
   grid-template-columns: minmax(0, 1fr) 34px;
   gap: 10px;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 4px;
   opacity: 0;
   transition: opacity 0.15s ease;
 }
@@ -2287,6 +2371,21 @@ html body .wd strong {
 
   .wd-budget-head {
     display: grid;
+    gap: 10px;
+  }
+
+  .wd-budget-donut-disk {
+    width: min(190px, 100%);
+  }
+
+  .wd-budget-donut-legend li {
+    grid-template-columns: 9px minmax(0, 1fr);
+  }
+
+  .wd-budget-donut-legend strong {
+    grid-column: 2;
+    justify-self: start;
+    font-size: 12px;
   }
 }
 

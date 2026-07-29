@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { InteractivePieChart } from "./FinCharts";
 import { moneyCents } from "./financeStore";
 import {
   AUGUST_REVENUE_TARGET,
@@ -57,6 +56,48 @@ const COLORS: Record<string, string> = {
   health: "#16a34a",
   personal: "#dc2626",
 };
+
+function BudgetDonut({
+  allocations,
+  target,
+}: {
+  allocations: ReturnType<typeof buildAugustPlan>["allocations"];
+  target: number;
+}) {
+  let cursor = 0;
+  const stops = allocations.map((allocation) => {
+    const start = cursor;
+    const end = cursor + allocation.percent * 100;
+    cursor = end;
+    return `${COLORS[allocation.id]} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+  });
+
+  return (
+    <div className="wd-budget-donut" aria-label="Budget allocation pie">
+      <div
+        className="wd-budget-donut-disk"
+        style={{ background: `conic-gradient(${stops.join(", ")})` }}
+      >
+        <span>
+          <strong>{moneyCents(target)}</strong>
+          <small>after tax</small>
+        </span>
+      </div>
+      <ul className="wd-budget-donut-legend">
+        {allocations.map((allocation) => (
+          <li key={allocation.id}>
+            <i style={{ background: COLORS[allocation.id] }} aria-hidden />
+            <span>{allocation.label}</span>
+            <strong>
+              {moneyCents(allocation.amount)} ·{" "}
+              {Math.round(allocation.percent * 100)}%
+            </strong>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function estimateGrossForNet(targetNet: number): {
   gross: number;
@@ -147,12 +188,6 @@ export function RockefellerDesk() {
     [settings.targetIncome],
   );
 
-  const slices = plan.allocations.map((allocation) => ({
-    name: allocation.label,
-    value: allocation.amount,
-    color: COLORS[allocation.id],
-  }));
-
   function addItem() {
     const item = draft.trim();
     if (!item) return;
@@ -222,19 +257,7 @@ export function RockefellerDesk() {
       </dl>
 
       <div className="wd-budget-grid">
-        <InteractivePieChart
-          title=""
-          slices={slices}
-          size={300}
-          holeRatio={0.58}
-          centerPrimary={moneyCents(plan.targetIncome)}
-          centerSecondary="after tax"
-          showLegend
-          className="wd-allocation-pie"
-          formatValue={(value, fraction) =>
-            `${moneyCents(value)} · ${Math.round(fraction * 100)}%`
-          }
-        />
+        <BudgetDonut allocations={plan.allocations} target={plan.targetIncome} />
 
         <div className="wd-budget-table-wrap">
           <table className="wd-budget-table">
