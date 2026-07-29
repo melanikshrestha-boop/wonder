@@ -935,8 +935,17 @@ export function AllLedgerCharts({
   });
   const totalIncome = months.reduce((sum, item) => sum + item.data.totalIn, 0);
   const totalExpenses = months.reduce((sum, item) => sum + item.data.totalOut, 0);
+  const totalMovementIn = months.reduce(
+    (sum, item) => sum + item.data.movementIn,
+    0,
+  );
+  const totalMovementOut = months.reduce(
+    (sum, item) => sum + item.data.movementOut,
+    0,
+  );
   const expenseMap = new Map<string, number>();
   const incomeMap = new Map<string, number>();
+  const movementOutMap = new Map<string, number>();
   for (const row of rows) {
     if (row.pending) continue;
     const name = normalizeTransactionCategory(
@@ -945,7 +954,13 @@ export function AllLedgerCharts({
       row.kind
     );
     const map = row.kind === "income" ? incomeMap : expenseMap;
-    if (!name || isTransferLike({ ...row, category: name })) continue;
+    if (!name) continue;
+    if (isTransferLike({ ...row, category: name })) {
+      if (row.kind === "expense") {
+        movementOutMap.set(name, (movementOutMap.get(name) || 0) + row.amount);
+      }
+      continue;
+    }
     map.set(name, (map.get(name) || 0) + row.amount);
   }
   const toSlices = (map: Map<string, number>) =>
@@ -966,7 +981,10 @@ export function AllLedgerCharts({
     (sum, [name, value]) => sum + (earnedNames.has(name) ? value : 0),
     0,
   );
-  const supportAndRepayments = Math.max(0, totalIncome - earnedIncome);
+  const familySupport = incomeMap.get("Family") || 0;
+  const paybacks = Math.max(0, totalIncome - earnedIncome - familySupport);
+  const cashChange =
+    totalIncome + totalMovementIn - totalExpenses - totalMovementOut;
   const breakdown = (entries: [string, number][]) =>
     entries
       .filter(([, value]) => value > 0)
@@ -976,10 +994,29 @@ export function AllLedgerCharts({
   const earnedBreakdown = breakdown(
     Array.from(incomeMap.entries()).filter(([name]) => earnedNames.has(name)),
   );
-  const supportBreakdown = breakdown(
-    Array.from(incomeMap.entries()).filter(([name]) => !earnedNames.has(name)),
+  const familyBreakdown = breakdown(
+    Array.from(incomeMap.entries()).filter(([name]) => name === "Family"),
+  );
+  const paybackBreakdown = breakdown(
+    Array.from(incomeMap.entries()).filter(
+      ([name]) => !earnedNames.has(name) && name !== "Family",
+    ),
   );
   const spendingBreakdown = breakdown(Array.from(expenseMap.entries()));
+  const movedOutBreakdown = breakdown(Array.from(movementOutMap.entries()));
+  const latestBalanceRow =
+    [...rows]
+      .filter(
+        (row) =>
+          !row.pending &&
+          row.statementBalance != null &&
+          Number.isFinite(row.statementBalance),
+      )
+      .sort((left, right) => {
+        const dateCmp = right.date.localeCompare(left.date);
+        if (dateCmp) return dateCmp;
+        return (right.statementOrder ?? -1) - (left.statementOrder ?? -1);
+      })[0] || null;
   const monthlyNet: LinePoint[] = months.map(({ month, data }) => ({
     x: new Date(`${month}-01T12:00:00`).toLocaleString("en-US", {
       month: "short",
@@ -1002,11 +1039,19 @@ export function AllLedgerCharts({
             </span>
           </div>
           <div className="wd-math-metric" tabIndex={0}>
-            <dt>Support + repayments</dt>
-            <dd>{moneyCents(supportAndRepayments)}</dd>
+            <dt>Family</dt>
+            <dd>{moneyCents(familySupport)}</dd>
             <span className="wd-math-popover">
-              <strong>Money received, but not earned</strong>
-              {supportBreakdown}
+              <strong>Family support</strong>
+              {familyBreakdown}
+            </span>
+          </div>
+          <div className="wd-math-metric" tabIndex={0}>
+            <dt>Paybacks</dt>
+            <dd>{moneyCents(paybacks)}</dd>
+            <span className="wd-math-popover">
+              <strong>Reimbursements, gifts, rewards</strong>
+              {paybackBreakdown}
             </span>
           </div>
           <div className="wd-math-metric" tabIndex={0}>
@@ -1018,14 +1063,55 @@ export function AllLedgerCharts({
             </span>
           </div>
           <div className="wd-math-metric" tabIndex={0}>
-            <dt>Net cash</dt>
-            <dd className={totalIncome - totalExpenses >= 0 ? "is-pos" : "is-neg"}>
-              {moneyCents(totalIncome - totalExpenses)}
+            <dt>Moved in</dt>
+            <dd>{moneyCents(totalMovementIn)}</dd>
+            <span className="wd-math-popover">
+              <strong>Not income: money pulled from elsewhere</strong>
+              Transfers into this ledger total {moneyCents(totalMovementIn)}.
+            </span>
+          </div>
+          <div className="wd-math-metric" tabIndex={0}>
+            <dt>Moved out</dt>
+            <dd className="is-neg">{moneyCents(totalMovementOut)}</dd>
+            <span className="wd-math-popover">
+              <strong>Not spending: money sent elsewhere</strong>
+              {movedOutBreakdown}
+            </span>
+          </div>
+          <div className="wd-math-metric" tabIndex={0}>
+            <dt>Cash change</dt>
+            <dd className={cashChange >= 0 ? "is-pos" : "is-neg"}>
+              {moneyCents(cashChange)}
             </dd>
             <span className="wd-math-popover">
-              <strong>Received − spent</strong>
-              {moneyCents(totalIncome)} − {moneyCents(totalExpenses)} ={" "}
-              {moneyCents(totalIncome - totalExpenses)}
+              <strong>Received + moved in - spent - moved out</strong>
+              {moneyCents(totalIncome)} + {moneyCents(totalMovementIn)} -{" "}
+              {moneyCents(totalExpenses)} - {moneyCents(totalMovementOut)} ={" "}
+              {moneyCents(cashChange)}
+            </span>
+          </div>
+          <div className="wd-math-metric" tabIndex={0}>
+            <dt>Checking</dt>
+            <dd
+              className={
+                latestBalanceRow == null
+                  ? "is-unavailable"
+                  : latestBalanceRow.statementBalance! >= 0
+                  ? "is-pos"
+                  : "is-neg"
+              }
+            >
+              {latestBalanceRow == null
+                ? "—"
+                : moneyCents(latestBalanceRow.statementBalance!)}
+            </dd>
+            <span className="wd-math-popover">
+              <strong>Latest bank-supplied balance</strong>
+              {latestBalanceRow == null
+                ? "No imported statement balance in this scope."
+                : `${latestBalanceRow.date} after ${
+                    latestBalanceRow.merchant || latestBalanceRow.note
+                  }.`}
             </span>
           </div>
         </dl>
@@ -1042,7 +1128,7 @@ export function AllLedgerCharts({
           />
         </article>
         <InteractivePieChart
-          title="Money received by source"
+          title="Received by source"
           slices={toSlices(incomeMap)}
           size={220}
           holeRatio={0.58}
@@ -1060,6 +1146,18 @@ export function AllLedgerCharts({
           holeRatio={0.58}
           centerPrimary={moneyCents(totalExpenses)}
           centerSecondary="expenses"
+          showLegend
+          onSliceDoubleClick={(slice) =>
+            onCategoryDoubleClick?.("expense", slice.name)
+          }
+        />
+        <InteractivePieChart
+          title="Moved out, not spending"
+          slices={toSlices(movementOutMap)}
+          size={220}
+          holeRatio={0.58}
+          centerPrimary={moneyCents(totalMovementOut)}
+          centerSecondary="moved out"
           showLegend
           onSliceDoubleClick={(slice) =>
             onCategoryDoubleClick?.("expense", slice.name)

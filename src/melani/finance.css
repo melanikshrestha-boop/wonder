@@ -3503,8 +3503,8 @@ html.theme-light .wd-cad-opt.on {
 
 .wd-all-ledger-head dl {
   display: grid;
-  grid-template-columns: repeat(4, minmax(110px, 1fr));
-  gap: 32px;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 24px 32px;
 }
 
 .wd-all-ledger-head dl {
@@ -3552,7 +3552,7 @@ html.theme-light .wd-cad-opt.on {
 
 @media (max-width: 680px) {
   .wd-all-ledger-head dl {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px 24px;
   }
   .wd-all-ledger-grid {
