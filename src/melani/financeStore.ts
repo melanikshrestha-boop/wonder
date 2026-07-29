@@ -187,9 +187,12 @@ const DEFAULT_BUDGET: BudgetLine[] = [
   { category: "Education", planned: 0 },
   { category: "Travel", planned: 0 },
   { category: "Business", planned: 0 },
+  { category: "Online business", planned: 0 },
+  { category: "Technology", planned: 0 },
+  { category: "Photography costs", planned: 0 },
+  { category: "Reselling costs", planned: 0 },
   { category: "Fees", planned: 0 },
   { category: "Credit card payment", planned: 0 },
-  { category: "Other", planned: 0 },
 ];
 
 const DEFAULT_ACCOUNTS: FinanceAccount[] = [

@@ -90,6 +90,7 @@ import type { CopilotContext } from "./financeCopilotEngine";
 import { FinanceSqlEditor } from "./FinanceSqlEditor";
 import { Spend3D } from "./Spend3D";
 import { BusinessReport } from "./BusinessReport";
+import { RockefellerDesk } from "./RockefellerDesk";
 import {
   availableBusinessQuarters,
   buildBusinessQuarterReport,
@@ -263,8 +264,16 @@ const PLAN_GROUPS: { id: string; label: string; cats: string[] }[] = [
   },
   {
     id: "buffer",
-    label: "Buffer",
-    cats: ["Education", "Business", "Fees"],
+    label: "Build",
+    cats: [
+      "Education",
+      "Business",
+      "Online business",
+      "Technology",
+      "Photography costs",
+      "Reselling costs",
+      "Fees",
+    ],
   },
 ];
 
@@ -4362,6 +4371,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         {/* ════════ PLAN ════════ */}
         {tab === "plan" ? (
           <div className="wd-page">
+            <RockefellerDesk state={state} actualYm={ym} />
+
             {/* Smart budget engine — $500/mo hard limit */}
             <section className="wd-panel" aria-label="Smart budget">
               <div className="wd-panel-head">
