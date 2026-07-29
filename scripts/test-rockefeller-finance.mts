@@ -38,7 +38,7 @@ assert.equal(
 );
 assert.equal(
   august.allocations.find((row) => row.id === "personal")?.amount,
-  500
+  100
 );
 assert.equal(
   august.personal.find((row) => row.label === "Restaurants")?.amount,

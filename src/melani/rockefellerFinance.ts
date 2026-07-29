@@ -35,7 +35,7 @@ const NON_OPERATING_EXPENSE = new Set([
 ]);
 
 export type CapitalAllocation = {
-  id: "tax" | "reinvest" | "invest" | "reserve" | "personal";
+  id: "health" | "reinvest" | "capital" | "personal";
   label: string;
   percent: number;
   amount: number;
@@ -58,81 +58,78 @@ function cents(value: number): number {
 /** A capital-first plan. It is a forecast scenario, never booked revenue. */
 export function buildAugustPlan(
   targetIncome = AUGUST_REVENUE_TARGET,
-  personalCapRate = 0.05,
+  personalCapRate = 0.01,
   disciplineRate = 0.01
 ): AugustPlan {
   const target = Math.max(0, cents(targetIncome));
-  const personalRate = Math.max(0.01, Math.min(0.05, personalCapRate));
-  const taxRate = 0.25;
-  const investRate = 0.2;
-  const reserveRate = 0.05;
-  const reinvestRate = cents(1 - taxRate - investRate - reserveRate - personalRate);
+  const personalRate = 0.01;
+  const healthRate = 0.1;
+  const capitalRate = 0.35;
+  const reinvestRate = cents(1 - healthRate - capitalRate - personalRate);
   const personalAmount = cents(target * personalRate);
   const reinvestAmount = cents(target * reinvestRate);
 
   const allocations: CapitalAllocation[] = [
     {
-      id: "tax",
-      label: "Tax reserve",
-      percent: taxRate,
-      amount: cents(target * taxRate),
-      rule: "Move on receipt; do not treat tax money as spendable cash.",
-    },
-    {
       id: "reinvest",
-      label: "Online + technology reinvestment",
+      label: "Reinvestment in self/business",
       percent: reinvestRate,
       amount: reinvestAmount,
-      rule: "Release only against a named experiment, expected return, and review date.",
+      rule: "Business, learning, tools, equipment, and experiments.",
     },
     {
-      id: "invest",
-      label: "Long-term capital",
-      percent: investRate,
-      amount: cents(target * investRate),
-      rule: "Keep separate from operating cash; deployment requires an explicit policy.",
+      id: "capital",
+      label: "Investment in capital",
+      percent: capitalRate,
+      amount: cents(target * capitalRate),
+      rule: "Brokerage, Roth IRA, CDs, or cash equivalents.",
     },
     {
-      id: "reserve",
-      label: "College transition reserve",
-      percent: reserveRate,
-      amount: cents(target * reserveRate),
-      rule: "Hold for move-in, health, transport, or true surprises.",
+      id: "health",
+      label: "Health",
+      percent: healthRate,
+      amount: cents(target * healthRate),
+      rule: "Groceries, treatment, meds, health maintenance.",
     },
     {
       id: "personal",
       label: "Personal purchasing power",
       percent: personalRate,
       amount: personalAmount,
-      rule: `Hard ceiling ${Math.round(personalRate * 100)}%; restaurant budget is $0.`,
+      rule: "Strict 1% ceiling.",
     },
   ];
 
   const personal = [
     {
       label: "Healthy groceries",
-      amount: cents(personalAmount * 0.6),
+      amount: cents(target * healthRate * 0.7),
       rule: "Food bought for home; restaurant delivery does not qualify.",
     },
     {
-      label: "Tailoring + presentation",
+      label: "Treatments + care",
+      amount: cents(target * healthRate * 0.3),
+      rule: "Health appointments, meds, and repair work.",
+    },
+    {
+      label: "Clothing + fun",
+      amount: cents(personalAmount * 0.6),
+      rule: "Personal wants only.",
+    },
+    {
+      label: "Tailoring",
       amount: cents(personalAmount * 0.2),
       rule: "Alter what you own before buying replacements.",
     },
     {
-      label: "Transport + laundry",
+      label: "Flights + small fun",
       amount: cents(personalAmount * 0.2),
-      rule: "College logistics only.",
+      rule: "Still inside the 1% cap.",
     },
     {
       label: "Restaurants",
       amount: 0,
-      rule: "Banned for August.",
-    },
-    {
-      label: "Clothing",
-      amount: 0,
-      rule: "Family-funded or deferred; no personal capital allocation.",
+      rule: "Zero.",
     },
   ];
 

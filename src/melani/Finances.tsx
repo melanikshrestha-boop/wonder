@@ -210,15 +210,13 @@ type SortKey = "date" | "merchant" | "category" | "amount" | "kind";
 const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "transactions", label: "Ledger", icon: "☰" },
   { id: "overview", label: "All", icon: "◉" },
-  { id: "business", label: "Quarterly", icon: "▤" },
-  { id: "plan", label: "Plan", icon: "▦" },
+  { id: "plan", label: "Budget", icon: "▦" },
   { id: "subscriptions", label: "Subscriptions", icon: "↻" },
   { id: "sql", label: "SQL", icon: "⌗" },
 ];
 
 const ALL_TAB_IDS: TabId[] = [
   "overview",
-  "business",
   "worth",
   "transactions",
   "credit",
@@ -3041,13 +3039,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 <button
                   type="button"
                   className="wd-btn"
-                  onClick={() => setTab("business")}
-                >
-                  Quarterly report
-                </button>
-                <button
-                  type="button"
-                  className="wd-btn"
                   onClick={() => setBooksExpanded((open) => !open)}
                 >
                   {booksExpanded ? "Hide full books" : "Open full books"}
@@ -4378,6 +4369,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
         {tab === "plan" ? (
           <div className="wd-page">
             <RockefellerDesk />
+            {false ? (
+              <>
 
             {/* Smart budget engine — $500/mo hard limit */}
             <section className="wd-panel" aria-label="Smart budget">
@@ -4775,6 +4768,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                 );
               })}
             </section>
+              </>
+            ) : null}
           </div>
         ) : null}
 
@@ -4798,8 +4793,8 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                   >
                     <div className="wd-ai-sub-head">
                       <div>
-                        <div className="wd-kicker">AI PLAN TRIAL</div>
-                        <h2>Four plans now. Keep the one that earns its place.</h2>
+                        <div className="wd-kicker">AI stack</div>
+                        <h2>Confirmed monthly tools</h2>
                       </div>
                       <div className="wd-ai-sub-total">
                         <strong>{money(aiSubscriptionStack.monthlyTotal)}</strong>
@@ -4808,39 +4803,18 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                         </span>
                       </div>
                     </div>
-                    <p className="wd-muted">
-                      User-confirmed costs, separate from the incomplete card
-                      ledger. Choosing one $20 plan would cut this stack by
-                      {` ${money(
-                        Math.max(0, aiSubscriptionStack.monthlyTotal - 20)
-                      )}/mo`}.
-                    </p>
                     <div className="wd-ai-sub-list">
                       {aiSubscriptionStack.plans.map((subscription) => (
                         <div className="wd-ai-sub-line" key={subscription.key}>
                           <div>
                             <strong>{subscription.merchant}</strong>
-                            <span>Confirmed this month</span>
                           </div>
                           <div>
                             <strong>{money(subscription.monthlyCost)}/mo</strong>
-                            <span>
-                              Keep only this → save{" "}
-                              {money(
-                                aiSubscriptionStack.monthlyTotal -
-                                  subscription.monthlyCost
-                              )}
-                              /mo
-                            </span>
                           </div>
                         </div>
                       ))}
                     </div>
-                    <p className="wd-sub-hint">
-                      Compare them on the same real tasks before cancelling:
-                      correctness, speed, coding workflow, research, and how
-                      often you actually reach for each one.
-                    </p>
                   </section>
                 ) : null}
 
@@ -4930,7 +4904,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                             ) : null}
                           </td>
                           <td>
-                            {/* Hover/focus: Monthly | Yearly — no ugly pill stack */}
                             <div className="wd-cad-toggle" tabIndex={0}>
                               <span className="wd-cad-current">
                                 {CADENCE_LABEL[s.cadence] || s.cadence}
@@ -4999,10 +4972,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                       ))}
                     </tbody>
                   </table>
-                  <p className="wd-sub-hint">
-                    Hover cadence to switch Monthly / Yearly. × removes it from
-                    the list and pie — totals update automatically.
-                  </p>
                 </section>
               </>
             )}

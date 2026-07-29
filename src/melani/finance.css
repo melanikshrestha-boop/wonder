@@ -2059,7 +2059,7 @@ html body .wd strong {
   display: block;
 }
 
-/* Plan is intentionally one chart. The underlying engines still power reports. */
+/* Budget owns this page. Old budget panels stay out of the rendered layout. */
 .wd-page > .wd-rockefeller ~ * {
   display: none !important;
 }
@@ -2092,6 +2092,194 @@ html body .wd strong {
   max-width: 100%;
   overflow-x: clip;
   padding-right: 24px !important;
+}
+
+.wd-budget-ledger {
+  max-width: 980px;
+  padding-top: 0 !important;
+}
+
+.wd-budget-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.wd-budget-head h2 {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 0.95;
+}
+
+.wd-budget-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  gap: 18px 28px;
+  margin: 0 0 24px;
+}
+
+.wd-budget-metrics div {
+  position: relative;
+  min-width: 0;
+}
+
+.wd-budget-metrics dt,
+.wd-budget-table th {
+  color: var(--wd-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wd-budget-metrics dd {
+  margin: 4px 0 0;
+  font-size: 25px;
+  font-weight: 750;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.wd-budget-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 36px;
+  align-items: center;
+}
+
+.wd-budget-table-wrap {
+  display: grid;
+  gap: 20px;
+}
+
+.wd-budget-table {
+  width: 100%;
+  border-collapse: collapse;
+  line-height: 1;
+}
+
+.wd-budget-table th,
+.wd-budget-table td {
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(24, 28, 35, 0.08);
+  text-align: left;
+  vertical-align: baseline;
+}
+
+.wd-budget-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.wd-budget-table td {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.wd-budget-table.is-small td {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.wd-reinvest-list {
+  margin-top: 28px;
+}
+
+.wd-reinvest-title {
+  margin-bottom: 8px;
+}
+
+.wd-reinvest-list ul {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wd-reinvest-list li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 28px;
+  gap: 10px;
+  align-items: center;
+  min-height: 38px;
+  border-bottom: 1px solid rgba(24, 28, 35, 0.08);
+}
+
+.wd-reinvest-list li span {
+  color: var(--wd-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wd-reinvest-list input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--wd-text);
+  font: inherit;
+  font-weight: 650;
+  line-height: 1;
+  outline: none;
+}
+
+.wd-reinvest-list .wd-row-x {
+  opacity: 0;
+}
+
+.wd-reinvest-list li:hover .wd-row-x,
+.wd-reinvest-list li:focus-within .wd-row-x {
+  opacity: 1;
+}
+
+.wd-reinvest-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.wd-reinvest-list:hover .wd-reinvest-add,
+.wd-reinvest-list:focus-within .wd-reinvest-add {
+  opacity: 1;
+}
+
+.wd-reinvest-add input {
+  min-height: 34px;
+  border-bottom: 1px solid rgba(24, 28, 35, 0.16);
+}
+
+.wd-reinvest-add button,
+.wd-row-x {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--wd-secondary);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+.wd-reinvest-add button:hover,
+.wd-row-x:hover {
+  color: var(--wd-text);
+}
+
+@media (max-width: 780px) {
+  .wd-budget-head,
+  .wd-budget-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wd-budget-head {
+    display: grid;
+  }
 }
 
 .wd-all-ledger-charts .wd-pie-legend {
@@ -5372,7 +5560,7 @@ svg.wd-linechart {
   }
 }
 
-/* Final visibility contract: All is charts only; Plan is the allocation pie only. */
+/* Final visibility contract: All is charts only; Budget is one focused ledger-like desk. */
 .wd-overview > :not(.wd-all-ledger-charts) {
   display: none !important;
 }
