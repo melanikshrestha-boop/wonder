@@ -2094,6 +2094,14 @@ html body .wd strong {
   padding-right: 24px !important;
 }
 
+.wd-ledger-year-summary {
+  margin: 0 0 28px;
+}
+
+.wd-ledger-year-summary > h2 {
+  margin: 0 0 18px;
+}
+
 .wd-budget-ledger {
   max-width: 980px;
   padding-top: 0 !important;

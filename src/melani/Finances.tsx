@@ -209,14 +209,12 @@ type SortKey = "date" | "merchant" | "category" | "amount" | "kind";
 
 const NAV: { id: TabId; label: string; icon: string }[] = [
   { id: "transactions", label: "Ledger", icon: "☰" },
-  { id: "overview", label: "All", icon: "◉" },
   { id: "plan", label: "Budget", icon: "▦" },
   { id: "subscriptions", label: "Subscriptions", icon: "↻" },
   { id: "sql", label: "SQL", icon: "⌗" },
 ];
 
 const ALL_TAB_IDS: TabId[] = [
-  "overview",
   "worth",
   "transactions",
   "credit",
@@ -4084,11 +4082,14 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
               ) : null}
 
               {filterMonth === "all" && monthBooks.length > 0 ? (
-                <AllLedgerCharts
-                  rows={ledgerChartRows}
-                  scopeLabel={String(filterYear)}
-                  onCategoryDoubleClick={filterLedgerFromChart}
-                />
+                <section className="wd-ledger-year-summary" aria-label="Year summary">
+                  <h2>Okay here's the deal.</h2>
+                  <AllLedgerCharts
+                    rows={ledgerChartRows}
+                    scopeLabel={String(filterYear)}
+                    onCategoryDoubleClick={filterLedgerFromChart}
+                  />
+                </section>
               ) : null}
 
               {/* Always full list — no ···, no hide */}
