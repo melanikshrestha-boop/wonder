@@ -53,6 +53,12 @@ html {
   scroll-behavior: smooth;
 }
 
+html {
+  /* Crisper text on macOS; ignored elsewhere */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   font-family: var(--notion-serif);
   font-size: 15px;
@@ -62,6 +68,23 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Headings: even line lengths. Short UI copy: no orphan words. */
+h1,
+h2,
+h3,
+.page-title-input,
+.breadcrumb-title {
+  text-wrap: balance;
+}
+
+p,
+.block-input:not(.type-code),
+.mai-bubble,
+.slash-item-desc,
+.child-page-title {
+  text-wrap: pretty;
 }
 
 /* Force serif on every surface: chrome, menus, page, Mel, markets */
@@ -114,9 +137,33 @@ button,
 input,
 textarea {
   font-family: inherit;
-  transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
-    border-color var(--dur) var(--ease), opacity var(--dur) var(--ease),
-    box-shadow var(--dur) var(--ease);
+  /* Never transition: all — name properties so mid-interaction feels interruptible */
+  transition:
+    background var(--dur) var(--ease),
+    color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    opacity var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    transform 150ms ease-out;
+}
+
+/* Tactile press on chrome controls (not dense nav rows — those stay quiet) */
+.sidebar-icon-btn:active:not(:disabled),
+.topbar-btn:active:not(:disabled),
+.workspace-btn:active:not(:disabled),
+.sidebar-home-pill:active:not(:disabled),
+.child-page-link:active:not(:disabled),
+.more-menu button:active:not(:disabled),
+.slash-item:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* Dynamic numbers (timers, money, counts) keep stable width when digits change */
+.tabular-nums,
+[data-tabular],
+.wd-balance,
+.wonder-quote-refresh {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Scrollbars — hairline only, no pill borders / no fat rounded chrome */
@@ -347,6 +394,7 @@ html.is-sidebar-resizing {
 }
 
 .sidebar-icon-btn {
+  position: relative;
   width: 28px;
   height: 28px;
   border: none;
@@ -358,6 +406,17 @@ html.is-sidebar-resizing {
   align-items: center;
   justify-content: center;
   font-size: 14px;
+}
+
+/* Hit pad ≤ visual + neighbor gap so pads never overlap (28 + 6 gap → 34) */
+.sidebar-icon-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
 }
 
 .sidebar-icon-btn:hover {
@@ -1007,8 +1066,9 @@ html.theme-light .sidebar .sidebar-search svg {
 }
 
 .wonder-quote-refresh button {
-  width: 24px;
-  height: 24px;
+  position: relative;
+  width: 28px;
+  height: 28px;
   display: inline-grid;
   place-items: center;
   padding: 0;
@@ -1017,6 +1077,12 @@ html.theme-light .sidebar .sidebar-search svg {
   background: transparent;
   color: currentColor;
   cursor: pointer;
+}
+
+.wonder-quote-refresh button::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
 }
 
 .wonder-quote-refresh button:hover:not(:disabled) {
@@ -1057,20 +1123,21 @@ html.theme-light .sidebar .sidebar-search svg {
   z-index: 5;
 }
 
-/* Light · star · search · more — same box size, almost touching */
+/* Light · star · search · more — same box size, slight gap so hit pads don’t collide */
 .topbar-actions {
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  gap: 4px;
   flex-shrink: 0;
   margin-right: 2px;
 }
 
 .topbar-actions .topbar-btn {
-  height: 28px;
-  width: 28px;
-  min-width: 28px;
-  max-width: 28px;
+  position: relative;
+  height: 32px;
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
   padding: 0;
   margin: 0;
   font-size: 13px;
@@ -1078,6 +1145,17 @@ html.theme-light .sidebar .sidebar-search svg {
   font-weight: 500;
   letter-spacing: 0;
   border-radius: 6px;
+}
+
+/* Hit pad = visual + gap (32 + 4) so pads touch but never overlap */
+.topbar-actions .topbar-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  transform: translate(-50%, -50%);
 }
 
 /* Theme label fits same height; slightly wider for "Light"/"Dark" text only */
@@ -1091,8 +1169,8 @@ html.theme-light .sidebar .sidebar-search svg {
 }
 
 .topbar-btn {
-  height: 28px;
-  min-width: 28px;
+  height: 32px;
+  min-width: 32px;
   padding: 0 6px;
   border: none;
   background: transparent;
@@ -1109,6 +1187,11 @@ html.theme-light .sidebar .sidebar-search svg {
 .topbar-btn:hover {
   background: rgba(55, 53, 47, 0.08);
   color: var(--text);
+}
+
+.topbar-btn:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.28);
+  outline-offset: 1px;
 }
 
 
@@ -1533,6 +1616,7 @@ html.theme-light .sidebar .sidebar-search svg {
 }
 
 .block-todo-check {
+  position: relative;
   width: 16px;
   height: 16px;
   margin: 7px 4px 0 2px;
@@ -1547,6 +1631,17 @@ html.theme-light .sidebar .sidebar-search svg {
   padding: 0;
   color: #fff;
   font-size: 11px;
+}
+
+/* 16px checkbox is hard to hit — pad to ~40 without stealing the title click */
+.block-todo-check::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  transform: translate(-50%, -50%);
 }
 
 .block-todo-check.is-checked {
@@ -3495,6 +3590,56 @@ html.theme-dark {
   border-top: 0 !important;
   border-bottom: 0 !important;
   box-shadow: none !important;
+}
+
+/* ═══════════════════════════════════════════
+   Feel-better surfaces — images + motion restraint
+   ═══════════════════════════════════════════ */
+
+/* Neutral inset outline on content images (pure white ring on dark canvas) */
+.main-scroll img:not([class*="icon"]):not(.min-icon),
+.page-content img:not([class*="icon"]),
+.bl img:not([class*="icon"]),
+.wd img:not([class*="icon"]),
+.wardrobe img:not([class*="icon"]),
+.fx img:not([class*="icon"]) {
+  outline: 1px solid oklch(1 0 0 / 0.1);
+  outline-offset: -1px;
+}
+
+html.theme-light .main-scroll img:not([class*="icon"]):not(.min-icon),
+html.theme-light .page-content img:not([class*="icon"]),
+html.theme-light .bl img:not([class*="icon"]),
+html.theme-light .wd img:not([class*="icon"]),
+html.theme-light .wardrobe img:not([class*="icon"]),
+html.theme-light .fx img:not([class*="icon"]) {
+  outline: 1px solid oklch(0 0 0 / 0.1);
+}
+
+/* Reduced motion: keep color/opacity cues, drop transform choreography */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .sidebar-icon-btn:active:not(:disabled),
+  .topbar-btn:active:not(:disabled),
+  .workspace-btn:active:not(:disabled),
+  .sidebar-home-pill:active:not(:disabled),
+  .child-page-link:active:not(:disabled),
+  .more-menu button:active:not(:disabled),
+  .slash-item:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 /* ═══════════════════════════════════════════

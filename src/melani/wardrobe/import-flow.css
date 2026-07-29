@@ -102,7 +102,8 @@
 .import-tray__button:focus-visible,
 .import-icon-button:hover,
 .import-icon-button:focus-visible { background: rgba(255, 255, 255, 0.12); outline: none; }
-.import-tray__button:active, .import-icon-button:active { transform: scale(0.94); }
+/* 0.96 only — anything below 0.95 feels exaggerated on press */
+.import-tray__button:active, .import-icon-button:active { transform: scale(0.96); }
 
 .import-tray__actions {
   display: flex;
