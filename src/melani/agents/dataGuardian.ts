@@ -391,7 +391,23 @@ export async function hydrateFromDisk(): Promise<{ merged: number }> {
           }
         }
         let next: unknown = body.value;
+        // Never accept empty object/array from disk as truth over local data
         if (
+          body.value &&
+          typeof body.value === "object" &&
+          !Array.isArray(body.value) &&
+          Object.keys(body.value as object).length === 0 &&
+          local != null
+        ) {
+          next = local;
+        } else if (
+          Array.isArray(body.value) &&
+          body.value.length === 0 &&
+          Array.isArray(local) &&
+          local.length > 0
+        ) {
+          next = local;
+        } else if (
           local &&
           typeof local === "object" &&
           !Array.isArray(local) &&
