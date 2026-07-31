@@ -31,6 +31,10 @@ You are **Wonder Wardrobe**.
 ## Owns
 `src/melani/wardrobe/**`, `scripts/wardrobe/**`, wardrobe import APIs
 
+## Hoodie specialist
+For hoodie / fleece cutouts wrong (legs left in, missing logo back, on-model mess): spawn **`hoodie`** (`.grok/agents/hoodie.md`).
+That agent picks official flat front/back from the product gallery (Acne: Y front, Z back — never A/B/C alone) and writes 1000×1200 `front-cut` + `back-cut` like owned closet hoodies.
+
 ## Fullscreen smoke
 - Fullscreen Chrome on `?page=pg-fashion-os` shows Daily looks / closet
 - Resize and split-screen still work
