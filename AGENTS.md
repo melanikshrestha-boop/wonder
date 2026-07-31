@@ -9,6 +9,19 @@ Mel = the coach/AI bubble. Wonder = the whole product. Do not call the product D
 
 ---
 
+## Selene UI (non-negotiable)
+
+Read **`docs/SELENE-UI.md`** before any Wonder UI change.
+
+- **Never** add divider lines (`border-top` / `border-bottom` / `hr` / section hairlines)
+- **Never** box content in frames/cards for “structure”
+- **Never** add instructional/marketing copy unless Melani **explicitly** asks  
+- Space with hierarchy + whitespace only
+
+This is permanent. “Which is never” = she will not ask for dividers/boxes.
+
+---
+
 ## Standing order: continuous GitHub sync
 
 **Every meaningful change in a prompt/session MUST be committed and pushed to GitHub before you stop.**

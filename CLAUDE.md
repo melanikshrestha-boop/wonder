@@ -28,3 +28,12 @@ Owner may switch mid-day from Claude Code to Grok (or the reverse). Unpushed wor
 ## Naming
 
 Wonder = product. Mel = coach. Not Dr. Melani for the product name.
+
+## Selene UI (Wonder)
+
+See **`docs/SELENE-UI.md`**.
+
+- No divider lines. Ever (unless Melani orders them — she won’t).  
+- No boxing content.  
+- No helper/marketing blurbs unless she asks.  
+- Fix density with spacing, not chrome.

@@ -119,20 +119,20 @@ button { font: inherit; }
   margin: 0; /* no air under the collection tabs */
   border: 0;
   border-radius: 0;
-  padding: 10px 0 0; /* tiny breath under the divider only */
+  padding: 8px 0 0;
   overflow-x: auto;
   background: transparent;
   box-shadow: none;
   scrollbar-width: none;
 }
 
-/* Owned · Want · Sell · Shop — divider line is the bottom edge of this row */
+/* Owned · Want · Sell · Shop — spacing only (Selene: no divider lines) */
 .collection-nav {
   display: flex;
   gap: 6px;
   margin: 20px 0 0;
-  padding: 0 0 12px;
-  border-bottom: 1px solid rgba(26, 24, 21, .14);
+  padding: 0 0 10px;
+  border-bottom: 0;
 }
 .collection-nav button {
   border: 0;
@@ -156,7 +156,7 @@ button { font: inherit; }
   background: #1d1a17;
   font-weight: 650;
 }
-.resale-field { margin: 22px 0 0; padding: 16px 0 0; border: 0; border-top: 1px solid rgba(25,22,18,.12); }
+.resale-field { margin: 22px 0 0; padding: 12px 0 0; border: 0; border-top: 0; }
 .resale-field legend { padding: 0; color: #777169; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; }
 .resale-toggle { display: flex; align-items: center; gap: 9px; margin-top: 10px; font-size: 14px; cursor: pointer; }
 .resale-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 13px; }
@@ -2117,3 +2117,56 @@ button.gallery-item .gallery-item-retail {
 .g360-error { color: #b91c1c; }
 
 /* 360 opens immediately in the popup — no toggle step */
+
+/* ═══════════════════════════════════════════════════════════
+   SELENE UI — no dividers · no content boxes (Wonder wardrobe)
+   ═══════════════════════════════════════════════════════════ */
+.app-shell,
+.app-shell *,
+.gallery-pane,
+.gallery-pane *,
+.gallery-section,
+.collection-nav,
+.category-nav,
+.gallery-header,
+.detail-pane,
+.detail-pane *,
+.wishlist-bridge,
+.wishlist-bridge * {
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+  border-top-style: none !important;
+  border-bottom-style: none !important;
+}
+
+/* Kill framed chrome; keep real form controls usable */
+.collection-nav,
+.gallery-section,
+.gallery-section + .gallery-section,
+.wishlist-bridge,
+.gallery-item,
+.detail-pane,
+.import-card,
+.import-progress {
+  box-shadow: none !important;
+}
+
+/* No full content boxes — detail panels stay open field */
+.detail-pane,
+.wishlist-bridge,
+.import-popover {
+  border-left-width: 0 !important;
+  border-right-width: 0 !important;
+  border-color: transparent !important;
+}
+
+/* Inputs may keep a quiet field edge only */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  border-top-width: 1px !important;
+  border-bottom-width: 1px !important;
+  border-left-width: 1px !important;
+  border-right-width: 1px !important;
+  border-style: solid !important;
+}
