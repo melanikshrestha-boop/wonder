@@ -220,6 +220,26 @@ export const PRODUCT_LINKS: Record<string, ProductLink> = {
     url: amz("B081KL2QYJ"),
     priceUsd: 12,
   },
+  /** Bryan Johnson morning–style SA cleanser (wishlist / restock) */
+  "CeraVe Acne Control Cleanser": {
+    name: "CeraVe Acne Control Cleanser (2% Salicylic Acid)",
+    store: "amazon",
+    url: amz("B0C7JJG6BB"),
+    altStore: "brand",
+    altUrl:
+      "https://www.cerave.com/skincare/cleansers/acne-salicylic-acid-cleanser",
+    note: "16 fl oz value size · ceramides + niacinamide + hectorite clay",
+    priceUsd: 20,
+  },
+  "CeraVe Acne Control Cleanser (2% Salicylic Acid)": {
+    name: "CeraVe Acne Control Cleanser (2% Salicylic Acid)",
+    store: "amazon",
+    url: amz("B0C7JJG6BB"),
+    altStore: "brand",
+    altUrl:
+      "https://www.cerave.com/skincare/cleansers/acne-salicylic-acid-cleanser",
+    priceUsd: 20,
+  },
   "Soft Services Comfort Cleanse": {
     name: "Soft Services Comfort Cleanse",
     store: "sephora",

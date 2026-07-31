@@ -68,8 +68,16 @@ function routineCostTotal(secs: RoutineSection[]): {
   return { total, priced: lines.length, unpriced, lines };
 }
 
+/** Extra AM products Melani wants (not yet daily steps — restock / wishlist) */
+const AM_WISHLIST_PRODUCTS = [
+  "CeraVe Acne Control Cleanser",
+] as const;
+
 /** AM skincare products only (for restock picker) */
-const AM_SKIN_PRODUCTS = titlesFromSections(AM_SECTIONS);
+const AM_SKIN_PRODUCTS = [
+  ...titlesFromSections(AM_SECTIONS),
+  ...AM_WISHLIST_PRODUCTS,
+].sort((a, b) => a.localeCompare(b));
 
 /** PM skincare products (all PM night types, de-duped) */
 const PM_SKIN_PRODUCTS = (() => {
@@ -90,16 +98,29 @@ type RestockItem = {
 };
 
 function loadRestock(): RestockItem[] {
+  let items: RestockItem[] = [];
   try {
     const raw = localStorage.getItem(RESTOCK_KEY);
     if (raw) {
       const arr = JSON.parse(raw) as RestockItem[];
-      if (Array.isArray(arr)) return arr;
+      if (Array.isArray(arr)) items = arr;
     }
   } catch {
     /* ignore */
   }
-  return [];
+  // Seed skincare wishlist products (e.g. CeraVe SA cleanser) so they appear under Products & restock
+  let changed = false;
+  for (const title of AM_WISHLIST_PRODUCTS) {
+    if (!items.some((x) => x.title.toLowerCase() === title.toLowerCase())) {
+      items = [
+        ...items,
+        { id: newRestockId(), title, source: "am" },
+      ];
+      changed = true;
+    }
+  }
+  if (changed) saveRestock(items);
+  return items;
 }
 
 function saveRestock(items: RestockItem[]) {
