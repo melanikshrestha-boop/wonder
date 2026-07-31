@@ -275,7 +275,7 @@ export default function App() {
             "pg-library": "Bookshelf",
             "pg-finance": "Finances",
             "pg-math": "Content",
-            "pg-failures": "Failures",
+
             "pg-agent-care": "Care Concierge",
             "pg-fashion-os": "Wardrobe",
             "pg-data": "My Data",

@@ -129,6 +129,10 @@ const PURGE_PAGE_IDS = new Set([
   "pg-focus",
   "pg-screentime",
   "pg-screen-time",
+  // Failures desk — permanently deleted
+  "pg-failures",
+  "pg-failure",
+  "pg-learn-failures",
   // Operator + paper trading desks — permanently deleted
   "pg-operator",
   "pg-empire",
@@ -373,15 +377,7 @@ function ensureLifePages(ws: Workspace): Workspace {
       : p
   );
 
-  // Learn — Failures desk (own success metrics from failure log)
-  ensurePage("pg-failures", "Failures", "journal", null, [
-    newBlock(
-      "paragraph",
-      "Log misses. Mark recoveries. Success score is computed from your failure loop — not fake perfection."
-    ),
-  ]);
-
-  // Permanently remove Operator + paper trading + World Monitor (no re-create)
+  // Permanently remove Operator + paper trading + World Monitor + Failures (no re-create)
   const PERMANENTLY_DELETED = new Set([
     "pg-operator",
     "pg-empire",
@@ -391,6 +387,9 @@ function ensureLifePages(ws: Workspace): Workspace {
     "pg-day-trade",
     "pg-daytrade",
     "pg-world-monitor",
+    "pg-failures",
+    "pg-failure",
+    "pg-learn-failures",
   ]);
   pages = pages.filter((p) => !PERMANENTLY_DELETED.has(p.id));
 
@@ -465,6 +464,13 @@ function ensureLifePages(ws: Workspace): Workspace {
     activePageId === "pg-screen-time"
   ) {
     activePageId = "pg-sleep";
+  }
+  if (
+    activePageId === "pg-failures" ||
+    activePageId === "pg-failure" ||
+    activePageId === "pg-learn-failures"
+  ) {
+    activePageId = "pg-library";
   }
 
   return { ...ws, pages, activePageId };

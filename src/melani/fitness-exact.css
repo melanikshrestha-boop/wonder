@@ -2351,3 +2351,21 @@ html.theme-light .whoop-bar-link:hover:not(:disabled) {
 html.theme-light .fx-page .fx-bm-graph-goal {
   color: rgba(26, 28, 34, 0.5);
 }
+
+/* Bowel graphs — sleep-style collapsible footer */
+.fx-bm-logs-footer {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.fx-bm-nights-toggle {
+  /* reuse .fx-nights-toggle look; ensure it’s hard to miss */
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.fx-bm-logs-panel {
+  width: 100%;
+  margin-top: 4px;
+}

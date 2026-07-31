@@ -28,7 +28,6 @@ import {
   isFitnessPage,
   isHabitsPage,
   isHygienePage,
-  isFailuresPage,
   isContentEmpirePage,
   isShoppingAgentPage,
   isBodyOsPage,
@@ -74,11 +73,6 @@ const ContentEmpire = lazy(async () => {
   const m = await import("./ContentEmpire");
   return { default: m.ContentEmpire };
 });
-const FailuresLab = lazy(async () => {
-  const m = await import("./FailuresLab");
-  return { default: m.FailuresLab };
-});
-// Focus desk loads inside FitnessExact (Sleep · Meals · Gym · Focus)
 const CycleTracker = lazy(async () => {
   const m = await import("./CycleTracker");
   return { default: m.CycleTracker };
@@ -414,7 +408,6 @@ export function isMelaniRichPage(pageId: string): boolean {
     isFinancesPage(pageId) ||
     isHabitsPage(pageId) ||
     isContentEmpirePage(pageId) ||
-    isFailuresPage(pageId) ||
     isBodyOsPage(pageId) ||
     pageId === "pg-data" ||
     pageId === "pg-my-data"
@@ -514,14 +507,6 @@ export function MelaniRichPage({
     return (
       <Suspense fallback={<DeskFallback label="Loading Content" />}>
         <ContentEmpire />
-      </Suspense>
-    );
-  }
-
-  if (isFailuresPage(pageId)) {
-    return (
-      <Suspense fallback={<DeskFallback label="Loading Failures" />}>
-        <FailuresLab />
       </Suspense>
     );
   }

@@ -94,8 +94,6 @@ import {
   tryMetricsLabCommand,
   run_experiments,
   tryExperimentsLabCommand,
-  run_failures,
-  tryFailuresCommand,
 } from "./melTools";
 import {
   formatLocalResearchReply,
@@ -812,12 +810,6 @@ function planAndExecute(text: string, pageId?: string, pageTitle?: string): MelT
     /\b(?:teach me|explain)\b.*\b(?:options?|trading|iv crush|greeks|position siz)/i.test(low)
   ) {
     addTool(results, trading_knowledge_brief(q));
-  }
-
-  // Failures desk — own success metrics from failure log
-  if (tryFailuresCommand(q)) {
-    addTool(results, run_failures(q));
-    return results;
   }
 
   // YouTube / content backbone (views, retention seconds, findings)

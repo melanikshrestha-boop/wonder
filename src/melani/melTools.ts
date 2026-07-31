@@ -52,11 +52,6 @@ import {
 import { tryContentCommand } from "./melContent";
 import { tryFinanceModelCommand } from "./melFinanceModel";
 import {
-  addFailure,
-  formatFailuresBrief,
-  type FailureDomain,
-} from "./failuresStore";
-import {
   appendLifeLog,
   applyGoalCommand,
   applyPinCommand,
@@ -163,11 +158,7 @@ const PAGE_ALIASES: Array<{ pattern: RegExp; pageId: string; title: string }> = 
     pageId: "pg-math",
     title: "Math Lab",
   },
-  {
-    pattern: /^(?:my\s+)?failures?$/i,
-    pageId: "pg-failures",
-    title: "Failures",
-  },
+  // Failures desk permanently removed
   // Weather is Mel-only (no page) — do not navigate to a Weather page
   { pattern: /^(?:my\s+)?(?:wardrobe|closet|clothes)$/i, pageId: "pg-fashion-os", title: "Wardrobe" },
   { pattern: /^(?:style\s+shopper|shop\s+clothes|fashion\s+shop)$/i, pageId: "pg-fashion-os", title: "Style Shopper" },
@@ -179,10 +170,11 @@ const PAGE_ALIASES: Array<{ pattern: RegExp; pageId: string; title: string }> = 
   { pattern: /^(?:my\s+)?(?:meals?|food|nutrition|macros?|calories|cals|food log|what i ate)$/i, pageId: "pg-meals", title: "Meals" },
   { pattern: /^(?:my\s+)?(?:sleep|brain fog)$/i, pageId: "pg-sleep", title: "Sleep" },
   { pattern: /^(?:my\s+)?(?:gym|workout|training)$/i, pageId: "pg-gym", title: "Gym" },
+  // Focus / Screen Time permanently removed — open Sleep instead
   {
     pattern: /^(?:my\s+)?(?:focus|screen\s*time|screentime)$/i,
-    pageId: "pg-focus",
-    title: "Focus",
+    pageId: "pg-sleep",
+    title: "Sleep",
   },
   {
     pattern: /^(?:my\s+)?(?:fitness|bowel|bowel movement|bm tracker|poop tracker)$/i,
@@ -729,59 +721,6 @@ export function run_experiments(query = ""): string {
 
 export function tryExperimentsLabCommand(raw: string): string | null {
   return tryExperimentCommand(raw.trim());
-}
-
-/**
- * Failures desk — log miss / show success metrics.
- * Mel: "log failure shipped broken UI" · "failures" · "success score"
- */
-export function run_failures(query = ""): string {
-  const q = query.trim();
-  if (!q || /^(status|score|brief|list)?$/i.test(q)) {
-    return result("run_failures", formatFailuresBrief(), { mode: "brief" });
-  }
-  // log failure: title | lesson optional after " — " or " | "
-  const m = q.match(
-    /^(?:log\s+)?(?:failure|fail|miss)\s*:?\s*(.+)$/i
-  );
-  if (m?.[1]) {
-    let rest = m[1].trim();
-    let domain: FailureDomain = "other";
-    const dom = rest.match(
-      /^(product|engineering|health|money|people|focus|other)\s*[:\-–]\s*(.+)$/i
-    );
-    if (dom) {
-      domain = dom[1]!.toLowerCase() as FailureDomain;
-      rest = dom[2]!.trim();
-    }
-    let title = rest;
-    let lesson = "";
-    const split = rest.split(/\s+[—|]\s+|;\s*lesson:\s*/i);
-    if (split.length >= 2) {
-      title = split[0]!.trim();
-      lesson = split.slice(1).join(" ").trim();
-    }
-    const entry = addFailure({ title, lesson, domain });
-    return result(
-      "run_failures",
-      `Logged failure [${entry.domain} s${entry.severity}]: ${entry.title}${
-        entry.lesson ? `\nLesson: ${entry.lesson}` : ""
-      }\n\n${formatFailuresBrief()}`,
-      { entry }
-    );
-  }
-  return result("run_failures", formatFailuresBrief(), { mode: "brief" });
-}
-
-export function tryFailuresCommand(raw: string): string | null {
-  const t = raw.trim();
-  if (
-    /^(?:failures?|success\s+score|failure\s+(?:log|status|brief))$/i.test(t) ||
-    /^(?:log\s+)?(?:failure|fail|miss)\b/i.test(t)
-  ) {
-    return t;
-  }
-  return null;
 }
 
 export function weekly_intelligence_digest(): string {

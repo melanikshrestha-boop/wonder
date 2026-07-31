@@ -91,10 +91,3 @@ export function isContentEmpirePage(pageId: string): boolean {
   );
 }
 
-export function isFailuresPage(pageId: string): boolean {
-  return (
-    pageId === "pg-failures" ||
-    pageId === "pg-failure" ||
-    pageId === "pg-learn-failures"
-  );
-}
