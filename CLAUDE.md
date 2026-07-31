@@ -19,9 +19,11 @@ Owner may switch mid-day from Claude Code to Grok (or the reverse). Unpushed wor
 - Local: http://127.0.0.1:5173/ in Safari — ALWAYS this exact address
   (`localhost:5173` is a different browser storage origin and shows an
   empty workspace; user data lives under 127.0.0.1)
-- Owner's Mac clone lives in a folder named **`notion-like`** (NOT
-  "wonder") — when giving the owner terminal steps, never assume
-  `~/wonder`; the safe start command is `cd ~/notion-like && npm run dev`
+- **Always-on:** `npm run wonder:install` (LaunchAgent KeepAlive). Prefer
+  that over one-off `npm run dev` so the site does not die mid-day.
+- Base widget: `http://127.0.0.1:5173/?widget=1` (Dock / Home Screen)
+- Clones may live as **`~/wonder`** or **`~/notion-like`** — start from the
+  active clone; Keeper scripts resolve their own root.
 
 ## Naming
 

@@ -761,7 +761,7 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Search is the only control above Agents. */}
+      {/* Search + Base widget (everyday tracking, Dock / phone) */}
       <div className="sidebar-home-row">
         <button
           type="button"
@@ -770,6 +770,21 @@ export function Sidebar({
           onClick={onOpenSearch}
         >
           <MinimalIcon name="search" size={15} />
+        </button>
+        <button
+          type="button"
+          className="sidebar-tool-btn sidebar-base-btn"
+          title="Base today — everyday tracking widget"
+          onClick={() => {
+            const url = new URL(window.location.href);
+            url.searchParams.set("widget", "1");
+            url.searchParams.delete("page");
+            window.location.href = url.toString();
+          }}
+        >
+          <span aria-hidden style={{ fontSize: 13, lineHeight: 1 }}>
+            ◆
+          </span>
         </button>
       </div>
 

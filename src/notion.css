@@ -14,15 +14,24 @@
 
   /* One soft black canvas */
   --bg: #050505;
-  /* Frosted glass sidebar — translucent fill + blur tokens */
-  --sidebar-bg: rgba(8, 8, 12, 0.42);
+  /* Frosted glass sidebar — more translucent + playful prism tokens */
+  --sidebar-bg: rgba(12, 14, 22, 0.28);
   --sidebar-bg-solid: #0a0a0c; /* fallback when blur unsupported */
-  --sidebar-blur: 32px;
-  --sidebar-saturate: 1.55;
-  --sidebar-edge: rgba(255, 255, 255, 0.1);
-  --sidebar-glow: rgba(140, 170, 220, 0.07);
-  --sidebar-hover: rgba(255, 255, 255, 0.07);
-  --sidebar-active: rgba(255, 255, 255, 0.12);
+  --sidebar-blur: 44px;
+  --sidebar-saturate: 1.85;
+  --sidebar-edge: rgba(255, 255, 255, 0.14);
+  --sidebar-glow: rgba(160, 190, 255, 0.14);
+  --sidebar-glow-2: rgba(200, 160, 255, 0.1);
+  --sidebar-glow-3: rgba(255, 180, 140, 0.06);
+  --sidebar-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-active: rgba(255, 255, 255, 0.16);
+  --sidebar-prism: linear-gradient(
+    165deg,
+    rgba(168, 196, 240, 0.55) 0%,
+    rgba(196, 168, 240, 0.35) 40%,
+    rgba(240, 196, 168, 0.25) 70%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
   --text: rgba(255, 255, 255, 0.94);
   --text-muted: rgba(255, 255, 255, 0.58);
   --text-faint: rgba(255, 255, 255, 0.38);
@@ -224,13 +233,18 @@ html.theme-light *::-webkit-scrollbar-thumb:hover {
   /* Ambient field behind glass sidebar so frost reads as real translucency */
   background:
     radial-gradient(
-      ellipse 70% 55% at 0% 12%,
+      ellipse 75% 58% at 0% 10%,
       var(--sidebar-glow),
       transparent 58%
     ),
     radial-gradient(
-      ellipse 50% 40% at 8% 88%,
-      rgba(90, 70, 140, 0.05),
+      ellipse 55% 42% at 6% 78%,
+      var(--sidebar-glow-2),
+      transparent 52%
+    ),
+    radial-gradient(
+      ellipse 40% 30% at 12% 40%,
+      var(--sidebar-glow-3),
       transparent 50%
     ),
     var(--bg);
@@ -272,7 +286,7 @@ html.theme-light *::-webkit-scrollbar-thumb:hover {
   }
 }
 
-/* ── Sidebar — translucent frosted glass ── */
+/* ── Sidebar — translucent frosted glass (playful prism edge) ── */
 .sidebar {
   --sb-inset: 14px; /* one left edge for everything LTR */
   position: relative; /* for the drag handle */
@@ -281,16 +295,24 @@ html.theme-light *::-webkit-scrollbar-thumb:hover {
   min-width: var(--sidebar-w);
   max-width: var(--sidebar-w);
   height: 100%;
-  background: var(--sidebar-bg);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(255, 255, 255, 0.02) 28%,
+      rgba(255, 255, 255, 0.01) 100%
+    ),
+    var(--sidebar-bg);
   /* Frost the ambient field (desktop) or page content (drawer) */
   -webkit-backdrop-filter: blur(var(--sidebar-blur)) saturate(var(--sidebar-saturate));
   backdrop-filter: blur(var(--sidebar-blur)) saturate(var(--sidebar-saturate));
   border-right: 1px solid var(--sidebar-edge);
   /* Soft lift + inner glass highlight — no solid slab */
   box-shadow:
-    inset -1px 0 0 rgba(255, 255, 255, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    10px 0 36px rgba(0, 0, 0, 0.22);
+    inset -1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -40px 80px rgba(140, 170, 255, 0.04),
+    12px 0 48px rgba(0, 0, 0, 0.28);
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -312,6 +334,69 @@ html.theme-light *::-webkit-scrollbar-thumb:hover {
   box-sizing: border-box;
   font-family: var(--notion-serif);
   isolation: isolate;
+}
+
+/* Soft sheen that drifts — glass that feels alive, not a static slab */
+.sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.045) 38%,
+    rgba(180, 200, 255, 0.06) 48%,
+    transparent 62%
+  );
+  background-size: 220% 100%;
+  animation: wonder-glass-sheen 14s ease-in-out infinite;
+  opacity: 0.85;
+}
+
+/* Prismatic right edge — fun glass lip without breaking open/close */
+.sidebar::after {
+  content: "";
+  position: absolute;
+  top: 8%;
+  right: 0;
+  bottom: 8%;
+  width: 2px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 2;
+  background: var(--sidebar-prism);
+  opacity: 0.75;
+  box-shadow: 0 0 18px rgba(168, 196, 240, 0.25);
+}
+
+@keyframes wonder-glass-sheen {
+  0%,
+  100% {
+    background-position: 100% 0;
+  }
+  50% {
+    background-position: 0% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar::before {
+    animation: none;
+    opacity: 0.35;
+  }
+}
+
+/* Keep nav content above the sheen layer */
+.sidebar > * {
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar.is-closed::before,
+.sidebar.is-closed::after {
+  opacity: 0;
 }
 
 /* No backdrop-filter support → readable solid glass */

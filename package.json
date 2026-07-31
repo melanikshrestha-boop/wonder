@@ -31,7 +31,13 @@
     "screen": "python3 scripts/screentime.py",
     "screen:watch": "python3 scripts/screentime.py --watch --disk --save --phone",
     "screen:week": "python3 scripts/screentime.py --days 7 --disk",
-    "screen:export": "python3 scripts/screentime.py --export --days 30"
+    "screen:export": "python3 scripts/screentime.py --export --days 30",
+    "wonder:status": "bash scripts/wonder-keeper.sh status",
+    "wonder:start": "bash scripts/wonder-keeper.sh start",
+    "wonder:stop": "bash scripts/wonder-keeper.sh stop",
+    "wonder:open": "bash scripts/wonder-keeper.sh open",
+    "wonder:install": "bash scripts/wonder-keeper.sh install",
+    "wonder:uninstall": "bash scripts/wonder-keeper.sh uninstall"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.wonder.keeper</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/melanishrestha/wonder/scripts/wonder-keeper.sh</string>
+    <string>serve</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/melanishrestha/wonder</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>WONDER_PORT</key>
+    <string>5173</string>
+    <key>HOME</key>
+    <string>/Users/melanishrestha</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/melanishrestha/.wonder/logs/launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/melanishrestha/.wonder/logs/launchd.err.log</string>
+</dict>
+</plist>

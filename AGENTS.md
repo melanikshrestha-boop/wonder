@@ -58,6 +58,23 @@ npm run dev
 open -a Safari "http://127.0.0.1:5173/"
 ```
 
+### Always-on (Wonder Keeper)
+
+Vite dies when a terminal closes or the process crashes. Install the LaunchAgent once:
+
+```bash
+npm run wonder:install   # login + KeepAlive health loop
+npm run wonder:status
+npm run wonder:open      # ensure up + Safari
+```
+
+- Health URL: **http://127.0.0.1:5173/** (never `localhost` — different storage origin)
+- Base widget: **http://127.0.0.1:5173/?widget=1**
+- Phone (same Wi‑Fi): `http://LAN_IP:5173/` (see `wonder:status`)
+- Logs: `~/.wonder/logs/` · status JSON: `~/.wonder/status.json`
+
+Safari → Share → **Add to Dock** (Mac) or **Add to Home Screen** (iPhone) for app-like use.
+
 Production build (static UI only — Vite APIs/bridges are local-dev):
 
 ```bash
