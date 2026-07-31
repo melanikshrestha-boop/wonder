@@ -262,7 +262,14 @@ export function buildItemProfile(item, operational = {}, policyInput) {
   const formal = FORMAL_WORDS.test(text) || kind === "dress";
   const cameraSafe = !CAMERA_RISK_WORDS.test(text) && !isJersey && color.saturation < 0.88 && color.lightness > 0.08 && color.lightness < 0.93;
   const warmthBase = kind === "jacket" ? 0.82 : kind === "bottom" ? 0.48 : kind === "dress" ? 0.42 : kind === "top" ? 0.35 : 0.2;
-  const warmth = clamp(warmthBase + (/\b(wool|fleece|puffer|thermal|heavy)\b/i.test(text) ? 0.18 : 0) - (/\b(linen|mesh|sleeveless|short)\b/i.test(text) ? 0.15 : 0));
+  // Hoodies/fleece are warm layers; basic tees are light — weather scoring must feel this.
+  const warmth = clamp(
+    warmthBase
+    + (isHoodie ? 0.32 : 0)
+    + (isBasicTee ? -0.1 : 0)
+    + (/\b(wool|fleece|puffer|thermal|heavy|sweatshirt)\b/i.test(text) ? 0.18 : 0)
+    - (/\b(linen|mesh|sleeveless|short)\b/i.test(text) ? 0.15 : 0),
+  );
   const material = scoreMaterialQuality(item.fabric || item.composition, item, policy);
   const fit = detectFit(item);
   const metadataSignals = [item.name, item.part, item.color, item.image, (item.tags || []).length > 0, item.intelligence?.visualHash, item.fabric || item.composition].filter(Boolean).length;
@@ -378,12 +385,74 @@ function modeScore(items, mode) {
   return Math.min(100, 68 + (comfort * 22) + (statementCount <= 1 ? 10 : 0));
 }
 
+/**
+ * Heavy warm layers (hoodies, fleece, coats) — wrong on a hot clear day.
+ * Soft average-warmth math alone is not enough: a hoodie can still win on taste/DNA.
+ */
+function isHeavyWarmLayer(item) {
+  if (!item) return false;
+  if (item.traits?.isHoodie) return true;
+  if (item.kind === "jacket") return true;
+  const text = itemText(item);
+  return /\b(sweatshirt|crewneck|fleece|hoodie|puffer|parka|coat|wool coat|thermal|heavy knit|zip.?up)\b/i.test(text);
+}
+
+/** Light tops that belong on hot days (tees, tanks, linen — not hoodies). */
+function isHotWeatherLightTop(item) {
+  if (!item || item.kind !== "top") return false;
+  if (item.traits?.isHoodie || isHeavyWarmLayer(item)) return false;
+  if (item.traits?.isBasicTee) return true;
+  const text = itemText(item);
+  return /\b(tee|t-shirt|tshirt|tank|linen|mesh|sleeveless|shirt|polo)\b/i.test(text);
+}
+
+/**
+ * Hard climate blocks — scoring cannot soft-rank past these.
+ * Hot (≥78°F): no hoodies / fleece / jackets. Warm (≥72°F): no hoodies.
+ * Rain does not re-enable a hoodie at 89°; that is still a bad call.
+ */
+function isWeatherBlocked(item, temperatureF, rain = false) {
+  const t = Number(temperatureF);
+  if (!Number.isFinite(t) || !item) return false;
+  if (t >= 78) {
+    if (item.traits?.isHoodie) return true;
+    if (item.kind === "jacket") return true;
+    if (item.kind === "top" && isHeavyWarmLayer(item)) return true;
+  }
+  // Warm but not scorching — hoodie still wrong for outdoor NYC daytime
+  if (t >= 72 && item.traits?.isHoodie) return true;
+  // Very hot: also skip heavy sweat bottoms when lighter bottoms exist (handled via soft score)
+  void rain;
+  return false;
+}
+
 function weatherScore(items, temperatureF, rain) {
-  const averageWarmth = items.reduce((sum, item) => sum + item.traits.warmth, 0) / items.length;
+  if (!items.length) return 50;
+  // Absolute floor when a hard climate rule is violated — look must not win.
+  if (items.some((item) => isWeatherBlocked(item, temperatureF, rain))) {
+    return 3;
+  }
+  const averageWarmth = items.reduce((sum, item) => sum + (item.traits?.warmth ?? 0.4), 0) / items.length;
   const desiredWarmth = clamp((72 - temperatureF) / 48 + 0.28);
-  const temperatureScore = 100 - Math.abs(averageWarmth - desiredWarmth) * 90;
+  let temperatureScore = 100 - Math.abs(averageWarmth - desiredWarmth) * 90;
+  // Hot day: reward light tops, crush residual heavy warmth
+  if (temperatureF >= 78) {
+    const tops = items.filter((item) => item.kind === "top");
+    if (tops.length && tops.every((top) => isHotWeatherLightTop(top))) {
+      temperatureScore = Math.min(100, temperatureScore + 22);
+    }
+    if (items.some((item) => (item.traits?.warmth ?? 0) >= 0.6)) {
+      temperatureScore = Math.max(0, temperatureScore - 35);
+    }
+  }
+  // Cold day: reward outer layers / hoodies when present
+  if (temperatureF <= 50) {
+    if (items.some((item) => item.kind === "jacket" || item.traits?.isHoodie)) {
+      temperatureScore = Math.min(100, temperatureScore + 18);
+    }
+  }
   const rainScore = rain ? (items.some((item) => item.traits.rainSafe) ? 100 : 54) : 100;
-  return (temperatureScore * 0.72) + (rainScore * 0.28);
+  return clamp((temperatureScore * 0.72) + (rainScore * 0.28), 0, 100);
 }
 
 function rotationScore(items, now = Date.now()) {
@@ -434,13 +503,17 @@ function scoreLook(items, context, state = {}, inspoScore = null, tasteMeta = nu
   const minimal = minimalLookScore(items, policy);
   const fitPenalty = fitLookPenalty(items, policy);
   const materialVeto = items.some((item) => item.traits?.materialVeto);
+  const climateVeto = items.some((item) => isWeatherBlocked(item, context.temperatureF, context.rain));
   const inspo = Number.isFinite(Number(inspoScore)) ? Number(inspoScore) : 72;
   const taste = Number.isFinite(Number(tasteMeta?.score))
     ? Number(tasteMeta.score)
     : fashionTasteScore(items, context.mode, context.inspoVibes || []).score;
   const hasInspo = Boolean(context.hasInspo);
+  // Extreme heat/cold: weather must outrank DNA hoodie boosts
+  const extremeClimate = context.temperatureF >= 78 || context.temperatureF <= 48;
   // Taste knowledge dominates ranking — color math is secondary support
-  const tasteWeight = 0.28;
+  const tasteWeight = extremeClimate ? 0.22 : 0.28;
+  const weatherWeight = extremeClimate ? 0.18 : 0.08;
   const inspoWeight = hasInspo ? 0.14 : 0;
   const colorWeight = hasInspo ? 0.06 : 0.08;
   const qualityWeight = 0.08;
@@ -448,7 +521,7 @@ function scoreLook(items, context, state = {}, inspoScore = null, tasteMeta = nu
   let total = (completeBase ? 12 : 0)
     + (color * colorWeight)
     + (mode * modeWeight)
-    + (weather * 0.08)
+    + (weather * weatherWeight)
     + (rotation * 0.05)
     + (preference * 0.06)
     + (availability * 0.04)
@@ -458,6 +531,8 @@ function scoreLook(items, context, state = {}, inspoScore = null, tasteMeta = nu
     + (inspo * inspoWeight)
     - fitPenalty * 0.08;
   if (materialVeto) total -= 18;
+  // Hard climate veto: hoodie at 89° must never beat a tee
+  if (climateVeto) total = Math.min(total, 18);
   // Absolute floor crush for jersey+sweats / anti-taste in everyday
   if ((context.mode === "everyday" || context.mode === "build") && taste < 45) {
     total = Math.min(total, 48);
@@ -499,6 +574,15 @@ function explainLook(items, context, score, inspoReasons = [], tasteReasons = []
   }
   if (context.rain && !items.some((item) => item.traits.rainSafe)) {
     reasons.push("No rain-safe piece is logged — protect the look or add an outer layer.");
+  }
+  if (context.temperatureF >= 78) {
+    const lightTop = items.find((item) => item.kind === "top" && isHotWeatherLightTop(item));
+    if (lightTop) {
+      reasons.push(`${Math.round(context.temperatureF)}° — light top only; heavy layers stay home.`);
+    }
+  }
+  if (items.some((item) => isWeatherBlocked(item, context.temperatureF, context.rain))) {
+    reasons.push("Climate mismatch: this layer is too heavy for today's temperature.");
   }
   if (score.breakdown.preference >= 84) {
     reasons.push("Your previous outfit feedback favors this combination.");
@@ -599,18 +683,27 @@ export function generateOutfits(library, state = {}, request = {}) {
   const limitGroup = (items) => [...items]
     .sort((first, second) => candidateRank(second) - candidateRank(first) || first.id.localeCompare(second.id))
     .slice(0, 60);
-  let tops = limitGroup(groups.top || []);
+  // Climate-first filter: drop hoodies/heavy layers on hot days when lighter tops exist
+  const climateFilter = (item) => !isWeatherBlocked(item, context.temperatureF, context.rain);
+  const rawTops = groups.top || [];
+  const climateTops = rawTops.filter(climateFilter);
+  const rawJackets = groups.jacket || [];
+  const climateJackets = rawJackets.filter(climateFilter);
+  let tops = limitGroup(climateTops.length ? climateTops : rawTops);
   let bottoms = limitGroup(groups.bottom || []);
   const dresses = limitGroup(groups.dress || []);
+  const tempF = context.temperatureF;
   // Everyday / build: rank DNA tops first; don't let football kits dominate the base matrix
+  // Heat: tees first, hoodies last (or already filtered out)
   if (context.mode === "everyday" || context.mode === "build" || context.mode === "stream") {
     tops = [...tops].sort((a, b) => {
       const rank = (t) => (
         (t.traits?.isJersey ? -40 : 0)
-        + (t.traits?.isHoodie ? 24 : 0)
-        + (t.traits?.isBasicTee ? 20 : 0)
+        + (t.traits?.isHoodie ? (tempF >= 75 ? -60 : tempF >= 68 ? 4 : 24) : 0)
+        + (t.traits?.isBasicTee ? (tempF >= 75 ? 42 : 20) : 0)
+        + (isHotWeatherLightTop(t) && tempF >= 75 ? 16 : 0)
         + (t.traits?.dnaTop ? 12 : 0)
-        + (t.traits?.everydayHero ? 10 : 0)
+        + (t.traits?.everydayHero ? (tempF >= 78 && t.traits?.isHoodie ? -20 : 10) : 0)
         + (t.traits?.minimalSafe ? 6 : 0)
       );
       return rank(b) - rank(a) || a.id.localeCompare(b.id);
@@ -618,7 +711,7 @@ export function generateOutfits(library, state = {}, request = {}) {
     bottoms = [...bottoms].sort((a, b) => {
       const rank = (t) => (
         (t.traits?.isJeans ? 22 : 0)
-        + (t.traits?.isSweats ? 8 : 0)
+        + (t.traits?.isSweats ? (tempF >= 82 ? -6 : 8) : 0)
         + (t.traits?.dnaBottom ? 10 : 0)
         + (t.colorProfile && isNeutral(t.colorProfile) ? 4 : 0)
       );
@@ -646,11 +739,18 @@ export function generateOutfits(library, state = {}, request = {}) {
   }
 
   const candidates = [];
-  const desiredJacket = context.temperatureF < 66 || ["out", "content"].includes(context.mode);
+  // Never force outerwear on hot days — "out"/"content" modes still need climate sense
+  const desiredJacket = tempF < 66
+    || (["out", "content"].includes(context.mode) && tempF < 70);
   for (const [index, base] of baseLooks.entries()) {
     const items = [...base];
-    const jacket = desiredJacket ? bestOptional(groups.jacket || [], items, index) : null;
-    if (jacket) items.push(jacket);
+    // Skip climate-blocked bases (fallback closet with only hoodies still generates, but score-crushed)
+    if (items.some((item) => isWeatherBlocked(item, tempF, context.rain)) && climateTops.length > 0) {
+      continue;
+    }
+    const jacketPool = climateJackets.length ? climateJackets : (tempF < 78 ? rawJackets : []);
+    const jacket = desiredJacket ? bestOptional(jacketPool, items, index) : null;
+    if (jacket && !isWeatherBlocked(jacket, tempF, context.rain)) items.push(jacket);
     const shoes = bestOptional(groups.shoes || [], items, index);
     if (shoes) items.push(shoes);
     const accessory = bestOptional(groups.accessory || [], items, index);
@@ -725,6 +825,9 @@ export function generateOutfits(library, state = {}, request = {}) {
   const warnings = [];
   if (context.rain && !(groups.jacket || []).some((item) => item.traits.rainSafe)) {
     warnings.push("Rain is in the context, but no rain-safe outer layer is identified in the wardrobe.");
+  }
+  if (tempF >= 78 && climateTops.length && rawTops.some((item) => item.traits?.isHoodie)) {
+    warnings.push(`${Math.round(tempF)}° — hoodies and heavy layers are off the board today.`);
   }
   if (context.hasInspo) {
     warnings.push(`Scoring with ${context.inspoCount} active inspo ${context.inspoCount === 1 ? "image" : "images"} (drop + Pinterest).`);

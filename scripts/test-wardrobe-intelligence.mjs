@@ -60,6 +60,30 @@ assert.ok(
   "the generator must never recommend competing blue hoodie + blue denim + blue sneaker stack",
 );
 
+// Hot clear day: never lead with a hoodie when a tee exists
+const hotCloset = [
+  { id: "hot-hoodie", name: "Blue Scuffers Hoodie", part: "upperbody", color: "#4a6b8a", tags: ["hoodie", "oversized"], image: "/hoodie.png" },
+  { id: "hot-tee", name: "Black Fitted Tee", part: "upperbody", color: "#151515", tags: ["basic tee", "cotton"], image: "/tee.png" },
+  { id: "hot-jeans", name: "Baggy Black Jeans", part: "lowerbody", color: "#111111", tags: ["jeans"], image: "/jeans.png" },
+  { id: "hot-sneaker", name: "Clean White Sneaker", part: "shoes", color: "#f5f5f5", tags: ["sneakers"], image: "/sneaker.png" },
+];
+const hotState = { items: Object.fromEntries(hotCloset.map((item) => [item.id, { status: "clean" }])) };
+const hotLooks = generateOutfits(hotCloset, hotState, { mode: "everyday", temperatureF: 89, rain: false, count: 6 }).looks;
+assert.ok(hotLooks.length >= 1, "hot day should still produce looks");
+assert.ok(
+  hotLooks.every((look) => !look.items.some((item) => item.id === "hot-hoodie")),
+  "89° clear must not recommend a hoodie when a tee is available",
+);
+assert.ok(
+  hotLooks.some((look) => look.items.some((item) => item.id === "hot-tee")),
+  "89° should surface the light tee",
+);
+const coolHoodieLooks = generateOutfits(hotCloset, hotState, { mode: "everyday", temperatureF: 52, rain: false, count: 4 }).looks;
+assert.ok(
+  coolHoodieLooks.some((look) => look.items.some((item) => item.id === "hot-hoodie")),
+  "cool weather may still use the hoodie",
+);
+
 const packing = buildPackingPlan(library, state, { days: 3, mode: "everyday", temperatureF: 70 });
 assert.equal(packing.days, 3);
 assert.ok(packing.items.length >= 1);

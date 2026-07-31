@@ -24,19 +24,21 @@ body,
   color: var(--ink);
 }
 
-/* The same usable column and breathing room as Fitness. */
+/* Full viewport width — no 1180px side gutters on full-screen wardrobe. */
 .gallery-header,
 .gallery-section,
 .daily-gen,
 .wishlist-bridge,
 .ss-root {
-  width: min(100%, 1180px);
-  margin-right: auto;
-  margin-left: auto;
+  width: 100%;
+  max-width: 100%;
+  margin-right: 0;
+  margin-left: 0;
+  box-sizing: border-box;
 }
 
 .gallery-header {
-  padding: 14px 34px 0;
+  padding: 14px clamp(20px, 3.5vw, 48px) 0;
 }
 
 .gallery-toolbar {
@@ -164,15 +166,29 @@ body,
   padding-left: 0;
 }
 
-/* Daily Looks is a report, not an ecommerce card. */
+/* Daily Looks — full width report; outfit fills the row (3 equal columns). */
 .daily-gen {
   margin-top: 4px;
   margin-bottom: var(--workspace-space-double);
-  padding: 0 34px;
+  padding: 0 clamp(20px, 3.5vw, 48px);
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  width: 100%;
+  max-width: 100%;
+}
+
+.daily-gen__outfit {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-inline: 0 !important;
+  grid-template-columns: repeat(var(--outfit-count, 3), minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 56px);
+}
+
+.daily-gen__outfit-media {
+  max-height: min(62vh, 520px) !important;
 }
 
 .daily-gen__head {
@@ -421,7 +437,10 @@ body,
 
 /* Closet / Wishlist / Resale: open catalog rows — dense (was 20×26 gap = too much air under prices). */
 .gallery-section {
-  padding: 4px 28px 0;
+  padding: 4px clamp(20px, 3.5vw, 48px) 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .gallery-section + .gallery-section {
@@ -604,8 +623,11 @@ button.gallery-item .gallery-item-retail {
   left: auto;
   bottom: auto;
   gap: 6px;
-  width: min(calc(100% - 68px), 1180px);
-  margin: 18px auto 32px;
+  width: 100%;
+  max-width: 100%;
+  margin: 18px 0 32px;
+  padding-inline: clamp(20px, 3.5vw, 48px);
+  box-sizing: border-box;
   min-height: 0;
   padding: 0;
   overflow: visible;

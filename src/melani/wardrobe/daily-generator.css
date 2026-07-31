@@ -1,17 +1,14 @@
 /* Daily Cloth Generator — cream paper, serif, no chrome clutter */
 
 .daily-gen {
-  margin: 24px clamp(16px, 4vw, 52px) 28px;
-  padding: clamp(16px, 3vw, 26px);
+  margin: 24px 0 28px;
+  padding: clamp(16px, 2.2vw, 28px) clamp(20px, 3.5vw, 48px);
   border: 0;
-  border-radius: 20px;
-  background:
-    radial-gradient(circle at 92% 4%, rgba(180, 130, 115, .13), transparent 31%),
-    rgba(255, 252, 246, 0.72);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.72) inset,
-    0 20px 55px rgba(25, 22, 18, .08);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   box-sizing: border-box;
+  width: 100%;
   max-width: 100%;
   overflow-x: clip; /* never let a long name spill the page */
 }
@@ -383,9 +380,9 @@
   place-items: center;
   width: 100%;
   min-width: 0;
-  /* fluid height from width — never fixed so it scales on every screen */
-  aspect-ratio: 1 / 1.05;
-  max-height: min(42vh, 280px);
+  /* Full-screen: large equal tiles — fill the column, not a tiny strip */
+  aspect-ratio: 1 / 1.08;
+  max-height: min(58vh, 460px);
   overflow: hidden;
 }
 
@@ -469,11 +466,33 @@
   }
 }
 
+/* Wide / full-screen: span the full row — no 920px gutter trap */
 @media (min-width: 721px) {
   .daily-gen__outfit {
     grid-template-columns: repeat(var(--outfit-count, 3), minmax(0, 1fr));
-    max-width: min(920px, 100%);
-    margin-inline: auto;
+    width: 100%;
+    max-width: 100%;
+    margin-inline: 0;
+    gap: clamp(20px, 3vw, 48px);
+  }
+
+  .daily-gen__outfit-media {
+    max-height: min(62vh, 520px);
+  }
+
+  .daily-gen__outfit-name {
+    font-size: clamp(13px, 1.15vw, 16px);
+  }
+}
+
+/* Very wide monitors: keep three equal hero columns edge-to-edge */
+@media (min-width: 1200px) {
+  .daily-gen__outfit {
+    gap: clamp(28px, 3.5vw, 64px);
+  }
+
+  .daily-gen__outfit-media {
+    max-height: min(64vh, 560px);
   }
 }
 
