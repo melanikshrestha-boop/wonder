@@ -10,11 +10,12 @@ const DELETED_STORAGE_KEY = "open-wardrobe-deleted-v1";
 const SHOP_WANTS_KEY = "wonder-style-shopper-wants-v1";
 const PINTEREST_BOARD_KEY = "wonder-wardrobe-pinterest-board-v1";
 const RESALE_FIX_KEY = "wonder-wardrobe-resale-correction-2026-07-27";
-/** Gallery density: 0 = most columns (zoom out), 4 = fewest (zoom in) */
-const DENSITY_KEY = "wonder-wardrobe-density-v1";
+/** Gallery density: 0 = most columns (zoom out), 5 = fewest / biggest tiles (zoom in) */
+const DENSITY_KEY = "wonder-wardrobe-density-v2";
 const DENSITY_MIN = 0;
-const DENSITY_MAX = 4;
-const DENSITY_MINMAX = [108, 128, 152, 188, 240];
+const DENSITY_MAX = 5;
+/** Column min-width in px — higher = larger product tiles */
+const DENSITY_MINMAX = [140, 176, 220, 280, 360, 460];
 
 function isOriginalResalePiece(item) {
   return /anti social social club.*hoodie|fear of god essentials.*hoodie/i.test(
@@ -1057,7 +1058,8 @@ export function App() {
     } catch {
       /* ignore */
     }
-    return 1;
+    // Default mid-large so full-screen closet is not postage-stamp size
+    return 3;
   });
 
   const bumpDensity = (delta) => {
