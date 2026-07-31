@@ -53,6 +53,7 @@ Orchestration: **`.grok/skills/wonder-parallel/SKILL.md`** (`/wonder-parallel`) 
 | `wonder-data-guardian` | Health storage: merge-only; never wipe bowel/fog/meals/weight/habits |
 | `wonder-selene` | UI law: no dividers, no boxes, no blurbs |
 | `wonder-wardrobe` | Closet: fullscreen must work, paste-link + screenshot reverse-import, density, Selene |
+| `hoodie` | Hoodie tiles: official flat front/back (not on-model rembg); 1000×1200 front-cut + back-cut |
 | `wonder-keeper` | Keep `http://127.0.0.1:5173/` alive |
 | `wonder-verify` | Read-only smoke after parallel work |
 
