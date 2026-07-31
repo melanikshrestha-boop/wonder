@@ -2823,32 +2823,27 @@ html.theme-light .main.is-melani .main-scroll {
   color: #1a1c22 !important;
 }
 
-/* Wardrobe: fill remaining viewport (half-screen AND full Chrome window).
-   Quote is optional chrome; body+shell claim all leftover height so iframe isn't 0. */
+/* Wardrobe: fill remaining viewport (half-screen, maximized, AND F11 fullscreen).
+   Quote is hidden — it steals height and leaves the iframe looking empty. */
 .main.is-wardrobe {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
-  height: 100dvh;
-  max-height: 100dvh;
+  min-height: 100%;
+  height: 100%;
+  max-height: 100%;
   overflow: hidden;
 }
 
 .main.is-wardrobe .main-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden !important; /* flex children must fill — not scroll away to 0 */
   display: flex;
   flex-direction: column;
 }
 
 .main.is-wardrobe .wonder-page-quote {
-  width: min(calc(100% - 68px), 1180px);
-  max-width: 1180px;
-  flex: 0 0 auto;
-  margin-top: 12px;
-  margin-bottom: 8px;
+  display: none !important;
 }
 
 .main.is-wardrobe .notion-melani-page,
@@ -2856,7 +2851,7 @@ html.theme-light .main.is-melani .main-scroll {
   width: 100%;
   flex: 1 1 auto;
   min-height: 0;
-  height: auto;
+  height: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -2864,12 +2859,51 @@ html.theme-light .main.is-melani .main-scroll {
   flex-direction: column;
 }
 
-/* Fullscreen / maximized — same contract */
+/*
+ * Nuclear fill: pin wardrobe shell to the content rect under topbar.
+ * Survives flex-chain bugs, quote remnants, and browser fullscreen.
+ */
+.main.is-wardrobe .wardrobe-frame-shell {
+  position: fixed !important;
+  top: 45px; /* .topbar height */
+  right: 0;
+  bottom: 0;
+  left: var(--sidebar-w, 252px);
+  z-index: 4;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: none !important;
+  margin: 0 !important;
+  background: #f7f7fa;
+}
+
+.app:has(.sidebar.is-closed) .main.is-wardrobe .wardrobe-frame-shell,
+.app:has(.sidebar.is-collapsed) .main.is-wardrobe .wardrobe-frame-shell {
+  left: 0;
+}
+
+@media (max-width: 768px) {
+  .main.is-wardrobe .wardrobe-frame-shell {
+    left: 0;
+  }
+}
+
+/* Fullscreen / maximized — same contract (viewport units after F11) */
 :fullscreen .main.is-wardrobe,
-:-webkit-full-screen .main.is-wardrobe {
+:-webkit-full-screen .main.is-wardrobe,
+:fullscreen .app,
+:-webkit-full-screen .app {
   min-height: 100dvh;
   height: 100dvh;
   max-height: 100dvh;
+}
+
+:fullscreen .main.is-wardrobe .wardrobe-frame-shell,
+:-webkit-full-screen .main.is-wardrobe .wardrobe-frame-shell {
+  top: 45px;
+  bottom: 0;
 }
 
 /* ── Notion-style sidebar extras (Agents, bottom links) ── */

@@ -611,7 +611,10 @@ export default function App() {
 
         {/* Page body scrolls here — Notion pages OR Melani content inside page */}
         <div ref={mainScrollRef} className="main-scroll">
-          {!isFitnessPage(activePage.id) ? <UniversalQuote /> : null}
+          {/* Fitness + Wardrobe own the full canvas — no quote band stealing height */}
+          {!isFitnessPage(activePage.id) && !isWardrobePage(activePage.id) ? (
+            <UniversalQuote />
+          ) : null}
           {melaniMode ? (
             /* Sleep / Meals / Gym live in the SIDEBAR only */
             <div className="notion-melani-page">

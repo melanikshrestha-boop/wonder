@@ -1,13 +1,14 @@
 /*
- * Wardrobe iframe fill — MUST work half-screen AND full Chrome window.
- * Shell is flex:1 in .main.is-wardrobe; iframe absolutely fills the shell.
+ * Wardrobe iframe fill — MUST work half-screen, maximized, AND F11 fullscreen.
+ * Parent notion.css pins .wardrobe-frame-shell fixed under the topbar;
+ * iframe always 100% of that shell.
  */
 .wardrobe-frame-shell {
   position: relative;
   display: block;
   width: 100%;
   flex: 1 1 auto;
-  min-height: min(70dvh, 720px);
+  min-height: 0;
   height: 100%;
   overflow: hidden;
   background: #f7f7fa;
@@ -18,9 +19,10 @@
   position: absolute;
   inset: 0;
   display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 400px;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: none !important;
   border: 0;
   background: #f7f7fa;
 }

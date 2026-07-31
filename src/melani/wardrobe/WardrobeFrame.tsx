@@ -9,19 +9,32 @@ import "./wardrobe-frame.css";
 function fitIframe(el: HTMLIFrameElement | null) {
   if (!el) return;
   const parent = el.parentElement;
-  // Prefer parent content box (flex-filled shell)
+  const vv = window.visualViewport;
+  const viewH = Math.floor(vv?.height ?? window.innerHeight);
+
+  // 1) Shell already has real pixels (fixed fill under topbar) — match it exactly
   if (parent) {
-    const ph = parent.clientHeight;
-    if (ph >= 200) {
+    const pr = parent.getBoundingClientRect();
+    const ph = Math.max(parent.clientHeight, Math.floor(pr.height));
+    if (ph >= 120) {
+      el.style.width = "100%";
       el.style.height = `${ph}px`;
       el.style.minHeight = `${ph}px`;
+      el.style.maxHeight = `${ph}px`;
       return;
     }
   }
+
+  // 2) Fallback: remaining viewport under iframe top (works in F11 fullscreen)
   const top = el.getBoundingClientRect().top;
-  const available = Math.max(400, Math.floor(window.innerHeight - top - 4));
+  const available = Math.max(320, viewH - Math.floor(top) - 2);
+  el.style.width = "100%";
   el.style.height = `${available}px`;
   el.style.minHeight = `${available}px`;
+  el.style.maxHeight = `${available}px`;
+  if (parent) {
+    parent.style.minHeight = `${available}px`;
+  }
 }
 
 class WardrobeErrorBoundary extends Component<
