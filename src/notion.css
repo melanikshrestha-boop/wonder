@@ -2823,12 +2823,15 @@ html.theme-light .main.is-melani .main-scroll {
   color: #1a1c22 !important;
 }
 
-/* Wardrobe follows the same page flow as Fitness: quote, tabs, then content.
-   Use dvh + flex so Chrome fullscreen never paints a blank white slab. */
+/* Wardrobe: fill remaining viewport (half-screen AND full Chrome window).
+   Quote is optional chrome; body+shell claim all leftover height so iframe isn't 0. */
 .main.is-wardrobe {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
 }
 
 .main.is-wardrobe .main-scroll {
@@ -2844,34 +2847,29 @@ html.theme-light .main.is-melani .main-scroll {
   width: min(calc(100% - 68px), 1180px);
   max-width: 1180px;
   flex: 0 0 auto;
-  margin-top: 16px;
-  margin-bottom: 10px;
+  margin-top: 12px;
+  margin-bottom: 8px;
 }
 
 .main.is-wardrobe .notion-melani-page,
 .main.is-wardrobe .notion-melani-body {
   width: 100%;
   flex: 1 1 auto;
+  min-height: 0;
   height: auto;
-  min-height: min(640px, calc(100dvh - 120px));
   margin: 0;
   padding: 0;
-  overflow: visible;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* Fullscreen Chrome / browser F11 — keep wardrobe filling the live viewport */
+/* Fullscreen / maximized — same contract */
 :fullscreen .main.is-wardrobe,
 :-webkit-full-screen .main.is-wardrobe {
   min-height: 100dvh;
   height: 100dvh;
-}
-
-:fullscreen .main.is-wardrobe .main-scroll,
-:-webkit-full-screen .main.is-wardrobe .main-scroll {
-  min-height: 0;
-  flex: 1;
+  max-height: 100dvh;
 }
 
 /* ── Notion-style sidebar extras (Agents, bottom links) ── */
