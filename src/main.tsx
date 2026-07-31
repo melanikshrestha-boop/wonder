@@ -44,6 +44,14 @@ if (isWidgetMode()) {
       /* ignore */
     }
   });
+  // Data Guardian — hydrate health from disk + optional vault auto-seal
+  void import("./melani/agents/dataGuardian").then(async (g) => {
+    await g.hydrateFromDisk();
+    g.mirrorAllToDisk();
+  });
+  void import("./melani/agents/dataVault").then((v) => {
+    void v.maybeAutoSnapshot(45);
+  });
 }
 
 // PWA: register shell SW only in production builds (dev HMR must stay free)

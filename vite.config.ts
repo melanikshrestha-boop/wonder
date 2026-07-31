@@ -16,6 +16,7 @@ import { plaidFinanceApi } from "./scripts/plaid-finance-api.mjs";
 import { marketQuoteApi } from "./scripts/market-quote-api.mjs";
 import { screentimeApi } from "./scripts/screentime-api.mjs";
 import { wonderStateApi } from "./scripts/wonder-state-api.mjs";
+import { wonderVaultApi } from "./scripts/wonder-vault-api.mjs";
 
 // Wonder is one app on :5173. Gym/Fitness/etc. are native React (no iframe / no PIN).
 // Optional legacy proxy if an old health backend is still running locally.
@@ -52,6 +53,8 @@ export default defineConfig(({ mode }) => {
       screentimeApi(),
       // Shared habits/state for Chrome ↔ floating Base widget
       wonderStateApi(),
+      // Timestamped health vault (Data Vault agent)
+      wonderVaultApi(),
     ],
     build: {
       rollupOptions: {

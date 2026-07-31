@@ -105,3 +105,20 @@ You log health
 ## Removed
 
 - **Focus / Screen Time** page under Fitness — permanently out of nav (owner request). Historical screen-time files on disk are not bulk-deleted; the UI surface is gone.
+
+## UI
+
+Open **Agents → Body OS** (`?page=pg-body-os`).
+
+Editorial desk:
+
+1. **Data Guardian** — domain seals (bowel, fog, meals, weight, …)  
+2. **Data Vault** — seal now · strip of freezes · merge restore  
+3. **Twin** — overall + chips · lever · radar · 7-day forecast  
+
+Code:
+
+- `src/melani/agents/dataGuardian.ts`
+- `src/melani/agents/dataVault.ts`
+- `src/melani/agents/AgentsDesk.tsx` + `agents-desk.css`
+- `scripts/wonder-vault-api.mjs`

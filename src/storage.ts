@@ -418,6 +418,13 @@ function ensureLifePages(ws: Workspace): Workspace {
   ensurePage("pg-agent-care", "Care Concierge", "care", "pg-agents", [
     newBlock("paragraph", ""),
   ]);
+  // Body OS — Data Guardian · Vault · Twin (never-wipe health + design desk)
+  ensurePage("pg-body-os", "Body OS", "shield", "pg-agents", [
+    newBlock(
+      "paragraph",
+      "Data Guardian · Data Vault · Twin. Your health history never goes silent."
+    ),
+  ]);
 
   // Lift anything that was nested under the old Work hub (so stocks kids aren’t lost)
   pages = pages.map((p) =>

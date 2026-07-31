@@ -308,7 +308,16 @@ export function saveWeight(day: string, kg: number, note = ""): WeightEntry {
   const list = loadWeightLog().filter((e) => e.day !== day);
   list.push(entry);
   list.sort((a, b) => (a.day < b.day ? 1 : -1));
-  localStorage.setItem(WEIGHT_KEY, JSON.stringify(list.slice(0, 400)));
+  const next = list.slice(0, 400);
+  localStorage.setItem(WEIGHT_KEY, JSON.stringify(next));
+  // Data Guardian — mirror weight history to disk (never wipe prior days)
+  try {
+    void import("./agents/dataGuardian").then((g) => {
+      g.pushGuardianKey(WEIGHT_KEY, next);
+    });
+  } catch {
+    /* ignore */
+  }
   emit();
   return entry;
 }

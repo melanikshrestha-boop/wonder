@@ -31,6 +31,7 @@ import {
   isFailuresPage,
   isContentEmpirePage,
   isShoppingAgentPage,
+  isBodyOsPage,
 } from "./pageRoutes";
 // isContentEmpirePage covers former Math Lab routes
 // Nutrition tab is retired from the product surface (design rejected).
@@ -92,6 +93,11 @@ const WardrobeFrame = lazy(async () => {
 const GmailConnector = lazy(async () => {
   const module = await import("./GmailConnector");
   return { default: module.GmailConnector };
+});
+
+const AgentsDesk = lazy(async () => {
+  const module = await import("./agents/AgentsDesk");
+  return { default: module.AgentsDesk };
 });
 
 function DeskFallback({ label }: { label: string }) {
@@ -409,6 +415,7 @@ export function isMelaniRichPage(pageId: string): boolean {
     isHabitsPage(pageId) ||
     isContentEmpirePage(pageId) ||
     isFailuresPage(pageId) ||
+    isBodyOsPage(pageId) ||
     pageId === "pg-data" ||
     pageId === "pg-my-data"
   );
@@ -467,6 +474,14 @@ export function MelaniRichPage({
     return (
       <Suspense fallback={<DeskFallback label="Loading Care" />}>
         <CareConcierge />
+      </Suspense>
+    );
+  }
+
+  if (isBodyOsPage(pageId)) {
+    return (
+      <Suspense fallback={<DeskFallback label="Loading Body OS" />}>
+        <AgentsDesk />
       </Suspense>
     );
   }
