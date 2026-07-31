@@ -530,6 +530,30 @@ button { font: inherit; }
   text-underline-offset: 3px;
 }
 
+/* Wishlist behavioral read — type only, no boxes (Selene) */
+.wishlist-taste {
+  margin: 4px clamp(20px, 3.5vw, 48px) 18px;
+  max-width: 52rem;
+}
+
+.wishlist-taste__lede {
+  margin: 0;
+  font-size: clamp(15px, 1.4vw, 18px);
+  font-weight: 550;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  color: #1a1c22;
+}
+
+.wishlist-taste__signals,
+.wishlist-taste__rank {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #8f929a;
+  letter-spacing: 0.01em;
+}
+
 .wishlist-card-shell {
   display: grid;
   grid-template-rows: 1fr auto;

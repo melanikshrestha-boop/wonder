@@ -4,6 +4,7 @@ import { WardrobeImportFlow } from "./import-flow.jsx";
 import { OptimizedImage } from "./OptimizedImage.jsx";
 import { StyleShopper } from "./StyleShopper.jsx";
 import { DailyGenerator } from "./DailyGenerator.jsx";
+import { analyzeWishlist } from "./wishlistTaste.js";
 
 const STORAGE_KEY = "open-wardrobe-edits-v1";
 const DELETED_STORAGE_KEY = "open-wardrobe-deleted-v1";
@@ -1367,6 +1368,12 @@ export function App() {
   const wantCount = items.filter(isWantItem).length;
   const saleCount = items.filter(isForSaleItem).length;
 
+  /** Live wishlist read — re-runs whenever she adds/removes wants */
+  const wishlistTaste = useMemo(
+    () => (collection === "want" ? analyzeWishlist(items) : null),
+    [collection, items],
+  );
+
   return (
     <div className={`app-shell${selectedItem ? " has-selection" : ""}`}>
       <main className="gallery-pane">
@@ -1531,6 +1538,27 @@ export function App() {
                     : "No pieces in this view."}
               </p>
             )}
+
+            {/* Wishlist taste — plain read, no cards/dividers; updates as she adds */}
+            {collection === "want" && wishlistTaste && wishlistTaste.count > 0 ? (
+              <div className="wishlist-taste" aria-label="Wishlist taste read">
+                <p className="wishlist-taste__lede">{wishlistTaste.lede}</p>
+                {wishlistTaste.signals.length ? (
+                  <p className="wishlist-taste__signals">
+                    {wishlistTaste.signals.join(" · ")}
+                  </p>
+                ) : null}
+                {wishlistTaste.brands.length > 1 ? (
+                  <p className="wishlist-taste__rank">
+                    Brands{" "}
+                    {wishlistTaste.brands
+                      .slice(0, 5)
+                      .map((b) => `${b.name} ${b.count}`)
+                      .join(" · ")}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
 
             {!!items.length && gallerySections.map((section) => (
               <section
