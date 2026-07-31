@@ -529,6 +529,58 @@ export function resolveBuyLink(title: string): ProductLink {
   };
 }
 
+/** Oral care stack (titles must match hygieneRoutines ORAL_CARE_SECTIONS) */
+Object.assign(PRODUCT_LINKS, {
+  "Waterpik Water Flosser": {
+    name: "Waterpik Water Flosser",
+    store: "brand" as const,
+    url: "https://www.waterpik.com/products/dental-water-flosser/",
+    note: "Brand product line — pick your model on Waterpik.",
+  },
+  "Oral-B Electric Toothbrush": {
+    name: "Oral-B Electric Toothbrush",
+    store: "amazon" as const,
+    url: "https://amzn.to/4aTQBCd",
+  },
+  "Oral-B Soft Toothbrush Heads": {
+    name: "Oral-B Soft Toothbrush Heads",
+    store: "amazon" as const,
+    url: "https://amzn.to/4di9EYy",
+  },
+  Mouthwash: {
+    name: "Mouthwash",
+    store: "amazon" as const,
+    url: "https://amzn.to/4dcxRQh",
+  },
+  "Sensodyne Toothpaste": {
+    name: "Sensodyne Toothpaste",
+    store: "amazon" as const,
+    url: "https://www.amazon.com/s?k=Sensodyne+toothpaste",
+    note: "Leftover fluoride supply — not the long-term pick.",
+  },
+  "Fluoride-Free Toothpaste": {
+    name: "Fluoride-Free Toothpaste",
+    store: "amazon" as const,
+    url: "https://amzn.to/44p7Ith",
+  },
+  "Dr. Tung's Smart Floss": {
+    name: "Dr. Tung's Smart Floss",
+    store: "amazon" as const,
+    url: "https://amzn.to/3JDBUHt",
+  },
+  "Dr. Tung's Tongue Scraper": {
+    name: "Dr. Tung's Tongue Scraper",
+    store: "amazon" as const,
+    url: "https://amzn.to/4be2UJB",
+  },
+  "SomnoDent Bruxism Device": {
+    name: "SomnoDent Bruxism Device",
+    store: "brand" as const,
+    url: "https://somnomed.com",
+    note: "Provider-fitted device — brand site for SomnoMed / SomnoDent.",
+  },
+});
+
 /** Best Amazon ASIN for a product title (primary url or alt url) */
 export function resolveAmazonAsin(title: string): string | null {
   const link = resolveBuyLink(title);

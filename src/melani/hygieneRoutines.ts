@@ -696,3 +696,109 @@ export const HAIR_SECTIONS: RoutineSection[] = [
     ],
   },
 ];
+
+/** Oral care — Melani’s stack (fluoride-free goal; Sensodyne is leftover supply only). */
+export const ORAL_CARE_SECTIONS: RoutineSection[] = [
+  {
+    id: "clean",
+    title: "Clean",
+    steps: [
+      {
+        num: 1,
+        title: "Waterpik Water Flosser",
+        subtitle: "Water floss",
+        note: "",
+        bullets: [
+          "Fill reservoir with lukewarm water.",
+          "Trace along the gumline and between teeth before brushing.",
+        ],
+      },
+      {
+        num: 2,
+        title: "Dr. Tung's Smart Floss",
+        subtitle: "String floss",
+        note: "After water flosser when you want extra contact.",
+        bullets: [
+          "Wrap and slide gently under the gumline.",
+          "Fresh section for each tooth.",
+        ],
+      },
+      {
+        num: 3,
+        title: "Oral-B Electric Toothbrush",
+        subtitle: "Brush",
+        note: "Use soft replacement heads only.",
+        bullets: [
+          "Soft head, two minutes, light pressure.",
+          "Outer surfaces → chewing surfaces → inner surfaces.",
+        ],
+      },
+      {
+        num: 4,
+        title: "Oral-B Soft Toothbrush Heads",
+        subtitle: "Heads",
+        note: "Swap heads on schedule so bristles stay soft.",
+        bullets: [
+          "Keep spare heads dry between uses.",
+          "Replace when bristles splay or on your usual cadence.",
+        ],
+      },
+      {
+        num: 5,
+        title: "Fluoride-Free Toothpaste",
+        subtitle: "Primary toothpaste",
+        note: "Main paste for the fluoride-free goal.",
+        bullets: [
+          "Pea-sized amount on the soft head.",
+          "Spit; no hard rinse if you want residual minerals to sit.",
+        ],
+      },
+      {
+        num: 6,
+        title: "Sensodyne Toothpaste",
+        subtitle: "Leftover only",
+        note: "Contains fluoride — leftover supply from before the fluoride-free switch. Finish the tube; do not restock as daily.",
+        bullets: [
+          "Only while this leftover lasts.",
+          "Prefer the fluoride-free paste for regular use.",
+        ],
+      },
+      {
+        num: 7,
+        title: "Mouthwash",
+        subtitle: "Rinse",
+        note: "",
+        bullets: [
+          "After brushing, swish the timed amount on the label.",
+          "Spit; avoid eating or drinking for a few minutes.",
+        ],
+      },
+      {
+        num: 8,
+        title: "Dr. Tung's Tongue Scraper",
+        subtitle: "Tongue",
+        note: "",
+        bullets: [
+          "Gentle strokes front to back on the tongue.",
+          "Rinse the scraper; optional second pass.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "night",
+    title: "Night protection",
+    steps: [
+      {
+        num: 9,
+        title: "SomnoDent Bruxism Device",
+        subtitle: "Night guard",
+        note: "Wear as directed by SomnoMed / your provider.",
+        bullets: [
+          "Clean and dry after evening oral care.",
+          "Seat fully before sleep; store in its case in the morning.",
+        ],
+      },
+    ],
+  },
+];

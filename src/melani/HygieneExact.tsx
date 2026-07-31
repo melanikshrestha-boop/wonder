@@ -8,6 +8,7 @@ import {
   DAILY_SHOWER_SECTIONS,
   EVERYTHING_SHOWER_SECTIONS,
   HAIR_SECTIONS,
+  ORAL_CARE_SECTIONS,
   PM_ROUTINES,
   type RoutineSection,
   type RoutineStep,
@@ -234,6 +235,7 @@ export function isHygienePage(pageId: string): boolean {
     pageId === "pg-shower-daily" ||
     pageId === "pg-shower-everything" ||
     pageId === "pg-hair" ||
+    pageId === "pg-oral-care" ||
     pageId === "pg-am-skin" ||
     pageId === "pg-pm-skin" ||
     pageId.startsWith("pg-pm-")
@@ -289,6 +291,18 @@ export function HygieneExact({ pageId, onGo }: Props) {
         title="Hair care"
         icon="hair"
         sections={HAIR_SECTIONS}
+        pageId={pageId}
+        onBack={() => onGo("pg-hygiene")}
+      />
+    );
+  }
+  if (pageId === "pg-oral-care") {
+    return (
+      <SectionedRoutinePage
+        key={pageId}
+        title="Oral care"
+        icon="hygiene"
+        sections={ORAL_CARE_SECTIONS}
         pageId={pageId}
         onBack={() => onGo("pg-hygiene")}
       />
@@ -367,6 +381,14 @@ function HygieneHub({ onGo }: { onGo: (id: string) => void }) {
       label: "AM skincare",
       icon: "am-skin",
       pageId: "pg-am-skin",
+      rowClass: "is-am",
+      weekClass: "is-am",
+    },
+    {
+      id: "oral_care",
+      label: "Oral care",
+      icon: "hygiene",
+      pageId: "pg-oral-care",
       rowClass: "is-am",
       weekClass: "is-am",
     },
@@ -494,6 +516,15 @@ function HygieneHub({ onGo }: { onGo: (id: string) => void }) {
           >
             <MinimalIcon name="hair" size={16} className="hx-nav-ic" />
             <span className="hx-nav-label">Hair care</span>
+            <span className="hx-nav-chev">→</span>
+          </button>
+          <button
+            type="button"
+            className="hx-nav-row is-am"
+            onClick={() => onGo("pg-oral-care")}
+          >
+            <MinimalIcon name="hygiene" size={16} className="hx-nav-ic" />
+            <span className="hx-nav-label">Oral care</span>
             <span className="hx-nav-chev">→</span>
           </button>
         </div>
@@ -1069,9 +1100,11 @@ function SectionedRoutinePage({
   const theme =
     pageId === "pg-hair"
       ? "hx-theme-hair"
-      : pageId.includes("shower")
+      : pageId === "pg-oral-care"
         ? "hx-theme-body"
-        : "hx-theme-skin";
+        : pageId.includes("shower")
+          ? "hx-theme-body"
+          : "hx-theme-skin";
 
   return (
     <div className={`hx ${theme}`}>
