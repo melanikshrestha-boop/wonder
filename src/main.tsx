@@ -34,6 +34,16 @@ if (isWidgetMode()) {
       <App />
     </StrictMode>
   );
+  // Bridge Chrome localStorage ↔ floating widget via ~/.wonder/local
+  void import("./melani/habitStore").then(async (h) => {
+    await h.hydrateHabitsFromShared();
+    try {
+      h.saveHabits(h.loadHabits());
+      h.saveChecks(h.loadChecks());
+    } catch {
+      /* ignore */
+    }
+  });
 }
 
 // PWA: register shell SW only in production builds (dev HMR must stay free)

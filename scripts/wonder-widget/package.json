@@ -1,0 +1,6 @@
+{
+  "name": "wonder-base-widget",
+  "private": true,
+  "main": "main.cjs",
+  "version": "1.0.0"
+}

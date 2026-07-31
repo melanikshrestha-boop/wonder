@@ -13,3 +13,6 @@ dist-single
 
 # Personal WHOOP exports (local only)
 public/whoop/
+
+# Built floating widget
+scripts/wonder-widget/bin/

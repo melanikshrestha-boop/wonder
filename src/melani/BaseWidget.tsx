@@ -7,11 +7,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   currentStreak,
   dayCompletion,
+  hydrateHabitsFromShared,
   isChecked,
   loadChecks,
   loadHabits,
   onHabitsChange,
   saveChecks,
+  saveHabits,
   toggleCheck,
   type Habit,
   type CheckMap,
@@ -41,7 +43,23 @@ export function BaseWidget() {
 
   useEffect(() => onHabitsChange(refresh), [refresh]);
 
-  // Cross-tab / full-app sync
+  // Hydrate from ~/.wonder/local (shared with Chrome full app) and push local → disk
+  useEffect(() => {
+    void (async () => {
+      const changed = await hydrateHabitsFromShared();
+      // Push whatever we have so the other surface (Chrome ↔ widget) can see it
+      try {
+        saveHabits(loadHabits());
+        saveChecks(loadChecks());
+      } catch {
+        /* ignore */
+      }
+      if (changed) refresh();
+      else refresh();
+    })();
+  }, [refresh]);
+
+  // Cross-tab / full-app sync + poll shared disk (Electron ≠ Chrome localStorage)
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (
@@ -54,9 +72,15 @@ export function BaseWidget() {
     };
     window.addEventListener("storage", onStorage);
     window.addEventListener("focus", refresh);
+    const poll = window.setInterval(() => {
+      void hydrateHabitsFromShared().then((changed) => {
+        if (changed) refresh();
+      });
+    }, 2500);
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("focus", refresh);
+      window.clearInterval(poll);
     };
   }, [refresh]);
 

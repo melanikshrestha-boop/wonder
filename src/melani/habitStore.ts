@@ -212,6 +212,64 @@ function emitChange() {
   window.dispatchEvent(new Event(EVENT));
 }
 
+/** Push a key to ~/.wonder/local so Chrome + floating widget stay in sync. */
+function pushSharedState(key: string, value: unknown) {
+  if (typeof fetch === "undefined") return;
+  try {
+    void fetch("/api/wonder-state", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, value }),
+      keepalive: true,
+    }).catch(() => {
+      /* server optional */
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Pull shared state from disk into localStorage (widget ↔ Chrome bridge).
+ * Returns true if localStorage changed.
+ */
+export async function hydrateHabitsFromShared(): Promise<boolean> {
+  if (typeof fetch === "undefined" || typeof localStorage === "undefined") {
+    return false;
+  }
+  let changed = false;
+  try {
+    const [hRes, cRes] = await Promise.all([
+      fetch(`/api/wonder-state?key=${encodeURIComponent(HABITS_KEY)}`),
+      fetch(`/api/wonder-state?key=${encodeURIComponent(CHECKS_KEY)}`),
+    ]);
+    if (hRes.ok) {
+      const body = (await hRes.json()) as { value?: Habit[] | null };
+      if (Array.isArray(body.value) && body.value.length) {
+        const next = JSON.stringify(body.value);
+        if (localStorage.getItem(HABITS_KEY) !== next) {
+          localStorage.setItem(HABITS_KEY, next);
+          changed = true;
+        }
+      }
+    }
+    if (cRes.ok) {
+      const body = (await cRes.json()) as { value?: CheckMap | null };
+      if (body.value && typeof body.value === "object") {
+        const next = JSON.stringify(body.value);
+        if (localStorage.getItem(CHECKS_KEY) !== next) {
+          localStorage.setItem(CHECKS_KEY, next);
+          changed = true;
+        }
+      }
+    }
+  } catch {
+    /* offline / no API */
+  }
+  if (changed) emitChange();
+  return changed;
+}
+
 export function onHabitsChange(cb: () => void): () => void {
   if (typeof window === "undefined") return () => {};
   window.addEventListener(EVENT, cb);
@@ -231,6 +289,7 @@ export function loadHabits(): Habit[] {
         if (changed) {
           try {
             localStorage.setItem(HABITS_KEY, JSON.stringify(fixed));
+            pushSharedState(HABITS_KEY, fixed);
           } catch { /* ignore */ }
         }
         return fixed;
@@ -253,6 +312,7 @@ export function saveHabits(habits: Habit[]) {
       localStorage.setItem(HABITS_KEY, JSON.stringify(habits));
     }
   } catch { /* ignore */ }
+  pushSharedState(HABITS_KEY, habits);
   emitChange();
 }
 
@@ -275,6 +335,7 @@ export function saveChecks(map: CheckMap) {
       localStorage.setItem(CHECKS_KEY, JSON.stringify(map));
     }
   } catch { /* ignore */ }
+  pushSharedState(CHECKS_KEY, map);
   emitChange();
 }
 
