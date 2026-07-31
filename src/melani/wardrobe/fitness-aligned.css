@@ -325,26 +325,40 @@ body,
   opacity: .72;
 }
 
-/* Stacked outfit (Daily Generator) — visualize, no WHY essay */
-.daily-gen__stack {
-  width: min(360px, 100%);
-  height: min(54vh, 500px);
-  margin: 4px auto 18px;
+/* Daily outfit strip — flat paper, no boxes, no overlap */
+.daily-gen__outfit {
+  margin: 6px 0 22px;
+  gap: clamp(14px, 2.8vw, 32px);
 }
 
-.daily-gen__stack-layer {
+.daily-gen__outfit-card {
   border: 0;
-  background: transparent;
-  box-shadow: none;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0;
 }
 
-.daily-gen__stack-img {
+.daily-gen__outfit-media {
+  background: transparent;
+}
+
+.daily-gen__outfit-img {
   filter:
-    drop-shadow(0 1px 1px rgba(25, 22, 18, 0.08))
-    drop-shadow(0 12px 22px rgba(25, 22, 18, 0.12));
+    drop-shadow(0 1px 1px rgba(25, 22, 18, 0.06))
+    drop-shadow(0 10px 18px rgba(25, 22, 18, 0.1));
+}
+
+.daily-gen__outfit-kind {
+  color: var(--muted, #8d877e);
+}
+
+.daily-gen__outfit-name {
+  color: var(--ink, #211e1a);
+  font-weight: 600;
 }
 
 .daily-gen__stage,
+.daily-gen__stack,
 .daily-gen__why-block {
   display: none !important;
 }
@@ -695,13 +709,13 @@ button.gallery-item .gallery-item-retail {
     gap: 10px 20px;
   }
 
-  .daily-gen__stage {
+  .daily-gen__outfit {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 22px;
   }
 
-  .daily-gen__piece {
-    grid-template-rows: minmax(220px, 58vh) auto;
+  .daily-gen__outfit-media {
+    max-height: 46vh;
   }
 
   .wishlist-bridge {

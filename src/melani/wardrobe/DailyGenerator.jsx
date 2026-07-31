@@ -206,28 +206,17 @@ export function DailyGenerator({ items = [], onOpenItem }) {
 
   const pieces = useMemo(() => {
     if (!look?.items?.length) return [];
-    // Visual stack order: jacket (back) → top → bottom → shoes (front of frame)
+    // Display order: top → bottom → shoes → jacket (no overlap layout)
     const rank = (item) => {
       const k = String(item.kind || item.part || "");
-      if (k === "jacket" || k === "wholebody_up") return 0;
-      if (k === "top" || k === "upperbody") return 1;
-      if (k === "bottom" || k === "lowerbody") return 2;
-      if (k === "shoes") return 3;
-      if (k === "dress" || k === "dresses") return 1;
+      if (k === "top" || k === "upperbody" || k === "dress" || k === "dresses") return 0;
+      if (k === "bottom" || k === "lowerbody") return 1;
+      if (k === "shoes") return 2;
+      if (k === "jacket" || k === "wholebody_up") return 3;
       return 4;
     };
     return [...look.items].sort((a, b) => rank(a) - rank(b));
   }, [look]);
-
-  function stackClass(item) {
-    const k = String(item?.kind || item?.part || "").toLowerCase();
-    if (k === "jacket" || k === "wholebody_up") return "is-jacket";
-    if (k === "top" || k === "upperbody") return "is-top";
-    if (k === "bottom" || k === "lowerbody") return "is-bottom";
-    if (k === "shoes") return "is-shoes";
-    if (k === "dress" || k === "dresses") return "is-dress";
-    return "is-other";
-  }
 
   const persistIndex = (nextIndex) => {
     setLookIndex(nextIndex);
@@ -597,36 +586,44 @@ export function DailyGenerator({ items = [], onOpenItem }) {
         </p>
       ) : (
         <>
-          {/* Stacked outfit — visualize, no essay */}
-          <div className="daily-gen__stack" role="list" aria-label="Today's outfit stack">
-            {pieces.map((piece, index) => {
+          {/* Outfit pieces — never overlap; fluid columns for every width */}
+          <div
+            className="daily-gen__outfit"
+            role="list"
+            aria-label="Today's outfit"
+            style={{ "--outfit-count": Math.max(1, pieces.length) }}
+          >
+            {pieces.map((piece) => {
               const src = pieceImage(piece);
-              const layer = stackClass(piece);
               return (
                 <button
                   key={piece.id}
                   type="button"
-                  className={`daily-gen__stack-layer ${layer}`}
+                  className="daily-gen__outfit-card"
                   role="listitem"
-                  style={{ zIndex: 10 + index }}
                   onClick={() => onOpenItem?.(piece.id)}
                   aria-label={`${kindLabel(piece)}: ${piece.name || "Piece"}`}
-                  title={piece.name || kindLabel(piece)}
                 >
-                  {src ? (
-                    <OptimizedImage
-                      className="daily-gen__stack-img"
-                      src={src}
-                      alt=""
-                      sizes="220px"
-                      breakpoints={[160, 220, 320, 480]}
-                    />
-                  ) : (
-                    <span
-                      className="daily-gen__img-fallback"
-                      style={{ background: piece.color || "#ccc" }}
-                    />
-                  )}
+                  <span className="daily-gen__outfit-media" aria-hidden="true">
+                    {src ? (
+                      <OptimizedImage
+                        className="daily-gen__outfit-img"
+                        src={src}
+                        alt=""
+                        sizes="(max-width: 640px) 42vw, 200px"
+                        breakpoints={[120, 180, 240, 320, 400]}
+                      />
+                    ) : (
+                      <span
+                        className="daily-gen__img-fallback"
+                        style={{ background: piece.color || "#ccc" }}
+                      />
+                    )}
+                  </span>
+                  <span className="daily-gen__outfit-meta">
+                    <span className="daily-gen__outfit-kind">{kindLabel(piece)}</span>
+                    <span className="daily-gen__outfit-name">{piece.name || "Piece"}</span>
+                  </span>
                 </button>
               );
             })}
