@@ -22,9 +22,22 @@ This is permanent. “Which is never” = she will not ask for dividers/boxes.
 
 ---
 
-## Subagents (parallel lanes)
+## Subagents (Dynamic Spawning)
 
-Project agents: **`.grok/agents/`**. Fan out instead of one mega-session that stomps data.
+Project agents: **`.grok/agents/`**. Lead breaks work into specialized children — **max 8 concurrent** — so parallel edits do not stomp data.
+
+Orchestration: **`.grok/skills/wonder-parallel/SKILL.md`** (`/wonder-parallel`) · lead law: **`.grok/agents/wonder-lead.md`**.
+
+### Specialization trio
+
+| Agent | Job | Isolation |
+|-------|-----|-----------|
+| `wonder-researcher` | Read-only code/data investigation | none (read-only) |
+| `wonder-implementer` | Bounded code slice | **worktree** |
+| `wonder-reviewer` | Diff gate (Guardian + Selene + correctness) | none (read-only) |
+| `wonder-lead` | Orchestrator: decompose → spawn ≤8 → merge → ship | parent only |
+
+### Domain lanes
 
 | Agent | Job |
 |-------|-----|
@@ -34,13 +47,15 @@ Project agents: **`.grok/agents/`**. Fan out instead of one mega-session that st
 | `wonder-keeper` | Keep `http://127.0.0.1:5173/` alive |
 | `wonder-verify` | Read-only smoke after parallel work |
 
-Orchestration: **`.grok/skills/wonder-parallel/SKILL.md`** (`/wonder-parallel`).
-
-### Parallel rules
-1. One writer per file surface — never two agents on `habitStore` or the same CSS file.
-2. Health + UI + wardrobe can run **at the same time**.
-3. Finish with `wonder-verify` (or equivalent) before “done.”
-4. Prefer `isolation: worktree` for multi-file implementers.
+### Parallel rules (absolute)
+1. **Dynamic spawn:** lead assigns roles; do not run one mega-session on multi-track work.
+2. **Max 8 concurrent** subagents; batch the rest into wave 2.
+3. **One writer per file surface** — never two agents on `habitStore` or the same CSS file.
+4. **Git worktree isolation** for every multi-file writer (`isolation: worktree`).
+5. Researchers + reviewers are **read-only**; implementers report worktree path + branch for merge.
+6. Health + UI + wardrobe can run **at the same time** on non-overlapping fences.
+7. Finish with `wonder-reviewer` then `wonder-verify` before “done.”
+8. Children **never** recursive-spawn; only the lead fans out.
 
 ---
 

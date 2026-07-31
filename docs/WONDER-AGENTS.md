@@ -115,3 +115,58 @@ Code:
 - `src/melani/agents/dataGuardian.ts`
 - `src/melani/agents/dataVault.ts`
 - `scripts/wonder-vault-api.mjs`
+
+---
+
+## 4. Dynamic Spawning (Grok project agents)
+
+**Job:** The lead agent breaks multi-track work into specialized children so parallel edits never collide or wipe data.
+
+### Three pillars
+
+| Pillar | Meaning |
+|--------|---------|
+| **Dynamic Spawning** | Lead decomposes the request; spawns only needed roles; **max 8 concurrent** |
+| **Task Specialization** | Researcher → implementer → reviewer (plus domain lanes) |
+| **Git Worktree Isolation** | Writers run in isolated worktrees; lead merges after review |
+
+### Specialization trio
+
+| Agent | File | Mode |
+|-------|------|------|
+| `wonder-researcher` | `.grok/agents/wonder-researcher.md` | Read-only investigation |
+| `wonder-implementer` | `.grok/agents/wonder-implementer.md` | Code in worktree |
+| `wonder-reviewer` | `.grok/agents/wonder-reviewer.md` | Diff gate before merge |
+| `wonder-lead` | `.grok/agents/wonder-lead.md` | Parent orchestrator |
+
+### Domain lanes (unchanged)
+
+`wonder-data-guardian`, `wonder-selene`, `wonder-wardrobe`, `wonder-keeper`, `wonder-verify`.
+
+### How a multi-track request runs (example)
+
+Melani: *“Stop habit wipe risk, kill hairlines on Habits, denser shoes grid.”*
+
+```text
+Lead (wonder-lead / /wonder-parallel)
+  ├─ wonder-researcher     (habit hydrate paths)     read-only
+  ├─ wonder-data-guardian  (habitStore fence)        worktree
+  ├─ wonder-selene         (Habits CSS only)         worktree
+  ├─ wonder-wardrobe       (wardrobe grid only)      worktree
+  │     … ≤ 8 concurrent …
+  ├─ wonder-reviewer       (all diffs vs main)       read-only
+  └─ wonder-verify         (typecheck + :5173)       read-only
+       → lead merges worktrees → commit + push main
+```
+
+### Orchestration skill
+
+`.grok/skills/wonder-parallel/SKILL.md` — slash **`/wonder-parallel`**.
+
+### Absolute rules
+
+1. One writer per file surface.  
+2. Empty disk is not truth for health.  
+3. Selene: no dividers, no boxes, no blurbs unless asked.  
+4. Writers → worktrees; children do not recursive-spawn.  
+5. Parent commits and pushes per `AGENTS.md`.
