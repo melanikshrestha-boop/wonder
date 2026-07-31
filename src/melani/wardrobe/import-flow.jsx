@@ -151,8 +151,30 @@ export function WardrobeImportFlow({ onGarmentApproved, onModeledApproved }) {
   useEffect(() => {
     api(CONFIG_API).then(setSetup).catch((requestError) => setSetup({ ready: false, error: requestError.message }));
     api(API)
-      .then((storedJobs) => {
-        const visibleJobs = storedJobs.filter((job) => job.status !== "complete" && job.stages?.crop?.status !== "rejected" && job.stages?.garment?.status !== "rejected" && job.stages?.modeled?.status !== "rejected");
+      .then(async (storedJobs) => {
+        // Purge stuck "crop ready for review" noise — user never wants that badge
+        const stale = storedJobs.filter(
+          (job) =>
+            job.stages?.crop?.status === "review" ||
+            job.status === "complete" ||
+            job.stages?.crop?.status === "rejected" ||
+            job.stages?.garment?.status === "rejected" ||
+            job.stages?.modeled?.status === "rejected"
+        );
+        await Promise.all(
+          stale.map((job) =>
+            api(`${API}/${job.id}`, { method: "DELETE" }).catch(() => null)
+          )
+        );
+        const visibleJobs = storedJobs.filter(
+          (job) =>
+            !stale.some((s) => s.id === job.id) &&
+            job.status !== "complete" &&
+            job.stages?.crop?.status !== "rejected" &&
+            job.stages?.garment?.status !== "rejected" &&
+            job.stages?.modeled?.status !== "rejected" &&
+            job.stages?.crop?.status !== "review"
+        );
         setJobs(visibleJobs);
         setDrafts(Object.fromEntries(visibleJobs.map((job) => [job.id, defaultDraft(job)])));
       })
@@ -286,15 +308,36 @@ export function WardrobeImportFlow({ onGarmentApproved, onModeledApproved }) {
   const reviewJob = selectedReviewJob || jobs.find((job) => reviewStageFor(job)) || jobs.find((job) => hasCleanupFailure(job)) || active;
   const reviewStage = reviewJob ? reviewStageFor(reviewJob) : null;
   const progress = 0;
-  const hasImportActivity = Boolean(jobs.length || notice || setupRequired);
+  // Only treat *live* work as activity — never sticky "N crop ready" chrome
+  const hasImportActivity = Boolean(
+    jobs.some((job) => {
+      const t = deriveStatus(job).tone;
+      return t === "processing" || t === "error";
+    }) ||
+      notice ||
+      setupRequired
+  );
 
   return (
     <>
       <input ref={inputRef} type="file" accept="image/*" multiple hidden disabled={!setup?.ready} onChange={(event) => { submitFiles(event.target.files); event.target.value = ""; }} />
       <div className="import-drop-overlay" data-active={dragging && !setupRequired} aria-hidden={!dragging || setupRequired}><div className="import-drop-target is-over"><UploadSimple size={34} weight="light" /><h2>Drop clothing images</h2><p>A single garment or a photo of a full outfit works. Your wardrobe stays exactly where you left it.</p></div></div>
-      <aside className="import-tray" data-has-activity={hasImportActivity} aria-label="Wardrobe imports">
-        <button className="import-tray__button" type="button" onClick={() => setupRequired || hasImportActivity ? setOpen(true) : inputRef.current?.click()} aria-label={setupRequired ? "Open setup instructions" : hasImportActivity ? "Open import progress" : "Add clothes"}>{activeStatus?.tone === "processing" ? <SpinnerGap size={19} className="import-spinner" /> : activeStatus?.tone === "error" ? <WarningCircle size={19} /> : readyCount ? <span>{readyCount}</span> : notice ? <X size={18} /> : <Plus size={19} />}</button>
-        <div className="import-tray__actions">{active && <img className="import-tray__preview" src={active.stages?.garment?.assetUrl || active.stages?.garment?.failedAssetUrl || active.stages?.crop?.assetUrl || active.originalAssetUrl} alt="" />}<span className="import-tray__label">{activeStatus?.text || "Add clothes"}</span>{!setupRequired && <button className="import-icon-button" type="button" onClick={() => inputRef.current?.click()} aria-label="Choose images"><UploadSimple size={17} /></button>}</div>
+      {/* Minimal + only — no expanded "Crop ready for review" status strip */}
+      <aside className="import-tray import-tray--minimal" aria-label="Add clothes">
+        <button
+          className="import-tray__button"
+          type="button"
+          onClick={() => (setupRequired ? setOpen(true) : inputRef.current?.click())}
+          aria-label={setupRequired ? "Open setup instructions" : "Add clothes"}
+        >
+          {activeStatus?.tone === "processing" ? (
+            <SpinnerGap size={19} className="import-spinner" />
+          ) : activeStatus?.tone === "error" ? (
+            <WarningCircle size={19} />
+          ) : (
+            <Plus size={19} />
+          )}
+        </button>
       </aside>
       <div className="import-popover-backdrop" data-open={open} onMouseDown={(event) => event.target === event.currentTarget && setOpen(false)}>
         <section className="import-popover" role="dialog" aria-modal="true" aria-labelledby="import-title">

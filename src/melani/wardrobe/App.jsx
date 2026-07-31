@@ -1446,46 +1446,11 @@ export function App() {
           )
         ) : (
           <>
-            {collection === "want" ? (
-              <section className="wishlist-bridge" aria-label="Pinterest connection">
-                <div>
-                  <p className="wishlist-bridge-label">Pinterest taste connection</p>
-                  <h2>Make the generator dress from your visual world.</h2>
-                  <p>Paste your profile, one fashion board, or a pin. Wonder saves the link and uses those colors and silhouettes in Daily Looks.</p>
-                </div>
-                <div className="wishlist-bridge-form">
-                  <input
-                    type="url"
-                    inputMode="url"
-                    value={pinterestBoardInput}
-                    onChange={(event) => setPinterestBoardInput(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        connectPinterestBoard();
-                      }
-                    }}
-                    placeholder="https://www.pinterest.com/your-name/your-fashion-board/"
-                    aria-label="Your Pinterest board"
-                  />
-                  <button type="button" onClick={connectPinterestBoard} disabled={pinterestBusy}>
-                    {pinterestBusy ? "Connecting…" : pinterestBoard ? "Refresh board" : "Connect Pinterest"}
-                  </button>
-                </div>
-                <div className="wishlist-bridge-foot">
-                  {pinterestStatus ? <span role="status">{pinterestStatus}</span> : <span>Public boards and individual pins work best.</span>}
-                  {pinterestBoard ? (
-                    <a href={pinterestBoard} target="_blank" rel="noreferrer">Open my Pinterest ↗</a>
-                  ) : null}
-                </div>
-              </section>
-            ) : null}
-
             {error && <p className="status error">{error}</p>}
-            {!error && loading && <p className="status">Loading wardrobe</p>}
+            {!error && loading && <p className="status">Loading…</p>}
             {!error && !loading && !items.length && (
               <div className="status empty wardrobe-empty-block">
-                <p>Drop, paste, or add a photo to import your first piece.</p>
+                <p>Add a photo.</p>
                 {readDeletedItems().size > 0 ? (
                   <button type="button" className="restore-deleted-button" onClick={restoreDeleted}>
                     Restore removed pieces ({readDeletedItems().size})

@@ -10,10 +10,10 @@ import "./daily-generator.css";
 const DAILY_KEY = "wonder-daily-outfit-v1";
 const PINTEREST_BOARD_KEY = "wonder-wardrobe-pinterest-board-v1";
 const MODES = [
-  { id: "build", label: "Comfort", note: "soft · unrestricted" },
-  { id: "everyday", label: "Everyday", note: "clean · effortless" },
-  { id: "out", label: "Going out", note: "stronger silhouette" },
-  { id: "content", label: "Content", note: "camera-aware" },
+  { id: "build", label: "Comfort" },
+  { id: "everyday", label: "Everyday" },
+  { id: "out", label: "Going out" },
+  { id: "content", label: "Content" },
 ];
 
 function todayKey() {
@@ -455,9 +455,6 @@ export function DailyGenerator({ items = [], onOpenItem }) {
               </span>
             ) : null}
           </h2>
-          <p className="daily-gen__sub">
-            Built from your real closet, current weather, comfort rules, fit balance, and the Pinterest references you choose.
-          </p>
         </div>
         <div className="daily-gen__actions-top">
           <button type="button" className="daily-gen__btn ghost" onClick={() => setShowInspo((current) => !current)}>
@@ -483,7 +480,6 @@ export function DailyGenerator({ items = [], onOpenItem }) {
             }}
           >
             <strong>{option.label}</strong>
-            <span>{option.note}</span>
           </button>
         ))}
       </div>
