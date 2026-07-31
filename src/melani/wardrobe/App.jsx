@@ -1056,8 +1056,15 @@ export function App() {
   const [pinterestBusy, setPinterestBusy] = useState(false);
   const [cols, setCols] = useState(() => {
     try {
-      const n = Number(localStorage.getItem(COLS_KEY));
-      if (Number.isFinite(n)) return Math.min(COLS_MAX, Math.max(COLS_MIN, Math.round(n)));
+      // CRITICAL: getItem missing → null → Number(null)===0 → was clamping to COLS_MIN (2)
+      // and disabling +. Only honor a real stored string.
+      const raw = localStorage.getItem(COLS_KEY);
+      if (raw != null && String(raw).trim() !== "") {
+        const n = Number(raw);
+        if (Number.isFinite(n)) {
+          return Math.min(COLS_MAX, Math.max(COLS_MIN, Math.round(n)));
+        }
+      }
     } catch {
       /* ignore */
     }
