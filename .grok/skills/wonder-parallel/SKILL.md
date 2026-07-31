@@ -33,6 +33,15 @@ Full lead law: **`.grok/agents/wonder-lead.md`** (`wonder-lead`).
 | `wonder-implementer` | Bounded code slice | **worktree** |
 | `wonder-reviewer` | Diff gate before merge | none, read-only |
 
+### Cross-cutting
+
+| Agent | Job | Isolation |
+|-------|-----|-----------|
+| `repo-explorer` | Entry points + data flow + risk map | read-only |
+| `code-reviewer` | Impact-ranked quality review | read-only |
+| `test-debugger` | Run tests, group failures, debug steps | execute |
+| `security-reviewer` | Authz / validation / secrets (no exploits) | read-only |
+
 ### Domain lanes
 
 | Agent | Lane | Isolation |

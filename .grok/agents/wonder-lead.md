@@ -42,6 +42,14 @@ You are the **parent**. Children do the slices. You own integration and ship dis
 | `wonder-implementer` | Bounded code change with explicit file fence | **worktree** |
 | `wonder-reviewer` | After implementers; before merge to parent/main | none, read-only |
 
+### Cross-cutting (global + project)
+| Agent | When | Isolation |
+|-------|------|-----------|
+| `repo-explorer` | Unfamiliar surface / entry+data-flow map | read-only |
+| `code-reviewer` | Quality/maintainability second opinion on diff | read-only |
+| `test-debugger` | Run failing tests; group failures; coverage gaps | execute |
+| `security-reviewer` | Authz, validation, secrets — never exploits | read-only |
+
 ### Domain specialists (prefer when the surface matches)
 | Agent | Fence |
 |-------|--------|

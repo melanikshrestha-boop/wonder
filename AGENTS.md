@@ -28,7 +28,7 @@ Project agents: **`.grok/agents/`**. Lead breaks work into specialized children 
 
 Orchestration: **`.grok/skills/wonder-parallel/SKILL.md`** (`/wonder-parallel`) · lead law: **`.grok/agents/wonder-lead.md`**.
 
-### Specialization trio
+### Specialization trio (Wonder-named)
 
 | Agent | Job | Isolation |
 |-------|-----|-----------|
@@ -37,13 +37,22 @@ Orchestration: **`.grok/skills/wonder-parallel/SKILL.md`** (`/wonder-parallel`) 
 | `wonder-reviewer` | Diff gate (Guardian + Selene + correctness) | none (read-only) |
 | `wonder-lead` | Orchestrator: decompose → spawn ≤8 → merge → ship | parent only |
 
+### Cross-cutting roles (also in `~/.grok/agents/`)
+
+| Agent | Job | Isolation |
+|-------|-----|-----------|
+| `repo-explorer` | Entry points, data flows, risk map | read-only |
+| `code-reviewer` | Impact-ranked quality/maintainability review | read-only |
+| `test-debugger` | Run tests, group failures, debug steps / coverage gaps | execute tests |
+| `security-reviewer` | Authz, validation, secret exposure | read-only (no exploits) |
+
 ### Domain lanes
 
 | Agent | Job |
 |-------|-----|
 | `wonder-data-guardian` | Health storage: merge-only; never wipe bowel/fog/meals/weight/habits |
 | `wonder-selene` | UI law: no dividers, no boxes, no blurbs |
-| `wonder-wardrobe` | Closet: native mount (no blank fullscreen), paste-link + screenshot reverse-import, density, Selene |
+| `wonder-wardrobe` | Closet: fullscreen must work, paste-link + screenshot reverse-import, density, Selene |
 | `wonder-keeper` | Keep `http://127.0.0.1:5173/` alive |
 | `wonder-verify` | Read-only smoke after parallel work |
 
