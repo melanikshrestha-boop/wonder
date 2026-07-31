@@ -434,14 +434,6 @@ export function iconForPage(page: Pick<Page, "id" | "title" | "kind" | "icon">):
     return "monitor";
   if (id === "pg-data" || id === "pg-my-data" || t === "data" || t === "my data")
     return "data";
-  if (
-    id === "pg-body-os" ||
-    id === "pg-data-guardian" ||
-    t.includes("body os") ||
-    t.includes("guardian") ||
-    t === "shield"
-  )
-    return "data";
   if (id.includes("lab") || t.includes("lab")) return "labs";
   if (id === "pg-life" || t === "life") return "life";
   if (id.includes("library") || t.includes("library")) return "library";

@@ -29,7 +29,6 @@ import {
   isHabitsPage,
   isHygienePage,
   isShoppingAgentPage,
-  isBodyOsPage,
 } from "./pageRoutes";
 // Nutrition tab is retired from the product surface (design rejected).
 // Operator + paper trading + World Monitor + Content + Failures permanently deleted (not routed).
@@ -81,11 +80,6 @@ const WardrobeFrame = lazy(async () => {
 const GmailConnector = lazy(async () => {
   const module = await import("./GmailConnector");
   return { default: module.GmailConnector };
-});
-
-const AgentsDesk = lazy(async () => {
-  const module = await import("./agents/AgentsDesk");
-  return { default: module.AgentsDesk };
 });
 
 function DeskFallback({ label }: { label: string }) {
@@ -401,7 +395,6 @@ export function isMelaniRichPage(pageId: string): boolean {
     isCareConciergePage(pageId) ||
     isFinancesPage(pageId) ||
     isHabitsPage(pageId) ||
-    isBodyOsPage(pageId) ||
     pageId === "pg-data" ||
     pageId === "pg-my-data"
   );
@@ -460,14 +453,6 @@ export function MelaniRichPage({
     return (
       <Suspense fallback={<DeskFallback label="Loading Care" />}>
         <CareConcierge />
-      </Suspense>
-    );
-  }
-
-  if (isBodyOsPage(pageId)) {
-    return (
-      <Suspense fallback={<DeskFallback label="Loading Body OS" />}>
-        <AgentsDesk />
       </Suspense>
     );
   }

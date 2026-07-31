@@ -138,6 +138,10 @@ const PURGE_PAGE_IDS = new Set([
   "pg-failures",
   "pg-failure",
   "pg-learn-failures",
+  // Body OS desk — permanently deleted (Guardian/Vault still run headless)
+  "pg-body-os",
+  "pg-data-guardian",
+  "pg-twin-desk",
   // Operator + paper trading desks — permanently deleted
   "pg-operator",
   "pg-empire",
@@ -384,6 +388,9 @@ function ensureLifePages(ws: Workspace): Workspace {
     "pg-youtube",
     "pg-channel",
     "pg-learn-math",
+    "pg-body-os",
+    "pg-data-guardian",
+    "pg-twin-desk",
   ]);
   pages = pages.filter((p) => !PERMANENTLY_DELETED.has(p.id));
 
@@ -410,13 +417,6 @@ function ensureLifePages(ws: Workspace): Workspace {
   ]);
   ensurePage("pg-agent-care", "Care Concierge", "care", "pg-agents", [
     newBlock("paragraph", ""),
-  ]);
-  // Body OS — Data Guardian · Vault · Twin (never-wipe health + design desk)
-  ensurePage("pg-body-os", "Body OS", "shield", "pg-agents", [
-    newBlock(
-      "paragraph",
-      "Data Guardian · Data Vault · Twin. Your health history never goes silent."
-    ),
   ]);
 
   // Lift anything that was nested under the old Work hub (so stocks kids aren’t lost)
@@ -468,7 +468,10 @@ function ensureLifePages(ws: Workspace): Workspace {
     activePageId === "pg-content" ||
     activePageId === "pg-youtube" ||
     activePageId === "pg-channel" ||
-    activePageId === "pg-learn-math"
+    activePageId === "pg-learn-math" ||
+    activePageId === "pg-body-os" ||
+    activePageId === "pg-data-guardian" ||
+    activePageId === "pg-twin-desk"
   ) {
     activePageId = "pg-library";
   }

@@ -53,14 +53,6 @@ export function isShoppingAgentPage(pageId: string): boolean {
   return pageId === "pg-agent-shopping";
 }
 
-/** Body OS — Data Guardian · Vault · Twin */
-export function isBodyOsPage(pageId: string): boolean {
-  return (
-    pageId === "pg-body-os" ||
-    pageId === "pg-data-guardian" ||
-    pageId === "pg-twin-desk"
-  );
-}
 
 /** @deprecated Use Focus under Fitness (pg-focus). Kept for old links. */
 export function isScreenTimePage(pageId: string): boolean {
