@@ -43,7 +43,7 @@ Orchestration: **`.grok/skills/wonder-parallel/SKILL.md`** (`/wonder-parallel`) 
 |-------|-----|
 | `wonder-data-guardian` | Health storage: merge-only; never wipe bowel/fog/meals/weight/habits |
 | `wonder-selene` | UI law: no dividers, no boxes, no blurbs |
-| `wonder-wardrobe` | Closet only (`wardrobe/**`, library) |
+| `wonder-wardrobe` | Closet: native mount (no blank fullscreen), paste-link + screenshot reverse-import, density, Selene |
 | `wonder-keeper` | Keep `http://127.0.0.1:5173/` alive |
 | `wonder-verify` | Read-only smoke after parallel work |
 

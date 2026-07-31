@@ -1,22 +1,32 @@
+/* Iframe shell — height is set in JS from getBoundingClientRect (fullscreen-safe) */
 .wardrobe-frame-shell {
+  display: block;
   width: 100%;
-  height: auto;
-  min-height: calc(100vh - 142px);
-  overflow: visible;
+  min-height: 480px;
+  overflow: hidden;
   background: #f7f7fa;
+  box-sizing: border-box;
 }
 
 .wardrobe-frame {
   display: block;
   width: 100%;
-  height: calc(100vh - 142px);
-  min-height: 720px;
+  /* JS overwrites height; fallbacks for first paint */
+  height: calc(100dvh - 140px);
+  min-height: 480px;
   border: 0;
   background: #f7f7fa;
+  vertical-align: top;
 }
 
-@media (max-height: 820px) {
-  .wardrobe-frame {
-    min-height: 640px;
-  }
+/* When Chrome is full-screen, still fill remaining space below topbar */
+:fullscreen .wardrobe-frame-shell,
+:-webkit-full-screen .wardrobe-frame-shell,
+.main.is-wardrobe:fullscreen .wardrobe-frame-shell {
+  min-height: calc(100dvh - 48px);
+}
+
+:fullscreen .wardrobe-frame,
+:-webkit-full-screen .wardrobe-frame {
+  min-height: calc(100dvh - 48px);
 }

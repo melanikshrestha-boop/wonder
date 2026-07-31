@@ -203,10 +203,32 @@ export function WardrobeImportFlow({ onGarmentApproved, onModeledApproved }) {
     if (!setup?.ready) { setOpen(true); return; }
     const images = [...files].filter((file) => file.type.startsWith("image/"));
     if (!images.length) return;
-    setDragging(false); setError(""); setNotice(null);
+    setDragging(false); setError(""); setNotice(null); setOpen(true); setLinkBusy(true);
     for (const file of images) {
       try {
         const imageDataUrl = await fileToDataUrl(file);
+        // Default: reverse-find product online (screenshot of shoe → real listing → cutout)
+        // Same end state as paste-link import.
+        try {
+          const reverse = await api("/api/import/product-image", {
+            method: "POST",
+            body: JSON.stringify({ imageDataUrl }),
+          });
+          if (reverse.item) {
+            onGarmentApproved?.(reverse.item);
+            setNotice({
+              tone: "complete",
+              text: reverse.duplicate ? "Already on wishlist" : reverse.foundUrl ? "Found online · added" : "Saved from photo",
+              detail: reverse.foundUrl
+                ? `${reverse.item.name}${reverse.item.retailPrice != null ? ` · $${reverse.item.retailPrice}` : ""} · ${reverse.foundUrl}`
+                : reverse.note || `${reverse.item.name} cut out from your photo.`,
+            });
+            continue;
+          }
+        } catch (reverseError) {
+          // Fall through to classic multi-stage import only if reverse path fails hard
+          console.warn("[import] reverse search failed:", reverseError.message);
+        }
         const result = await api(API, { method: "POST", body: JSON.stringify({ imageDataUrl, metadata: { name: file.name.replace(/\.[^.]+$/, "") } }) });
         const createdJobs = result.jobs || [result];
         const duplicates = result.duplicates || [];
@@ -214,20 +236,17 @@ export function WardrobeImportFlow({ onGarmentApproved, onModeledApproved }) {
           const names = duplicates.map((duplicate) => duplicate.existingName).join(", ");
           setNotice({ tone: "complete", text: "Already in your wardrobe", detail: `${names} matched the upload, so I did not create a duplicate.` });
         }
-        if (!createdJobs.length && duplicates.length) {
-          setOpen(true);
-          continue;
-        }
+        if (!createdJobs.length && duplicates.length) continue;
         if (!createdJobs.length && result.noClothingDetected) {
-          setNotice({ tone: "complete", text: "No clothing detected", detail: `We couldn’t find a distinct wearable item in ${file.name}. Try a clearer or more tightly framed image.` });
-          setOpen(true);
+          setNotice({ tone: "complete", text: "No clothing detected", detail: `We couldn’t find a wearable item in ${file.name}.` });
           continue;
         }
         setJobs((current) => [...current, ...createdJobs]);
         setDrafts((current) => ({ ...current, ...Object.fromEntries(createdJobs.map((job) => [job.id, defaultDraft(job)])) }));
       } catch (requestError) { setError(requestError.message); }
     }
-  }, [setup]);
+    setLinkBusy(false);
+  }, [setup, onGarmentApproved]);
 
   /** Primary path: paste buy-link → scrape → cutout → wishlist. Zero manual crop. */
   const submitProductLink = useCallback(async (rawUrl) => {
@@ -440,7 +459,7 @@ export function WardrobeImportFlow({ onGarmentApproved, onModeledApproved }) {
                 </button>
               </div>
               <p className="import-link-hint">
-                Paste any product page. I pull the photo, cut the background, read name and price, and drop it on your wishlist — no crop work for you.
+                Paste a product page <strong>or</strong> drop / upload a screenshot. I reverse-find the real listing, cut the product, and put it on your wishlist — same pipeline as shoes.
               </p>
             </form>
           )}
@@ -453,7 +472,7 @@ export function WardrobeImportFlow({ onGarmentApproved, onModeledApproved }) {
                 disabled={!setup?.ready || linkBusy}
                 onClick={() => { setNotice(null); inputRef.current?.click(); }}
               >
-                <UploadSimple size={14} /> Or upload a photo
+                <UploadSimple size={14} /> Screenshot / photo
               </button>
             </div>
           ) : (

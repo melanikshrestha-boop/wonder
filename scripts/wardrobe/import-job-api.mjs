@@ -581,6 +581,99 @@ async function openAIAnalyze({ key, baseUrl, model, image, mime }) {
   return parsed.items;
 }
 
+/** Vision: name the exact product so we can reverse-search a buy link. */
+async function openAIIdentifyProduct({ key, baseUrl, model, image, mime }) {
+  const response = await fetch(`${baseUrl}/responses`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      input: [{
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: "This is a product photo or screenshot of one fashion item Melani wants to buy. Identify the most specific real retail product you can. Return JSON only with: brand, productName (full commercial name e.g. Nike Killshot 2 Leather), colorway, part (upperbody|lowerbody|shoes|dresses|wholebody_up|accessories_up), searchQuery (best Google Shopping query to find the exact item to buy), confidence (0-1).",
+          },
+          { type: "input_image", image_url: `data:${mime};base64,${image.toString("base64")}` },
+        ],
+      }],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "product_id",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              brand: { type: "string" },
+              productName: { type: "string" },
+              colorway: { type: "string" },
+              part: { type: "string", enum: ["upperbody", "dresses", "wholebody_up", "lowerbody", "accessories_up", "shoes"] },
+              searchQuery: { type: "string" },
+              confidence: { type: "number" },
+            },
+            required: ["brand", "productName", "colorway", "part", "searchQuery", "confidence"],
+          },
+        },
+      },
+    }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error?.message || `Product ID failed (${response.status})`);
+  const outputText = result.output_text || result.output?.flatMap((item) => item.content || []).find((item) => item.type === "output_text")?.text;
+  if (!outputText) throw new Error("Could not identify the product from that image.");
+  return JSON.parse(outputText);
+}
+
+/** Best-effort product page discovery from a shopping search query. */
+async function searchProductPageUrls(query, limit = 8) {
+  const urls = [];
+  const q = encodeURIComponent(query);
+  try {
+    const res = await fetch(`https://html.duckduckgo.com/html/?q=${q}`, {
+      headers: {
+        "User-Agent": BROWSER_UA,
+        Accept: "text/html",
+      },
+    });
+    if (res.ok) {
+      const html = await res.text();
+      const re = /uddg=([^&"]+)/g;
+      let m;
+      while ((m = re.exec(html)) && urls.length < limit) {
+        try {
+          const decoded = decodeURIComponent(m[1]);
+          if (/^https?:\/\//i.test(decoded) && !/duckduckgo\.com/i.test(decoded)) {
+            urls.push(decoded.split("&")[0]);
+          }
+        } catch {
+          /* skip */
+        }
+      }
+      // Also plain hrefs
+      const hrefRe = /href="(https?:\/\/(?!duckduckgo)[^"]+)"/gi;
+      while ((m = hrefRe.exec(html)) && urls.length < limit) {
+        const u = m[1];
+        if (!/duckduckgo|google\.|bing\.|youtube\.|facebook\./i.test(u)) urls.push(u);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  // Prefer retailer domains
+  const scored = [...new Set(urls)].map((u) => {
+    let score = 0;
+    if (/nike|adidas|uniqlo|nordstrom|zappos|footlocker|ssense|endclothing|stockx|goat|edikted|stussy|scuffers|fearofgod|jcrew|gap|hm\.com|zara|asos|target|amazon/i.test(u)) score += 5;
+    if (/product|products|\/t\/|\/p\/|sku|dp\//i.test(u)) score += 3;
+    if (/\.(jpg|png|webp|gif)/i.test(u)) score -= 4;
+    return { u, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((s) => s.u).slice(0, limit);
+}
+
 export function wardrobeImportApi(options = {}) {
   let root;
   let jobsDir;
@@ -820,39 +913,17 @@ export function wardrobeImportApi(options = {}) {
       if (url.pathname === "/api/import/config" && req.method === "GET") {
         return json(res, 200, await setupStatus());
       }
-      // Paste a product link → auto-scrape photo/name/price → cutout → wishlist library item
-      if (url.pathname === "/api/import/product-url" && req.method === "POST") {
-        const input = await body(req, 64 * 1024);
-        const productUrl = String(input.url || input.productUrl || input.link || "").trim();
-        if (!isHttpUrl(productUrl)) {
-          throw Object.assign(new Error("Paste a full product link starting with https://"), { status: 400 });
-        }
-        // Direct image URL path
-        let scraped;
-        if (/\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(productUrl)) {
-          scraped = {
-            name: input.name || "Wishlist piece",
-            imageUrl: productUrl,
-            price: parsePrice(input.price),
-            currency: "USD",
-            brand: null,
-            part: guessPartFromText(input.name || ""),
-            productRef: productUrl,
-          };
-        } else {
-          scraped = await scrapeProductPage(productUrl);
-        }
-        // Dedupe by productRef
+      /** Persist a scraped (or local-bytes) product as a wishlist tile — shared by link + screenshot paths. */
+      async function importWishlistProduct({ scraped, sourceBytes, seedMethod, extraTags = [] }) {
         const existing = await loadImported();
-        const dup = existing.find(
-          (item) =>
-            item.productRef &&
-            String(item.productRef).split("?")[0] === scraped.productRef.split("?")[0]
-        );
-        if (dup) {
-          return json(res, 200, { item: dup, duplicate: true });
+        if (scraped.productRef) {
+          const dup = existing.find(
+            (item) =>
+              item.productRef &&
+              String(item.productRef).split("?")[0] === String(scraped.productRef).split("?")[0]
+          );
+          if (dup) return { item: dup, duplicate: true };
         }
-        const sourceBytes = await downloadRemoteImage(scraped.imageUrl);
         const cut = await cutoutProductBytes(sourceBytes, scraped, root);
         const part = PARTS.has(cut.part) ? cut.part : scraped.part;
         const tile = await fitTileCanvas(cut.bytes, part);
@@ -877,20 +948,23 @@ export function wardrobeImportApi(options = {}) {
           color: cut.color || intelligence?.color || "#d8d0c2",
           secondaryColor: null,
           palette: [cut.color || "#d8d0c2"].filter(Boolean),
-          tags: [...new Set([...(cut.tags || []), "want", "wishlist", "link-import"].filter(Boolean))],
+          tags: [...new Set([...(cut.tags || []), "want", "wishlist", seedMethod, ...extraTags].filter(Boolean))],
           role: "wishlist",
-          productRef: scraped.productRef,
+          productRef: scraped.productRef || null,
           retailPrice: scraped.price,
           retailCurrency: scraped.currency || "USD",
-          retailNote: scraped.price != null ? `From product link · $${scraped.price}` : "From product link",
+          retailNote:
+            scraped.price != null
+              ? `From ${seedMethod} · $${scraped.price}`
+              : `From ${seedMethod}`,
           intelligence,
           image: `${LIBRARY_ASSET_ROOT}/${garmentName}?v=${version}`,
           frontImage: `${LIBRARY_ASSET_ROOT}/${garmentName}?v=${version}`,
           thumbnail: `${LIBRARY_ASSET_ROOT}/${garmentName}?v=${version}`,
           garmentImage: `${LIBRARY_ASSET_ROOT}/${garmentName}?v=${version}`,
           sourceImage: `${LIBRARY_ASSET_ROOT}/${sourceName}?v=${version}`,
-          seedSource: scraped.productRef,
-          seedMethod: "product-url",
+          seedSource: scraped.productRef || scraped.imageUrl || null,
+          seedMethod,
           subjectCutout: true,
           analysisVersion: 2,
           analysisUpdatedAt: new Date().toISOString(),
@@ -899,7 +973,153 @@ export function wardrobeImportApi(options = {}) {
           updatedAt: new Date().toISOString(),
         };
         await atomicJson(importedFile, [...existing, record]);
-        return json(res, 201, { item: record, duplicate: false });
+        return { item: record, duplicate: false };
+      }
+
+      // Paste a product link → auto-scrape photo/name/price → cutout → wishlist
+      if (url.pathname === "/api/import/product-url" && req.method === "POST") {
+        const input = await body(req, 64 * 1024);
+        const productUrl = String(input.url || input.productUrl || input.link || "").trim();
+        if (!isHttpUrl(productUrl)) {
+          throw Object.assign(new Error("Paste a full product link starting with https://"), { status: 400 });
+        }
+        let scraped;
+        if (/\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(productUrl)) {
+          scraped = {
+            name: input.name || "Wishlist piece",
+            imageUrl: productUrl,
+            price: parsePrice(input.price),
+            currency: "USD",
+            brand: null,
+            part: guessPartFromText(input.name || ""),
+            productRef: productUrl,
+          };
+        } else {
+          scraped = await scrapeProductPage(productUrl);
+        }
+        const sourceBytes = await downloadRemoteImage(scraped.imageUrl);
+        const result = await importWishlistProduct({
+          scraped,
+          sourceBytes,
+          seedMethod: "product-url",
+          extraTags: ["link-import"],
+        });
+        return json(res, result.duplicate ? 200 : 201, result);
+      }
+
+      // Screenshot / photo → identify product → find buy link online → same cutout pipeline
+      if (url.pathname === "/api/import/product-image" && req.method === "POST") {
+        const input = await body(req, 25 * 1024 * 1024);
+        const image = decodeImage(input);
+        const sourceBytes = await normalizeImage(image.data);
+        const key = setting("OPENAI_API_KEY").trim();
+        let identity = null;
+        let productUrl = null;
+        let scraped = null;
+        let searchQuery = "";
+
+        if (key) {
+          try {
+            identity = await openAIIdentifyProduct({
+              key,
+              baseUrl: apiBaseUrl(),
+              model: setting("OPENAI_VISION_MODEL", "gpt-5.4-mini"),
+              image: sourceBytes,
+              mime: "image/png",
+            });
+            searchQuery = String(identity.searchQuery || `${identity.brand} ${identity.productName} ${identity.colorway}`).trim();
+          } catch (err) {
+            console.warn("[product-image] identify:", err.message);
+          }
+        }
+
+        if (!searchQuery) {
+          // Local fallback: use wardrobe vision item list for a name
+          try {
+            if (key) {
+              const items = await openAIAnalyze({
+                key,
+                baseUrl: apiBaseUrl(),
+                model: setting("OPENAI_VISION_MODEL", "gpt-5.4-mini"),
+                image: sourceBytes,
+                mime: "image/png",
+              });
+              if (items[0]?.name) searchQuery = items[0].name;
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        if (!searchQuery) searchQuery = "fashion product buy";
+
+        const candidates = await searchProductPageUrls(searchQuery, 10);
+        for (const candidate of candidates) {
+          try {
+            scraped = await scrapeProductPage(candidate);
+            productUrl = candidate;
+            break;
+          } catch {
+            /* try next */
+          }
+        }
+
+        if (scraped && productUrl) {
+          // Prefer clean retailer photo when we found a page; still keep ID name if better
+          if (identity?.productName && identity.productName.length > 4) {
+            scraped = {
+              ...scraped,
+              name: identity.productName,
+              brand: identity.brand || scraped.brand,
+              part: PARTS.has(identity.part) ? identity.part : scraped.part,
+            };
+          }
+          try {
+            const remoteBytes = await downloadRemoteImage(scraped.imageUrl);
+            const result = await importWishlistProduct({
+              scraped: { ...scraped, productRef: productUrl },
+              sourceBytes: remoteBytes,
+              seedMethod: "screenshot-reverse",
+              extraTags: ["screenshot", "reverse-search"],
+            });
+            return json(res, result.duplicate ? 200 : 201, {
+              ...result,
+              identity,
+              foundUrl: productUrl,
+              searchQuery,
+            });
+          } catch (err) {
+            console.warn("[product-image] remote import failed, using upload:", err.message);
+          }
+        }
+
+        // No reliable product page — still cut the uploaded photo and save as wishlist
+        const fallbackName =
+          identity?.productName ||
+          (identity?.brand ? `${identity.brand} piece` : null) ||
+          "Wishlist piece from photo";
+        const result = await importWishlistProduct({
+          scraped: {
+            name: fallbackName,
+            brand: identity?.brand || null,
+            part: identity?.part || "shoes",
+            price: null,
+            currency: "USD",
+            productRef: null,
+            imageUrl: null,
+          },
+          sourceBytes,
+          seedMethod: "screenshot-local",
+          extraTags: ["screenshot", searchQuery ? "needs-link" : "unidentified"],
+        });
+        return json(res, 201, {
+          ...result,
+          identity,
+          foundUrl: null,
+          searchQuery,
+          note: productUrl
+            ? "Saved cutout from your photo (retail page scrape failed)."
+            : "Saved cutout from your photo — could not lock a retail link. Paste a product URL later if you find one.",
+        });
       }
       const wardrobeReprocessMatch = url.pathname.match(/^\/api\/import\/wardrobe\/(import-[a-f0-9-]{36})\/reprocess$/i);
       if (wardrobeReprocessMatch && req.method === "POST") {

@@ -10,6 +10,11 @@ const DELETED_STORAGE_KEY = "open-wardrobe-deleted-v1";
 const SHOP_WANTS_KEY = "wonder-style-shopper-wants-v1";
 const PINTEREST_BOARD_KEY = "wonder-wardrobe-pinterest-board-v1";
 const RESALE_FIX_KEY = "wonder-wardrobe-resale-correction-2026-07-27";
+/** Gallery density: 0 = most columns (zoom out), 4 = fewest (zoom in) */
+const DENSITY_KEY = "wonder-wardrobe-density-v1";
+const DENSITY_MIN = 0;
+const DENSITY_MAX = 4;
+const DENSITY_MINMAX = [108, 128, 152, 188, 240];
 
 function isOriginalResalePiece(item) {
   return /anti social social club.*hoodie|fear of god essentials.*hoodie/i.test(
@@ -1045,6 +1050,27 @@ export function App() {
   });
   const [pinterestStatus, setPinterestStatus] = useState("");
   const [pinterestBusy, setPinterestBusy] = useState(false);
+  const [density, setDensity] = useState(() => {
+    try {
+      const n = Number(localStorage.getItem(DENSITY_KEY));
+      if (Number.isFinite(n)) return Math.min(DENSITY_MAX, Math.max(DENSITY_MIN, Math.round(n)));
+    } catch {
+      /* ignore */
+    }
+    return 1;
+  });
+
+  const bumpDensity = (delta) => {
+    setDensity((current) => {
+      const next = Math.min(DENSITY_MAX, Math.max(DENSITY_MIN, current + delta));
+      try {
+        localStorage.setItem(DENSITY_KEY, String(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetch("/api/import/wardrobe", { cache: "no-store" })
@@ -1333,40 +1359,32 @@ export function App() {
     <div className={`app-shell${selectedItem ? " has-selection" : ""}`}>
       <main className="gallery-pane">
         <header className="gallery-header">
-          <nav className="collection-nav" aria-label="Wardrobe collections">
-            {[
-              ["looks", "Daily looks"],
-              ["wardrobe", "My closet"],
-              ["want", "Wishlist"],
-              ["resale", "For sale"],
-              ["shop", "Shop assistant"],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className={collection === id ? "active" : ""}
-                onClick={() => {
-                  setCollection(id);
-                  setSelectedId(null);
-                }}
-              >
-                {label}
-                {id === "resale"
-                  ? ` ${saleCount}`
-                  : ""}
-                {id === "want"
-                  ? ` ${wantCount}`
-                  : ""}
-              </button>
-            ))}
-          </nav>
-          <p className="wardrobe-kpis" aria-label="Wardrobe summary">
-            <span><strong>{ownedCount}</strong> closet</span>
-            <span><strong>{wantCount}</strong> wishlist</span>
-            <span><strong>{saleCount}</strong> for sale</span>
-          </p>
-          {!["shop", "looks"].includes(collection) ? (
-            <>
+          {/* One clean toolbar row: collections · filters · density · counts */}
+          <div className="gallery-toolbar">
+            <nav className="collection-nav" aria-label="Wardrobe collections">
+              {[
+                ["looks", "Daily looks"],
+                ["wardrobe", "My closet"],
+                ["want", "Wishlist"],
+                ["resale", "For sale"],
+                ["shop", "Shop"],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={collection === id ? "active" : ""}
+                  onClick={() => {
+                    setCollection(id);
+                    setSelectedId(null);
+                  }}
+                >
+                  {label}
+                  {id === "resale" ? ` ${saleCount}` : ""}
+                  {id === "want" ? ` ${wantCount}` : ""}
+                </button>
+              ))}
+            </nav>
+            {!["shop", "looks"].includes(collection) ? (
               <nav className="category-nav" aria-label="Filter wardrobe by section">
                 {NAV.map((nav) => (
                   <button
@@ -1380,33 +1398,62 @@ export function App() {
                   </button>
                 ))}
               </nav>
-              {subOptions ? (
-                <nav className="subcategory-nav" aria-label={`${activeNavMeta.label} types`}>
-                  <button
-                    type="button"
-                    className={!activeSub ? "active" : ""}
-                    onClick={() => {
-                      setActiveSub(null);
-                      setSelectedId(null);
-                    }}
-                    aria-pressed={!activeSub}
-                  >
-                    All {activeNavMeta.label}
-                  </button>
-                  {subOptions.map((sub) => (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      className={activeSub === sub.id ? "active" : ""}
-                      onClick={() => chooseSub(sub.id)}
-                      aria-pressed={activeSub === sub.id}
-                    >
-                      {sub.label}
-                    </button>
-                  ))}
-                </nav>
-              ) : null}
-            </>
+            ) : null}
+            <div className="gallery-toolbar-end">
+              <div className="gallery-density" role="group" aria-label="Zoom gallery density">
+                <button
+                  type="button"
+                  className="gallery-density__btn"
+                  onClick={() => bumpDensity(1)}
+                  disabled={density >= DENSITY_MAX}
+                  aria-label="Zoom in (fewer columns)"
+                  title="Zoom in"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  className="gallery-density__btn"
+                  onClick={() => bumpDensity(-1)}
+                  disabled={density <= DENSITY_MIN}
+                  aria-label="Zoom out (more columns)"
+                  title="Zoom out"
+                >
+                  +
+                </button>
+              </div>
+              <p className="wardrobe-kpis" aria-label="Wardrobe summary">
+                <span><strong>{ownedCount}</strong> closet</span>
+                <span><strong>{wantCount}</strong> wish</span>
+                <span><strong>{saleCount}</strong> sale</span>
+              </p>
+            </div>
+          </div>
+          {!["shop", "looks"].includes(collection) && subOptions ? (
+            <nav className="subcategory-nav" aria-label={`${activeNavMeta.label} types`}>
+              <button
+                type="button"
+                className={!activeSub ? "active" : ""}
+                onClick={() => {
+                  setActiveSub(null);
+                  setSelectedId(null);
+                }}
+                aria-pressed={!activeSub}
+              >
+                All {activeNavMeta.label}
+              </button>
+              {subOptions.map((sub) => (
+                <button
+                  key={sub.id}
+                  type="button"
+                  className={activeSub === sub.id ? "active" : ""}
+                  onClick={() => chooseSub(sub.id)}
+                  aria-pressed={activeSub === sub.id}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </nav>
           ) : null}
         </header>
 
@@ -1483,7 +1530,12 @@ export function App() {
                   {section.label}
                   <span className="gallery-section-count">{section.items.length}</span>
                 </h2>
-                <div className="gallery-grid">
+                <div
+                  className="gallery-grid"
+                  style={{
+                    "--gallery-min": `${DENSITY_MINMAX[density] || 128}px`,
+                  }}
+                >
                   {section.items.map((item) => {
                     const card = (
                       <GalleryItem
