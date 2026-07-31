@@ -43,3 +43,6 @@ Read `docs/SELENE-UI.md` first every time.
 - Surfaces cleaned
 - Rules violated that you fixed
 - Files changed
+
+## Wardrobe tiles (UI agents)
+When Melani shows empty product flecks / holey cutouts: that is **not** a spacing chrome fix — hand to **wonder-wardrobe** and re-fetch official product flats. Do not paper over with boxes or captions.
