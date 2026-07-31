@@ -612,10 +612,9 @@ html:not(.theme-light) .gallery-item,
   object-fit: contain;
   /* Assets are pre-centered with equal margins — keep dead-center in the tile */
   object-position: center center;
-  transform: scale(1.02);
-  transition:
-    transform 220ms cubic-bezier(.2, .7, .2, 1),
-    opacity 180ms ease;
+  /* Constant size — hover must NOT grow/shrink (front↔back is opacity only) */
+  transform: none;
+  transition: opacity 160ms ease;
   -webkit-user-drag: none;
   min-height: 0;
   background: transparent !important;
@@ -636,28 +635,40 @@ html:not(.theme-light) .gallery-item,
   pointer-events: none;
 }
 
-/* Hover / keyboard focus: back design pops (ASSC, Scuffers, etc.) */
+/* Hover / keyboard focus: swap to back only — same box, same scale, same orientation */
 .gallery-item.has-back:hover .gallery-img-front,
 .gallery-item.has-back:focus-visible .gallery-img-front,
 .gallery-item.has-back:focus-within .gallery-img-front {
   opacity: 0;
+  transform: none;
 }
 .gallery-item.has-back:hover .gallery-img-back,
 .gallery-item.has-back:focus-visible .gallery-img-back,
 .gallery-item.has-back:focus-within .gallery-img-back {
   opacity: 1;
+  transform: none;
 }
 
 /* Back label removed — hover still flips the image; no "BACK" text chrome */
 
-/* Upperbody / hoodies: same visual weight as Scuffers flats */
+/* Upperbody / hoodies: lock size (no hover zoom — back reveal is opacity only) */
 .gallery-item[data-part="upperbody"] .gallery-item-media .gallery-img,
 .gallery-item[data-part="upperbody"] .gallery-item-media img {
-  transform: scale(1.04);
+  transform: none;
 }
 .gallery-item[data-part="upperbody"]:hover .gallery-item-media .gallery-img,
 .gallery-item[data-part="upperbody"]:focus-visible .gallery-item-media .gallery-img {
-  transform: scale(1.06);
+  transform: none;
+}
+
+/* Dual-face pieces: both layers identical frame — never different scale */
+.gallery-item.has-back .gallery-item-media .gallery-img-front,
+.gallery-item.has-back .gallery-item-media .gallery-img-back {
+  transform: none !important;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
 }
 
 /* Pants / jeans: fill the tile · product already equidistant in the PNG */
@@ -866,8 +877,7 @@ button.gallery-item .gallery-item-retail {
   border-radius: 999px;
 }
 
-/* Hover scale is handled on .gallery-item-media imgs (and upperbody boost).
-   Do not force scale(1) here — it killed the back-reveal pop. */
+/* Hover must NOT scale tiles — front/back swap is opacity-only (see has-back rules). */
 
 .gallery-item.selected { border-color: var(--accent); }
 

@@ -472,6 +472,8 @@ body,
 .gallery-item-media .gallery-img,
 .gallery-item-media img {
   filter: none;
+  /* No hover zoom — size locked; dual-face is opacity swap only */
+  transform: none !important;
 }
 
 .gallery-item-name,
