@@ -136,6 +136,7 @@ function CleanupEditor({ job, tolerance, setTolerance, busy, onPreview, onAccept
 
 export function WardrobeImportFlow({ onGarmentApproved, onModeledApproved }) {
   const inputRef = useRef(null);
+  const linkInputRef = useRef(null);
   const [jobs, setJobs] = useState([]);
   const [drafts, setDrafts] = useState({});
   const [regenerationPrompts, setRegenerationPrompts] = useState({});
@@ -147,6 +148,9 @@ export function WardrobeImportFlow({ onGarmentApproved, onModeledApproved }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState(null);
   const [setup, setSetup] = useState(null);
+  /** Paste-a-buy-link field (primary + action — Melani never crops by hand) */
+  const [productLink, setProductLink] = useState("");
+  const [linkBusy, setLinkBusy] = useState(false);
 
   useEffect(() => {
     api(CONFIG_API).then(setSetup).catch((requestError) => setSetup({ ready: false, error: requestError.message }));
@@ -224,6 +228,51 @@ export function WardrobeImportFlow({ onGarmentApproved, onModeledApproved }) {
       } catch (requestError) { setError(requestError.message); }
     }
   }, [setup]);
+
+  /** Primary path: paste buy-link → scrape → cutout → wishlist. Zero manual crop. */
+  const submitProductLink = useCallback(async (rawUrl) => {
+    const url = String(rawUrl || productLink || "").trim();
+    if (!url) {
+      setError("Paste a product link first.");
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      setError("Use a full link starting with https://");
+      return;
+    }
+    setLinkBusy(true);
+    setError("");
+    setNotice(null);
+    setOpen(true);
+    try {
+      const result = await api("/api/import/product-url", {
+        method: "POST",
+        body: JSON.stringify({ url }),
+      });
+      if (result.item) {
+        onGarmentApproved?.(result.item);
+        setProductLink("");
+        setNotice({
+          tone: "complete",
+          text: result.duplicate ? "Already on your wishlist" : "Added to wishlist",
+          detail: result.duplicate
+            ? `${result.item.name} was already saved from that link.`
+            : `${result.item.name}${result.item.retailPrice != null ? ` · $${result.item.retailPrice}` : ""} — photo, cutout, and price handled.`,
+        });
+      }
+    } catch (requestError) {
+      setError(requestError.message || "Could not import that link.");
+    } finally {
+      setLinkBusy(false);
+    }
+  }, [productLink, onGarmentApproved]);
+
+  // Focus the link field whenever the popup opens for a fresh add
+  useEffect(() => {
+    if (!open) return undefined;
+    const t = window.setTimeout(() => linkInputRef.current?.focus(), 80);
+    return () => window.clearTimeout(t);
+  }, [open]);
 
   useEffect(() => {
     let depth = 0;
@@ -322,15 +371,15 @@ export function WardrobeImportFlow({ onGarmentApproved, onModeledApproved }) {
     <>
       <input ref={inputRef} type="file" accept="image/*" multiple hidden disabled={!setup?.ready} onChange={(event) => { submitFiles(event.target.files); event.target.value = ""; }} />
       <div className="import-drop-overlay" data-active={dragging && !setupRequired} aria-hidden={!dragging || setupRequired}><div className="import-drop-target is-over"><UploadSimple size={34} weight="light" /><h2>Drop clothing images</h2><p>A single garment or a photo of a full outfit works. Your wardrobe stays exactly where you left it.</p></div></div>
-      {/* Minimal + only — no expanded "Crop ready for review" status strip */}
+      {/* Minimal + only — opens paste-link popup (not a raw file picker) */}
       <aside className="import-tray import-tray--minimal" aria-label="Add clothes">
         <button
           className="import-tray__button"
           type="button"
-          onClick={() => (setupRequired ? setOpen(true) : inputRef.current?.click())}
-          aria-label={setupRequired ? "Open setup instructions" : "Add clothes"}
+          onClick={() => setOpen(true)}
+          aria-label="Add clothes from a product link"
         >
-          {activeStatus?.tone === "processing" ? (
+          {linkBusy || activeStatus?.tone === "processing" ? (
             <SpinnerGap size={19} className="import-spinner" />
           ) : activeStatus?.tone === "error" ? (
             <WarningCircle size={19} />
@@ -339,10 +388,75 @@ export function WardrobeImportFlow({ onGarmentApproved, onModeledApproved }) {
           )}
         </button>
       </aside>
-      <div className="import-popover-backdrop" data-open={open} onMouseDown={(event) => event.target === event.currentTarget && setOpen(false)}>
+      <div className="import-popover-backdrop" data-open={open} onMouseDown={(event) => event.target === event.currentTarget && !linkBusy && setOpen(false)}>
         <section className="import-popover" role="dialog" aria-modal="true" aria-labelledby="import-title">
-          <header className="import-popover__header"><div><p className="import-popover__eyebrow">Wardrobe import</p><h2 className="import-popover__title" id="import-title">{readyCount ? `${readyCount} ready for review` : activeStatus?.tone === "error" ? "Import needs attention" : jobs.length ? "Preparing new pieces" : notice?.text || "Add to your wardrobe"}</h2></div><button className="import-icon-button" type="button" onClick={() => setOpen(false)} aria-label="Close import progress"><X size={20} /></button></header>
-          {!jobs.length ? setupRequired ? <div className="import-drop-target import-setup-warning"><WarningCircle size={30} /><h2>Import unavailable</h2><p>Reload Wonder to reconnect the local wardrobe importer.</p></div> : <div className="import-drop-target"><UploadSimple size={28} /><h2>{notice ? "Try another image" : "Choose or paste an image"}</h2><p>{notice?.detail || (setup?.smartLocalReady ? "The on-device fashion model separates you, each garment, and the background, then reads color from garment pixels only." : "Choose a clear garment image, review its details, and add it directly to Wardrobe.")}</p><button className="import-button import-button--primary" disabled={!setup?.ready} onClick={() => { setNotice(null); inputRef.current?.click(); }}>Choose images</button></div> : (
+          <header className="import-popover__header"><div><p className="import-popover__eyebrow">Add piece</p><h2 className="import-popover__title" id="import-title">{readyCount ? `${readyCount} ready for review` : activeStatus?.tone === "error" ? "Import needs attention" : jobs.length ? "Preparing new pieces" : notice?.text || "Paste a product link"}</h2></div><button className="import-icon-button" type="button" onClick={() => !linkBusy && setOpen(false)} aria-label="Close"><X size={20} /></button></header>
+          {/* Always show link paste — primary path. Image upload is optional fallback. */}
+          {!setupRequired && (
+            <form
+              className="import-link-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submitProductLink();
+              }}
+            >
+              <label className="import-link-label" htmlFor="import-product-link">
+                Product link
+              </label>
+              <div className="import-link-row">
+                <input
+                  ref={linkInputRef}
+                  id="import-product-link"
+                  className="import-link-input"
+                  type="url"
+                  inputMode="url"
+                  autoComplete="url"
+                  spellCheck={false}
+                  placeholder="https://…  (paste the exact thing you’re buying)"
+                  value={productLink}
+                  disabled={linkBusy}
+                  onChange={(event) => setProductLink(event.target.value)}
+                  onKeyDown={(event) => {
+                    // Space on empty field does nothing; on filled URL Space still types.
+                    // Enter submits via form. Also treat Cmd/Ctrl+Enter as submit.
+                    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                      event.preventDefault();
+                      void submitProductLink();
+                    }
+                  }}
+                />
+                <button
+                  className="import-button import-button--primary"
+                  type="submit"
+                  disabled={linkBusy || !productLink.trim()}
+                >
+                  {linkBusy ? (
+                    <>
+                      <SpinnerGap size={14} className="import-spinner" /> Working…
+                    </>
+                  ) : (
+                    "Add"
+                  )}
+                </button>
+              </div>
+              <p className="import-link-hint">
+                Paste any product page. I pull the photo, cut the background, read name and price, and drop it on your wishlist — no crop work for you.
+              </p>
+            </form>
+          )}
+          {!jobs.length ? setupRequired ? <div className="import-drop-target import-setup-warning"><WarningCircle size={30} /><h2>Import unavailable</h2><p>Reload Wonder to reconnect the local wardrobe importer.</p></div> : (
+            <div className="import-link-secondary">
+              {notice?.detail && <p className="import-link-status" data-tone={notice.tone}>{notice.detail}</p>}
+              <button
+                className="import-button"
+                type="button"
+                disabled={!setup?.ready || linkBusy}
+                onClick={() => { setNotice(null); inputRef.current?.click(); }}
+              >
+                <UploadSimple size={14} /> Or upload a photo
+              </button>
+            </div>
+          ) : (
             <>
               <div className={`import-progress${activeStatus?.tone !== "processing" ? " is-reviewing" : progress < 100 ? " is-indeterminate" : ""}`}><div className="import-progress__meta"><span>{activeStatus?.text}</span><span>{jobs.length} {jobs.length === 1 ? "item" : "items"}</span></div>{activeStatus?.tone === "processing" && <div className="import-progress__track"><div className="import-progress__bar" style={{ "--import-progress": `${progress}%` }} /></div>}</div>
               {reviewJob && reviewStage ? <ReviewEditor job={reviewJob} stage={reviewStage} draft={drafts[reviewJob.id] || defaultDraft(reviewJob)} setDraft={(draft) => setDrafts((current) => ({ ...current, [reviewJob.id]: draft }))} regenPrompt={regenerationPrompts[`${reviewJob.id}:${reviewStage}`] || ""} setRegenPrompt={(prompt) => setRegenerationPrompts((current) => ({ ...current, [`${reviewJob.id}:${reviewStage}`]: prompt }))} busy={busyId === reviewJob.id} canRegenerate={Boolean(setup?.aiReady)} onAction={(action, prompt) => perform(reviewJob, reviewStage, action, prompt)} /> : reviewJob && hasCleanupFailure(reviewJob) ? <CleanupEditor job={reviewJob} tolerance={cleanupTolerances[reviewJob.id] ?? reviewJob.stages.garment.cleanupTolerance ?? 46} setTolerance={(tolerance) => setCleanupTolerances((current) => ({ ...current, [reviewJob.id]: tolerance }))} busy={busyId === reviewJob.id} onPreview={(tolerance) => performCleanup(reviewJob, "preview", tolerance)} onAccept={() => performCleanup(reviewJob, "accept")} /> : null}

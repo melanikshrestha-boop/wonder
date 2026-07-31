@@ -1284,6 +1284,11 @@ export function App() {
 
   const addImportedItem = useCallback((newItem) => {
     setItems((current) => current.some((item) => item.id === newItem.id) ? current : [...current, newItem]);
+    // Link imports land on wishlist — jump there so Melani sees the new piece
+    if (newItem?.role === "wishlist" || (newItem?.tags || []).includes("want")) {
+      setCollection("want");
+      setSelectedId(newItem.id);
+    }
   }, []);
 
   const attachImportedModeledImage = useCallback((jobId, modeledImage) => {

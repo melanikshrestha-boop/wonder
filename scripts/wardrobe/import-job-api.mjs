@@ -49,6 +49,245 @@ function decodeImage(input) {
   return { data, mime };
 }
 
+const BROWSER_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+function isHttpUrl(value) {
+  try {
+    const u = new URL(String(value || "").trim());
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function metaContent(html, property) {
+  const patterns = [
+    new RegExp(`<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']+)["']`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${property}["']`, "i"),
+    new RegExp(`<meta[^>]+name=["']${property}["'][^>]+content=["']([^"']+)["']`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${property}["']`, "i"),
+  ];
+  for (const re of patterns) {
+    const m = html.match(re);
+    if (m?.[1]) return m[1].replace(/&amp;/g, "&").replace(/&#39;/g, "'").trim();
+  }
+  return null;
+}
+
+function parseJsonLdProducts(html) {
+  const products = [];
+  const re = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+  while ((match = re.exec(html))) {
+    try {
+      const raw = match[1].trim();
+      if (!raw) continue;
+      const data = JSON.parse(raw);
+      const stack = Array.isArray(data) ? [...data] : [data];
+      while (stack.length) {
+        const node = stack.pop();
+        if (!node || typeof node !== "object") continue;
+        if (Array.isArray(node["@graph"])) stack.push(...node["@graph"]);
+        const type = node["@type"];
+        const types = Array.isArray(type) ? type : type ? [type] : [];
+        if (types.some((t) => /product/i.test(String(t)))) products.push(node);
+        for (const value of Object.values(node)) {
+          if (value && typeof value === "object") stack.push(value);
+        }
+      }
+    } catch {
+      /* ignore bad JSON-LD blocks */
+    }
+  }
+  return products;
+}
+
+function firstImageFromNode(node) {
+  const image = node?.image;
+  if (!image) return null;
+  if (typeof image === "string") return image;
+  if (Array.isArray(image)) {
+    for (const entry of image) {
+      if (typeof entry === "string") return entry;
+      if (entry?.url) return entry.url;
+    }
+  }
+  if (image?.url) return image.url;
+  return null;
+}
+
+function parsePrice(value) {
+  if (value == null) return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const text = String(value).replace(/[^0-9.,]/g, "").replace(/,/g, "");
+  const n = Number.parseFloat(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+function guessPartFromText(text = "") {
+  const t = String(text).toLowerCase();
+  if (/\b(shoe|sneaker|boot|loafer|heel|sandal|dunk|samba|blazer mid|jordan)\b/.test(t)) return "shoes";
+  if (/\b(jean|denim|sweatpant|trouser|pant|short|skirt)\b/.test(t)) return "lowerbody";
+  if (/\b(dress|gown)\b/.test(t)) return "dresses";
+  if (/\b(jacket|puffer|coat|parka|blazer|windbreaker)\b/.test(t)) return "wholebody_up";
+  if (/\b(bag|belt|scarf|hat|cap|beanie|sunglass|jewelry|watch)\b/.test(t)) return "accessories_up";
+  return "upperbody";
+}
+
+async function scrapeProductPage(productUrl) {
+  const res = await fetch(productUrl, {
+    headers: {
+      "User-Agent": BROWSER_UA,
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+    },
+    redirect: "follow",
+  });
+  if (!res.ok) throw Object.assign(new Error(`Could not open that link (HTTP ${res.status})`), { status: 422 });
+  const html = await res.text();
+  const products = parseJsonLdProducts(html);
+  const product = products[0] || {};
+  const offers = Array.isArray(product.offers) ? product.offers[0] : product.offers;
+  const name =
+    product.name ||
+    metaContent(html, "og:title") ||
+    metaContent(html, "twitter:title") ||
+    html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.replace(/\s+/g, " ").trim() ||
+    "Wishlist piece";
+  const image =
+    firstImageFromNode(product) ||
+    metaContent(html, "og:image") ||
+    metaContent(html, "og:image:secure_url") ||
+    metaContent(html, "twitter:image") ||
+    metaContent(html, "twitter:image:src");
+  const price =
+    parsePrice(offers?.price) ??
+    parsePrice(offers?.lowPrice) ??
+    parsePrice(metaContent(html, "product:price:amount")) ??
+    parsePrice(metaContent(html, "og:price:amount"));
+  const currency =
+    offers?.priceCurrency ||
+    metaContent(html, "product:price:currency") ||
+    metaContent(html, "og:price:currency") ||
+    "USD";
+  const brand =
+    (typeof product.brand === "string" ? product.brand : product.brand?.name) ||
+    metaContent(html, "product:brand") ||
+    null;
+  if (!image || !isHttpUrl(image)) {
+    throw Object.assign(new Error("No product photo found on that page. Try a direct product link."), { status: 422 });
+  }
+  let imageUrl = image;
+  try {
+    imageUrl = new URL(image, productUrl).href;
+  } catch {
+    /* keep absolute */
+  }
+  return {
+    name: String(name).replace(/\s*[|–—-]\s*.*$/, "").trim().slice(0, 120) || "Wishlist piece",
+    imageUrl,
+    price,
+    currency: String(currency || "USD").toUpperCase().slice(0, 8),
+    brand: brand ? String(brand).trim().slice(0, 80) : null,
+    part: guessPartFromText(`${brand || ""} ${name}`),
+    productRef: productUrl,
+  };
+}
+
+async function downloadRemoteImage(imageUrl) {
+  const res = await fetch(imageUrl, {
+    headers: {
+      "User-Agent": BROWSER_UA,
+      Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      Referer: imageUrl,
+    },
+    redirect: "follow",
+  });
+  if (!res.ok) throw Object.assign(new Error(`Could not download product photo (HTTP ${res.status})`), { status: 422 });
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length < 1500) throw Object.assign(new Error("Product photo was too small to use"), { status: 422 });
+  return sharp(buf).rotate().ensureAlpha().png().toBuffer();
+}
+
+async function punchStudioBackground(pngBytes) {
+  const { data, info } = await sharp(pngBytes).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const out = Buffer.from(data);
+  for (let i = 0; i < out.length; i += info.channels) {
+    const r = out[i];
+    const g = out[i + 1];
+    const b = out[i + 2];
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    if (min > 210 && max - min < 28) out[i + 3] = 0;
+    else if (min > 238) out[i + 3] = 0;
+  }
+  return sharp(out, { raw: { width: info.width, height: info.height, channels: info.channels } }).png().toBuffer();
+}
+
+async function cutoutProductBytes(pngBytes, meta, root) {
+  try {
+    const segmented = await segmentFashionImage(pngBytes, {
+      root,
+      modelRoot: path.resolve(root, process.env.WARDROBE_LOCAL_MODEL_DIR || "data/models"),
+      name: meta.name,
+    });
+    if (segmented.items?.length) {
+      const preferred =
+        segmented.items.find((item) => item.metadata?.part === meta.part) || segmented.items[0];
+      if (preferred?.garmentBytes?.length > 2000) {
+        return {
+          bytes: preferred.garmentBytes,
+          part: preferred.metadata?.part || meta.part,
+          color: preferred.metadata?.color || meta.color || "#d8d0c2",
+          tags: preferred.metadata?.tags || [],
+        };
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+  const punched = await punchStudioBackground(pngBytes);
+  const trimmed = await sharp(punched).trim({ threshold: 8 }).png().toBuffer();
+  return { bytes: trimmed, part: meta.part, color: meta.color || "#d8d0c2", tags: [] };
+}
+
+async function fitTileCanvas(pngBytes, part = "upperbody") {
+  const OUT_W = 1000;
+  const OUT_H = 1200;
+  const meta = await sharp(pngBytes).metadata();
+  const isShoe = part === "shoes";
+  const maxW = isShoe ? 820 : 960;
+  const maxH = isShoe ? Math.round(OUT_H * 0.42) : 897;
+  let tw = meta.width || maxW;
+  let th = meta.height || maxH;
+  const scale = Math.min(maxW / tw, maxH / th, 1.35);
+  tw = Math.max(1, Math.round(tw * scale));
+  th = Math.max(1, Math.round(th * scale));
+  const fitted = await sharp(pngBytes)
+    .resize(tw, th, { fit: "inside", withoutEnlargement: false, kernel: sharp.kernel.lanczos3 })
+    .png()
+    .toBuffer();
+  const fm = await sharp(fitted).metadata();
+  return sharp({
+    create: {
+      width: OUT_W,
+      height: OUT_H,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([
+      {
+        input: fitted,
+        left: Math.round((OUT_W - (fm.width || tw)) / 2),
+        top: Math.round((OUT_H - (fm.height || th)) / 2),
+      },
+    ])
+    .png()
+    .toBuffer();
+}
+
 function normalizeMetadata(value = {}) {
   const metadata = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const color = typeof metadata.color === "string" && HEX_COLOR.test(metadata.color) ? metadata.color.toLowerCase() : "#d8d0c2";
@@ -580,6 +819,87 @@ export function wardrobeImportApi(options = {}) {
       }
       if (url.pathname === "/api/import/config" && req.method === "GET") {
         return json(res, 200, await setupStatus());
+      }
+      // Paste a product link → auto-scrape photo/name/price → cutout → wishlist library item
+      if (url.pathname === "/api/import/product-url" && req.method === "POST") {
+        const input = await body(req, 64 * 1024);
+        const productUrl = String(input.url || input.productUrl || input.link || "").trim();
+        if (!isHttpUrl(productUrl)) {
+          throw Object.assign(new Error("Paste a full product link starting with https://"), { status: 400 });
+        }
+        // Direct image URL path
+        let scraped;
+        if (/\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(productUrl)) {
+          scraped = {
+            name: input.name || "Wishlist piece",
+            imageUrl: productUrl,
+            price: parsePrice(input.price),
+            currency: "USD",
+            brand: null,
+            part: guessPartFromText(input.name || ""),
+            productRef: productUrl,
+          };
+        } else {
+          scraped = await scrapeProductPage(productUrl);
+        }
+        // Dedupe by productRef
+        const existing = await loadImported();
+        const dup = existing.find(
+          (item) =>
+            item.productRef &&
+            String(item.productRef).split("?")[0] === scraped.productRef.split("?")[0]
+        );
+        if (dup) {
+          return json(res, 200, { item: dup, duplicate: true });
+        }
+        const sourceBytes = await downloadRemoteImage(scraped.imageUrl);
+        const cut = await cutoutProductBytes(sourceBytes, scraped, root);
+        const part = PARTS.has(cut.part) ? cut.part : scraped.part;
+        const tile = await fitTileCanvas(cut.bytes, part);
+        const intelligence = await createVisualDescriptor(tile, {
+          name: scraped.name,
+          part,
+          color: cut.color,
+        });
+        const id = `sheet-${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+        const version = Date.now();
+        await mkdir(libraryAssetDir, { recursive: true });
+        const garmentName = `${id}-front-cut.png`;
+        const sourceName = `${id}-source.png`;
+        await writeFile(path.join(libraryAssetDir, garmentName), tile);
+        await writeFile(path.join(libraryAssetDir, sourceName), sourceBytes);
+        await writeFile(path.join(libraryAssetDir, `${id}-garment.png`), tile);
+        const record = {
+          id,
+          name: scraped.name,
+          brand: scraped.brand,
+          part,
+          color: cut.color || intelligence?.color || "#d8d0c2",
+          secondaryColor: null,
+          palette: [cut.color || "#d8d0c2"].filter(Boolean),
+          tags: [...new Set([...(cut.tags || []), "want", "wishlist", "link-import"].filter(Boolean))],
+          role: "wishlist",
+          productRef: scraped.productRef,
+          retailPrice: scraped.price,
+          retailCurrency: scraped.currency || "USD",
+          retailNote: scraped.price != null ? `From product link · $${scraped.price}` : "From product link",
+          intelligence,
+          image: `${LIBRARY_ASSET_ROOT}/${garmentName}?v=${version}`,
+          frontImage: `${LIBRARY_ASSET_ROOT}/${garmentName}?v=${version}`,
+          thumbnail: `${LIBRARY_ASSET_ROOT}/${garmentName}?v=${version}`,
+          garmentImage: `${LIBRARY_ASSET_ROOT}/${garmentName}?v=${version}`,
+          sourceImage: `${LIBRARY_ASSET_ROOT}/${sourceName}?v=${version}`,
+          seedSource: scraped.productRef,
+          seedMethod: "product-url",
+          subjectCutout: true,
+          analysisVersion: 2,
+          analysisUpdatedAt: new Date().toISOString(),
+          schemaVersion: 3,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        await atomicJson(importedFile, [...existing, record]);
+        return json(res, 201, { item: record, duplicate: false });
       }
       const wardrobeReprocessMatch = url.pathname.match(/^\/api\/import\/wardrobe\/(import-[a-f0-9-]{36})\/reprocess$/i);
       if (wardrobeReprocessMatch && req.method === "POST") {
