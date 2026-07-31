@@ -4,10 +4,11 @@
  *   - ~/.melani_assistant/health_data/jarvis/bowel_memory.json (week rolls)
  *   - day-level bowel_movement_*.json
  *   - Chrome 127.0.0.1:5173 localStorage (2026-07-26 No, 2026-07-30 Type 4)
- *   - Owner correction 2026-07-30 session: Monday = Type 1
- *     (calendar Mon of that week = 2026-07-27)
+ *   - Owner 2026-07-30 final week: Sat No, Sun No, Mon No,
+ *     Tue Type 1, Wed Type 4, Thu Type 4
  *
- * On load, Wonder MERGES this into localStorage (never replaces richer rows).
+ * On load: fill missing days from archive. Local owner logs always win
+ * on conflict (never re-clobber a corrected day).
  */
 
 /** Minimal shape — matches BowelDayLog in sleepStore (kept local to avoid cycles). */
@@ -33,12 +34,13 @@ export const BOWEL_HISTORY_ARCHIVE: Record<string, ArchiveBowelDay> = {
   "2026-06-29": { had: true },
   "2026-07-10": { had: true },
   "2026-07-18": { had: true },
-  // Wonder week (Jul 26–30)
-  "2026-07-26": { had: false }, // Sunday No (prior correction)
-  // Mon Jul 27 — owner: Type 1 (most important recent log)
-  "2026-07-27": { had: true, look: 1 },
-  // Tue Jul 28 — owner: does not think they went (leave unlogged; do not invent No)
-  "2026-07-30": { had: true, look: 4 }, // today Type 4 from Chrome
+  // Wonder week (Sat Jul 25 – Thu Jul 30) — owner-confirmed 2026-07-30
+  "2026-07-25": { had: false }, // Saturday — no
+  "2026-07-26": { had: false }, // Sunday — no
+  "2026-07-27": { had: false }, // Monday — no
+  "2026-07-28": { had: true, look: 1 }, // Tuesday — type 1
+  "2026-07-29": { had: true, look: 4 }, // Wednesday — type 4
+  "2026-07-30": { had: true, look: 4 }, // Thursday — type 4
 };
 
 /** Recovered brain-fog map (yes = fog that day). */
@@ -51,10 +53,11 @@ export const FOG_HISTORY_ARCHIVE: Record<string, boolean> = {
 };
 
 /**
- * Prefer richer truth when merging:
- * - keep both days
- * - if one has look and other doesn't, keep look
- * - never drop a day that already exists unless new explicitly clears via correction path
+ * Merge bowel maps without wiping history.
+ * - `base` = localStorage (owner / live) — wins on conflict
+ * - `incoming` = archive or disk — only fills missing days, or enriches
+ *   a Yes that has no type yet
+ * Never re-applies archive over a day the owner already logged.
  */
 export function mergeBowelDetailPreferRicher<T extends ArchiveBowelDay>(
   base: Record<string, T>,
@@ -66,18 +69,19 @@ export function mergeBowelDetailPreferRicher<T extends ArchiveBowelDay>(
     if (!log || typeof log.had !== "boolean") continue;
     const prev = out[day];
     if (!prev) {
+      // Missing day → restore from archive/disk
       out[day] = { ...log };
       continue;
     }
-    // Prefer Yes + type over bare Yes or empty
-    const next = { ...prev, ...log, had: log.had } as T;
-    if (prev.look != null && next.look == null && next.had) {
-      next.look = prev.look;
+    // Local already has this day — keep local `had`. Only fill missing type/feel/note.
+    const next = { ...log, ...prev, had: prev.had } as T;
+    if (prev.had && prev.look == null && log.look != null) {
+      next.look = log.look;
     }
-    if (prev.feel != null && next.feel == null && next.had) {
-      next.feel = prev.feel;
+    if (prev.had && prev.feel == null && log.feel != null) {
+      next.feel = log.feel;
     }
-    if (prev.note && !next.note) next.note = prev.note;
+    if (!prev.note && log.note) next.note = log.note;
     if (!next.had) {
       delete next.look;
       delete next.feel;

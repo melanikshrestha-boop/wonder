@@ -1632,9 +1632,9 @@ function MealsPanel() {
     })();
   }, []);
   const [bowelTypesOpen, setBowelTypesOpen] = useState(false);
-  /** Lifetime graphs open by default — this is the most important tracking. */
-  const [bowelLogsOpen, setBowelLogsOpen] = useState(true);
-  /** Cumulative Bristol 1–7 lines (Type 4 ideal) — always on with Logs */
+  /** Graphs closed by default — open via “logged days” toggle (like sleep nights). */
+  const [bowelLogsOpen, setBowelLogsOpen] = useState(false);
+  /** Bristol types graph nested under the same toggle */
   const [bowelPieOpen, setBowelPieOpen] = useState(true);
   const todayLog = bowelDetail[day];
   const todayBowel = todayLog?.had === true;
@@ -2037,18 +2037,6 @@ function MealsPanel() {
       <section className="fx-section fx-bowel">
         <div className="fx-bowel-head">
           <h2 className="fx-h2">BOWEL MOVEMENT</h2>
-          <button
-            type="button"
-            className={`fx-bm-logs-toggle${bowelLogsOpen ? " is-on" : ""}`}
-            aria-expanded={bowelLogsOpen}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setBowelLogsOpen((open) => !open);
-            }}
-          >
-            Logs
-          </button>
         </div>
 
         <div className="fx-bf-btns" role="group" aria-label="Bowel movement today only">
@@ -2115,6 +2103,7 @@ function MealsPanel() {
             );
           })}
         </div>
+        {/* Type picker only after Yes — keeps the surface minimal */}
         {todayBowel ? (
           <div className="fx-bm-details">
             {!bowelTypesOpen ? (
@@ -2122,7 +2111,7 @@ function MealsPanel() {
                 <p className="fx-bm-type-hint" aria-live="polite">
                   {todayLog?.look != null
                     ? `Type ${todayLog.look} saved`
-                    : "Yes logged"}
+                    : "Yes logged — pick type"}
                 </p>
                 <button
                   type="button"
@@ -2186,49 +2175,66 @@ function MealsPanel() {
           </div>
         ) : null}
 
-        {bowelLogsOpen ? (
-          <>
-            {/* Graph 1: cumulative Yes (should climb) vs No (want flat → 0 growth) */}
-            <BowelConsistencyGraph
-              points={bowelConsistency.points}
-              yes={bowelConsistency.yes}
-              no={bowelConsistency.no}
-            />
-            <p className="fx-bm-graph-goal">
-              Goal: Yes keeps rising every day you go · No stays flat (no new
-              No days).
-            </p>
-            {/* Graph 2: Bristol 1–7 cumulative — Type 4 should dominate forever */}
-            <button
-              type="button"
-              className="fx-bf-life-toggle"
-              aria-expanded={bowelPieOpen}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setBowelPieOpen((o) => !o);
-              }}
-            >
-              Types · n = {bristolLife.n}
-              {bristolLife.n > 0
-                ? ` · ${([1, 2, 3, 4, 5, 6, 7] as const)
-                    .filter((t) => bristolLife.counts[t] > 0)
-                    .map((t) => `${t}×${bristolLife.counts[t]}`)
-                    .join(" · ")}`
-                : ""}
-              {bristolLife.counts[4] > 0
-                ? ` · Type 4 lead ${bristolLife.counts[4]}`
-                : ""}
-            </button>
-            {bowelPieOpen ? (
-              <BowelBristolLifetimeGraph
-                series={bristolLife.series}
-                counts={bristolLife.counts}
-                n={bristolLife.n}
+        {/*
+          Graphs hidden until toggle — same pattern as sleep “every night logged”.
+          Big charts only when you ask; count stays conspicuous.
+        */}
+        <footer className="fx-bm-logs-footer">
+          <button
+            type="button"
+            className={`fx-nights-toggle fx-bm-nights-toggle${
+              bowelLogsOpen ? " is-open" : ""
+            }`}
+            aria-expanded={bowelLogsOpen}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setBowelLogsOpen((open) => !open);
+            }}
+          >
+            bowel days logged
+            <span className="fx-nights-count">
+              {bowelConsistency.yes + bowelConsistency.no}
+            </span>
+          </button>
+          {bowelLogsOpen ? (
+            <div className="fx-bm-logs-panel">
+              <BowelConsistencyGraph
+                points={bowelConsistency.points}
+                yes={bowelConsistency.yes}
+                no={bowelConsistency.no}
               />
-            ) : null}
-          </>
-        ) : null}
+              <p className="fx-bm-graph-goal">
+                Goal: Yes climbs · No stays flat.
+              </p>
+              <button
+                type="button"
+                className="fx-bf-life-toggle"
+                aria-expanded={bowelPieOpen}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setBowelPieOpen((o) => !o);
+                }}
+              >
+                types · n = {bristolLife.n}
+                {bristolLife.n > 0
+                  ? ` · ${([1, 2, 3, 4, 5, 6, 7] as const)
+                      .filter((t) => bristolLife.counts[t] > 0)
+                      .map((t) => `${t}×${bristolLife.counts[t]}`)
+                      .join(" · ")}`
+                  : ""}
+              </button>
+              {bowelPieOpen ? (
+                <BowelBristolLifetimeGraph
+                  series={bristolLife.series}
+                  counts={bristolLife.counts}
+                  n={bristolLife.n}
+                />
+              ) : null}
+            </div>
+          ) : null}
+        </footer>
       </section>
     </>
   );

@@ -1072,10 +1072,13 @@ const BOWEL_PENDING_CORRECTIONS: {
   had: boolean;
   look?: BowelLook;
 }[] = [
-  // Melani: Sunday bowel = No (forgot to click)
+  // Owner-confirmed week (2026-07-30 night) — force these over any wrong prior rows
+  { id: "2026-07-25-no-v2", day: "2026-07-25", had: false },
   { id: "2026-07-26-no", day: "2026-07-26", had: false },
-  // Owner 2026-07-30: Monday was Type 1 (most important recent log)
-  { id: "2026-07-27-type1", day: "2026-07-27", had: true, look: 1 },
+  { id: "2026-07-27-no-v2", day: "2026-07-27", had: false }, // Mon: did not go
+  { id: "2026-07-28-type1-v2", day: "2026-07-28", had: true, look: 1 }, // Tue
+  { id: "2026-07-29-type4-v2", day: "2026-07-29", had: true, look: 4 }, // Wed
+  { id: "2026-07-30-type4-v2", day: "2026-07-30", had: true, look: 4 }, // Thu
 ];
 
 export function applyPendingBowelCorrections(): string[] {
