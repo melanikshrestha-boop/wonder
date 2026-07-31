@@ -269,17 +269,17 @@ button { font: inherit; }
 /* Category bands — closet is organized, not scattered.
    Keep bands tight so JEANS → SWEATS doesn't leave a huge empty void. */
 .gallery-section {
-  padding: 8px 52px 4px;
+  padding: 6px 28px 2px;
 }
 
 .gallery-section + .gallery-section {
   /* small breath between bands only — not half a screen */
-  margin-top: 10px;
-  padding-top: 12px;
+  margin-top: 6px;
+  padding-top: 8px;
 }
 
 .gallery-section-title {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   padding: 0;
   font-size: 11px;
   font-weight: 650;
@@ -303,11 +303,12 @@ button { font: inherit; }
 
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-  /* single spacing — title / product / caption tight stack */
-  gap: 14px 18px;
+  /* denser columns — less empty air between shoes / flats */
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+  /* tight gutters: row then column */
+  gap: 6px 8px;
   /* no fat bottom pad — next section title sits close under the last row */
-  padding: 0 0 4px;
+  padding: 0 0 2px;
   /* never stretch a 1-item band into empty vertical space */
   align-content: start;
 }
@@ -489,13 +490,14 @@ button { font: inherit; }
 .gallery-item {
   appearance: none;
   width: 100%;
-  aspect-ratio: .78;
+  /* less tall empty stage — products sit closer row-to-row */
+  aspect-ratio: .92;
   display: grid;
   grid-template-rows: 1fr auto;
   place-items: center;
   border: none;
   border-radius: 0;
-  padding: 4px 6px 0;
+  padding: 2px 2px 0;
   /* product floats on page — no plate (Scuffers-style flats) */
   background: transparent !important;
   /* Button UA styles can force light text — lock ink for name/price */
@@ -504,7 +506,7 @@ button { font: inherit; }
   cursor: pointer;
   transition: border-color 160ms ease, box-shadow 160ms ease;
   /* image → name → price: max single-spaced, no air */
-  gap: 0.2em;
+  gap: 0.12em;
   line-height: 1;
 }
 
@@ -595,14 +597,18 @@ html:not(.theme-light) .gallery-item,
   transform-origin: center center;
 }
 
-/* Shoes: fill the tile more (zoom in), no plate — transparent cutouts only */
+/* Shoes: fill the tile hard — kill wasted air above/below the sole */
+.gallery-item[data-part="shoes"],
+.gallery-item.is-shoe {
+  aspect-ratio: 1.05;
+}
 .gallery-item[data-part="shoes"] .gallery-item-media,
 .gallery-item.is-shoe .gallery-item-media {
   background: transparent !important;
 }
 .gallery-item[data-part="shoes"] img,
 .gallery-item.is-shoe img {
-  transform: scale(1.1);
+  transform: scale(1.22);
   object-fit: contain;
   background: transparent !important;
 }
@@ -610,7 +616,7 @@ html:not(.theme-light) .gallery-item,
 .gallery-item.is-shoe:hover img,
 .gallery-item[data-part="shoes"]:focus-visible img,
 .gallery-item.is-shoe:focus-visible img {
-  transform: scale(1.14);
+  transform: scale(1.26);
 }
 
 /* Jackets / puffers: fill tile more (no huge empty air) */
