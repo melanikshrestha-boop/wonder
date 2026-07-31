@@ -2,7 +2,8 @@ export type WeatherLocation = {
   latitude: number;
   longitude: number;
   label: string;
-  source: "device" | "search";
+  /** device GPS · search · ip (auto from public IP) */
+  source: "device" | "search" | "ip";
   timezone?: string;
   savedAt: number;
 };
@@ -359,32 +360,121 @@ export async function fetchWeatherSnapshot(location: WeatherLocation, signal?: A
 }
 
 /**
- * Live weather for Mel (and wardrobe). Defaults to New York City.
- * No Weather page required — Mel retrieves this on demand.
+ * Infer city/region from public IP (no permission prompt).
+ * Used when Mel has never set a weather location.
+ */
+export async function detectLocationFromIp(signal?: AbortSignal): Promise<WeatherLocation> {
+  // ipwho.is — free, CORS-friendly, no key
+  const response = await fetch("https://ipwho.is/", {
+    signal,
+    headers: { Accept: "application/json" },
+  });
+  const payload = (await response.json().catch(() => ({}))) as {
+    success?: boolean;
+    latitude?: number;
+    longitude?: number;
+    city?: string;
+    region?: string;
+    region_code?: string;
+    country_code?: string;
+    timezone?: { id?: string } | string;
+    message?: string;
+  };
+  if (!response.ok || payload.success === false) {
+    throw new Error(payload.message || "IP location failed.");
+  }
+  const lat = Number(payload.latitude);
+  const lon = Number(payload.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    throw new Error("IP location returned no coordinates.");
+  }
+  const city = String(payload.city || "").trim();
+  const region = String(payload.region_code || payload.region || "").trim();
+  const country = String(payload.country_code || "").trim();
+  const label =
+    [city, region || country].filter(Boolean).join(", ") || "Current area";
+  const tz =
+    typeof payload.timezone === "string"
+      ? payload.timezone
+      : payload.timezone?.id || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return {
+    latitude: lat,
+    longitude: lon,
+    label,
+    source: "ip",
+    timezone: tz,
+    savedAt: Date.now(),
+  };
+}
+
+/**
+ * Live weather for Mel (and wardrobe).
+ * Priority: saved location → device GPS if marked → IP city → NYC fallback.
  */
 export async function getFreshSavedWeather(maxAge = WEATHER_CACHE_MS): Promise<WeatherSnapshot | null> {
   const cached = loadWeatherSnapshot();
   if (isFreshWeather(cached, maxAge)) return cached;
-  let location =
-    loadWeatherLocation()
-    || cached?.location
-    || ensureDefaultWeatherLocation();
+
+  let location = loadWeatherLocation() || cached?.location || null;
+
+  // Seeded NYC default is not a real choice — replace with IP city when possible
+  const isSeedNyc =
+    location
+    && location.source === "search"
+    && /new york/i.test(location.label || "");
+
+  // No saved city (or only the NYC seed) → detect from public IP
+  if (!location || isSeedNyc) {
+    try {
+      location = await detectLocationFromIp();
+      saveWeatherLocation(location);
+    } catch {
+      if (!location) location = ensureDefaultWeatherLocation();
+    }
+  }
+
+  // Re-check IP occasionally if the last fix was IP and older than a day
+  // (travel / hotel networks) — cheap, no permission.
+  if (
+    location.source === "ip"
+    && Date.now() - Number(location.savedAt || 0) > 24 * 60 * 60 * 1000
+  ) {
+    try {
+      location = await detectLocationFromIp();
+      saveWeatherLocation(location);
+    } catch {
+      /* keep previous IP fix */
+    }
+  }
+
   if (location.source === "device") {
     try {
       location = await requestDeviceLocation();
       saveWeatherLocation(location);
     } catch {
-      /* Keep last coords; fall back to NYC if unusable */
-      if (!validLocation(location)) location = ensureDefaultWeatherLocation();
+      if (!validLocation(location)) {
+        try {
+          location = await detectLocationFromIp();
+          saveWeatherLocation(location);
+        } catch {
+          location = ensureDefaultWeatherLocation();
+        }
+      }
     }
   }
+
   try {
     return await fetchWeatherSnapshot(location);
   } catch {
-    // Last cache is fine; if empty, still try NYC once
     if (cached) return cached;
     try {
-      return await fetchWeatherSnapshot(ensureDefaultWeatherLocation());
+      // IP retry then NYC
+      try {
+        const ip = await detectLocationFromIp();
+        return await fetchWeatherSnapshot(ip);
+      } catch {
+        return await fetchWeatherSnapshot(ensureDefaultWeatherLocation());
+      }
     } catch {
       return null;
     }

@@ -325,75 +325,28 @@ body,
   opacity: .72;
 }
 
-.daily-gen__stage {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 32px;
-  margin: 0 0 22px;
-  padding: 0;
+/* Stacked outfit (Daily Generator) — visualize, no WHY essay */
+.daily-gen__stack {
+  width: min(360px, 100%);
+  height: min(54vh, 500px);
+  margin: 4px auto 18px;
 }
 
-.daily-gen__piece {
-  display: grid;
-  grid-template-rows: minmax(250px, 1fr) auto;
-  gap: 8px;
-  padding: 0 0 12px;
+.daily-gen__stack-layer {
   border: 0;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
-.daily-gen__piece:hover,
-.daily-gen__piece:focus-visible {
-  outline: none;
-  background: transparent;
-  box-shadow: none;
-  border-bottom-color: #aeb1b9;
+.daily-gen__stack-img {
+  filter:
+    drop-shadow(0 1px 1px rgba(25, 22, 18, 0.08))
+    drop-shadow(0 12px 22px rgba(25, 22, 18, 0.12));
 }
 
-.daily-gen__piece-media {
-  min-height: 250px;
-  aspect-ratio: 1 / 1;
-}
-
-.daily-gen__img {
-  filter: none;
-}
-
-.daily-gen__piece-meta {
-  gap: 4px;
-}
-
-.daily-gen__piece-kind {
-  margin: 0;
-}
-
-.daily-gen__piece-name {
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
+.daily-gen__stage,
 .daily-gen__why-block {
-  margin: 0 0 18px;
-  padding: 14px 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
-}
-
-.daily-gen__why,
-.daily-gen__why-list {
-  color: #50535a;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.daily-gen__why-label {
-  color: var(--ink);
+  display: none !important;
 }
 
 .daily-gen__toolbar {

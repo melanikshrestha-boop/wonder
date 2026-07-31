@@ -206,16 +206,28 @@ export function DailyGenerator({ items = [], onOpenItem }) {
 
   const pieces = useMemo(() => {
     if (!look?.items?.length) return [];
+    // Visual stack order: jacket (back) → top → bottom → shoes (front of frame)
     const rank = (item) => {
       const k = String(item.kind || item.part || "");
-      if (k === "top" || k === "upperbody") return 0;
-      if (k === "bottom" || k === "lowerbody") return 1;
-      if (k === "shoes") return 2;
-      if (k === "jacket" || k === "wholebody_up") return 3;
+      if (k === "jacket" || k === "wholebody_up") return 0;
+      if (k === "top" || k === "upperbody") return 1;
+      if (k === "bottom" || k === "lowerbody") return 2;
+      if (k === "shoes") return 3;
+      if (k === "dress" || k === "dresses") return 1;
       return 4;
     };
     return [...look.items].sort((a, b) => rank(a) - rank(b));
   }, [look]);
+
+  function stackClass(item) {
+    const k = String(item?.kind || item?.part || "").toLowerCase();
+    if (k === "jacket" || k === "wholebody_up") return "is-jacket";
+    if (k === "top" || k === "upperbody") return "is-top";
+    if (k === "bottom" || k === "lowerbody") return "is-bottom";
+    if (k === "shoes") return "is-shoes";
+    if (k === "dress" || k === "dresses") return "is-dress";
+    return "is-other";
+  }
 
   const persistIndex = (nextIndex) => {
     setLookIndex(nextIndex);
@@ -434,23 +446,10 @@ export function DailyGenerator({ items = [], onOpenItem }) {
         <div className="daily-gen__head-text">
           <p className="daily-gen__eyebrow">Smart outfit generator · {prettyDate(date)}</p>
           <h2 className="daily-gen__title">
-            Today&apos;s comfort-first edit
-            {look?.vibes?.length ? (
-              <span className="daily-gen__inspo-badge" title="Outfit vibe tags from knowledge base">
-                {look.vibes.slice(0, 3).join(" · ")}
-              </span>
-            ) : look ? (
-              <span className="daily-gen__score" title="Internal rank only — read Why for taste">
-                {look.score}
-              </span>
-            ) : null}
-            {activeInspo.length ? (
-              <span className="daily-gen__inspo-badge" title="Active inspo images">
-                {activeInspo.length} inspo
-              </span>
-            ) : null}
+            Today
             {weatherContext ? (
-              <span className="daily-gen__weather-badge">
+              <span className="daily-gen__weather-badge" title={weatherContext.location || ""}>
+                {weatherContext.location ? `${weatherContext.location.split(",")[0]} · ` : ""}
                 {Math.round(weatherContext.temperatureF)}° · {weatherContext.condition}
               </span>
             ) : null}
@@ -598,61 +597,40 @@ export function DailyGenerator({ items = [], onOpenItem }) {
         </p>
       ) : (
         <>
-          <div className="daily-gen__stage" role="list">
-            {pieces.map((piece) => {
+          {/* Stacked outfit — visualize, no essay */}
+          <div className="daily-gen__stack" role="list" aria-label="Today's outfit stack">
+            {pieces.map((piece, index) => {
               const src = pieceImage(piece);
+              const layer = stackClass(piece);
               return (
                 <button
                   key={piece.id}
                   type="button"
-                  className="daily-gen__piece"
+                  className={`daily-gen__stack-layer ${layer}`}
                   role="listitem"
+                  style={{ zIndex: 10 + index }}
                   onClick={() => onOpenItem?.(piece.id)}
-                  aria-label={`Open ${piece.name || kindLabel(piece)}`}
+                  aria-label={`${kindLabel(piece)}: ${piece.name || "Piece"}`}
+                  title={piece.name || kindLabel(piece)}
                 >
-                  <span className="daily-gen__piece-media" aria-hidden="true">
-                    {src ? (
-                      <OptimizedImage
-                        className="daily-gen__img"
-                        src={src}
-                        alt=""
-                        sizes="160px"
-                        breakpoints={[120, 180, 240, 320]}
-                      />
-                    ) : (
-                      <span className="daily-gen__img-fallback" style={{ background: piece.color || "#ccc" }} />
-                    )}
-                  </span>
-                  <span className="daily-gen__piece-meta">
-                    <span className="daily-gen__piece-kind">{kindLabel(piece)}</span>
-                    <span className="daily-gen__piece-name">{piece.name || "Piece"}</span>
-                  </span>
+                  {src ? (
+                    <OptimizedImage
+                      className="daily-gen__stack-img"
+                      src={src}
+                      alt=""
+                      sizes="220px"
+                      breakpoints={[160, 220, 320, 480]}
+                    />
+                  ) : (
+                    <span
+                      className="daily-gen__img-fallback"
+                      style={{ background: piece.color || "#ccc" }}
+                    />
+                  )}
                 </button>
               );
             })}
           </div>
-
-          {look.inspoMatch?.length ? (
-            <p className="daily-gen__inspo-match">
-              Matched inspo: {look.inspoMatch.join(" · ")}
-            </p>
-          ) : null}
-
-          {(look.summary || look.reasons?.[0]) ? (
-            <div className="daily-gen__why-block">
-              <p className="daily-gen__why">
-                <span className="daily-gen__why-label">Why</span>
-                {look.summary || look.reasons[0]}
-              </p>
-              {look.reasons?.length > 1 ? (
-                <ul className="daily-gen__why-list">
-                  {look.reasons.slice(1, 4).map((r) => (
-                    <li key={r}>{r}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          ) : null}
 
           <div className="daily-gen__toolbar">
             <div className="daily-gen__pager">
