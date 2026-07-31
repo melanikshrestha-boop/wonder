@@ -10,12 +10,15 @@ const DELETED_STORAGE_KEY = "open-wardrobe-deleted-v1";
 const SHOP_WANTS_KEY = "wonder-style-shopper-wants-v1";
 const PINTEREST_BOARD_KEY = "wonder-wardrobe-pinterest-board-v1";
 const RESALE_FIX_KEY = "wonder-wardrobe-resale-correction-2026-07-27";
-/** Gallery density: 0 = most columns (zoom out), 5 = fewest / biggest tiles (zoom in) */
-const DENSITY_KEY = "wonder-wardrobe-density-v2";
-const DENSITY_MIN = 0;
-const DENSITY_MAX = 5;
-/** Column min-width in px — higher = larger product tiles */
-const DENSITY_MINMAX = [140, 176, 220, 280, 360, 460];
+/**
+ * Gallery density = exact column count.
+ * + → one fewer column (last item on the row wraps to the next line)
+ * − → one more column
+ */
+const COLS_KEY = "wonder-wardrobe-cols-v3";
+const COLS_MIN = 2;
+const COLS_MAX = 10;
+const COLS_DEFAULT = 6;
 
 function isOriginalResalePiece(item) {
   return /anti social social club.*hoodie|fear of god essentials.*hoodie/i.test(
@@ -1051,22 +1054,22 @@ export function App() {
   });
   const [pinterestStatus, setPinterestStatus] = useState("");
   const [pinterestBusy, setPinterestBusy] = useState(false);
-  const [density, setDensity] = useState(() => {
+  const [cols, setCols] = useState(() => {
     try {
-      const n = Number(localStorage.getItem(DENSITY_KEY));
-      if (Number.isFinite(n)) return Math.min(DENSITY_MAX, Math.max(DENSITY_MIN, Math.round(n)));
+      const n = Number(localStorage.getItem(COLS_KEY));
+      if (Number.isFinite(n)) return Math.min(COLS_MAX, Math.max(COLS_MIN, Math.round(n)));
     } catch {
       /* ignore */
     }
-    // Default mid-large so full-screen closet is not postage-stamp size
-    return 3;
+    return COLS_DEFAULT;
   });
 
-  const bumpDensity = (delta) => {
-    setDensity((current) => {
-      const next = Math.min(DENSITY_MAX, Math.max(DENSITY_MIN, current + delta));
+  /** delta: +1 more columns (− button), −1 fewer columns (+ button) */
+  const bumpCols = (delta) => {
+    setCols((current) => {
+      const next = Math.min(COLS_MAX, Math.max(COLS_MIN, current + delta));
       try {
-        localStorage.setItem(DENSITY_KEY, String(next));
+        localStorage.setItem(COLS_KEY, String(next));
       } catch {
         /* ignore */
       }
@@ -1402,24 +1405,24 @@ export function App() {
               </nav>
             ) : null}
             <div className="gallery-toolbar-end">
-              <div className="gallery-density" role="group" aria-label="Zoom gallery density">
+              <div className="gallery-density" role="group" aria-label="Gallery columns">
                 <button
                   type="button"
                   className="gallery-density__btn"
-                  onClick={() => bumpDensity(-1)}
-                  disabled={density <= DENSITY_MIN}
-                  aria-label="Zoom out (more columns)"
-                  title="Zoom out — more columns"
+                  onClick={() => bumpCols(1)}
+                  disabled={cols >= COLS_MAX}
+                  aria-label="More columns"
+                  title={`More columns (${cols} now)`}
                 >
                   −
                 </button>
                 <button
                   type="button"
                   className="gallery-density__btn"
-                  onClick={() => bumpDensity(1)}
-                  disabled={density >= DENSITY_MAX}
-                  aria-label="Zoom in (fewer columns)"
-                  title="Zoom in — larger tiles"
+                  onClick={() => bumpCols(-1)}
+                  disabled={cols <= COLS_MIN}
+                  aria-label="Fewer columns"
+                  title={`Fewer columns — wraps one item (${cols} now)`}
                 >
                   +
                 </button>
@@ -1535,7 +1538,8 @@ export function App() {
                 <div
                   className="gallery-grid"
                   style={{
-                    "--gallery-min": `${DENSITY_MINMAX[density] || 128}px`,
+                    // Exact column count: + drops one col so last item wraps a row
+                    "--gallery-cols": String(cols),
                   }}
                 >
                   {section.items.map((item) => {

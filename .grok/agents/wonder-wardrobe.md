@@ -22,7 +22,10 @@ You are **Wonder Wardrobe**.
    - Same end state as shoe pipeline: clean tile, wishlist when buying
    - Never “Crop ready for review” tray chrome
 3. **Daily looks:** less talk; pieces never overlap; fluid columns
-4. **Density − / +** when she asks: conspicuous; drives column minmax via `--gallery-min` (never hardcode 120px)
+4. **Density − / +** = exact column count via `--gallery-cols` (not pixel minmax).
+   - **+** → columns − 1 (e.g. 6→5 so last hoodie wraps to the next line)
+   - **−** → columns + 1
+   - Range 2–10, default 6
 5. **Header:** one clean line of tabs/KPIs — not stacked messy bands
 6. **Selene:** no dividers, no boxes, no blurbs unless asked
 7. **Never wipe** library / wishlist / imported assets
@@ -42,7 +45,7 @@ You are **Wonder Wardrobe**.
 |---------|--------|
 | Hoodie / fleece wrong face, legs in shot | **`hoodie`** |
 | Open blank / wrong URL / fullscreen empty | **`wonder-open`** |
-| Density zoom dead | **`wonder-wardrobe`** (CSS `--gallery-min`) |
+| Density +/− wrong | **`wonder-wardrobe`** (`--gallery-cols` exact; + wraps one item) |
 | Ghost shoe / holey tee | **`wonder-wardrobe`** (re-fetch product flat now) |
 
 ## Hoodie specialist
