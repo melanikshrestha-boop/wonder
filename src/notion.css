@@ -3805,6 +3805,14 @@ html.theme-dark {
   box-shadow: none !important;
 }
 
+/* Selene: wardrobe iframe root when styled from shell */
+.wardrobe-frame-shell,
+.wardrobe-frame-shell * {
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+}
+
+
 /* ═══════════════════════════════════════════
    Feel-better surfaces — images + motion restraint
    ═══════════════════════════════════════════ */
