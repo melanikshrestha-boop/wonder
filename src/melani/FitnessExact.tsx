@@ -305,6 +305,13 @@ const BRISTOL_LINE_COLORS: Record<1 | 2 | 3 | 4 | 5 | 6 | 7, string> = {
 type BristolType = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 const BRISTOL_TYPES: BristolType[] = [1, 2, 3, 4, 5, 6, 7];
 
+type BristolSeriesPoint = {
+  day: string;
+  byType: Record<BristolType, number>;
+  /** The one Bristol type logged that day (only one BM type per day). */
+  eventType: BristolType;
+};
+
 type BowelConsistencyPoint = {
   day: string;
   yes: number;
@@ -313,17 +320,56 @@ type BowelConsistencyPoint = {
   look?: BowelLook;
 };
 
+type LineSeg = { d: string; solid: boolean };
+
+/** Straight segments: solid on event day, dotted carry-forward otherwise. */
+function buildStraightSegs(
+  pts: { x: number; y: number }[],
+  solidAtEnd: (endIdx: number) => boolean
+): LineSeg[] {
+  const segs: LineSeg[] = [];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    segs.push({
+      solid: solidAtEnd(i),
+      d: `M${a.x.toFixed(1)},${a.y.toFixed(1)} L${b.x.toFixed(1)},${b.y.toFixed(1)}`,
+    });
+  }
+  return segs;
+}
+
+/**
+ * Step segments (H then V): solid when this series was the log that day,
+ * dotted when the count is only carried forward.
+ */
+function buildStepSegs(
+  pts: { x: number; y: number }[],
+  solidAtEnd: (endIdx: number) => boolean
+): LineSeg[] {
+  const segs: LineSeg[] = [];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    segs.push({
+      solid: solidAtEnd(i),
+      d: `M${a.x.toFixed(1)},${a.y.toFixed(1)} H${b.x.toFixed(1)} V${b.y.toFixed(1)}`,
+    });
+  }
+  return segs;
+}
+
 /**
  * Lifetime Bristol multi-line graph — one cumulative line per type 1–7.
- * Same Recovery panel language (title · big n · soft lines · footer).
+ * Solid = that type was logged that day · dotted = carry-forward (no new log of that type).
+ * Dots only on real event days so a one-time Type 7 does not paint every day.
  */
 function BowelBristolLifetimeGraph({
   series,
   counts,
   n,
 }: {
-  /** day → cumulative count for each type after that day */
-  series: { day: string; byType: Record<BristolType, number> }[];
+  series: BristolSeriesPoint[];
   counts: Record<BristolType, number>;
   n: number;
 }) {
@@ -359,17 +405,27 @@ function BowelBristolLifetimeGraph({
     padL + (series.length === 1 ? plotW / 2 : (i / (series.length - 1)) * plotW);
 
   const activeTypes = BRISTOL_TYPES.filter((t) => counts[t] > 0);
+  // Tiny y-nudge when several types share the same count so flat carry lines
+  // don't fully erase each other (still one type per day in the data).
+  const yNudge = (t: BristolType, v: number, i: number) => {
+    const same = activeTypes.filter((u) => series[i].byType[u] === v);
+    if (same.length < 2) return 0;
+    const rank = same.indexOf(t);
+    const mid = (same.length - 1) / 2;
+    return (rank - mid) * 2.4; // px in SVG space
+  };
+
   const lines = activeTypes.map((t) => {
     const pts = series.map((s, i) => ({
       x: xOf(i),
-      y: yOf(s.byType[t]),
+      y: yOf(s.byType[t]) + yNudge(t, s.byType[t], i),
       v: s.byType[t],
       day: s.day,
+      isEvent: s.eventType === t,
     }));
-    const d = pts
-      .map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
-      .join(" ");
-    return { t, pts, d, color: BRISTOL_LINE_COLORS[t] };
+    // Segment into day i is solid only when type t was the BM that day
+    const segs = buildStraightSegs(pts, (endIdx) => pts[endIdx].isEvent);
+    return { t, pts, segs, color: BRISTOL_LINE_COLORS[t] };
   });
 
   const yTicks = [0, Math.round(yHi / 2), yHi].filter(
@@ -446,7 +502,7 @@ function BowelBristolLifetimeGraph({
           className="wx-graph is-interactive fx-bm-multi"
           viewBox={`0 0 ${w} ${h}`}
           role="img"
-          aria-label="Lifetime Bristol types — cumulative counts by type"
+          aria-label="Lifetime Bristol types — solid when that type logged, dotted carry-forward"
           onMouseMove={onMove}
           onMouseLeave={() => setHoverDay(null)}
         >
@@ -469,40 +525,68 @@ function BowelBristolLifetimeGraph({
               </text>
             </g>
           ))}
+          {/* Dotted carry-forward under solid event segments so real logs win visually */}
           {lines.map((line) => {
-            const dim =
-              (hotType != null && hotType !== line.t) ||
-              (hoverDay != null && hotType == null && false);
+            const dim = hotType != null && hotType !== line.t;
             const emphasis = hotType === line.t;
+            const sw = emphasis ? 3 : 2.25;
             return (
               <g key={line.t} opacity={dim ? 0.22 : 1}>
-                <path
-                  d={line.d}
-                  fill="none"
-                  stroke={line.color}
-                  strokeWidth={emphasis ? 3 : 2.25}
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                  pointerEvents="none"
-                />
-                {line.pts.map((p, i) => (
-                  <circle
-                    key={`${line.t}-${i}`}
-                    cx={p.x}
-                    cy={p.y}
-                    r={
-                      hoverIdx === i
-                        ? emphasis
-                          ? 5
-                          : 3.5
-                        : emphasis
-                          ? 3
-                          : 2.2
-                    }
-                    fill={line.color}
-                    pointerEvents="none"
-                  />
-                ))}
+                {line.segs
+                  .filter((s) => !s.solid)
+                  .map((s, si) => (
+                    <path
+                      key={`d-${line.t}-${si}`}
+                      d={s.d}
+                      fill="none"
+                      stroke={line.color}
+                      strokeWidth={sw}
+                      strokeDasharray="5 5"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      pointerEvents="none"
+                    />
+                  ))}
+                {line.segs
+                  .filter((s) => s.solid)
+                  .map((s, si) => (
+                    <path
+                      key={`s-${line.t}-${si}`}
+                      d={s.d}
+                      fill="none"
+                      stroke={line.color}
+                      strokeWidth={sw + 0.35}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      pointerEvents="none"
+                    />
+                  ))}
+                {/* Dots only on days this type was actually logged */}
+                {line.pts
+                  .filter((p) => p.isEvent)
+                  .map((p) => {
+                    const i = series.findIndex((s) => s.day === p.day);
+                    return (
+                      <circle
+                        key={`${line.t}-${p.day}`}
+                        cx={p.x}
+                        cy={p.y}
+                        r={
+                          hoverIdx === i
+                            ? emphasis
+                              ? 5.5
+                              : 4
+                            : emphasis
+                              ? 3.5
+                              : 2.8
+                        }
+                        fill={line.color}
+                        stroke="rgba(255,255,255,0.85)"
+                        strokeWidth={1}
+                        pointerEvents="none"
+                      />
+                    );
+                  })}
               </g>
             );
           })}
@@ -538,11 +622,14 @@ function BowelBristolLifetimeGraph({
         </svg>
         {hoverRow ? (
           <div className="fx-bm-graph-tip" role="tooltip">
-            <strong>{shortDay(hoverRow.day)}</strong>
+            <strong>
+              {shortDay(hoverRow.day)} · Type {hoverRow.eventType}
+            </strong>
             <ul>
               {activeTypes.map((t) => (
                 <li key={t} style={{ color: BRISTOL_LINE_COLORS[t] }}>
                   T{t}: {hoverRow.byType[t]}
+                  {hoverRow.eventType === t ? " · logged" : ""}
                 </li>
               ))}
             </ul>
@@ -572,7 +659,7 @@ function BowelBristolLifetimeGraph({
       </div>
       <footer className="wx-panel-foot">
         <span>
-          n = {n} · cumulative count of each Bristol type over time
+          n = {n} · solid = logged that type · dotted = carry-forward
         </span>
       </footer>
     </article>
@@ -621,17 +708,20 @@ function BowelConsistencyGraph({
     if (!m) return iso;
     return `${Number(m[2])}/${Number(m[3])}`;
   };
-  const stepPath = (key: "yes" | "no") => {
-    if (!points.length) return "";
-    const first = points[0];
-    let d = `M${xOf(0).toFixed(1)},${yOf(first[key]).toFixed(1)}`;
-    for (let i = 1; i < points.length; i++) {
-      const nextX = xOf(i);
-      const nextY = yOf(points[i][key]);
-      d += ` H${nextX.toFixed(1)} V${nextY.toFixed(1)}`;
-    }
-    return d;
-  };
+  // Solid when this series was the day's log; dotted carry-forward otherwise
+  const yesPts = points.map((p, i) => ({
+    x: xOf(i),
+    y: yOf(p.yes),
+    event: p.logged === "yes",
+  }));
+  const noPts = points.map((p, i) => ({
+    x: xOf(i),
+    y: yOf(p.no),
+    event: p.logged === "no",
+  }));
+  const yesSegs = buildStepSegs(yesPts, (i) => yesPts[i].event);
+  const noSegs = buildStepSegs(noPts, (i) => noPts[i].event);
+
   const yTicks = [0, Math.round(yHi / 2), yHi].filter(
     (v, i, a) => a.indexOf(v) === i
   );
@@ -667,6 +757,47 @@ function BowelConsistencyGraph({
       }
     }
     setHoverIndex(best);
+  }
+
+  function renderSegs(
+    segs: LineSeg[],
+    color: string,
+    solidW: number,
+    dashW: number
+  ) {
+    return (
+      <>
+        {segs
+          .filter((s) => !s.solid)
+          .map((s, i) => (
+            <path
+              key={`d-${i}`}
+              d={s.d}
+              fill="none"
+              stroke={color}
+              strokeWidth={dashW}
+              strokeDasharray="6 5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              pointerEvents="none"
+            />
+          ))}
+        {segs
+          .filter((s) => s.solid)
+          .map((s, i) => (
+            <path
+              key={`s-${i}`}
+              d={s.d}
+              fill="none"
+              stroke={color}
+              strokeWidth={solidW}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              pointerEvents="none"
+            />
+          ))}
+      </>
+    );
   }
 
   return (
@@ -707,7 +838,7 @@ function BowelConsistencyGraph({
           className="wx-graph is-interactive fx-bm-consistency-svg"
           viewBox={`0 0 ${w} ${h}`}
           role="img"
-          aria-label="Cumulative bowel movement Yes versus No count"
+          aria-label="Cumulative Yes vs No — solid on log day, dotted carry-forward"
           onMouseMove={onMove}
           onMouseLeave={() => setHoverIndex(null)}
         >
@@ -740,38 +871,30 @@ function BowelConsistencyGraph({
             y2={yOf(0)}
             className="fx-bm-axis-line"
           />
-          <path
-            d={stepPath("no")}
-            fill="none"
-            stroke="rgba(239, 68, 68, 0.88)"
-            strokeWidth={2.35}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            pointerEvents="none"
-          />
-          <path
-            d={stepPath("yes")}
-            fill="none"
-            stroke="rgba(34, 197, 94, 0.96)"
-            strokeWidth={3}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            pointerEvents="none"
-          />
+          {renderSegs(noSegs, "rgba(239, 68, 68, 0.88)", 2.35, 2.1)}
+          {renderSegs(yesSegs, "rgba(34, 197, 94, 0.96)", 3, 2.5)}
+          {/* Dots only on the series that was logged that day */}
           {points.map((p, i) => (
             <g key={p.day} pointerEvents="none">
-              <circle
-                cx={xOf(i)}
-                cy={yOf(p.no)}
-                r={hoverIndex === i ? 4 : 2.6}
-                fill="rgba(239, 68, 68, 0.88)"
-              />
-              <circle
-                cx={xOf(i)}
-                cy={yOf(p.yes)}
-                r={hoverIndex === i ? 5 : 3}
-                fill="rgba(34, 197, 94, 0.96)"
-              />
+              {p.logged === "no" ? (
+                <circle
+                  cx={xOf(i)}
+                  cy={yOf(p.no)}
+                  r={hoverIndex === i ? 4.5 : 3}
+                  fill="rgba(239, 68, 68, 0.88)"
+                  stroke="rgba(255,255,255,0.85)"
+                  strokeWidth={1}
+                />
+              ) : (
+                <circle
+                  cx={xOf(i)}
+                  cy={yOf(p.yes)}
+                  r={hoverIndex === i ? 5 : 3.2}
+                  fill="rgba(34, 197, 94, 0.96)"
+                  stroke="rgba(255,255,255,0.85)"
+                  strokeWidth={1}
+                />
+              )}
             </g>
           ))}
           {hoverIndex != null ? (
@@ -824,6 +947,9 @@ function BowelConsistencyGraph({
           No flatlines · {no}
         </span>
       </div>
+      <footer className="wx-panel-foot">
+        <span>solid = that day’s log · dotted = carry-forward</span>
+      </footer>
     </article>
   );
 }
@@ -1674,11 +1800,12 @@ function MealsPanel() {
       .map(([day, log]) => ({ day, look: log!.look as BristolType }))
       .sort((a, b) => a.day.localeCompare(b.day));
 
-    const series: { day: string; byType: Record<BristolType, number> }[] = [];
+    const series: BristolSeriesPoint[] = [];
     for (const { day, look } of days) {
       counts[look] += 1;
       series.push({
         day,
+        eventType: look,
         byType: {
           1: counts[1],
           2: counts[2],
