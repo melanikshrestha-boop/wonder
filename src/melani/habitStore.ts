@@ -212,9 +212,41 @@ function emitChange() {
   window.dispatchEvent(new Event(EVENT));
 }
 
-/** Push a key to ~/.wonder/local so Chrome + floating widget stay in sync. */
+/** Union two check maps — never drop a day or a habit id already present. */
+export function mergeCheckMaps(a: CheckMap, b: CheckMap | null | undefined): CheckMap {
+  const out: CheckMap = { ...a };
+  if (!b || typeof b !== "object") return out;
+  for (const [day, ids] of Object.entries(b)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+    if (!Array.isArray(ids)) continue;
+    const set = new Set([...(out[day] || []), ...ids.filter(Boolean)]);
+    if (set.size) out[day] = Array.from(set);
+  }
+  return out;
+}
+
+function checkMapSize(map: CheckMap): number {
+  return Object.values(map).reduce((n, ids) => n + (ids?.length || 0), 0);
+}
+
+/**
+ * Recovered checks from Chrome LevelDB forensics (2026-07-31).
+ * Merged on load — never used to wipe fuller local history.
+ */
+const HABIT_CHECKS_ARCHIVE: CheckMap = {
+  // Only recoverable fragment after empty-disk overwrite incident
+  "2026-07-25": ["hb-10"], // Sleep by 10:30
+};
+
+/** Push a key to ~/.wonder/local — refuse to mirror empty over known non-empty. */
 function pushSharedState(key: string, value: unknown) {
   if (typeof fetch === "undefined") return;
+  // Never publish empty checks — that is how history got wiped before
+  if (key === CHECKS_KEY) {
+    const map = (value && typeof value === "object" ? value : {}) as CheckMap;
+    if (checkMapSize(map) === 0) return;
+  }
+  if (key === HABITS_KEY && Array.isArray(value) && value.length === 0) return;
   try {
     void fetch("/api/wonder-state", {
       method: "PUT",
@@ -231,7 +263,7 @@ function pushSharedState(key: string, value: unknown) {
 
 /**
  * Pull shared state from disk into localStorage (widget ↔ Chrome bridge).
- * Returns true if localStorage changed.
+ * MERGE ONLY — empty disk must never erase local checks.
  */
 export async function hydrateHabitsFromShared(): Promise<boolean> {
   if (typeof fetch === "undefined" || typeof localStorage === "undefined") {
@@ -239,27 +271,55 @@ export async function hydrateHabitsFromShared(): Promise<boolean> {
   }
   let changed = false;
   try {
+    // Always fold forensic archive first
+    const local0 = loadChecks();
+    const withArchive = mergeCheckMaps(local0, HABIT_CHECKS_ARCHIVE);
+    if (checkMapSize(withArchive) > checkMapSize(local0)) {
+      localStorage.setItem(CHECKS_KEY, JSON.stringify(withArchive));
+      changed = true;
+    }
+
     const [hRes, cRes] = await Promise.all([
       fetch(`/api/wonder-state?key=${encodeURIComponent(HABITS_KEY)}`),
       fetch(`/api/wonder-state?key=${encodeURIComponent(CHECKS_KEY)}`),
     ]);
     if (hRes.ok) {
       const body = (await hRes.json()) as { value?: Habit[] | null };
-      if (Array.isArray(body.value) && body.value.length) {
-        const next = JSON.stringify(body.value);
-        if (localStorage.getItem(HABITS_KEY) !== next) {
-          localStorage.setItem(HABITS_KEY, next);
-          changed = true;
-        }
+      // Only take remote habits if we have none local (or remote is longer list)
+      const localRaw = localStorage.getItem(HABITS_KEY);
+      let localHabits: Habit[] = [];
+      try {
+        if (localRaw) localHabits = JSON.parse(localRaw) as Habit[];
+      } catch {
+        /* ignore */
+      }
+      if (
+        Array.isArray(body.value) &&
+        body.value.length &&
+        (!Array.isArray(localHabits) || localHabits.length === 0)
+      ) {
+        localStorage.setItem(HABITS_KEY, JSON.stringify(body.value));
+        changed = true;
       }
     }
     if (cRes.ok) {
       const body = (await cRes.json()) as { value?: CheckMap | null };
-      if (body.value && typeof body.value === "object") {
-        const next = JSON.stringify(body.value);
-        if (localStorage.getItem(CHECKS_KEY) !== next) {
-          localStorage.setItem(CHECKS_KEY, next);
-          changed = true;
+      const remote = body.value;
+      // CRITICAL: empty {} remote must NOT overwrite local
+      if (remote && typeof remote === "object" && !Array.isArray(remote)) {
+        if (checkMapSize(remote) === 0) {
+          // disk is empty — push local up if we have data
+          const local = loadChecks();
+          if (checkMapSize(local) > 0) pushSharedState(CHECKS_KEY, local);
+        } else {
+          const local = loadChecks();
+          const merged = mergeCheckMaps(local, remote);
+          if (JSON.stringify(merged) !== JSON.stringify(local)) {
+            localStorage.setItem(CHECKS_KEY, JSON.stringify(merged));
+            changed = true;
+          }
+          // Mirror the richer merge back to disk
+          pushSharedState(CHECKS_KEY, merged);
         }
       }
     }
@@ -316,20 +376,53 @@ export function saveHabits(habits: Habit[]) {
   emitChange();
 }
 
-export function loadChecks(): CheckMap {
-  try {
-    const raw = typeof localStorage !== "undefined"
-      ? localStorage.getItem(CHECKS_KEY)
-      : null;
-    if (raw) {
-      const parsed = JSON.parse(raw) as CheckMap;
-      if (parsed && typeof parsed === "object") return parsed;
+const CHECKS_RECOVERY_FLAG = "wonder-habit-checks-recovered-v2";
+
+/**
+ * One-shot: fold forensic archive into local checks (never again if already done).
+ * Safe to call on every load — flag prevents re-adding after user unchecks.
+ */
+export function ensureHabitChecksRecovered(): CheckMap {
+  const local = (() => {
+    try {
+      const raw = localStorage.getItem(CHECKS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as CheckMap;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch {
+      /* ignore */
     }
-  } catch { /* ignore */ }
-  return {};
+    return {} as CheckMap;
+  })();
+
+  try {
+    if (localStorage.getItem(CHECKS_RECOVERY_FLAG) === "1") {
+      return local;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const merged = mergeCheckMaps(local, HABIT_CHECKS_ARCHIVE);
+  try {
+    localStorage.setItem(CHECKS_KEY, JSON.stringify(merged));
+    localStorage.setItem(CHECKS_RECOVERY_FLAG, "1");
+    if (checkMapSize(merged) > 0) pushSharedState(CHECKS_KEY, merged);
+  } catch {
+    /* ignore */
+  }
+  return merged;
+}
+
+export function loadChecks(): CheckMap {
+  return ensureHabitChecksRecovered();
 }
 
 export function saveChecks(map: CheckMap) {
+  // Full map from UI (toggle owns truth for each day). Never push empty to disk.
   try {
     if (typeof localStorage !== "undefined") {
       localStorage.setItem(CHECKS_KEY, JSON.stringify(map));

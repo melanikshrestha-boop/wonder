@@ -350,6 +350,16 @@ export async function hydrateFromDisk(): Promise<{ merged: number }> {
   } catch {
     /* ignore */
   }
+  // Habits: recover forensic archive + never accept empty disk overwrite
+  try {
+    const { ensureHabitChecksRecovered, hydrateHabitsFromShared } = await import(
+      "../habitStore"
+    );
+    ensureHabitChecksRecovered();
+    await hydrateHabitsFromShared();
+  } catch {
+    /* ignore */
+  }
 
   let merged = 0;
   const keys = [...GUARDIAN_EXACT_KEYS];
