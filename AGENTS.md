@@ -22,6 +22,28 @@ This is permanent. “Which is never” = she will not ask for dividers/boxes.
 
 ---
 
+## Subagents (parallel lanes)
+
+Project agents: **`.grok/agents/`**. Fan out instead of one mega-session that stomps data.
+
+| Agent | Job |
+|-------|-----|
+| `wonder-data-guardian` | Health storage: merge-only; never wipe bowel/fog/meals/weight/habits |
+| `wonder-selene` | UI law: no dividers, no boxes, no blurbs |
+| `wonder-wardrobe` | Closet only (`wardrobe/**`, library) |
+| `wonder-keeper` | Keep `http://127.0.0.1:5173/` alive |
+| `wonder-verify` | Read-only smoke after parallel work |
+
+Orchestration: **`.grok/skills/wonder-parallel/SKILL.md`** (`/wonder-parallel`).
+
+### Parallel rules
+1. One writer per file surface — never two agents on `habitStore` or the same CSS file.
+2. Health + UI + wardrobe can run **at the same time**.
+3. Finish with `wonder-verify` (or equivalent) before “done.”
+4. Prefer `isolation: worktree` for multi-file implementers.
+
+---
+
 ## Standing order: continuous GitHub sync
 
 **Every meaningful change in a prompt/session MUST be committed and pushed to GitHub before you stop.**
