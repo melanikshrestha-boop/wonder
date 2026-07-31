@@ -189,6 +189,7 @@ import {
   loadFogMap,
   msUntilFogLock,
   setFogDay,
+  saveBowelDetailMap,
   saveSleepDay,
   seedBowelDetailUndoBaseline,
   seedBowelUndoBaseline,
@@ -1598,6 +1599,7 @@ function MealsPanel() {
   const [bowelDetail, setBowelDetail] = useState<Record<string, BowelDayLog>>(
     () => {
       // One-shot: apply explicit missed-day corrections (e.g. Sunday = No)
+      // + merge recovered archive so wiped browser profiles get history back
       applyPendingBowelCorrections();
       const map = loadBowelDetailMap();
       seedBowelDetailUndoBaseline(map);
@@ -1605,11 +1607,35 @@ function MealsPanel() {
       return map;
     }
   );
+
+  // Pull ~/.wonder/local bowel mirror (merge-only) — survives profile swaps
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(
+          "/api/wonder-state?key=dr-melani-bowel-detail-v1"
+        );
+        if (!res.ok) return;
+        const body = (await res.json()) as {
+          value?: Record<string, BowelDayLog> | null;
+        };
+        if (!body.value || typeof body.value !== "object") return;
+        // save merges richer; then reload UI
+        saveBowelDetailMap(body.value);
+        const next = loadBowelDetailMap();
+        setBowelDetail(next);
+        seedBowelDetailUndoBaseline(next);
+        seedBowelUndoBaseline(loadBowelMap());
+      } catch {
+        /* offline */
+      }
+    })();
+  }, []);
   const [bowelTypesOpen, setBowelTypesOpen] = useState(false);
-  /** Long-term bowel logs stay hidden until Melani asks for them. */
-  const [bowelLogsOpen, setBowelLogsOpen] = useState(false);
-  /** Lifetime Bristol 1–7 pie (same toggle pattern as brain fog) */
-  const [bowelPieOpen, setBowelPieOpen] = useState(false);
+  /** Lifetime graphs open by default — this is the most important tracking. */
+  const [bowelLogsOpen, setBowelLogsOpen] = useState(true);
+  /** Cumulative Bristol 1–7 lines (Type 4 ideal) — always on with Logs */
+  const [bowelPieOpen, setBowelPieOpen] = useState(true);
   const todayLog = bowelDetail[day];
   const todayBowel = todayLog?.had === true;
   const todayBowelNo = todayLog?.had === false;
@@ -2162,12 +2188,17 @@ function MealsPanel() {
 
         {bowelLogsOpen ? (
           <>
+            {/* Graph 1: cumulative Yes (should climb) vs No (want flat → 0 growth) */}
             <BowelConsistencyGraph
               points={bowelConsistency.points}
               yes={bowelConsistency.yes}
               no={bowelConsistency.no}
             />
-            {/* Lifetime Bristol 1–7 — hidden until Logs is open */}
+            <p className="fx-bm-graph-goal">
+              Goal: Yes keeps rising every day you go · No stays flat (no new
+              No days).
+            </p>
+            {/* Graph 2: Bristol 1–7 cumulative — Type 4 should dominate forever */}
             <button
               type="button"
               className="fx-bf-life-toggle"
@@ -2184,6 +2215,9 @@ function MealsPanel() {
                     .filter((t) => bristolLife.counts[t] > 0)
                     .map((t) => `${t}×${bristolLife.counts[t]}`)
                     .join(" · ")}`
+                : ""}
+              {bristolLife.counts[4] > 0
+                ? ` · Type 4 lead ${bristolLife.counts[4]}`
                 : ""}
             </button>
             {bowelPieOpen ? (

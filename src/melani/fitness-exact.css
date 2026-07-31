@@ -2339,3 +2339,15 @@ html.theme-light .whoop-bar-link {
 html.theme-light .whoop-bar-link:hover:not(:disabled) {
   color: #1a1c22 !important;
 }
+
+/* Bowel graph goal caption under Yes/No consistency chart */
+.fx-bm-graph-goal {
+  margin: 6px 0 14px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.48);
+  max-width: 42rem;
+}
+html.theme-light .fx-page .fx-bm-graph-goal {
+  color: rgba(26, 28, 34, 0.5);
+}

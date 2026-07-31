@@ -5,6 +5,12 @@
  */
 import { todayKey } from "./data";
 import { pushUndo } from "../undoStack";
+import {
+  BOWEL_HISTORY_ARCHIVE,
+  FOG_HISTORY_ARCHIVE,
+  mergeBowelDetailPreferRicher,
+  mergeFogPreferKnown,
+} from "./bowelHistoryArchive";
 
 export const SLEEP_KEY = "dr-melani-sleep-v1";
 export const FOG_KEY = "dr-melani-brainfog-v1";
@@ -604,7 +610,7 @@ export type BowelEvent = {
   feel?: BowelFeel;
   color?: BowelColor;
   note?: string;
-  source: "ui" | "mel";
+  source: "ui" | "mel" | "correction" | "archive";
 };
 
 export function loadBowelEvents(): BowelEvent[] {
@@ -791,13 +797,35 @@ export function scrubFutureBowelDays(
   return { map: next, removed };
 }
 
-export function loadBowelDetailMap(): Record<string, BowelDayLog> {
+/** Push critical health maps to ~/.wonder/local — never only browser memory. */
+function pushBowelToDisk(key: string, value: unknown) {
+  if (typeof fetch === "undefined") return;
+  try {
+    void fetch("/api/wonder-state", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, value }),
+      keepalive: true,
+    }).catch(() => {
+      /* server optional */
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+let bowelArchiveMerged = false;
+
+/**
+ * Merge recovered archive + disk shared state into localStorage.
+ * NEVER shrinks history — only adds/enriches days.
+ */
+export function ensureBowelHistoryHydrated(): Record<string, BowelDayLog> {
   let map: Record<string, BowelDayLog> = {};
   try {
     const raw = localStorage.getItem(BOWEL_DETAIL_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as unknown;
-      // Guard corrupt / null / array junk so UI never dies mid-click
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
         map = parsed as Record<string, BowelDayLog>;
       }
@@ -807,12 +835,52 @@ export function loadBowelDetailMap(): Record<string, BowelDayLog> {
   }
 
   if (Object.keys(map).length === 0) {
-    // Seed from legacy yes/no map so week view stays consistent
     const legacy = loadBowelMap();
     for (const [day, had] of Object.entries(legacy)) {
       if (had === true || had === false) map[day] = { had };
     }
   }
+
+  // Always merge archive (richer wins) — restores wiped browser storage
+  map = mergeBowelDetailPreferRicher(
+    map,
+    BOWEL_HISTORY_ARCHIVE as Record<string, BowelDayLog>
+  );
+
+  // Fog archive (separate key — same “never wipe” rule)
+  try {
+    const fogRaw = localStorage.getItem(FOG_KEY);
+    let fog: Record<string, boolean> = {};
+    if (fogRaw) fog = normalizeFogMap(JSON.parse(fogRaw));
+    fog = mergeFogPreferKnown(FOG_HISTORY_ARCHIVE, fog);
+    localStorage.setItem(FOG_KEY, JSON.stringify(fog));
+  } catch {
+    /* ignore */
+  }
+
+  if (!bowelArchiveMerged) {
+    bowelArchiveMerged = true;
+    // Quiet persist restored history
+    try {
+      const json = JSON.stringify(map);
+      localStorage.setItem(BOWEL_DETAIL_KEY, json);
+      bowelDetailLastJson = json;
+      const yn: Record<string, boolean> = {};
+      for (const [d, log] of Object.entries(map)) yn[d] = !!log.had;
+      localStorage.setItem(BOWEL_KEY, JSON.stringify(yn));
+      bowelLastJson = JSON.stringify(yn);
+      pushBowelToDisk(BOWEL_DETAIL_KEY, map);
+      pushBowelToDisk(BOWEL_KEY, yn);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return map;
+}
+
+export function loadBowelDetailMap(): Record<string, BowelDayLog> {
+  let map = ensureBowelHistoryHydrated();
 
   // One-time hygiene: future marks are invalid data (week-chip bug), not history
   const today = todayKey();
@@ -820,6 +888,7 @@ export function loadBowelDetailMap(): Record<string, BowelDayLog> {
   if (removed.length > 0) {
     try {
       // Quiet persist — no undo entry for scrubbing invalid future rows
+      // NEVER drop past days — only future keys were removed
       const json = JSON.stringify(clean);
       localStorage.setItem(BOWEL_DETAIL_KEY, json);
       bowelDetailLastJson = json;
@@ -833,6 +902,8 @@ export function loadBowelDetailMap(): Record<string, BowelDayLog> {
       for (const [d, v] of Object.entries(yn)) legacyYn[d] = v;
       localStorage.setItem(BOWEL_KEY, JSON.stringify(legacyYn));
       bowelLastJson = JSON.stringify(legacyYn);
+      pushBowelToDisk(BOWEL_DETAIL_KEY, clean);
+      pushBowelToDisk(BOWEL_KEY, legacyYn);
     } catch {
       /* ignore */
     }
@@ -852,7 +923,23 @@ export function seedBowelDetailUndoBaseline(map?: Record<string, BowelDayLog>) {
 }
 
 export function saveBowelDetailMap(map: Record<string, BowelDayLog>) {
-  const json = JSON.stringify(map);
+  // SAFETY: merge with whatever is already stored so a partial write
+  // can never erase other days (agent bugs, empty profile, etc.).
+  let existing: Record<string, BowelDayLog> = {};
+  try {
+    const raw = localStorage.getItem(BOWEL_DETAIL_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        existing = parsed as Record<string, BowelDayLog>;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  const safe = mergeBowelDetailPreferRicher(existing, map);
+  const json = JSON.stringify(safe);
+
   // Undo stack first — never let undo registration block the write
   if (
     !bowelDetailUndoQuiet &&
@@ -891,14 +978,17 @@ export function saveBowelDetailMap(map: Record<string, BowelDayLog>) {
     localStorage.setItem(BOWEL_DETAIL_KEY, json);
     bowelDetailLastJson = json;
 
-    // Mirror yes/no into legacy key (Mel + week chips)
+    // Mirror yes/no into legacy key (Mel + week chips) — MERGE, never wipe other days
     const yn: Record<string, boolean> = { ...loadBowelMap() };
-    for (const [d, log] of Object.entries(map)) {
+    for (const [d, log] of Object.entries(safe)) {
       yn[d] = !!log.had;
     }
     // Quiet write on boolean map (undo is on detail)
     localStorage.setItem(BOWEL_KEY, JSON.stringify(yn));
     bowelLastJson = JSON.stringify(yn);
+    // Disk mirror — survives browser profile wipes
+    pushBowelToDisk(BOWEL_DETAIL_KEY, safe);
+    pushBowelToDisk(BOWEL_KEY, yn);
   } catch (err) {
     // Surface rare quota / private-mode failures so we can see them in console
     console.warn("[bowel] save failed", err);
@@ -976,13 +1066,22 @@ export function upsertBowelDay(
  */
 const BOWEL_CORRECTIONS_APPLIED_KEY = "dr-melani-bowel-corrections-applied-v1";
 
-const BOWEL_PENDING_CORRECTIONS: { id: string; day: string; had: boolean }[] = [
+const BOWEL_PENDING_CORRECTIONS: {
+  id: string;
+  day: string;
+  had: boolean;
+  look?: BowelLook;
+}[] = [
   // Melani: Sunday bowel = No (forgot to click)
   { id: "2026-07-26-no", day: "2026-07-26", had: false },
+  // Owner 2026-07-30: Monday was Type 1 (most important recent log)
+  { id: "2026-07-27-type1", day: "2026-07-27", had: true, look: 1 },
 ];
 
 export function applyPendingBowelCorrections(): string[] {
   if (typeof localStorage === "undefined") return [];
+  // Always re-merge archive first so corrections land on full history
+  ensureBowelHistoryHydrated();
   let applied: string[] = [];
   try {
     applied = JSON.parse(
@@ -996,7 +1095,9 @@ export function applyPendingBowelCorrections(): string[] {
   const newly: string[] = [];
   for (const c of BOWEL_PENDING_CORRECTIONS) {
     if (done.has(c.id)) continue;
-    upsertBowelDay(c.day, { had: c.had }, "correction");
+    const patch: Partial<BowelDayLog> & { had: boolean } = { had: c.had };
+    if (c.look != null) patch.look = c.look;
+    upsertBowelDay(c.day, patch, "correction");
     done.add(c.id);
     newly.push(c.id);
   }
