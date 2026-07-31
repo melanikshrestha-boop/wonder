@@ -1,6 +1,6 @@
 /**
- * Fitness page — Wonder Fitness (Sleep · Meals · Gym · Focus).
- * Quote + subnav; Focus is app hours (where attention goes).
+ * Fitness page — Wonder Fitness (Sleep · Meals · Gym).
+ * Focus / Screen Time permanently removed (owner: space for no value).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -22,7 +22,7 @@ import {
   type NutriEntry,
 } from "./nutrition/nutritionStore";
 import { GymExact } from "./GymExact";
-import { ScreenTime } from "./ScreenTime";
+
 import { MEL_DATA_EVENT } from "./melTools";
 import { notifyHabitAutoSync, WATER_GOAL_ML } from "./habitAutoSync";
 
@@ -68,20 +68,12 @@ function saveDayLog(day: string, log: DayLog) {
   }
 }
 
-export type FitnessTab = "sleep" | "meals" | "gym" | "focus";
+export type FitnessTab = "sleep" | "meals" | "gym";
 
 function tabFromPageId(pageId: string): FitnessTab {
   if (pageId === "pg-meals") return "meals";
   if (pageId === "pg-gym") return "gym";
-  // Focus was "Screen Time" — same desk, new name under Fitness
-  if (
-    pageId === "pg-focus" ||
-    pageId === "pg-screentime" ||
-    pageId === "pg-screen-time"
-  ) {
-    return "focus";
-  }
-  // Old Whoop page → Sleep (data lives on Sleep / Gym / Meals, not a Whoop tab)
+  // Legacy Focus / Screen Time / Whoop → Sleep (data stays; page is gone)
   return "sleep";
 }
 
@@ -2484,11 +2476,6 @@ function GymPanel() {
   return <GymExact />;
 }
 
-function FocusPanel() {
-  // Mac/app focus hours — mental load, not "mental health" branding
-  return <ScreenTime />;
-}
-
 type Props = {
   pageId: string;
   onGo: (id: string) => void;
@@ -2498,19 +2485,22 @@ const TAB_TO_PAGE: Record<FitnessTab, string> = {
   sleep: "pg-sleep",
   meals: "pg-meals",
   gym: "pg-gym",
-  focus: "pg-focus",
 };
 
 export function FitnessExact({ pageId, onGo }: Props) {
   const tab = useMemo(() => tabFromPageId(pageId), [pageId]);
 
-  // Legacy routes → canonical Fitness tabs
+  // Legacy routes → Sleep (Focus / Screen Time / Whoop / Body removed from nav)
   useEffect(() => {
-    if (pageId === "pg-whoop" || pageId === "pg-body") {
+    if (
+      pageId === "pg-whoop" ||
+      pageId === "pg-body" ||
+      pageId === "pg-focus" ||
+      pageId === "pg-screentime" ||
+      pageId === "pg-screen-time" ||
+      pageId === "pg-fitness"
+    ) {
       onGo("pg-sleep");
-    }
-    if (pageId === "pg-screentime" || pageId === "pg-screen-time") {
-      onGo("pg-focus");
     }
   }, [pageId, onGo]);
 
@@ -2538,14 +2528,13 @@ export function FitnessExact({ pageId, onGo }: Props) {
           />
         </div>
 
-        {/* Sleep · Meals · Gym · Focus */}
+        {/* Sleep · Meals · Gym only — Focus permanently removed */}
         <nav className="fx-subnav" aria-label="Fitness pages">
           {(
             [
               ["sleep", "Sleep"],
               ["meals", "Meals"],
               ["gym", "Gym"],
-              ["focus", "Focus"],
             ] as const
           ).map(([id, label]) => (
             <span key={id} className="fx-subnav-item">
@@ -2563,7 +2552,6 @@ export function FitnessExact({ pageId, onGo }: Props) {
         {tab === "sleep" && <SleepPanel />}
         {tab === "meals" && <MealsPanel />}
         {tab === "gym" && <GymPanel />}
-        {tab === "focus" && <FocusPanel />}
       </div>
     </div>
   );
@@ -2575,10 +2563,10 @@ export function isFitnessPage(pageId: string): boolean {
     "pg-sleep",
     "pg-meals",
     "pg-gym",
-    "pg-focus",
-    "pg-screentime", // legacy name → Focus
+    "pg-focus", // legacy → redirects to Sleep
+    "pg-screentime",
     "pg-screen-time",
     "pg-body",
-    "pg-whoop", // legacy route → redirects to Sleep
+    "pg-whoop",
   ].includes(pageId);
 }

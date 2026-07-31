@@ -125,6 +125,10 @@ const PURGE_PAGE_IDS = new Set([
   "pg-nutrition", // Claude nutrition tab — removed from sidebar (hideous)
   "pg-macros",
   "pg-calories",
+  // Focus / Screen Time — permanently deleted (owner: no value, too much space)
+  "pg-focus",
+  "pg-screentime",
+  "pg-screen-time",
   // Operator + paper trading desks — permanently deleted
   "pg-operator",
   "pg-empire",
@@ -304,33 +308,16 @@ function ensureLifePages(ws: Workspace): Workspace {
   ensurePage("pg-sleep", "Sleep", "sleep", "pg-fitness");
   ensurePage("pg-meals", "Meals", "meals", "pg-fitness");
   ensurePage("pg-gym", "Gym", "gym", "pg-fitness");
-  // Focus (was Screen Time) — app hours under Fitness, next to Gym
-  ensurePage("pg-focus", "Focus", "focus", "pg-fitness", [
-    newBlock(
-      "paragraph",
-      "Where your hours go: Mac apps, Safari sites, phone log. Sleep · Meals · Gym · Focus."
-    ),
-  ]);
-  // Whoop tab removed — band data feeds Sleep / Meals / Gym. Trash legacy page.
+  // Whoop + Focus permanently out of nav (data keys may remain; never wipe health)
   pages = pages.map((p) =>
-    p.id === "pg-whoop" && !p.trashedAt
+    (p.id === "pg-whoop" ||
+      p.id === "pg-focus" ||
+      p.id === "pg-screentime" ||
+      p.id === "pg-screen-time") &&
+    !p.trashedAt
       ? { ...p, trashedAt: now, parentId: null, updatedAt: now }
       : p
   );
-  // Migrate old Screen Time root → Focus under Fitness
-  pages = pages.map((p) => {
-    if (p.id === "pg-screentime" || p.id === "pg-screen-time") {
-      return {
-        ...p,
-        title: "Focus",
-        icon: "focus",
-        parentId: "pg-fitness",
-        trashedAt: p.trashedAt || now,
-        updatedAt: now,
-      };
-    }
-    return p;
-  });
   ensurePage("pg-hygiene", "Hygiene", "hygiene", null);
   // Hygiene sub-routines — Mel can open these by name; must exist in workspace
   ensurePage("pg-shower-daily", "Daily shower", "shower", "pg-hygiene", [
@@ -447,7 +434,7 @@ function ensureLifePages(ws: Workspace): Workspace {
   // Fitness / Hygiene children only when still orphaned
   pages = pages.map((p) => {
     if (p.parentId != null) return p;
-    if (["pg-sleep", "pg-meals", "pg-gym", "pg-focus"].includes(p.id)) {
+    if (["pg-sleep", "pg-meals", "pg-gym"].includes(p.id)) {
       return { ...p, parentId: "pg-fitness" };
     }
     if (
@@ -464,6 +451,13 @@ function ensureLifePages(ws: Workspace): Workspace {
   let activePageId = ws.activePageId;
   if (activePageId === "pg-work" || activePageId === "pg-world-monitor") {
     activePageId = "pg-library";
+  }
+  if (
+    activePageId === "pg-focus" ||
+    activePageId === "pg-screentime" ||
+    activePageId === "pg-screen-time"
+  ) {
+    activePageId = "pg-sleep";
   }
 
   return { ...ws, pages, activePageId };
