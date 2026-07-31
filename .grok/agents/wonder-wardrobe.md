@@ -49,8 +49,10 @@ You are **Wonder Wardrobe**.
 | Ghost shoe / holey tee | **`wonder-wardrobe`** (re-fetch product flat now) |
 
 ## Hoodie specialist
-For hoodie / fleece cutouts wrong (legs left in, missing logo back, on-model mess): spawn **`hoodie`** (`.grok/agents/hoodie.md`).
-That agent picks official flat front/back from the product gallery (Acne: Y front, Z back — never A/B/C alone) and writes 1000×1200 `front-cut` + `back-cut` like owned closet hoodies.
+Spawn **`hoodie`** for any dual-face hoodie issue. Laws (also in `hoodie.md`):
+- **Hood-tip ruler:** front/back share identical `top` + `height` on 1000×1200 (Scuffers math). Hover = opacity only — never scale.
+- Acne: Y front / Z back flats only. White: hole-filled cutout, **no cream plate**.
+- Script: `scripts/wardrobe/align-hoodie-pair.mjs`
 
 ## Fullscreen smoke
 - Fullscreen Chrome on `?page=pg-fashion-os` shows Daily looks / closet

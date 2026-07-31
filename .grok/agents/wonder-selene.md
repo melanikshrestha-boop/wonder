@@ -46,3 +46,6 @@ Read `docs/SELENE-UI.md` first every time.
 
 ## Wardrobe tiles (UI agents)
 When Melani shows empty product flecks / holey cutouts: that is **not** a spacing chrome fix — hand to **wonder-wardrobe** and re-fetch official product flats. Do not paper over with boxes or captions.
+
+## Dual-face product tiles (UI)
+Front/back hover is **opacity only**. If back jumps size/position, that is asset math — hand to **hoodie** / **wonder-wardrobe** (hood-tip ruler: same top+height). Do not add chrome.
