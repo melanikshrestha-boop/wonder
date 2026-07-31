@@ -86,8 +86,6 @@ import {
   tryMathLabCommand,
   run_success_math,
   trySuccessMathLabCommand,
-  run_content,
-  tryContentLabCommand,
   run_finance_model,
   tryFinanceModelLabCommand,
   run_metrics,
@@ -812,13 +810,6 @@ function planAndExecute(text: string, pageId?: string, pageTitle?: string): MelT
     addTool(results, trading_knowledge_brief(q));
   }
 
-  // YouTube / content backbone (views, retention seconds, findings)
-  const contentHit = tryContentLabCommand(q);
-  if (contentHit) {
-    addTool(results, run_content(q));
-    return results;
-  }
-
   // Quiet finance runway model
   const finModelHit = tryFinanceModelLabCommand(q);
   if (finModelHit) {
@@ -857,7 +848,6 @@ function planAndExecute(text: string, pageId?: string, pageTitle?: string): MelT
     return results;
   }
   if (/^(?:science|scientist|lab\s+mode)$/i.test(q)) {
-    addTool(results, run_content("videos"));
     addTool(results, run_finance_model("runway"));
     addTool(results, run_success_math("list"));
     return results;

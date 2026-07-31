@@ -75,19 +75,4 @@ export function isFocusPage(pageId: string): boolean {
   return isScreenTimePage(pageId);
 }
 
-/** Content Empire (YouTube research OS) — was Math Lab id */
-export function isMathLabPage(pageId: string): boolean {
-  return isContentEmpirePage(pageId);
-}
-
-export function isContentEmpirePage(pageId: string): boolean {
-  return (
-    pageId === "pg-math" ||
-    pageId === "pg-content" ||
-    pageId === "pg-youtube" ||
-    pageId === "pg-channel" ||
-    pageId === "pg-math-lab" ||
-    pageId === "pg-learn-math"
-  );
-}
 

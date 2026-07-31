@@ -108,7 +108,12 @@ const PURGE_PAGE_IDS = new Set([
   "pg-doc-hub", // Document Hub
   "pg-meetings", // Meetings
   "pg-classes", // Classes
-  "pg-content", // Content OS
+  "pg-content", // Content OS — permanently deleted
+  "pg-math", // was Content Empire
+  "pg-math-lab",
+  "pg-youtube",
+  "pg-channel",
+  "pg-learn-math",
   // pg-finance is live again (Finances desk under Learn)
   "pg-startups", // Startups / Silicon Valley
   "pg-reading-list", // Reading list
@@ -360,24 +365,7 @@ function ensureLifePages(ws: Workspace): Workspace {
     ]
   );
 
-  // Learn — Content Empire (YouTube research OS; Sleep-page UI)
-  ensurePage("pg-math", "Content", "brain", null, [
-    newBlock(
-      "paragraph",
-      "YouTube research backbone: views, second-level retention, findings, capital runway. Mel runs models behind the scenes."
-    ),
-  ]);
-  // Force rename old Math Lab / Mel Science / Mel labels → Content
-  pages = pages.map((p) =>
-    p.id === "pg-math" &&
-    (p.title === "Math Lab" ||
-      p.title === "Mel Science" ||
-      p.title === "Mel")
-      ? { ...p, title: "Content", updatedAt: now }
-      : p
-  );
-
-  // Permanently remove Operator + paper trading + World Monitor + Failures (no re-create)
+  // Permanently remove Operator + paper trading + World Monitor + Failures + Content (no re-create)
   const PERMANENTLY_DELETED = new Set([
     "pg-operator",
     "pg-empire",
@@ -390,6 +378,12 @@ function ensureLifePages(ws: Workspace): Workspace {
     "pg-failures",
     "pg-failure",
     "pg-learn-failures",
+    "pg-math",
+    "pg-math-lab",
+    "pg-content",
+    "pg-youtube",
+    "pg-channel",
+    "pg-learn-math",
   ]);
   pages = pages.filter((p) => !PERMANENTLY_DELETED.has(p.id));
 
@@ -468,7 +462,13 @@ function ensureLifePages(ws: Workspace): Workspace {
   if (
     activePageId === "pg-failures" ||
     activePageId === "pg-failure" ||
-    activePageId === "pg-learn-failures"
+    activePageId === "pg-learn-failures" ||
+    activePageId === "pg-math" ||
+    activePageId === "pg-math-lab" ||
+    activePageId === "pg-content" ||
+    activePageId === "pg-youtube" ||
+    activePageId === "pg-channel" ||
+    activePageId === "pg-learn-math"
   ) {
     activePageId = "pg-library";
   }

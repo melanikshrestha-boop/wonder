@@ -49,7 +49,6 @@ import {
   runSuccessEngine,
   trySuccessMathCommand,
 } from "./melSuccessMath";
-import { tryContentCommand } from "./melContent";
 import { tryFinanceModelCommand } from "./melFinanceModel";
 import {
   appendLifeLog,
@@ -153,11 +152,7 @@ const EMPTY_MACROS: MacroBag = {
 
 const PAGE_ALIASES: Array<{ pattern: RegExp; pageId: string; title: string }> = [
   { pattern: /^(?:my\s+)?(?:bookshelf|library|books?)$/i, pageId: "pg-library", title: "Bookshelf" },
-  {
-    pattern: /^(?:my\s+)?(?:math(?:\s+lab)?|crude\s+math|math\s+empire)$/i,
-    pageId: "pg-math",
-    title: "Math Lab",
-  },
+  // Content / Math Lab desk permanently removed
   // Failures desk permanently removed
   // Weather is Mel-only (no page) — do not navigate to a Weather page
   { pattern: /^(?:my\s+)?(?:wardrobe|closet|clothes)$/i, pageId: "pg-fashion-os", title: "Wardrobe" },
@@ -673,20 +668,6 @@ export function run_success_math(query = ""): string {
 
 export function trySuccessMathLabCommand(raw: string): string | null {
   return trySuccessMathCommand(raw.trim());
-}
-
-/** YouTube / content performance backbone */
-export function run_content(query = ""): string {
-  const text = tryContentCommand(query.trim() || "videos");
-  return result("run_content", text || formatContentFallback(), { query });
-}
-
-function formatContentFallback(): string {
-  return tryContentCommand("videos") || "videos";
-}
-
-export function tryContentLabCommand(raw: string): string | null {
-  return tryContentCommand(raw.trim());
 }
 
 /** Quiet finance runway model */

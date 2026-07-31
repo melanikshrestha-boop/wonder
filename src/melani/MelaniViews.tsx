@@ -28,13 +28,11 @@ import {
   isFitnessPage,
   isHabitsPage,
   isHygienePage,
-  isContentEmpirePage,
   isShoppingAgentPage,
   isBodyOsPage,
 } from "./pageRoutes";
-// isContentEmpirePage covers former Math Lab routes
 // Nutrition tab is retired from the product surface (design rejected).
-// Operator + paper trading + World Monitor permanently deleted (not routed).
+// Operator + paper trading + World Monitor + Content + Failures permanently deleted (not routed).
 import "./melani.css";
 
 /**
@@ -68,10 +66,6 @@ const Finances = lazy(async () => {
 const HabitTracker = lazy(async () => {
   const m = await import("./HabitTracker");
   return { default: m.HabitTracker };
-});
-const ContentEmpire = lazy(async () => {
-  const m = await import("./ContentEmpire");
-  return { default: m.ContentEmpire };
 });
 const CycleTracker = lazy(async () => {
   const m = await import("./CycleTracker");
@@ -407,7 +401,6 @@ export function isMelaniRichPage(pageId: string): boolean {
     isCareConciergePage(pageId) ||
     isFinancesPage(pageId) ||
     isHabitsPage(pageId) ||
-    isContentEmpirePage(pageId) ||
     isBodyOsPage(pageId) ||
     pageId === "pg-data" ||
     pageId === "pg-my-data"
@@ -499,14 +492,6 @@ export function MelaniRichPage({
     return (
       <Suspense fallback={<DeskFallback label="Loading Bookshelf" />}>
         <BooksLibrary onGo={onGo} workspacePages={pages} />
-      </Suspense>
-    );
-  }
-
-  if (isContentEmpirePage(pageId)) {
-    return (
-      <Suspense fallback={<DeskFallback label="Loading Content" />}>
-        <ContentEmpire />
       </Suspense>
     );
   }

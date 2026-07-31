@@ -78,7 +78,6 @@ const HEALTH_ROOT_IDS = [
 const LEARN_ROOT_IDS = [
   "pg-library",
   "pg-finance",
-  "pg-math",
 ] as const;
 
 /** true = closed (kids hidden). Opening a parent always forces its kids closed. */
