@@ -1404,20 +1404,20 @@ export function App() {
                 <button
                   type="button"
                   className="gallery-density__btn"
-                  onClick={() => bumpDensity(1)}
-                  disabled={density >= DENSITY_MAX}
-                  aria-label="Zoom in (fewer columns)"
-                  title="Zoom in"
+                  onClick={() => bumpDensity(-1)}
+                  disabled={density <= DENSITY_MIN}
+                  aria-label="Zoom out (more columns)"
+                  title="Zoom out — more columns"
                 >
                   −
                 </button>
                 <button
                   type="button"
                   className="gallery-density__btn"
-                  onClick={() => bumpDensity(-1)}
-                  disabled={density <= DENSITY_MIN}
-                  aria-label="Zoom out (more columns)"
-                  title="Zoom out"
+                  onClick={() => bumpDensity(1)}
+                  disabled={density >= DENSITY_MAX}
+                  aria-label="Zoom in (fewer columns)"
+                  title="Zoom in — larger tiles"
                 >
                   +
                 </button>
