@@ -304,11 +304,11 @@ button { font: inherit; }
 .gallery-grid {
   display: grid;
   /* denser columns — less empty air between shoes / flats */
-  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
-  /* tight gutters: row then column */
-  gap: 6px 8px;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  /* row gap tiny: price → next product (was reading as a huge void) */
+  gap: 2px 8px;
   /* no fat bottom pad — next section title sits close under the last row */
-  padding: 0 0 2px;
+  padding: 0;
   /* never stretch a 1-item band into empty vertical space */
   align-content: start;
 }
@@ -490,14 +490,14 @@ button { font: inherit; }
 .gallery-item {
   appearance: none;
   width: 100%;
-  /* less tall empty stage — products sit closer row-to-row */
-  aspect-ratio: .92;
+  /* shorter stage → less dead air under price before next row */
+  aspect-ratio: 1 / 1.02;
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   place-items: center;
   border: none;
   border-radius: 0;
-  padding: 2px 2px 0;
+  padding: 0 2px 0;
   /* product floats on page — no plate (Scuffers-style flats) */
   background: transparent !important;
   /* Button UA styles can force light text — lock ink for name/price */
@@ -506,7 +506,7 @@ button { font: inherit; }
   cursor: pointer;
   transition: border-color 160ms ease, box-shadow 160ms ease;
   /* image → name → price: max single-spaced, no air */
-  gap: 0.12em;
+  gap: 0;
   line-height: 1;
 }
 
@@ -600,7 +600,8 @@ html:not(.theme-light) .gallery-item,
 /* Shoes: fill the tile hard — kill wasted air above/below the sole */
 .gallery-item[data-part="shoes"],
 .gallery-item.is-shoe {
-  aspect-ratio: 1.05;
+  /* wider than tall → shorter cell so next row starts sooner */
+  aspect-ratio: 1.22;
 }
 .gallery-item[data-part="shoes"] .gallery-item-media,
 .gallery-item.is-shoe .gallery-item-media {
@@ -608,7 +609,7 @@ html:not(.theme-light) .gallery-item,
 }
 .gallery-item[data-part="shoes"] img,
 .gallery-item.is-shoe img {
-  transform: scale(1.22);
+  transform: scale(1.28);
   object-fit: contain;
   background: transparent !important;
 }
@@ -616,7 +617,7 @@ html:not(.theme-light) .gallery-item,
 .gallery-item.is-shoe:hover img,
 .gallery-item[data-part="shoes"]:focus-visible img,
 .gallery-item.is-shoe:focus-visible img {
-  transform: scale(1.26);
+  transform: scale(1.32);
 }
 
 /* Jackets / puffers: fill tile more (no huge empty air) */
@@ -639,9 +640,9 @@ html:not(.theme-light) .gallery-item,
   gap: 0; /* name sitting on price — single-spaced (line-height only) */
   width: 100%;
   min-width: 0;
-  padding: 0 2px;
+  padding: 0 2px 1px; /* 1px under price — next product row starts immediately */
   color: #191919;
-  line-height: 1.15; /* single-spaced stack; max allowed */
+  line-height: 1.05; /* tighter name/price stack */
   row-gap: 0;
 }
 .gallery-item-name {
@@ -1834,7 +1835,7 @@ button.gallery-item .gallery-item-retail {
 
 @media (max-width: 1180px) {
   .gallery-header { padding-inline: 34px; }
-  .gallery-grid { padding-inline: 32px; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 18px 22px; }
+  .gallery-grid { padding-inline: 24px; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 2px 10px; }
   .gallery-section { padding-inline: 32px; }
   .category-nav { max-width: 100%; }
   .viewer { padding-inline: 30px; }
@@ -1857,11 +1858,11 @@ button.gallery-item .gallery-item-retail {
   .category-nav button { min-height: 38px; padding: 9px 15px; font-size: 11px; }
   .gallery-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px 18px;
-    padding: 0 0 4px;
+    gap: 2px 8px;
+    padding: 0;
   }
-  .gallery-section { padding: 8px 20px 4px; }
-  .gallery-item { padding: 12px 8px 8px; }
+  .gallery-section { padding: 4px 16px 0; }
+  .gallery-item { padding: 0 4px 0; }
   .viewer-overlay { background: rgba(25, 24, 22, .34); }
   .viewer-overlay-popup {
     align-items: flex-end;
