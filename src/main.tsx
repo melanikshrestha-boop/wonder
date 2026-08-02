@@ -1,11 +1,22 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { ShellErrorBoundary } from "./ShellErrorBoundary";
 import { BaseWidget } from "./melani/BaseWidget";
 import { applyTheme, loadTheme } from "./theme";
 
 // Paint theme before first React paint (avoids dark flash when light is saved)
 applyTheme(loadTheme());
+
+// Clear stuck locks from wardrobe product viewer / resize that can blank the canvas
+try {
+  document.body.classList.remove("viewer-open");
+  document.documentElement.classList.remove("is-sidebar-resizing");
+  document.body.style.removeProperty("overflow");
+  document.documentElement.style.removeProperty("overflow");
+} catch {
+  /* ignore */
+}
 
 /** Base tracking widget — standalone surface for Dock / Home Screen / phone */
 function isWidgetMode(): boolean {
@@ -25,13 +36,17 @@ if (isWidgetMode()) {
   document.documentElement.dataset.wonderSurface = "widget";
   root.render(
     <StrictMode>
-      <BaseWidget />
+      <ShellErrorBoundary>
+        <BaseWidget />
+      </ShellErrorBoundary>
     </StrictMode>
   );
 } else {
   root.render(
     <StrictMode>
-      <App />
+      <ShellErrorBoundary>
+        <App />
+      </ShellErrorBoundary>
     </StrictMode>
   );
   // Bridge Chrome localStorage ↔ floating widget via ~/.wonder/local

@@ -5,12 +5,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   WHOOP_EVENT,
-  buildWhoopAnalytics,
   importWhoopCsvTexts,
   importWhoopFromPublicLatest,
   loadWhoopStore,
   type WhoopStore,
 } from "./whoopStore";
+import { buildWhoopAnalytics } from "./whoopAnalytics";
 import {
   GROUP_META,
   metricDef,

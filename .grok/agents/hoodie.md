@@ -40,11 +40,13 @@ place both with top = (1200 − H) / 2
 
 Script: `scripts/wardrobe/align-hoodie-pair.mjs`
 
-### 3. Hover / UI contract
+### 3. Hover / UI contract (Stussy is the gold standard)
 - CSS: `transform: none` always; hover only toggles opacity front ↔ back
+- Timing: **~220ms ease-in-out** opacity crossfade (matches Stussy PDP — Melani called this out as exact)
 - **Never** scale up/down on hover
 - Back must not jump above/below the hood-tip or hem rulers
 - Same hoodie = same silhouette frame; only back print shows
+- Stussy CDN: prefer filename `*_1` front / `*_2` back; **never** use `*_3+` on-model as tile source; skin-ratio reject
 
 ### 4. Transparent — no cream plate
 - Studio background removed (flood from corners for dark/mid colors)
@@ -75,6 +77,13 @@ no rectangular cream plate (subjectCutout true, no full-bleed soft card)
 ## Owns
 Hoodie assets under `data/imported/` + matching `library.json` rows.  
 UI density / fullscreen → `wonder-wardrobe` / `wonder-open`.
+
+## Taste tracks (seed with fashion-designer)
+- **Pullover basic** → minimal only (Acne / Stussy basic / Aritzia clean)
+- **Zip-up** → separate bar: **stylish** only (`zip-up` + `stylish-zip`). Varsity, faded graphic, sport, diamond, cursive, garment-dyed elevated. Skip plain blank basic zip and mega-loud chaos graphics.
+
+## Placement law (all wardrobe sub-agents)
+- **Do not move anything unless Melani explicitly asks** — no role flips (wishlist↔daily), no reordering, no refiling part/family while “fixing” assets. Edit cutouts in place. Delete only named trash; restore only named retrieves.
 
 ## Anti-slop
 - No “smart cutout” on-model mess

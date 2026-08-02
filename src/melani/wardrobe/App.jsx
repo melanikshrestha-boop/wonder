@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, X } from "@phosphor-icons/react";
 import { WardrobeImportFlow } from "./import-flow.jsx";
 import { OptimizedImage } from "./OptimizedImage.jsx";
-import { StyleShopper } from "./StyleShopper.jsx";
 import { DailyGenerator } from "./DailyGenerator.jsx";
 import { analyzeWishlist } from "./wishlistTaste.js";
 
@@ -490,6 +489,11 @@ function GalleryItem({
     }
   };
 
+  // Closet convention: all shoes face toe-left. Flip right-facing product flats.
+  const shoeFace = item.part === "shoes"
+    ? (item.shoeFace === "toe-right" || item.faceRight ? "toe-right" : "toe-left")
+    : undefined;
+
   return (
     <button
       className={[
@@ -504,6 +508,7 @@ function GalleryItem({
       aria-label={`Open ${item.name || type}${retail ? ` · retail ${retail}` : ""}${askFormatted ? ` · ask ${askFormatted}` : ""}${hasBack ? " · hover for back" : ""}`}
       aria-pressed={selected}
       data-part={item.part || ""}
+      data-shoe-face={shoeFace}
       data-testid={`wardrobe-item-${item.id}`}
     >
       {/* Stacked front/back — hover or keyboard focus reveals the back (logo/print side) */}
@@ -888,11 +893,15 @@ function ItemViewer({ item, onClose, onDelete, sellMode = false, onAskingPriceCh
       if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKeyDown);
+    // Standalone SPA locks body; native Wonder embed locks only the desk root
     document.body.classList.add("viewer-open");
+    const embed = document.querySelector(".wardrobe-embed");
+    embed?.classList.add("is-viewer-open");
     closeButtonRef.current?.focus();
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       document.body.classList.remove("viewer-open");
+      embed?.classList.remove("is-viewer-open");
     };
   }, [onClose]);
 
@@ -1029,16 +1038,39 @@ function ItemViewer({ item, onClose, onDelete, sellMode = false, onAskingPriceCh
 }
 
 
-export function App() {
+function isEmbeddedInWonder() {
+  try {
+    return typeof window !== "undefined" && window.self !== window.top;
+  } catch {
+    // Cross-origin parent → treat as embedded (never nest Wonder inside iframe)
+    return true;
+  }
+}
+
+/**
+ * @param {{ embedded?: boolean }} [props]
+ * embedded=true when mounted natively inside Wonder (no iframe, no exit bar).
+ */
+export function App({ embedded: embeddedProp } = {}) {
   const [items, setItems] = useState([]);
   /** Main nav: tops | bottoms | shoes | dresses | jackets | all */
   const [activeNav, setActiveNav] = useState("all");
   /** Sub: hoodies | tees | jeans | sweats | null (= whole section) */
   const [activeSub, setActiveSub] = useState(null);
+  // Shop tab permanently deleted — never reintroduce empty chrome
   const [collection, setCollection] = useState("looks");
   const [selectedId, setSelectedId] = useState(null);
+
+  useEffect(() => {
+    // Kill sticky "shop" state from old sessions
+    if (collection === "shop") setCollection("wardrobe");
+  }, [collection]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  /** True inside Wonder shell (native embed or legacy iframe) — no exit bar */
+  const [embedded, setEmbedded] = useState(
+    () => embeddedProp === true || isEmbeddedInWonder(),
+  );
   const [pinterestBoard, setPinterestBoard] = useState(() => {
     try {
       return localStorage.getItem(PINTEREST_BOARD_KEY) || "";
@@ -1084,6 +1116,14 @@ export function App() {
       return next;
     });
   };
+
+  useEffect(() => {
+    if (embeddedProp === true) {
+      setEmbedded(true);
+      return;
+    }
+    setEmbedded(isEmbeddedInWonder());
+  }, [embeddedProp]);
 
   useEffect(() => {
     fetch("/api/import/wardrobe", { cache: "no-store" })
@@ -1136,14 +1176,14 @@ export function App() {
   const subOptions = activeNavMeta?.sub || null;
 
   const visibleItems = useMemo(() => {
+    // If anything still has collection "shop" stuck in memory, treat as closet
+    const col = collection === "shop" ? "wardrobe" : collection;
     const collectionItems =
-      collection === "resale"
+      col === "resale"
         ? items.filter(isForSaleItem)
-        : collection === "want"
+        : col === "want"
           ? items.filter(isWantItem)
-          : collection === "shop"
-            ? items // shopper reads full closet (owned + want)
-            : items.filter((item) => !isWantItem(item)); // Closet + Looks = owned only
+          : items.filter((item) => !isWantItem(item)); // Closet + Looks = owned only
 
     let filtered = collectionItems;
     if (activeNav !== "all") {
@@ -1375,7 +1415,27 @@ export function App() {
   );
 
   return (
-    <div className={`app-shell${selectedItem ? " has-selection" : ""}`}>
+    <div className={`app-shell${selectedItem ? " has-selection" : ""}${embedded ? " is-embedded" : ""}`}>
+      {/*
+        Exit bar ONLY for standalone /wardrobe/ (no Wonder shell).
+        Never show inside the Wonder iframe — that loaded full Wonder in the frame
+        (double topbars: Agents/Wardrobe + Hygiene). Use target=_top if present.
+      */}
+      {!embedded ? (
+        <a
+          className="wonder-exit-bar"
+          href="/?menu=1"
+          target="_top"
+          rel="noopener"
+          title="Back to Wonder — opens main menu"
+        >
+          <span className="wonder-exit-bar__icon" aria-hidden="true">
+            <span /><span /><span />
+          </span>
+          <span>Wonder menu</span>
+          <span className="wonder-exit-bar__sub">exit wardrobe</span>
+        </a>
+      ) : null}
       <main className="gallery-pane">
         <header className="gallery-header">
           {/* One clean toolbar row: collections · filters · density · counts */}
@@ -1386,7 +1446,6 @@ export function App() {
                 ["wardrobe", "My closet"],
                 ["want", "Wishlist"],
                 ["resale", "For sale"],
-                ["shop", "Shop"],
               ].map(([id, label]) => (
                 <button
                   key={id}
@@ -1403,7 +1462,7 @@ export function App() {
                 </button>
               ))}
             </nav>
-            {!["shop", "looks"].includes(collection) ? (
+            {collection !== "looks" ? (
               <nav className="category-nav" aria-label="Filter wardrobe by section">
                 {NAV.map((nav) => (
                   <button
@@ -1448,7 +1507,7 @@ export function App() {
               </p>
             </div>
           </div>
-          {!["shop", "looks"].includes(collection) && subOptions ? (
+          {collection !== "looks" && subOptions ? (
             <nav className="subcategory-nav" aria-label={`${activeNavMeta.label} types`}>
               <button
                 type="button"
@@ -1476,37 +1535,7 @@ export function App() {
           ) : null}
         </header>
 
-        {collection === "shop" ? (
-          <StyleShopper
-            items={items}
-            onSaveWant={(find) => {
-              const row = {
-                id: `shop-want-${find.id}`,
-                name: find.name,
-                brand: find.brand,
-                lane: find.lane,
-                url: find.url,
-                price: find.price,
-                currency: find.currency,
-                tags: [...(find.tags || []), "want"],
-                productRef: find.url,
-                savedAt: new Date().toISOString(),
-              };
-              try {
-                const previous = readShopWants();
-                localStorage.setItem(
-                  SHOP_WANTS_KEY,
-                  JSON.stringify([row, ...previous.filter((item) => item.id !== row.id)].slice(0, 40))
-                );
-              } catch { /* ignore */ }
-              const saved = shopWantToItem(row);
-              setItems((current) => [
-                ...current.filter((item) => item.id !== saved.id),
-                saved,
-              ]);
-            }}
-          />
-        ) : collection === "looks" ? (
+        {collection === "looks" ? (
           !loading ? (
             <DailyGenerator
               items={items.filter((item) => !isWantItem(item))}
@@ -1534,7 +1563,7 @@ export function App() {
                 {collection === "resale"
                   ? "Nothing is marked for sale. Open a closet piece and move it to the resale rack."
                   : collection === "want"
-                    ? "No wishlist pieces yet. Save exact product links from Shop assistant."
+                    ? "No wishlist pieces yet. Add exact product links you want."
                     : "No pieces in this view."}
               </p>
             )}

@@ -1377,7 +1377,7 @@ function foodReply(data: Snapshot["food"] & {
     (m) => `${m.logged ? "✓" : "○"} ${m.title} · ${m.protein_g}g protein · ${m.calories} cal`
   );
   return [
-    `Meals (breakfast only for now)`,
+    `Meals (7-day breakfast trial only · measured bowl · no makhana)`,
     ``,
     data.plate,
     ``,

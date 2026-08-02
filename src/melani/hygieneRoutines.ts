@@ -791,12 +791,17 @@ export const ORAL_CARE_SECTIONS: RoutineSection[] = [
     steps: [
       {
         num: 9,
-        title: "SomnoDent Bruxism Device",
-        subtitle: "Night guard",
-        note: "Wear as directed by SomnoMed / your provider.",
+        title: "SomnoDent Avant",
+        subtitle: "Oral appliance · sleep",
+        note: "Custom SomnoMed mandibular advancement device (provider-fitted). Finish full evening oral care first, then seat the appliance.",
         bullets: [
-          "Clean and dry after evening oral care.",
-          "Seat fully before sleep; store in its case in the morning.",
+          "After floss, brush, tongue scrape, and rinse — mouth should be clean and dry enough to seat the trays.",
+          "Rinse the device with cool water; never hot (can warp acrylic / liner).",
+          "Seat upper and lower splints fully so the b-flex liner cradles the teeth; check both sides feel even.",
+          "Lips closed, nasal breathing — the Avant is built to encourage mouth closure while you sleep.",
+          "Morning: remove, rinse, brush the device gently with a soft brush + cool water (or the cleaner your dentist gave you).",
+          "Air-dry fully, then store in the case — never leave wet in a closed bag.",
+          "Follow your sleep dentist for titration / adjustment visits; don’t force fit if something feels wrong.",
         ],
       },
     ],

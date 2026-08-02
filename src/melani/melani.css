@@ -9,6 +9,15 @@
   font-size: 12px;
 }
 
+/* No text, no layout jump — desk mounts when chunk is ready */
+.melani-page-loading--quiet {
+  min-height: 40vh;
+  padding: 0;
+  background: transparent;
+  color: transparent;
+  pointer-events: none;
+}
+
 .melani-page-loading.is-dark {
   color: rgba(255, 255, 255, 0.58);
   background: #000;

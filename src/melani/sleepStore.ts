@@ -922,6 +922,37 @@ export function seedBowelDetailUndoBaseline(map?: Record<string, BowelDayLog>) {
   }
 }
 
+/**
+ * Full replace of bowel detail (owner corrections / prune only).
+ * Use when merge would re-introduce deleted seed days.
+ */
+export function replaceBowelDetailMap(map: Record<string, BowelDayLog>) {
+  const safe: Record<string, BowelDayLog> = {};
+  for (const [day, log] of Object.entries(map)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+    if (!log || typeof log.had !== "boolean") continue;
+    const row: BowelDayLog = { had: log.had };
+    if (log.had && log.look != null) row.look = log.look;
+    if (log.had && log.feel != null) row.feel = log.feel;
+    if (log.had && log.color != null) row.color = log.color;
+    if (log.note) row.note = log.note;
+    safe[day] = row;
+  }
+  const json = JSON.stringify(safe);
+  try {
+    localStorage.setItem(BOWEL_DETAIL_KEY, json);
+    bowelDetailLastJson = json;
+    const yn: Record<string, boolean> = {};
+    for (const [d, log] of Object.entries(safe)) yn[d] = !!log.had;
+    localStorage.setItem(BOWEL_KEY, JSON.stringify(yn));
+    bowelLastJson = JSON.stringify(yn);
+    pushBowelToDisk(BOWEL_DETAIL_KEY, safe);
+    pushBowelToDisk(BOWEL_KEY, yn);
+  } catch (err) {
+    console.warn("[bowel] replace failed", err);
+  }
+}
+
 export function saveBowelDetailMap(map: Record<string, BowelDayLog>) {
   // SAFETY: merge with whatever is already stored so a partial write
   // can never erase other days (agent bugs, empty profile, etc.).
@@ -1066,20 +1097,28 @@ export function upsertBowelDay(
  */
 const BOWEL_CORRECTIONS_APPLIED_KEY = "dr-melani-bowel-corrections-applied-v1";
 
+/**
+ * Owner week Jul 25–31 2026: only started logging this week.
+ * 5 Yes (with Bristol types) + 2 No = n = 7. Not the old 3-No draft.
+ */
 const BOWEL_PENDING_CORRECTIONS: {
   id: string;
   day: string;
   had: boolean;
   look?: BowelLook;
 }[] = [
-  // Owner-confirmed week (2026-07-30 night) — force these over any wrong prior rows
-  { id: "2026-07-25-no-v2", day: "2026-07-25", had: false },
-  { id: "2026-07-26-no", day: "2026-07-26", had: false },
-  { id: "2026-07-27-no-v2", day: "2026-07-27", had: false }, // Mon: did not go
-  { id: "2026-07-28-type1-v2", day: "2026-07-28", had: true, look: 1 }, // Tue
-  { id: "2026-07-29-type4-v2", day: "2026-07-29", had: true, look: 4 }, // Wed
-  { id: "2026-07-30-type4-v2", day: "2026-07-30", had: true, look: 4 }, // Thu
+  { id: "2026-07-25-yes-t7-v3", day: "2026-07-25", had: true, look: 7 },
+  { id: "2026-07-26-no-v3", day: "2026-07-26", had: false },
+  { id: "2026-07-27-yes-t4-v3", day: "2026-07-27", had: true, look: 4 },
+  { id: "2026-07-28-type1-v3", day: "2026-07-28", had: true, look: 1 },
+  { id: "2026-07-29-type4-v3", day: "2026-07-29", had: true, look: 4 },
+  { id: "2026-07-30-type4-v3", day: "2026-07-30", had: true, look: 4 },
+  { id: "2026-07-31-no-v3", day: "2026-07-31", had: false },
 ];
+
+/** Owner intentional start day — drop assistant seed rows before this. */
+const BOWEL_OWNER_START_DAY = "2026-07-25";
+const BOWEL_PRUNE_PRE_START_ID = "prune-before-2026-07-25-v4";
 
 export function applyPendingBowelCorrections(): string[] {
   if (typeof localStorage === "undefined") return [];
@@ -1096,11 +1135,45 @@ export function applyPendingBowelCorrections(): string[] {
   }
   const done = new Set(applied);
   const newly: string[] = [];
+
+  // One-shot: owner only started Jul 25 — drop assistant seed days + force week
+  if (!done.has(BOWEL_PRUNE_PRE_START_ID)) {
+    const map = loadBowelDetailMap();
+    const next: Record<string, BowelDayLog> = {};
+    for (const [day, log] of Object.entries(map)) {
+      if (day < BOWEL_OWNER_START_DAY) continue;
+      next[day] = log;
+    }
+    // Force the 7-day week shape before replace
+    for (const c of BOWEL_PENDING_CORRECTIONS) {
+      if (c.had) {
+        next[c.day] = {
+          had: true,
+          ...(c.look != null ? { look: c.look } : {}),
+        };
+      } else {
+        next[c.day] = { had: false };
+      }
+    }
+    replaceBowelDetailMap(next);
+    done.add(BOWEL_PRUNE_PRE_START_ID);
+    newly.push(BOWEL_PRUNE_PRE_START_ID);
+    // Mark day corrections done too — already written in replace
+    for (const c of BOWEL_PENDING_CORRECTIONS) {
+      done.add(c.id);
+      newly.push(c.id);
+    }
+  }
+
   for (const c of BOWEL_PENDING_CORRECTIONS) {
     if (done.has(c.id)) continue;
     const patch: Partial<BowelDayLog> & { had: boolean } = { had: c.had };
     if (c.look != null) patch.look = c.look;
-    upsertBowelDay(c.day, patch, "correction");
+    if (!c.had) {
+      upsertBowelDay(c.day, { had: false }, "correction");
+    } else {
+      upsertBowelDay(c.day, patch, "correction");
+    }
     done.add(c.id);
     newly.push(c.id);
   }

@@ -43,7 +43,9 @@ import {
   toggleRunItem,
   type GroceryRun,
 } from "./groceryEngine";
+import { MealsShop } from "./MealsShop";
 import "./shopping-agent.css";
+import "./meals-shop.css";
 
 const STATES: StockState[] = ["out", "low", "stocked"];
 
@@ -245,6 +247,9 @@ export function ShoppingAgent() {
           ) : null}
         </p>
       </header>
+
+      {/* Trader Joe's · exact grams + run-out (same as Meals → Shop) */}
+      <MealsShop />
 
       {/* ── Fixed-menu grocery run (the fun / anti-hate layer) ── */}
       <section className="shop-run" aria-label="Fixed menu grocery run">

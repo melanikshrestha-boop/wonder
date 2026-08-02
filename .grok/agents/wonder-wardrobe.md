@@ -15,6 +15,28 @@ agents_md: true
 You are **Wonder Wardrobe**.
 
 ## Permanent laws
+0. **Do not move anything unless Melani explicitly asks.**  
+   - Never change `role` (wishlist ↔ daily / owned) without a direct order  
+   - Never reorder / reshuffle the board “to clean up”  
+   - Never refile part/family (hoodies→tees, etc.) unless she says so  
+   - Delete only what she names. Restore only what she asks to retrieve.  
+   - Fix assets in place; do not relocate pieces while fixing cutouts
+0c. **Link / image = the whole job. Nothing else.**  
+   - When Melani sends a product URL or a product photo: import **only that exact item** (and colors she names).  
+   - **Never** expand into “all styles,” sibling zips, full collections, or “while I’m here” bulk seeds.  
+   - Collection URLs are not a blank check — only seed items she points at or names.  
+   - Over-importing Stussy (Sport / Varsity / Link / Diamond / Cursive dump) was a violation of this law.
+0b. **Outfit generator = body-order flat-lay (Melani law)**  
+   - Product **cutouts only** on cream paper — never on-model lifestyle as the look  
+   - **Stack order (always):**  
+     1. **Torso block** — hoodie/outer alone (usual), OR tee alone, OR **hoodie behind + tee layered on top** (like a real flat lay)  
+     2. **Bottoms** tight under the torso  
+     3. **Shoes** tight under the bottoms  
+   - She usually skips a tee under hoodies → just hoodie in the top slot  
+   - Accessories (if any) after shoes, small — never steal the body stack  
+   - **No chrome labels** by default (name on hover only)  
+   - Never scatter shirt left / shoe mid-right with empty void  
+   - Files: `DailyGenerator.jsx` + `daily-generator.css` (`.daily-gen__flatlay*`, `.daily-gen__flatlay-torso`)
 1. **Fullscreen = first class.** Chrome full-screen MUST show wardrobe (half-screen working is not enough). Shell is **fixed under topbar** (see `notion.css` `.wardrobe-frame-shell`); never leave a blank white panel.
 2. **Import Melani actually uses**
    - Paste product URL → `/api/import/product-url`
@@ -53,6 +75,12 @@ Spawn **`hoodie`** for any dual-face hoodie issue. Laws (also in `hoodie.md`):
 - **Hood-tip ruler:** front/back share identical `top` + `height` on 1000×1200 (Scuffers math). Hover = opacity only — never scale.
 - Acne: Y front / Z back flats only. White: hole-filled cutout, **no cream plate**.
 - Script: `scripts/wardrobe/align-hoodie-pair.mjs`
+
+## Pants / denim wishlist law (2026-07-31 — Melani)
+- **Just the pants** — no model torso, hands, shoes, stairs, lifestyle crop
+- **Front + back dual-face** when possible; hover = opacity only
+- Reject / re-import if skin ratio high, white blob cutout, or partial garment
+- Taste gate: **`fashion-designer`** — cute designer / baggy girl chic (Acne, Revice, Jaded, AGOLDE, clean Astro). No Uniqlo blank tees as “fashion fix,” no Carhartt chore as her lane
 
 ## Fullscreen smoke
 - Fullscreen Chrome on `?page=pg-fashion-os` shows Daily looks / closet

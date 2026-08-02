@@ -844,7 +844,7 @@ Calories: ${vs(t.calories, goals.calories, "")}
 Protein: ${vs(t.protein_g, goals.protein_g, "g")}
 Carbs: ${vs(t.carbs_g, goals.carbs_g, "g")} · Fat: ${vs(t.fat_g, goals.fat_g, "g")} · Fiber: ${vs(t.fiber_g, goals.fiber_g, "g")}
 Meals logged today: ${loggedMeals || "none yet"}
-Breakfast preset: ${MEAL_PRESETS[0]?.title || "Breakfast"} ~${MEAL_PRESETS[0]?.calories || 0} cal / ${MEAL_PRESETS[0]?.protein_g || 0}g protein
+Breakfast trial only: ${MEAL_PRESETS.map((m) => `${m.title} ~${m.calories}cal/${m.protein_g}gP`).join(" · ")}
 Supplements:
   ${supLines}
 

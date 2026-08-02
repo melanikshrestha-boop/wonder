@@ -63,12 +63,33 @@ export function MetricGraphPanel({
 }) {
   if (!series.points.length && series.avg == null) return null;
 
+  // Prefer explicit prop; else registry ideal (sleep 100%, 8h, etc.)
+  const def = metricDef(series.key);
+  const goalValue =
+    goal != null && Number.isFinite(goal) ? goal : def?.idealGoal ?? null;
+  const goalText =
+    goalLabel ??
+    def?.idealGoalLabel ??
+    (goalValue != null
+      ? `${formatValue(goalValue, series.unit)}${series.unit}`
+      : undefined);
+
+  // Blue dotted = your average (history you already have)
+  const avgValue =
+    series.avg != null && Number.isFinite(series.avg) && series.points.length >= 3
+      ? series.avg
+      : null;
+  const avgText =
+    avgValue != null
+      ? `avg ${formatValue(avgValue, series.unit)}${series.unit}`
+      : undefined;
+
   const d = deltaVsAvg(series);
   // Weight goal is down; Whoop metrics use registry; else raw sign
   const hib =
     series.key === "weight"
       ? false
-      : metricDef(series.key)?.higherIsBetter ?? null;
+      : def?.higherIsBetter ?? null;
   let deltaClass = "";
   if (d != null && Math.abs(d) >= 0.05 && hib !== null) {
     const good = hib ? d > 0 : d < 0;
@@ -119,70 +140,35 @@ export function MetricGraphPanel({
           </span>
         </div>
       </header>
-      <TimeGraph series={series} goal={goal} goalLabel={goalLabel} />
+      <TimeGraph
+        series={series}
+        goal={goalValue}
+        goalLabel={goalText}
+        avgLine={avgValue}
+        avgLabel={avgText}
+      />
       <footer className="wx-panel-foot">
         <span>
           n = {series.points.length}
           {series.latest != null
-            ? ` · latest: ${formatValue(series.latest, series.unit)}${series.unit}`
+            ? ` · latest ${formatValue(series.latest, series.unit)}${series.unit}`
             : ""}
-          {series.min != null && series.max != null
-            ? ` · range ${formatValue(series.min, series.unit)}–${formatValue(series.max, series.unit)}`
+          {avgValue != null
+            ? ` · avg ${formatValue(avgValue, series.unit)}${series.unit}`
             : ""}
-          {goal != null && Number.isFinite(goal)
-            ? ` · goal ${formatValue(goal, series.unit)}${series.unit}`
+          {goalValue != null && Number.isFinite(goalValue)
+            ? ` · ideal ${formatValue(goalValue, series.unit)}${series.unit}`
             : ""}
         </span>
+        <span className="wx-scale-legend" aria-hidden>
+          {avgValue != null ? (
+            <span className="wx-leg-avg">··· avg</span>
+          ) : null}
+          {goalValue != null ? (
+            <span className="wx-leg-ideal">— · ideal</span>
+          ) : null}
+        </span>
       </footer>
-      {series.forecast ? (
-        <footer className="wx-forecast-cap">
-          <p className="wx-forecast-sum">{series.forecast.summary}</p>
-          <p className="wx-forecast-math">
-            <span className="wx-forecast-k">Graph line</span>
-            {": "}
-            {series.forecast.formula}
-            {" · R² "}
-            {Math.round(series.forecast.r2 * 100)}%
-          </p>
-          {series.forecast.drivers ? (
-            <p className="wx-forecast-math">
-              <span className="wx-forecast-k">Drivers</span>
-              {" (not the flat multi-day line): R² "}
-              {Math.round(series.forecast.drivers.r2 * 100)}% · if last night again → ~
-              {series.forecast.drivers.nextIfSameConditions} min ·{" "}
-              {series.forecast.drivers.factors.join(", ")}
-            </p>
-          ) : null}
-          {series.forecast.logistic ? (
-            <p className="wx-forecast-log">
-              <span className="wx-forecast-k">Next night adequate</span>
-              {" (≥"}
-              {series.forecast.logistic.thresholdMin} min): ~
-              {Math.round(series.forecast.logistic.nextProb * 100)}% (logistic, acc{" "}
-              {Math.round(series.forecast.logistic.accuracy * 100)}%)
-            </p>
-          ) : null}
-          {series.forecast.rl ? (
-            <p className="wx-forecast-rl">
-              <strong>
-                RL · {series.forecast.rl.algorithm}
-              </strong>
-              {series.forecast.rl.actionLabel ? (
-                <>
-                  {" · "}
-                  <span className="wx-forecast-rl-action">{series.forecast.rl.actionLabel}</span>
-                </>
-              ) : null}
-              {series.forecast.rl.tip ? (
-                <>
-                  {" · "}
-                  <span className="wx-forecast-rl-tip">{series.forecast.rl.tip}</span>
-                </>
-              ) : null}
-            </p>
-          ) : null}
-        </footer>
-      ) : null}
     </article>
   );
 }

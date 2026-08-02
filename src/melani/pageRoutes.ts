@@ -25,6 +25,7 @@ export function isHygienePage(pageId: string): boolean {
     pageId === "pg-hair" ||
     pageId === "pg-am-skin" ||
     pageId === "pg-pm-skin" ||
+    pageId === "pg-oral-care" ||
     pageId.startsWith("pg-pm-")
   );
 }

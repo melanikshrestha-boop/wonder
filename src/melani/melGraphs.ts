@@ -23,8 +23,7 @@ import { loadFinance } from "./financeStore";
 import { isTransferLike } from "./financeTransfers";
 import { writeTonightBrief } from "./bodyBrief";
 import { fetchMacScreenTime } from "./screenTimeStore";
-import { buildDeepSleepForecast } from "./deepSleepForecast";
-import { buildDeepSleepRl } from "./rlDeepSleep";
+import { buildWhoopAnalytics } from "./whoopAnalytics";
 
 function ok(summary: string, data?: unknown): GraphNodeResult {
   return { ok: true, status: "ok", summary, data };
@@ -114,24 +113,17 @@ export const GRAPH_BODY_NIGHT: AgentGraph = {
     },
     models: {
       id: "models",
-      label: "Deep sleep models + RL tip",
+      label: "Deep sleep snapshot",
       run: () => {
-        const fc = buildDeepSleepForecast();
-        const rl = buildDeepSleepRl();
-        if (!fc && !rl) {
-          return empty("Not enough deep-sleep history for models");
+        // No regression / Q-learning — raw history only
+        const s = buildWhoopAnalytics();
+        const deep = s.byKey.deep;
+        if (!deep || !deep.points.length) {
+          return empty("Import Whoop sleeps CSV for deep sleep history");
         }
         return ok(
-          [
-            fc ? `forecast R²=${(fc.r2 * 100).toFixed(0)}%` : null,
-            rl ? `RL: ${rl.actionLabel}` : null,
-          ]
-            .filter(Boolean)
-            .join(" · "),
-          {
-            deepSummary: fc?.summary ?? null,
-            rlTip: rl?.tip ?? null,
-          }
+          `Deep sleep latest ${deep.latest ?? "—"} min · n=${deep.points.length}`,
+          { deepLatest: deep.latest ?? null, n: deep.points.length },
         );
       },
       next: () => "draft_brief",
@@ -147,8 +139,7 @@ export const GRAPH_BODY_NIGHT: AgentGraph = {
           "— Night loop draft —",
           `Day: ${ctx.bag.day || todayKey()}`,
           ctx.bag.topMove ? `Top move: ${ctx.bag.topMove}` : null,
-          ctx.bag.deepSummary ? `Deep: ${ctx.bag.deepSummary}` : null,
-          ctx.bag.rlTip ? `RL: ${ctx.bag.rlTip}` : null,
+          ctx.bag.deepLatest != null ? `Deep latest: ${ctx.bag.deepLatest} min` : null,
           p?.water?.summary ? `Water: ${p.water.summary}` : null,
           p?.sleep?.summary ? `Sleep: ${p.sleep.summary}` : null,
           p?.whoop?.summary ? `WHOOP: ${p.whoop.summary}` : null,

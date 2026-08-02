@@ -1,38 +1,169 @@
-:root {
+/*
+ * Tokens on BOTH hosts:
+ * - html.wardrobe-standalone → full /wardrobe/ SPA
+ * - .wardrobe-embed → native desk inside Wonder (no iframe)
+ * Never paint :root/body globally when embedded — that glitched Fitness/Hygiene.
+ */
+html.wardrobe-standalone,
+.wardrobe-embed {
   /* One shade darker beige so white denim / white sweats read clearly */
   --paper: #e8e0d2;
   --ink: #191919;
   --muted: #66625d;
   --line: #cfc8bc;
   --accent: #6e302e;
-  /* Serif everywhere (Wonder house rule) */
   font-family: "Source Serif 4", Georgia, "Times New Roman", ui-serif, serif;
   color: var(--ink);
   background: var(--paper);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
-* { box-sizing: border-box; }
-
-html { background: var(--paper); }
-
-body {
+html.wardrobe-standalone,
+html.wardrobe-standalone body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
   background: var(--paper);
   color: var(--ink);
-  -webkit-font-smoothing: antialiased;
 }
 
-body.viewer-open { overflow: hidden; }
+html.wardrobe-standalone body.viewer-open,
+.wardrobe-embed.is-viewer-open {
+  overflow: hidden;
+}
 
-button { font: inherit; }
+.wardrobe-embed,
+.wardrobe-embed * {
+  box-sizing: border-box;
+}
+
+html.wardrobe-standalone *,
+html.wardrobe-standalone *::before,
+html.wardrobe-standalone *::after {
+  box-sizing: border-box;
+}
+
+/*
+ * Exit bar: standalone /wardrobe/ only.
+ * NEVER inside Wonder iframe (.is-embedded) — nesting full Wonder caused
+ * double topbars (Agents/Wardrobe + Hygiene) and a stuck "Wardrobe" chrome.
+ */
+.wonder-exit-bar {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 14px;
+  margin: 0;
+  background: #191612;
+  color: #f7f1e8;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.app-shell.is-embedded .wonder-exit-bar {
+  display: none !important;
+}
+.wonder-exit-bar:hover {
+  background: #2a2620;
+  color: #fff;
+}
+.wonder-exit-bar__icon {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  width: 14px;
+  height: 12px;
+}
+.wonder-exit-bar__icon span {
+  display: block;
+  height: 1.5px;
+  width: 100%;
+  background: currentColor;
+  border-radius: 1px;
+}
+.wonder-exit-bar__sub {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.65;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wardrobe-embed button,
+html.wardrobe-standalone button {
+  font: inherit;
+}
 
 .app-shell {
   min-height: 100vh;
   background: var(--paper);
+}
+
+/* Inside Wonder: fill the desk, never force a second full viewport */
+.wardrobe-embed {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  overscroll-behavior: contain;
+  isolation: isolate;
+  contain: layout style;
+}
+
+.wardrobe-embed .app-shell {
+  min-height: 0;
+  flex: 1 1 auto;
+  height: auto;
+  width: 100%;
+}
+
+.wardrobe-embed-fallback {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 28px 24px;
+  color: #1a1a1a;
+  font-family: "Source Serif 4", Georgia, ui-serif, serif;
+}
+
+.wardrobe-embed-fallback p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.wardrobe-embed-fallback__btn {
+  appearance: none;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #191919;
+  color: #f7f1e8;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wardrobe-embed-fallback__btn--ghost {
+  background: transparent;
+  color: #191919;
+  border: 1px solid rgba(25, 22, 18, 0.2);
 }
 
 .gallery-pane { min-width: 0; }
@@ -185,7 +316,7 @@ button { font: inherit; }
   letter-spacing: -.02em;
 }
 
-/* Tops/Bottoms/… pill row — sits flush under Owned / Want / Sell / Shop */
+/* Tops/Bottoms/… pill row — sits under Daily looks / Closet / Wishlist / For sale */
 .category-nav {
   width: max-content;
   max-width: 100%;
@@ -203,7 +334,7 @@ button { font: inherit; }
   scrollbar-width: none;
 }
 
-/* Owned · Want · Sell · Shop — spacing only (Selene: no divider lines) */
+/* Daily looks · Closet · Wishlist · For sale — spacing only (Selene: no divider lines) */
 .collection-nav {
   display: flex;
   gap: 6px;
@@ -554,24 +685,40 @@ button { font: inherit; }
   letter-spacing: 0.01em;
 }
 
+/* Wishlist = same open field as closet — no card plate, no hover tray */
 .wishlist-card-shell {
   display: grid;
-  grid-template-rows: 1fr auto;
-  border-radius: 14px;
-  transition: background 160ms ease, transform 160ms ease;
+  grid-template-rows: auto auto;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: none;
 }
 
 .wishlist-card-shell:hover {
-  background: rgba(255, 252, 246, .52);
-  transform: translateY(-2px);
+  background: transparent !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.wishlist-card-shell > .gallery-item {
+  /* same stage as closet — do not grow a product plate */
+  height: auto;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .wishlist-card-actions {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 3px;
-  padding: 7px 10px 10px;
+  gap: 2px;
+  padding: 2px 0 4px;
   text-align: center;
+  border: 0 !important;
+  background: transparent !important;
 }
 
 .wishlist-card-actions a {
@@ -594,21 +741,22 @@ button { font: inherit; }
 .gallery-item {
   appearance: none;
   width: 100%;
-  /* shorter stage → less dead air under price before next row */
-  aspect-ratio: 1 / 1.02;
+  /* taller stage so hoodies fill the cell (less tiny-product air) */
+  aspect-ratio: 0.82 / 1;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   place-items: center;
-  border: none;
+  border: 0 !important;
   border-radius: 0;
+  outline: none !important;
   padding: 0 2px 0;
-  /* product floats on page — no plate (Scuffers-style flats) */
+  /* product floats on page — no plate, no frame (Selene) */
   background: transparent !important;
+  box-shadow: none !important;
   /* Button UA styles can force light text — lock ink for name/price */
   color: #191919 !important;
   -webkit-text-fill-color: #191919;
   cursor: pointer;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
   /* image → name → price: max single-spaced, no air */
   gap: 0;
   line-height: 1;
@@ -639,17 +787,19 @@ html:not(.theme-light) .gallery-item,
   object-fit: contain;
   /* Assets are pre-centered with equal margins — keep dead-center in the tile */
   object-position: center center;
-  /* Constant size — hover must NOT grow/shrink (front↔back is opacity only) */
+  /* Constant size — hover must NOT grow/shrink (front↔back is opacity only).
+     Timing matches Stussy PDP crossfade: soft ease-in-out, ~220ms — no zoom. */
   transform: none;
-  transition: opacity 160ms ease;
+  transition: opacity 220ms ease-in-out;
   -webkit-user-drag: none;
   min-height: 0;
   background: transparent !important;
   mix-blend-mode: normal;
-  /* Lift product off cream — critical for white/light pieces that otherwise vanish */
-  filter:
-    drop-shadow(0 1px 1px rgba(25, 22, 18, 0.10))
-    drop-shadow(0 10px 18px rgba(25, 22, 18, 0.12));
+  /* No drop-shadow, no outline frame — product floats (Selene: no boxes) */
+  filter: none;
+  outline: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 .gallery-item-media .gallery-img-front {
@@ -712,27 +862,55 @@ html:not(.theme-light) .gallery-item,
   transform-origin: center center;
 }
 
-/* Shoes: fill the tile hard — kill wasted air above/below the sole */
+/* Shoes: same density as closet — no product plate, consistent scale + face */
 .gallery-item[data-part="shoes"],
 .gallery-item.is-shoe {
   /* wider than tall → shorter cell so next row starts sooner */
   aspect-ratio: 1.22;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 .gallery-item[data-part="shoes"] .gallery-item-media,
 .gallery-item.is-shoe .gallery-item-media {
   background: transparent !important;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
+/* Standard face: toe left. Flip assets that face the other way. */
 .gallery-item[data-part="shoes"] img,
 .gallery-item.is-shoe img {
   transform: scale(1.28);
   object-fit: contain;
+  object-position: center center;
   background: transparent !important;
+  outline: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.gallery-item[data-part="shoes"][data-shoe-face="toe-right"] img,
+.gallery-item.is-shoe[data-shoe-face="toe-right"] img {
+  transform: scale(1.28) scaleX(-1);
 }
 .gallery-item[data-part="shoes"]:hover img,
 .gallery-item.is-shoe:hover img,
 .gallery-item[data-part="shoes"]:focus-visible img,
 .gallery-item.is-shoe:focus-visible img {
-  transform: scale(1.32);
+  transform: scale(1.28); /* no zoom — size locked like closet dual-face law */
+}
+.gallery-item[data-part="shoes"][data-shoe-face="toe-right"]:hover img,
+.gallery-item.is-shoe[data-shoe-face="toe-right"]:hover img,
+.gallery-item[data-part="shoes"][data-shoe-face="toe-right"]:focus-visible img,
+.gallery-item.is-shoe[data-shoe-face="toe-right"]:focus-visible img {
+  transform: scale(1.28) scaleX(-1);
+}
+
+/* Wishlist shoes use identical shoe stage as closet */
+.wishlist-card-shell .gallery-item.is-shoe,
+.wishlist-card-shell .gallery-item[data-part="shoes"] {
+  aspect-ratio: 1.22;
 }
 
 /* Jackets / puffers: fill tile more (no huge empty air) */
@@ -906,11 +1084,20 @@ button.gallery-item .gallery-item-retail {
 
 /* Hover must NOT scale tiles — front/back swap is opacity-only (see has-back rules). */
 
-.gallery-item.selected { border-color: var(--accent); }
+/* Selected / focus: no box frame — name weight or opacity only */
+.gallery-item.selected {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
 
 .gallery-item:focus-visible {
-  outline: 1px solid var(--ink);
-  outline-offset: 3px;
+  outline: none !important;
+}
+
+.gallery-item:focus-visible .gallery-item-name {
+  color: var(--ink, #191919);
+  font-weight: 620;
 }
 
 .status {
@@ -926,7 +1113,8 @@ button.gallery-item .gallery-item-retail {
 .viewer-overlay {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  /* Above Wonder sticky topbar (100) when wardrobe is native-embedded */
+  z-index: 200;
   display: flex;
   justify-content: flex-end;
   background: rgba(25, 24, 22, .28);
@@ -1027,6 +1215,11 @@ button.gallery-item .gallery-item-retail {
   opacity: 0;
   z-index: 2;
   pointer-events: none;
+}
+/* Popup dual-face: same Stussy-style opacity crossfade as gallery tiles */
+.product-popup-stage.has-back .product-popup-front,
+.product-popup-stage.has-back .product-popup-back {
+  transition: opacity 220ms ease-in-out;
 }
 .product-popup-stage.has-back:hover .product-popup-front {
   opacity: 0;

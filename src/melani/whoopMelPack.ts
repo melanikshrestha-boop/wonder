@@ -4,12 +4,12 @@
  */
 import { WHOOP_METRICS } from "./whoopMetrics";
 import {
-  buildWhoopAnalytics,
   loadRawWhoopCsv,
   loadWhoopStore,
   loadWeightLog,
   type WhoopStore,
 } from "./whoopStore";
+import { buildWhoopAnalytics } from "./whoopAnalytics";
 
 function fmt(n: number | null | undefined, digits = 1): string {
   if (n == null || !Number.isFinite(n)) return "—";

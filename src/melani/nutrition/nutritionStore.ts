@@ -19,6 +19,10 @@ import {
   macrosFor,
   type Macros,
 } from "./foodDb";
+import {
+  reportMealCutouts,
+  type CutoutHit,
+} from "../foodGuide";
 
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
 
@@ -52,6 +56,11 @@ export type NutriEntry = {
   presetId?: string;
   source: EntrySource;
   loggedAt: string;
+  /**
+   * Cut-out law hits (trash bin). Wonder always notices.
+   * Empty / omitted = clean.
+   */
+  cutoutHits?: CutoutHit[];
 };
 
 export type NutriProfile = {
@@ -252,6 +261,18 @@ export type NewEntry = {
 };
 
 export function addEntry(input: NewEntry, day: string = todayKey()): NutriEntry[] {
+  const source = input.source || "manual";
+  const report = reportMealCutouts(input.name, [input.qtyLabel]);
+  // Never auto-introduce cut-outs via plan/preset seeds — refuse the write
+  if (report.flagged && (source === "preset" || source === "legacy")) {
+    if (typeof console !== "undefined") {
+      console.warn(
+        `[cut-out law] blocked ${source} entry “${input.name}”:`,
+        report.hits.map((h) => h.label).join(", ")
+      );
+    }
+    return loadDay(day);
+  }
   const entry: NutriEntry = {
     id: newId(),
     day,
@@ -262,8 +283,9 @@ export function addEntry(input: NewEntry, day: string = todayKey()): NutriEntry[
     macros: input.macros,
     foodId: input.foodId,
     presetId: input.presetId,
-    source: input.source || "manual",
+    source,
     loggedAt: new Date().toISOString(),
+    cutoutHits: report.flagged ? report.hits : undefined,
   };
   const next = [...loadDay(day), entry];
   rememberRecent(entry);
@@ -293,9 +315,10 @@ export async function applyPendingSnackSeed(): Promise<NutriEntry[] | null> {
     if (applied[seed.id]) return null;
 
     // Always attach to *today* so a stale seed day still lands on the open log
+    // Cut-out law: never auto-introduce trash-bin foods (e.g. Pocky)
     const day = todayKey();
     const next = addEntries(
-      seed.entries.map((e) => ({ ...e, source: e.source || "manual" })),
+      seed.entries.map((e) => ({ ...e, source: "legacy" as EntrySource })),
       day
     );
     applied[seed.id] = true;
@@ -308,19 +331,36 @@ export async function applyPendingSnackSeed(): Promise<NutriEntry[] | null> {
 
 export function addEntries(inputs: NewEntry[], day: string = todayKey()): NutriEntry[] {
   const now = new Date().toISOString();
-  const created = inputs.map((input, index) => ({
-    id: `${newId()}-${index}`,
-    day,
-    slot: input.slot,
-    name: input.name,
-    grams: Math.round(input.grams),
-    qtyLabel: input.qtyLabel || `${Math.round(input.grams)} g`,
-    macros: input.macros,
-    foodId: input.foodId,
-    presetId: input.presetId,
-    source: input.source || "manual",
-    loggedAt: now,
-  }));
+  // Drop anything that fails cut-out law when auto-seeded; manual multi-add still flags
+  const cleaned = inputs.filter((input) => {
+    const source = input.source || "manual";
+    const report = reportMealCutouts(input.name, [input.qtyLabel]);
+    if (report.flagged && source !== "manual" && source !== "text" && source !== "search" && source !== "photo") {
+      if (typeof console !== "undefined") {
+        console.warn(`[cut-out law] skipped seed “${input.name}”`);
+      }
+      return false;
+    }
+    return true;
+  });
+  if (!cleaned.length) return loadDay(day);
+  const created = cleaned.map((input, index) => {
+    const report = reportMealCutouts(input.name, [input.qtyLabel]);
+    return {
+      id: `${newId()}-${index}`,
+      day,
+      slot: input.slot,
+      name: input.name,
+      grams: Math.round(input.grams),
+      qtyLabel: input.qtyLabel || `${Math.round(input.grams)} g`,
+      macros: input.macros,
+      foodId: input.foodId,
+      presetId: input.presetId,
+      source: input.source || "manual",
+      loggedAt: now,
+      cutoutHits: report.flagged ? report.hits : undefined,
+    };
+  });
   created.forEach(rememberRecent);
   return commit(day, [...loadDay(day), ...created]);
 }

@@ -1,0 +1,625 @@
+/**
+ * Meals plate + cut-out bin
+ * Editorial · serif · solid silhouette · list inside the vessel
+ * No card chrome, no hairline dividers, no marketing copy
+ */
+
+.fx-plate {
+  margin: 0 0 1.25rem;
+}
+
+/* Trash alone — no plate column */
+.fx-bin-solo {
+  justify-self: start;
+  max-width: 18.5rem;
+}
+
+.fx-bin-solo .fx-bin-silhouette {
+  margin: 0;
+}
+
+/* —— Plate column —— */
+
+.fx-plate-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.fx-plate-kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fx-faint);
+}
+
+.fx-plate-empty {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  color: var(--fx-muted);
+}
+
+.fx-plate-coach {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.fx-plate-status {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--fx-strong);
+}
+
+.fx-plate-move {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  color: var(--fx-muted);
+}
+
+.fx-plate-bars {
+  list-style: none;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.fx-plate-bar-lab {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--fx-muted);
+  margin-bottom: 0.2rem;
+}
+
+.fx-plate-bar-lab b {
+  margin-left: auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--fx-strong);
+}
+
+.fx-plate-bar-lab i {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--fx-faint);
+  font-size: 0.9em;
+}
+
+.fx-plate-bar-track {
+  position: relative;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fx-muted) 14%, transparent);
+  overflow: visible;
+}
+
+.fx-plate-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  min-width: 2px;
+  opacity: 0.9;
+}
+
+.fx-plate-bar-goal {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--fx-strong);
+  opacity: 0.45;
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.fx-plate-bars li.is-over .fx-plate-bar-lab b {
+  color: var(--fx-cutout, #ef4444);
+}
+
+.fx-plate-pie-wrap {
+  width: min(13.5rem, 100%);
+}
+
+.fx-plate-pie-sm {
+  width: min(9.5rem, 100%);
+  margin-top: 0.25rem;
+}
+
+.fx-plate-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: default;
+}
+
+.fx-plate-svg-sm {
+  width: 4.75rem;
+  flex-shrink: 0;
+}
+
+.fx-plate-wedge {
+  stroke: var(--fx-bg);
+  stroke-width: 2;
+  cursor: pointer;
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+.fx-plate-wedge:hover,
+.fx-plate-wedge.is-hot {
+  filter: brightness(1.08) saturate(1.05);
+}
+
+.fx-plate-hole {
+  fill: var(--fx-bg);
+}
+
+.fx-plate-hole-label {
+  fill: var(--fx-faint);
+  font-size: 10px;
+  font-family: var(--fx-font);
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.fx-plate-legend {
+  list-style: none;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.fx-plate-leg {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0.15rem 0;
+  margin: 0;
+  font: inherit;
+  color: var(--fx-muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.fx-plate-leg:hover,
+.fx-plate-leg.is-on {
+  color: var(--fx-strong);
+}
+
+.fx-plate-swatch {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 0.38em;
+}
+
+.fx-plate-leg-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+  min-width: 0;
+}
+
+.fx-plate-leg-text em {
+  font-style: normal;
+  font-size: 0.84rem;
+  line-height: 1.25;
+  font-weight: 400;
+}
+
+.fx-plate-leg-text b {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--fx-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.fx-plate-leg-text b::after {
+  content: "%";
+  font-size: 0.65em;
+  margin-left: 0.05em;
+  opacity: 0.8;
+}
+
+.fx-plate-drink {
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: var(--fx-faint);
+  line-height: 1.4;
+}
+
+.fx-plate-ex {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.55rem;
+  font-size: 0.78rem;
+  color: var(--fx-muted);
+  line-height: 1.35;
+}
+
+/* —— Trash can: interactive lid, toss, rattle on hits —— */
+
+.fx-bin {
+  justify-self: stretch;
+  min-width: 0;
+}
+
+/**
+ * Poster bin:
+ * dark page → pale solid can
+ * light page → near-black can (Don't Die)
+ */
+.fx-bin-silhouette {
+  --bin-solid: rgba(236, 236, 240, 0.94);
+  --bin-cavity: #050505;
+  --bin-type: rgba(255, 255, 255, 0.58);
+  --bin-num: rgba(255, 255, 255, 0.32);
+  width: 100%;
+  max-width: 18.5rem;
+  margin: 0 auto;
+  transition: transform 0.2s ease;
+}
+
+html.theme-light .fx-bin-silhouette {
+  --bin-solid: #14151a;
+  --bin-cavity: #f4f4f7;
+  --bin-type: rgba(20, 21, 26, 0.62);
+  --bin-num: rgba(20, 21, 26, 0.36);
+}
+
+/* Lid — static (no open/close) */
+.fx-bin-lid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: var(--bin-solid);
+  pointer-events: none;
+}
+
+.fx-bin-handle {
+  width: 1.55rem;
+  height: 0.4rem;
+  border-radius: 999px 999px 2px 2px;
+  background: var(--bin-solid);
+  margin-bottom: 0.1rem;
+}
+
+.fx-bin-lidcap {
+  width: 93%;
+  height: 0.68rem;
+  border-radius: 4px 4px 1px 1px;
+  background: var(--bin-solid);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--bin-solid) 55%, #000);
+}
+
+/* Vessel */
+.fx-bin-vessel {
+  position: relative;
+  margin-top: 0.12rem;
+  width: 100%;
+  padding: 0.95rem 1rem 1.05rem 0.9rem;
+  background: var(--bin-solid);
+  border-radius: 1px 1px 14px 14px;
+  clip-path: polygon(4.5% 0%, 95.5% 0%, 97% 100%, 3% 100%);
+  transform-origin: 50% 100%;
+  transition: box-shadow 0.25s ease;
+}
+
+.fx-bin.is-dirty .fx-bin-vessel {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fx-cutout, #ef4444) 35%, transparent);
+}
+
+.fx-bin-vessel::before {
+  content: "";
+  position: absolute;
+  inset: 0.5rem 0.62rem 0.58rem;
+  border-radius: 1px;
+  background: var(--bin-cavity);
+  pointer-events: none;
+}
+
+/* Tiny “flies” when something is flagged */
+.fx-bin-flies {
+  position: absolute;
+  inset: 0.4rem 0.5rem auto;
+  height: 1.2rem;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.fx-bin.is-dirty .fx-bin-flies {
+  opacity: 1;
+}
+
+.fx-bin-flies i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fx-cutout, #ef4444) 70%, #fff);
+  animation: fx-bin-fly 2.4s ease-in-out infinite;
+}
+
+.fx-bin-flies i:nth-child(1) {
+  left: 18%;
+  animation-delay: 0s;
+}
+.fx-bin-flies i:nth-child(2) {
+  left: 48%;
+  animation-delay: 0.4s;
+}
+.fx-bin-flies i:nth-child(3) {
+  left: 72%;
+  animation-delay: 0.9s;
+}
+
+.fx-bin-list {
+  position: relative;
+  z-index: 1;
+  list-style: none;
+  margin: 0;
+  padding: 0.1rem 0.1rem 0.05rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  max-height: min(50vh, 24.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--bin-type) 40%, transparent)
+    transparent;
+}
+
+.fx-bin-list li {
+  line-height: 1.22;
+}
+
+.fx-bin-row-btn {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+  column-gap: 0.4rem;
+  align-items: baseline;
+  width: 100%;
+  margin: 0;
+  padding: 0.12rem 0.1rem;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+
+.fx-bin-row-btn:hover {
+  background: color-mix(in srgb, var(--bin-type) 8%, transparent);
+}
+
+.fx-bin-row-btn:active {
+  transform: scale(0.98);
+}
+
+.fx-bin-n {
+  font-size: 0.65rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+  color: var(--bin-num);
+  text-align: right;
+  padding-top: 0.1em;
+}
+
+.fx-bin-item {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--bin-type);
+  letter-spacing: -0.012em;
+}
+
+.fx-bin-zap {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--fx-cutout, #ef4444);
+  opacity: 0.85;
+  line-height: 1;
+}
+
+/* Hit today = cut-out red */
+.fx-bin-list li.is-hit .fx-bin-n {
+  color: var(--fx-cutout, #ef4444);
+  opacity: 1;
+  font-weight: 700;
+}
+
+.fx-bin-list li.is-hit .fx-bin-item {
+  color: var(--fx-cutout, #ef4444);
+  font-weight: 600;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.12em;
+}
+
+/* Toss bounce */
+.fx-bin-list li.is-toss {
+  animation: fx-bin-toss 0.48s cubic-bezier(0.34, 1.55, 0.64, 1);
+}
+
+.fx-bin-list li.is-hit.is-toss .fx-bin-item {
+  animation: fx-bin-scorch 0.48s ease;
+}
+
+/* Rattle whole can when a hit lands */
+.fx-bin.is-rattle .fx-bin-silhouette {
+  animation: fx-bin-rattle 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* Bottom of vessel is the end — no wheels / foot line */
+
+@keyframes fx-bin-toss {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  35% {
+    transform: translateY(-7px) rotate(-4deg);
+  }
+  65% {
+    transform: translateY(2px) rotate(3deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes fx-bin-scorch {
+  0% {
+    filter: brightness(1);
+  }
+  40% {
+    filter: brightness(1.35);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+@keyframes fx-bin-rattle {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  15% {
+    transform: translateX(-4px) rotate(-1.2deg);
+  }
+  30% {
+    transform: translateX(4px) rotate(1.2deg);
+  }
+  45% {
+    transform: translateX(-3px) rotate(-0.8deg);
+  }
+  60% {
+    transform: translateX(3px) rotate(0.8deg);
+  }
+  75% {
+    transform: translateX(-1px) rotate(-0.3deg);
+  }
+}
+
+@keyframes fx-bin-fly {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate(6px, -10px) scale(1.2);
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-bin.is-rattle .fx-bin-silhouette,
+  .fx-bin-list li.is-toss,
+  .fx-bin-flies i {
+    animation: none !important;
+  }
+}
+
+/* —— Today fill (quiet) —— */
+
+.fx-plate-today {
+  margin-top: 1.15rem;
+}
+
+.fx-plate-today-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fx-faint);
+}
+
+.fx-plate-match {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fx-accent);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.fx-plate-quiet {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 0.72rem;
+  color: var(--fx-faint);
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+
+.fx-plate-quiet:hover {
+  color: var(--fx-muted);
+}
+
+.fx-plate-today-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.fx-plate-today-stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--fx-muted);
+}
+
+.fx-plate-today-stats li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fx-plate-today-stats b {
+  font-weight: 500;
+  color: var(--fx-strong);
+}
+
+.fx-plate-today-stats i {
+  font-style: normal;
+  color: var(--fx-faint);
+  font-size: 0.9em;
+}

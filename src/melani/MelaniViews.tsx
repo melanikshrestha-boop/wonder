@@ -71,10 +71,10 @@ const CycleTracker = lazy(async () => {
   return { default: m.CycleTracker };
 });
 
-/** Full upstream wardrobe (import flow, gallery, intelligence) — not the thin native stub. */
-const WardrobeFrame = lazy(async () => {
-  const module = await import("./wardrobe/WardrobeFrame");
-  return { default: module.WardrobeFrame };
+/** Full wardrobe App in-process (no iframe) — same closet, zero nested chrome. */
+const WardrobeEmbed = lazy(async () => {
+  const module = await import("./wardrobe/WardrobeEmbed");
+  return { default: module.WardrobeEmbed };
 });
 
 const GmailConnector = lazy(async () => {
@@ -82,8 +82,9 @@ const GmailConnector = lazy(async () => {
   return { default: module.GmailConnector };
 });
 
-function DeskFallback({ label }: { label: string }) {
-  return <div className="melani-page-loading">{label}</div>;
+/** Quiet fallback — empty desk while lazy chunk loads (no “Loading…” flash) */
+function DeskFallback({ label: _label }: { label: string }) {
+  return <div className="melani-page-loading melani-page-loading--quiet" aria-busy="true" />;
 }
 
 /** One page: Profile → Period → Labs (status cards + tables + smart import) */
@@ -436,7 +437,7 @@ export function MelaniRichPage({
   if (isWardrobePage(pageId)) {
     return (
       <Suspense fallback={<DeskFallback label="Loading Wardrobe" />}>
-        <WardrobeFrame />
+        <WardrobeEmbed />
       </Suspense>
     );
   }

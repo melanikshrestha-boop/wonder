@@ -37,3 +37,11 @@ See **`docs/SELENE-UI.md`**.
 - No boxing content.  
 - No helper/marketing blurbs unless she asks.  
 - Fix density with spacing, not chrome.
+
+## NO-DELETE UI (Wonder)
+
+See **`docs/NO-DELETE-UI.md`**.
+
+- **Add. Don’t steal.** New features sit beside old ones.
+- Never remove Fitness controls (every night logged, Import weekly data, brain fog, graphs) unless she explicitly says delete.
+- Moving a control does not authorize deleting the original.

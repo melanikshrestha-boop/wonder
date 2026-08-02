@@ -5,14 +5,16 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  buildWhoopAnalytics,
   loadWhoopStore,
   WHOOP_EVENT,
 } from "./whoopStore";
+import { buildWhoopAnalytics } from "./whoopAnalytics";
 import { groupMetricsBySection, metricDef } from "./whoopMetrics";
 import { MetricExplainModal, MetricGraphPanel } from "./whoopMetricUi";
+import { GearWishList } from "./GearWishPanel";
 import "./gym-exact.css";
 import "./whoop-lab.css";
+import "./gear-wishlist.css";
 
 // ── Types (same shape as Melani gym plan JSON files) ──
 type SetRow = { done?: boolean; failure?: boolean; label?: string };
@@ -1309,6 +1311,9 @@ export function GymExact() {
           ) : null}
         </section>
       ) : null}
+
+      {/* Blueprint / life gear — buy next (not daily; owned stack remembered) */}
+      <GearWishList />
     </div>
   );
 }

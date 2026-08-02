@@ -15,6 +15,8 @@
   --fx-line: rgba(255, 255, 255, 0.08);
   --fx-yes: #ef4444;
   --fx-no: #22c55e;
+  /* Cut-out law: ONLY color for banned / flagged foods (trash bin hits) */
+  --fx-cutout: #ef4444;
   --fx-chart-grid: rgba(255, 255, 255, 0.08);
   --fx-chart-label: rgba(255, 255, 255, 0.45);
   --fx-chart-goal: rgba(34, 197, 94, 0.55);
@@ -54,6 +56,7 @@ html.theme-light .fx-page {
   --fx-line: rgba(26, 28, 34, 0.1);
   --fx-yes: #dc2626;
   --fx-no: #16a34a;
+  --fx-cutout: #dc2626;
   --fx-chart-grid: rgba(26, 28, 34, 0.08);
   --fx-chart-label: rgba(26, 28, 34, 0.45);
   --fx-chart-goal: rgba(22, 163, 74, 0.55);
@@ -131,18 +134,44 @@ html.theme-light .fx-page {
   background: color-mix(in srgb, var(--fx-strong) 6%, transparent);
 }
 
+/* Quote refresh 2/2 + Whoop + stacked on the right */
+.fx-quote-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  color: var(--fx-muted);
+}
+
+.fx-quote-tools .whoop-drop-plus {
+  color: inherit;
+}
+
+.fx-quote-tools .whoop-drop-plus:hover:not(:disabled) {
+  color: var(--fx-strong);
+}
+
 /* Subnav: Sleep Meals Gym — text only, no middle dots */
 .fx-subnav {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0 1.1rem;
-  margin: 0 0 12px;
-  padding: 0 0 8px;
+  margin: 0 0 8px;
+  padding: 0;
   font-size: 14px;
   font-family: var(--fx-font);
   line-height: 1;
   border-bottom: none;
+}
+
+/* Meals · Eat | Shop — tight under Sleep/Meals/Gym (same text style, no pills) */
+.fx-meals-sub {
+  margin: 0 0 10px;
+  padding: 0;
+  /* Pull up so it sits under the main tab row without a big air gap */
+  margin-top: -2px;
 }
 
 .fx-subnav-item {
@@ -1477,12 +1506,12 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   }
 }
 
-/* Macro rings — always centered; never left-pin with empty void on the right */
+/* Macro rings — larger so cal + protein read in the hole */
 .fx-page .macro-ring-wrap {
   position: relative;
-  width: 200px;
-  height: 200px;
-  margin: 8px auto 18px;
+  width: min(280px, 78vw);
+  height: min(280px, 78vw);
+  margin: 10px auto 20px;
   isolation: isolate;
 }
 
@@ -1495,7 +1524,7 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
 
 .macro-rings circle {
   fill: none;
-  stroke-width: 5.5;
+  stroke-width: 6;
   stroke-linecap: round;
 }
 
@@ -1504,10 +1533,11 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
 }
 .ring-protein {
   stroke: #2eea7f;
-  stroke-width: 6.5;
+  stroke-width: 7;
 }
 .ring-cal {
   stroke: var(--fx-ring-cal, rgba(255, 255, 255, 0.28));
+  stroke-width: 7;
 }
 .ring-carbs {
   stroke: #facc15;
@@ -1519,43 +1549,62 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   stroke: #4da3ff;
 }
 .ring-hole {
+  /* Bigger hole so center cal + protein fit cleanly */
   fill: var(--fx-ring-hole, #000);
   stroke: none;
 }
 
 .macro-ring-center {
   position: absolute;
-  inset: 0;
+  inset: 18%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   pointer-events: none;
+  gap: 0;
 }
 
 .macro-ring-num {
   color: var(--fx-strong);
-  font-size: 1.58rem;
-  font-weight: 600;
-  line-height: 1;
+  font-size: 1.85rem;
+  font-weight: 650;
+  line-height: 1.05;
   font-family: var(--fx-font);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Calories lead (hero) · protein second */
+.macro-ring-cal-num {
+  font-size: 2.05rem;
+  letter-spacing: -0.02em;
+}
+
+.macro-ring-pro-num {
+  font-size: 1.45rem;
+  margin-top: 6px;
+  font-weight: 600;
 }
 
 .macro-ring-num small {
-  font-size: 0.9rem;
+  font-size: 0.75em;
   opacity: 0.7;
+  margin-left: 1px;
 }
 
 .macro-ring-sub,
 .macro-ring-goal {
   display: block;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--fx-muted);
-  margin-top: 2px;
+  margin-top: 1px;
+  line-height: 1.15;
 }
+
+/* Widen hole circle in SVG via CSS filter not possible — bump r in component */
 
 .macro-stats {
   list-style: none;
@@ -1631,29 +1680,365 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
 }
 
 /* ── My usuals — plain list, no cards ── */
+.usual-day-meta {
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--fx-muted, #6b7280);
+  letter-spacing: 0.01em;
+}
+
+/* Spend under last ingredient — monthly / yearly only */
+.usual-spend {
+  margin: 6px 0 0;
+  padding: 0;
+  max-width: 36rem;
+  display: grid;
+  gap: 0;
+}
+
+.usual-spend-line {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--fx-strong, #1a1c22);
+  font-variant-numeric: tabular-nums;
+}
+
+.usual-spend-line strong {
+  font-weight: 600;
+  color: #7a9bb8;
+}
+
+/* Rebuy groups — which items share a shopping trip */
+.usual-buy-groups {
+  margin: 6px 0 0;
+  display: grid;
+  gap: 0;
+}
+
+.usual-buy-groups-h {
+  margin: 0 0 2px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: #8b919a;
+  letter-spacing: 0.02em;
+}
+
+.usual-buy-groups-line {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.25;
+  display: grid;
+  gap: 0;
+}
+
+.usual-buy-groups-when {
+  color: #7a9bb8;
+  font-variant-numeric: tabular-nums;
+}
+
+.usual-buy-groups-what {
+  color: var(--fx-strong, #1a1c22);
+}
+
+.usual-instacart-play {
+  margin: 6px 0 0;
+  display: grid;
+  gap: 0;
+  max-width: 36rem;
+}
+
+.usual-instacart-play-head {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--fx-strong, #1a1c22);
+}
+
+.usual-instacart-play-rule {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.25;
+  color: #6b7280;
+}
+
+/* Ingredients — numbered, single-spaced (tight) */
+.usual-measure {
+  margin: 6px 0 4px;
+  max-width: 36rem;
+  font-family: inherit;
+}
+
+.usual-measure-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0; /* single-space between items */
+}
+
+.usual-measure-row {
+  display: grid;
+  grid-template-columns: 1.25rem 1fr;
+  column-gap: 0.4rem;
+  row-gap: 0;
+  align-items: baseline;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.2; /* single-space */
+}
+
+.usual-measure-n {
+  font-size: 12px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--fx-muted, #9ca3af);
+  text-align: right;
+  user-select: none;
+}
+
+.usual-measure-body {
+  display: grid;
+  gap: 0; /* no air between name / meta / days */
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.usual-measure-name {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--fx-strong, #1a1c22);
+}
+
+/* Product name = Instacart link · no underline · inherits color */
+.usual-product-link {
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+}
+
+.usual-product-link:hover,
+.usual-product-link:focus-visible {
+  text-decoration: none;
+  opacity: 0.88;
+}
+
+.usual-product-link:focus-visible {
+  outline: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  outline-offset: 2px;
+}
+
+/* (Costco · 48 oz) — same line as product, quieter · not a link */
+.usual-measure-meta-paren {
+  font-weight: 400;
+  font-size: 12px;
+  color: #8b919a;
+}
+
+/* Daily amount — smaller gray next to name (no-shop rows) */
+.usual-measure-amt {
+  font-weight: 400;
+  font-size: 0.78em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: #9ca3af;
+  vertical-align: baseline;
+}
+
+.usual-measure-how {
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: #a8aeb8;
+  margin: 0;
+}
+
+/* Line 2: 150 g/day; 2 tubs at once: $19.38 */
+.usual-shop-line {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: #6b7280;
+}
+
+.usual-shop-daily {
+  color: #6b7280;
+}
+
+/* Multi-buy total / price — hover for per-pack */
+.usual-shop-price {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: #7a9bb8;
+  cursor: default;
+}
+
+/* Line 3: Lasts ~ 18 days */
+.usual-shop-days {
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: #8b919a;
+  line-height: 1.2;
+  cursor: default;
+  width: fit-content;
+  margin: 0;
+}
+
+/* Macro breakdown toggle — single-spaced, no calories on Ingredients */
+.usual-macro-break {
+  margin: 4px 0 6px;
+  max-width: 36rem;
+}
+
+.usual-macro-break-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.usual-macro-break-row {
+  display: grid;
+  grid-template-columns: 1.25rem 1fr;
+  column-gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.usual-macro-break-n {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fx-muted, #9ca3af);
+  text-align: right;
+}
+
+.usual-macro-break-body {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+
+.usual-macro-break-name {
+  font-weight: 600;
+  color: var(--fx-strong, #1a1c22);
+  line-height: 1.2;
+}
+
+.usual-macro-break-amt {
+  font-weight: 400;
+  font-size: 0.85em;
+  color: #9ca3af;
+}
+
+.usual-macro-break-vals {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.usual-macro-break-total {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--fx-strong, #1a1c22);
+}
+
+.usual-macro-break-total strong {
+  font-weight: 600;
+}
+
+/* Color code — same for Ingredients + Macro breakdown */
+.usual-measure-row.is-base .usual-measure-name,
+.usual-measure-row.is-base .usual-product-link,
+.usual-macro-break-row.is-base .usual-macro-break-name {
+  color: #2f9d6a;
+}
+
+.usual-measure-row.is-nuts .usual-measure-name,
+.usual-measure-row.is-nuts .usual-product-link,
+.usual-macro-break-row.is-nuts .usual-macro-break-name {
+  color: #d4849a;
+}
+
+.usual-measure-row.is-seed .usual-measure-name,
+.usual-measure-row.is-seed .usual-product-link,
+.usual-macro-break-row.is-seed .usual-macro-break-name {
+  color: #c4923a;
+}
+
+.usual-measure-row.is-fruit .usual-measure-name,
+.usual-measure-row.is-fruit .usual-product-link,
+.usual-macro-break-row.is-fruit .usual-macro-break-name {
+  color: #4a8fc4;
+}
+
+html.theme-light .usual-measure-row.is-base .usual-measure-name,
+html.theme-light .usual-measure-row.is-base .usual-product-link,
+html.theme-light .usual-macro-break-row.is-base .usual-macro-break-name {
+  color: #1f8a58;
+}
+
+html.theme-light .usual-measure-row.is-nuts .usual-measure-name,
+html.theme-light .usual-measure-row.is-nuts .usual-product-link,
+html.theme-light .usual-macro-break-row.is-nuts .usual-macro-break-name {
+  color: #c46b84;
+}
+
+html.theme-light .usual-measure-row.is-seed .usual-measure-name,
+html.theme-light .usual-measure-row.is-seed .usual-product-link,
+html.theme-light .usual-macro-break-row.is-seed .usual-macro-break-name {
+  color: #a67a28;
+}
+
+html.theme-light .usual-measure-row.is-fruit .usual-measure-name,
+html.theme-light .usual-measure-row.is-fruit .usual-product-link,
+html.theme-light .usual-macro-break-row.is-fruit .usual-macro-break-name {
+  color: #2f6fa0;
+}
+
 .usuals-section {
   margin-top: 4px;
-  display: block;
+  display: grid;
+  gap: 0; /* single-space between breakfast / lunch / dinner */
 }
 
 .usual-flash {
-  margin: 0 0 10px;
+  margin: 0 0 6px;
   font-size: 13px;
   color: var(--fx-accent);
 }
 
 .usual-card {
-  margin: 0 0 14px;
-  padding: 0 0 2px;
+  margin: 0;
+  padding: 0;
   border: none;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  line-height: 1.2;
 }
 
-.usual-card.is-breakfast {
-  /* slight emphasis so breakfast is easy to find */
-  padding-top: 4px;
+.usual-card.is-core {
+  padding-top: 0;
+  padding-bottom: 2px;
 }
 
 .usual-slot {
@@ -1664,11 +2049,11 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
 }
 
 .usual-title {
-  margin: 0 0 2px;
+  margin: 0;
   font-size: 15px;
   font-weight: 650;
   color: var(--fx-strong);
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .usual-macro-line {
@@ -1684,10 +2069,11 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   border: none;
   background: none;
   padding: 0;
-  margin: 0 0 4px;
+  margin: 0;
   color: var(--fx-accent);
   font-family: inherit;
   font-size: 14px;
+  line-height: 1.2;
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
@@ -1701,7 +2087,8 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 4px;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .usual-logged-label {
@@ -1726,10 +2113,11 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   border: none;
   background: none;
   padding: 0;
-  margin: 2px 0 0;
+  margin: 0;
   color: var(--fx-muted);
   font-family: inherit;
   font-size: 13px;
+  line-height: 1.2;
   cursor: pointer;
   text-align: left;
 }
@@ -2003,6 +2391,52 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
 .fx-supp-name {
   color: var(--fx-supp-name);
   font-weight: 500;
+}
+
+/* Product line above Creatine (linked, no underline) */
+.fx-supp-product {
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  margin-bottom: 0.08rem;
+  color: var(--fx-supp-when);
+}
+
+.fx-supp-link {
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.fx-supp-link:hover {
+  opacity: 0.88;
+  text-decoration: none;
+}
+
+.fx-supp-name-row {
+  display: inline;
+}
+
+/* Double-tap expand: pack lasts / buy */
+.fx-supp-buy {
+  margin: 0.12rem 0 0.3rem 1.45rem;
+  display: grid;
+  gap: 0;
+}
+
+.fx-supp-buy-line {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  color: var(--fx-supp-when);
+  font-variant-numeric: tabular-nums;
+}
+
+.fx-supp-buy-math {
+  opacity: 0.85;
+  font-size: 0.72rem;
 }
 
 /* Brand + when to take — gold / amber */

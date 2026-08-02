@@ -1,11 +1,10 @@
 /**
  * Whoop series from the metric registry + store days/workouts.
+ * Charts are raw series only — no regression / logistic / Q-learning overlays.
  */
 import { WHOOP_METRICS, type WhoopMetricKey } from "./whoopMetrics";
 import type { MetricSeries, WhoopDay, WhoopStore, WhoopWorkout } from "./whoopStore";
 import { loadWhoopStore } from "./whoopStore";
-import { buildDeepSleepForecast } from "./deepSleepForecast";
-import { buildDeepSleepRl } from "./rlDeepSleep";
 
 export type WhoopAnalytics = {
   dayCount: number;
@@ -96,6 +95,11 @@ function storeStamp(s: WhoopStore): string {
   return `${s.lastImportAt || ""}|${Object.keys(s.days).length}|${s.workouts.length}|${s.journal.length}`;
 }
 
+/** Call after import so graphs rebuild from the new CSVs immediately. */
+export function clearWhoopAnalyticsCache() {
+  analyticsMem = null;
+}
+
 export function buildWhoopAnalytics(store?: WhoopStore): WhoopAnalytics {
   const s = store || loadWhoopStore();
   const stamp = storeStamp(s);
@@ -132,40 +136,6 @@ export function buildWhoopAnalytics(store?: WhoopStore): WhoopAnalytics {
       continue;
     }
     if (built.points.length === 0 && built.latest == null) continue;
-
-    // Deep sleep: attach best linear model + logistic adequacy readout
-    if (def.key === "deep" && built.points.length >= 5) {
-      const fc = buildDeepSleepForecast(s);
-      if (fc) {
-        const histDays = built.points.map((p) => p.day);
-        const fit = fc.points
-          .filter((p) => p.kind === "fit" && histDays.includes(p.day))
-          .map((p) => ({ day: p.day, value: p.value }));
-        const future = fc.points
-          .filter((p) => p.kind === "forecast")
-          .map((p) => ({ day: p.day, value: p.value }));
-        const rl = buildDeepSleepRl(s);
-        built.forecast = {
-          model: fc.model,
-          summary: fc.summary,
-          formula: fc.formula,
-          r2: fc.r2,
-          fit,
-          future,
-          drivers: fc.drivers,
-          logistic: fc.logistic,
-          rl: rl
-            ? {
-                algorithm: rl.algorithm,
-                actionLabel: rl.actionLabel,
-                tip: rl.tip,
-                nTransitions: rl.nTransitions,
-                stateLabel: rl.stateLabel,
-              }
-            : null,
-        };
-      }
-    }
 
     series.push(built);
     byKey[def.key] = built;

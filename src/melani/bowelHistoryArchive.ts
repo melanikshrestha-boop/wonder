@@ -1,11 +1,14 @@
 /**
- * Recovered bowel history — NEVER wipe this.
- * Built from:
- *   - ~/.melani_assistant/health_data/jarvis/bowel_memory.json (week rolls)
- *   - day-level bowel_movement_*.json
- *   - Chrome 127.0.0.1:5173 localStorage (2026-07-26 No, 2026-07-30 Type 4)
- *   - Owner 2026-07-30 final week: Sat No, Sun No, Mon No,
- *     Tue Type 1, Wed Type 4, Thu Type 4
+ * Recovered bowel history — NEVER wipe real owner weeks.
+ *
+ * Owner only started intentional logging the week of Jul 25–31 2026.
+ * Early Melani-assistant May/June seed rows are NOT owner week truth —
+ * they inflated “bowel days logged” past n=7. Archive holds the start week only.
+ *
+ * Week (owner 2026-08-01): **5 Yes · 2 No · n = 7**
+ *   Sat 7/25 Yes Type 7 · Sun 7/26 No · Mon 7/27 Yes Type 4
+ *   Tue 7/28 Yes Type 1 · Wed 7/29 Yes Type 4 · Thu 7/30 Yes Type 4
+ *   Fri 7/31 No
  *
  * On load: fill missing days from archive. Local owner logs always win
  * on conflict (never re-clobber a corrected day).
@@ -20,30 +23,22 @@ export type ArchiveBowelDay = {
   note?: string;
 };
 
-/** Day → log. `had` required; look only when Yes + known type. */
+/**
+ * First owner week only. Do not re-seed May/June assistant leftovers here.
+ * Day → log. `had` required; look only when Yes + known type.
+ */
 export const BOWEL_HISTORY_ARCHIVE: Record<string, ArchiveBowelDay> = {
-  // Early Melani Health / assistant
-  "2026-05-31": { had: true, note: "felt bloated after lunch" },
-  "2026-06-01": { had: true },
-  "2026-06-02": { had: true },
-  "2026-06-06": { had: false },
-  "2026-06-08": { had: false },
-  "2026-06-20": { had: true },
-  "2026-06-24": { had: true },
-  "2026-06-25": { had: true },
-  "2026-06-29": { had: true },
-  "2026-07-10": { had: true },
-  "2026-07-18": { had: true },
-  // Wonder week (Sat Jul 25 – Thu Jul 30) — owner-confirmed 2026-07-30
-  "2026-07-25": { had: false }, // Saturday — no
-  "2026-07-26": { had: false }, // Sunday — no
-  "2026-07-27": { had: false }, // Monday — no
-  "2026-07-28": { had: true, look: 1 }, // Tuesday — type 1
-  "2026-07-29": { had: true, look: 4 }, // Wednesday — type 4
-  "2026-07-30": { had: true, look: 4 }, // Thursday — type 4
+  // First intentional week — 5 Yes, 2 No
+  "2026-07-25": { had: true, look: 7 }, // Sat — yes, type 7
+  "2026-07-26": { had: false }, // Sun — no
+  "2026-07-27": { had: true, look: 4 }, // Mon — yes, type 4
+  "2026-07-28": { had: true, look: 1 }, // Tue — yes, type 1
+  "2026-07-29": { had: true, look: 4 }, // Wed — yes, type 4
+  "2026-07-30": { had: true, look: 4 }, // Thu — yes, type 4
+  "2026-07-31": { had: false }, // Fri — no
 };
 
-/** Recovered brain-fog map (yes = fog that day). */
+/** Recovered brain-fog map (yes = fog that day). Unrelated to bowel prune. */
 export const FOG_HISTORY_ARCHIVE: Record<string, boolean> = {
   "2026-06-01": false,
   "2026-06-02": false,

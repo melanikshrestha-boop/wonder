@@ -563,19 +563,27 @@ function silhouetteReason(top, bottom, shoes) {
       text: "Quiet tee + baggy denim — low decision fatigue, high readability.",
     });
   }
-  if (shoes?.taste?.role?.isBoot && (bottom.taste?.role?.isJeans || bv === "high")) {
+  // Boots under bare tee + baggy jeans is NOT intentional — needs outer or real structure
+  if (shoes?.taste?.role?.isBoot && top?.taste?.role?.isTee && !top?.taste?.role?.isHoodie) {
+    reasons.push({
+      kind: "silhouette",
+      good: false,
+      weight: 28,
+      text: "Boots under a bare basic tee aren't boot-worthy — the shoe overpowers a soft stack. Use clean sneakers, or add a real outer layer.",
+    });
+  } else if (shoes?.taste?.role?.isBoot && (bottom.taste?.role?.isJeans || bv === "high") && (top?.taste?.role?.isHoodie || top?.kind === "jacket")) {
     reasons.push({
       kind: "silhouette",
       good: true,
-      weight: 8,
-      text: "Boots + wide bottom add structure at the base — workwear edge without formalizing the look.",
+      weight: 10,
+      text: "Boots + wide denim with structured top/outer — workwear edge that earns the heavy shoe.",
     });
   } else if (shoes?.taste?.role?.isSneaker && bv === "high") {
     reasons.push({
       kind: "silhouette",
       good: true,
-      weight: 6,
-      text: "Clean sneakers under wide legs finish the silhouette without adding dressiness.",
+      weight: 10,
+      text: "Clean sneakers under wide legs finish the silhouette without overdressing a simple tee+denim stack.",
     });
   }
   return reasons;
@@ -638,6 +646,39 @@ function hardRules(top, bottom, shoes, mode) {
       text: "Three competing blues (top, denim, and sneaker accent) fight instead of forming a palette. Keep the shoe neutral or make one blue piece the only focal point.",
     });
   }
+  // Going out / everyday: combat boots need a stack that earns them
+  if (
+    shoes?.taste?.role?.isBoot
+    && top?.taste?.role?.isTee
+    && bottom?.taste?.role?.isJeans
+    && !top?.taste?.role?.isHoodie
+  ) {
+    reasons.push({
+      kind: "rule",
+      good: false,
+      weight: 48,
+      text: "Doc Martens / heavy boots + bare tee + jeans is costume weight on a soft outfit. Swap to Samba, Dunk, Spezial, AF1 — or layer a hoodie/jacket first.",
+    });
+  }
+  // Color match: loud shoe accent on quiet monochrome stack
+  if (top && bottom && shoes) {
+    const quietTop = top.taste?.color?.key === "black" || top.taste?.color?.key === "gray"
+      || top.colorProfile?.neutral;
+    const quietBottom = bottom.taste?.color?.key === "black" || bottom.taste?.color?.key === "gray"
+      || bottom.taste?.color?.key === "indigo" || bottom.colorProfile?.neutral
+      || bottom.taste?.role?.isJeans;
+    const shoeName = String(shoes.name || "");
+    const loudShoe = /university blue|unc\b|yellow|kill.?bill|light blue|sky/i.test(shoeName)
+      || (shoes.colorProfile && !shoes.colorProfile.neutral && shoes.colorProfile.saturation > 0.35);
+    if (quietTop && quietBottom && loudShoe && (top.taste?.color?.key === "black" || top.colorProfile?.lightness < 0.2)) {
+      reasons.push({
+        kind: "color-rule",
+        good: false,
+        weight: 44,
+        text: "Quiet black stack wants a quiet shoe (black, white, gum, grey). A loud blue/yellow sneaker reads random, not coherent.",
+      });
+    }
+  }
   return reasons;
 }
 
@@ -667,19 +708,19 @@ function dnaFormula(top, bottom, shoes) {
       text: "Hoodie + wide sweats is lounge-valid — softer than denim, keep textures from matching into pajamas.",
     });
   }
-  if (shoes?.taste?.role?.isBoot) {
+  if (shoes?.taste?.role?.isBoot && (top?.taste?.role?.isHoodie || top?.kind === "jacket")) {
     reasons.push({
       kind: "formula",
       good: true,
-      weight: 5,
-      text: "Boots anchor the base — structured, intentional, not athleisure-default.",
+      weight: 6,
+      text: "Boots with structured top/outer anchor the base — intentional, not costume.",
     });
   } else if (shoes?.taste?.role?.isSneaker) {
     reasons.push({
       kind: "formula",
       good: true,
-      weight: 5,
-      text: "Clean sneakers keep the look casual without dressing it up.",
+      weight: 8,
+      text: "Clean sneakers keep tee + denim casual and proportion-first — the default finish.",
     });
   }
   return reasons;
@@ -821,6 +862,10 @@ export function reasonOutfit(items = [], context = {}) {
   // Crush trash combos
   if (principles.some((p) => !p.good && p.kind === "rule" && /kit \+ sweat|Football kit/i.test(p.text))) {
     rank = Math.min(rank, 32);
+  }
+  // Crush weak boot stacks
+  if (principles.some((p) => !p.good && /boot-worthy|Doc Martens|heavy boots \+ bare tee/i.test(p.text))) {
+    rank = Math.min(rank, 34);
   }
   // Everyday: jersey should never outrank quiet uniform stacks
   if ((mode === "everyday" || mode === "build" || mode === "stream") && top?.taste?.role?.isJersey) {

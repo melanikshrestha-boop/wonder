@@ -348,6 +348,9 @@ function ensureLifePages(ws: Workspace): Workspace {
   ensurePage("pg-pm-skin", "PM skincare", "skin", "pg-hygiene", [
     newBlock("paragraph", ""),
   ]);
+  ensurePage("pg-oral-care", "Oral care", "hygiene", "pg-hygiene", [
+    newBlock("paragraph", ""),
+  ]);
   ensurePage("pg-data", "My Data", "data", null);
 
   // Learn — Bookshelf ALWAYS sits here (top-level), never buried under Work
@@ -553,6 +556,81 @@ export function loadWorkspace(): Workspace {
 
 export function saveWorkspace(ws: Workspace): void {
   localStorage.setItem(KEY, JSON.stringify(ws));
+}
+
+/**
+ * Known system pages that deep-links / Mel transport must always be able to open.
+ * Seeds the page if missing (does not wipe user content on existing pages).
+ */
+const SYSTEM_PAGE_SEEDS: Record<
+  string,
+  { title: string; icon: string; parentId: string | null }
+> = {
+  "pg-hygiene": { title: "Hygiene", icon: "hygiene", parentId: null },
+  "pg-oral-care": { title: "Oral care", icon: "hygiene", parentId: "pg-hygiene" },
+  "pg-am-skin": { title: "AM skincare", icon: "skin", parentId: "pg-hygiene" },
+  "pg-pm-skin": { title: "PM skincare", icon: "skin", parentId: "pg-hygiene" },
+  "pg-shower-daily": { title: "Daily shower", icon: "shower", parentId: "pg-hygiene" },
+  "pg-shower-everything": {
+    title: "Everything shower",
+    icon: "shower",
+    parentId: "pg-hygiene",
+  },
+  "pg-hair": { title: "Hair care", icon: "hair", parentId: "pg-hygiene" },
+  "pg-fitness": { title: "Fitness", icon: "fitness", parentId: null },
+  "pg-sleep": { title: "Sleep", icon: "sleep", parentId: "pg-fitness" },
+  "pg-meals": { title: "Meals", icon: "meals", parentId: "pg-fitness" },
+  "pg-gym": { title: "Gym", icon: "gym", parentId: "pg-fitness" },
+  "pg-fashion-os": { title: "Wardrobe", icon: "fashion", parentId: "pg-agents" },
+  "pg-library": { title: "Bookshelf", icon: "books", parentId: null },
+  "pg-finance": { title: "Finances", icon: "finance", parentId: null },
+  "pg-habits": { title: "Habits", icon: "habits", parentId: null },
+  "pg-data": { title: "My Data", icon: "data", parentId: null },
+};
+
+/** Ensure a system page exists and is not trashed, then return updated workspace. */
+export function ensureSystemPage(ws: Workspace, pageId: string): Workspace {
+  const seed = SYSTEM_PAGE_SEEDS[pageId];
+  if (!seed) return ws;
+  const now = Date.now();
+  const existing = ws.pages.find((p) => p.id === pageId);
+  if (existing) {
+    if (!existing.trashedAt && existing.parentId === seed.parentId) return ws;
+    return {
+      ...ws,
+      pages: ws.pages.map((p) =>
+        p.id === pageId
+          ? {
+              ...p,
+              title: p.title || seed.title,
+              icon: p.icon || seed.icon,
+              parentId: seed.parentId,
+              trashedAt: null,
+              updatedAt: now,
+            }
+          : p
+      ),
+    };
+  }
+  return {
+    ...ws,
+    pages: [
+      ...ws.pages,
+      {
+        id: pageId,
+        title: seed.title,
+        icon: seed.icon,
+        parentId: seed.parentId,
+        createdAt: now,
+        updatedAt: now,
+        blocks: [newBlock("paragraph", "")],
+        kind: "page" as const,
+        favorite: false,
+        trashedAt: null,
+        cover: null,
+      },
+    ],
+  };
 }
 
 export function createPage(parentId: string | null = null): Page {

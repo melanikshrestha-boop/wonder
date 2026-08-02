@@ -593,11 +593,18 @@ Object.assign(PRODUCT_LINKS, {
     store: "amazon" as const,
     url: "https://amzn.to/4be2UJB",
   },
-  "SomnoDent Bruxism Device": {
-    name: "SomnoDent Bruxism Device",
+  "SomnoDent Avant": {
+    name: "SomnoDent Avant",
     store: "brand" as const,
-    url: "https://somnomed.com",
-    note: "Provider-fitted device — brand site for SomnoMed / SomnoDent.",
+    url: "https://somnomed.com/en/patients/products/somnodent/somnodent-avant/",
+    note: "SomnoMed SomnoDent Avant — custom oral appliance; fitted through a sleep dentist / clinic.",
+  },
+  // Legacy title kept so older checklists still resolve a buy link
+  "SomnoDent Bruxism Device": {
+    name: "SomnoDent Avant",
+    store: "brand" as const,
+    url: "https://somnomed.com/en/patients/products/somnodent/somnodent-avant/",
+    note: "Renamed to SomnoDent Avant in oral care routine.",
   },
 });
 

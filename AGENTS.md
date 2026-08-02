@@ -22,6 +22,16 @@ This is permanent. “Which is never” = she will not ask for dividers/boxes.
 
 ---
 
+## NO-DELETE UI (non-negotiable)
+
+Read **`docs/NO-DELETE-UI.md`** before any Wonder UI change.
+
+- **When you add something new, do not delete existing UI** unless Melani explicitly orders delete/remove.
+- Fitness example: quote **+** Whoop drop is **additive** — **Import weekly data** under **every night logged** must stay.
+- Scan diffs for deleted buttons/toggles/footers. If she didn’t ask to delete them → put them back.
+
+---
+
 ## Subagents (Dynamic Spawning)
 
 Project agents: **`.grok/agents/`**. Lead breaks work into specialized children — **max 8 concurrent** — so parallel edits do not stomp data.

@@ -38,6 +38,13 @@ export type MetricDef = {
   sectionOrder: number;
   higherIsBetter: boolean | null;
   yRange?: { lo: number; hi: number };
+  /**
+   * Ideal target line on the graph (dotted).
+   * e.g. sleep performance 100%, sleep hours 8h.
+   * Only set when Melani has locked a personal ideal — not a medical claim.
+   */
+  idealGoal?: number;
+  idealGoalLabel?: string;
   what: string;
   how: string;
   /**
@@ -105,6 +112,9 @@ export const WHOOP_METRICS: readonly MetricDef[] = [
       "Chronic low scores with rising debt show up as fog, weaker training, worse mood, and slower recovery. Higher is better.",
     normalRange:
       "Aim repeatedly high (many nights near 85–100%). Occasional dips are normal; a week of low 70s is a problem.",
+    // Next-week ideal: perfect performance line
+    idealGoal: 100,
+    idealGoalLabel: "100% ideal",
     get: (d) => d.sleepScore,
   },
   {
@@ -124,6 +134,9 @@ export const WHOOP_METRICS: readonly MetricDef[] = [
       "Short nights after hard days usually show up as weaker next-morning recovery. You cannot out-train chronic under-sleep. Higher is better (up to your need — not endless).",
     normalRange:
       "Most 18–20 year olds need about 7–9 hours asleep. Your WHOOP need line matters more than a fixed internet average.",
+    // Next-week ideal: 8 hours asleep
+    idealGoal: 8,
+    idealGoalLabel: "8h ideal",
     get: (d) => d.sleepHours,
   },
   {

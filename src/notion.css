@@ -258,10 +258,16 @@ html.theme-light *::-webkit-scrollbar-thumb:hover {
 @media (min-width: 769px) {
   .app {
     display: block;
+    position: relative;
   }
 
-  .sidebar:not(.is-closed) {
-    position: absolute;
+  /*
+   * CRITICAL: sidebar is ALWAYS position:absolute on desktop (open OR closed).
+   * If closed only dropped absolute, relative+height:100% still ate a full
+   * viewport of flow height and shoved .main below the fold → pure blank page.
+   */
+  .sidebar {
+    position: absolute !important; /* beat any later position:relative */
     left: 0;
     top: 0;
     bottom: 0;
@@ -289,7 +295,12 @@ html.theme-light *::-webkit-scrollbar-thumb:hover {
 /* ── Sidebar — translucent frosted glass (playful prism edge) ── */
 .sidebar {
   --sb-inset: 14px; /* one left edge for everything LTR */
-  position: relative; /* for the drag handle */
+  /*
+   * Do NOT set position:relative here — it overrides the desktop
+   * @media (min-width: 769px) { position:absolute } rule below (same
+   * specificity, later source order) and shoved .main off-screen when
+   * the menu closed (blank white page). Desktop = absolute; mobile = fixed.
+   */
   z-index: 12;
   width: var(--sidebar-w);
   min-width: var(--sidebar-w);
@@ -449,15 +460,17 @@ html.is-sidebar-resizing {
   user-select: none !important;
 }
 
-/* Closed = take no horizontal space → main expands to full width */
+/* Closed = no width, no hit targets; must NOT consume vertical flow either
+   (desktop keeps position:absolute so height:100% never pushes .main down) */
 .sidebar.is-closed {
-  width: 0;
-  min-width: 0;
-  max-width: 0;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
   opacity: 0;
   border-right-color: transparent;
   box-shadow: none;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .sidebar-top {
@@ -1295,7 +1308,43 @@ html.theme-light .sidebar .sidebar-search svg {
   gap: 4px;
   padding: 0 12px;
   flex-shrink: 0;
-  z-index: 5;
+  /* Sticky + high z on EVERY page — no wardrobe-only fixed mode (that jumped/glitched) */
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg, #f7f7fa);
+  isolation: isolate;
+}
+
+/* Real three-line hamburger — clearer than a lone ☰ glyph */
+.topbar-menu-btn {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.topbar-menu-icon {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 16px;
+  height: 14px;
+  pointer-events: none;
+}
+
+.topbar-menu-icon span {
+  display: block;
+  width: 100%;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.topbar-menu-btn:hover {
+  background: rgba(55, 53, 47, 0.1);
+  color: var(--text);
 }
 
 /* Light · star · search · more — same box size, slight gap so hit pads don’t collide */
@@ -2823,8 +2872,11 @@ html.theme-light .main.is-melani .main-scroll {
   color: #1a1c22 !important;
 }
 
-/* Wardrobe: fill remaining viewport (half-screen, maximized, AND F11 fullscreen).
-   Quote is hidden — it steals height and leaves the iframe looking empty. */
+/*
+ * Wardrobe: fill the PAGE BODY only — never viewport-fixed.
+ * Fixed shell was the glitch source: it painted over Hygiene/Fitness after leave
+ * and fought the sidebar (double chrome, stuck "Wardrobe", dead clicks).
+ */
 .main.is-wardrobe {
   display: flex;
   flex-direction: column;
@@ -2835,9 +2887,10 @@ html.theme-light .main.is-melani .main-scroll {
 }
 
 .main.is-wardrobe .main-scroll {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden !important; /* flex children must fill — not scroll away to 0 */
+  overflow: hidden !important;
   display: flex;
   flex-direction: column;
 }
@@ -2848,6 +2901,7 @@ html.theme-light .main.is-melani .main-scroll {
 
 .main.is-wardrobe .notion-melani-page,
 .main.is-wardrobe .notion-melani-body {
+  position: relative;
   width: 100%;
   flex: 1 1 auto;
   min-height: 0;
@@ -2859,38 +2913,56 @@ html.theme-light .main.is-melani .main-scroll {
   flex-direction: column;
 }
 
-/*
- * Nuclear fill: pin wardrobe shell to the content rect under topbar.
- * Survives flex-chain bugs, quote remnants, and browser fullscreen.
- */
+/* Same sticky topbar as every other page — no left-offset fixed mode */
+.main.is-wardrobe .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+  background: #f7f7fa !important;
+  border-bottom: 1px solid rgba(25, 22, 18, 0.08);
+}
+
+/* Menu always readable on wardrobe cream */
+.main.is-wardrobe .topbar-menu-btn {
+  color: #1a1a1a !important;
+  background: rgba(25, 22, 18, 0.06);
+}
+.main.is-wardrobe .topbar-menu-btn:hover {
+  background: rgba(25, 22, 18, 0.12);
+  color: #000 !important;
+}
+.main.is-wardrobe .topbar-btn,
+.main.is-wardrobe .breadcrumb-title,
+.main.is-wardrobe .breadcrumb-link {
+  color: #2a2a2a !important;
+}
+
+/* Native wardrobe desk fills melani body — unmounts cleanly with the page */
+.main.is-wardrobe .wardrobe-embed,
 .main.is-wardrobe .wardrobe-frame-shell {
-  position: fixed !important;
-  top: 45px; /* .topbar height */
-  right: 0;
-  bottom: 0;
-  left: var(--sidebar-w, 252px);
-  z-index: 4;
+  position: absolute !important;
+  inset: 0;
+  z-index: 1;
   width: auto !important;
   height: auto !important;
   min-height: 0 !important;
   max-height: none !important;
-  flex: none !important;
   margin: 0 !important;
   background: #f7f7fa;
+  pointer-events: auto;
 }
 
-.app:has(.sidebar.is-closed) .main.is-wardrobe .wardrobe-frame-shell,
-.app:has(.sidebar.is-collapsed) .main.is-wardrobe .wardrobe-frame-shell {
-  left: 0;
-}
-
+/* Mobile drawer must sit above sticky topbar (100) when open */
 @media (max-width: 768px) {
-  .main.is-wardrobe .wardrobe-frame-shell {
-    left: 0;
+  .sidebar:not(.is-closed) {
+    z-index: 120 !important;
+  }
+  .sidebar-backdrop {
+    z-index: 115 !important;
   }
 }
 
-/* Fullscreen / maximized — same contract (viewport units after F11) */
 :fullscreen .main.is-wardrobe,
 :-webkit-full-screen .main.is-wardrobe,
 :fullscreen .app,
@@ -2898,12 +2970,6 @@ html.theme-light .main.is-melani .main-scroll {
   min-height: 100dvh;
   height: 100dvh;
   max-height: 100dvh;
-}
-
-:fullscreen .main.is-wardrobe .wardrobe-frame-shell,
-:-webkit-full-screen .main.is-wardrobe .wardrobe-frame-shell {
-  top: 45px;
-  bottom: 0;
 }
 
 /* ── Notion-style sidebar extras (Agents, bottom links) ── */
@@ -3873,27 +3939,26 @@ html.theme-dark {
 
 
 /* ═══════════════════════════════════════════
-   Feel-better surfaces — images + motion restraint
+   Feel-better surfaces — motion restraint only
    ═══════════════════════════════════════════ */
 
-/* Neutral inset outline on content images (pure white ring on dark canvas) */
-.main-scroll img:not([class*="icon"]):not(.min-icon),
-.page-content img:not([class*="icon"]),
-.bl img:not([class*="icon"]),
-.wd img:not([class*="icon"]),
-.wardrobe img:not([class*="icon"]),
-.fx img:not([class*="icon"]) {
-  outline: 1px solid oklch(1 0 0 / 0.1);
-  outline-offset: -1px;
-}
-
-html.theme-light .main-scroll img:not([class*="icon"]):not(.min-icon),
-html.theme-light .page-content img:not([class*="icon"]),
-html.theme-light .bl img:not([class*="icon"]),
-html.theme-light .wd img:not([class*="icon"]),
-html.theme-light .wardrobe img:not([class*="icon"]),
-html.theme-light .fx img:not([class*="icon"]) {
-  outline: 1px solid oklch(0 0 0 / 0.1);
+/*
+ * SELENE LAW: never box product photos.
+ * A global 1px outline on every content img framed wardrobe hoodies
+ * (and every other flat) like cards. Melani hates that. Outlines off.
+ */
+.main-scroll img,
+.page-content img,
+.bl img,
+.wd img,
+.wardrobe img,
+.wardrobe-embed img,
+.fx img,
+.gallery-item img,
+.gallery-img,
+.daily-gen__flatlay-img {
+  outline: none !important;
+  box-shadow: none;
 }
 
 /* Reduced motion: keep color/opacity cues, drop transform choreography */

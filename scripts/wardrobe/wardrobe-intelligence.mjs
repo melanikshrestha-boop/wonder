@@ -256,6 +256,12 @@ export function buildItemProfile(item, operational = {}, policyInput) {
   const isBasicTee = (BASIC_TEE_WORDS.test(blob) || (/\btee|t-shirt|tshirt\b/i.test(blob) && !isJersey && !isHoodie));
   const isJeans = JEANS_WORDS.test(blob) || resolveFabricCategory(item) === "jeans";
   const isSweats = SWEATS_WORDS.test(blob) || resolveFabricCategory(item) === "sweatpants";
+  // Footwear class — boots are not default for tee+jeans going out
+  const isBoot = kind === "shoes" && /\b(boot|boots|timberland|martens|doc\s*martens|1460|combat|chelsea)\b/i.test(blob);
+  const isRunningShoe = kind === "shoes" && /\b(hoka|bondi|running|trainer|pegasus|gel-?kayano)\b/i.test(blob);
+  const isCleanSneaker = kind === "shoes" && !isBoot && !isRunningShoe;
+  const isHeroSneaker = kind === "shoes" && isCleanSneaker
+    && /\b(samba|spezial|gazelle|dunk|jordan|blazer|air force|af1|killshot|mexico)\b/i.test(blob);
   // Jersey is always statement; graphic hoodies can be statement without being jersey
   const statement = isJersey || STATEMENT_WORDS.test(text);
   const comfort = COMFORT_WORDS.test(text) || ["top", "bottom"].includes(kind) || isSweats || isHoodie;
@@ -304,6 +310,10 @@ export function buildItemProfile(item, operational = {}, policyInput) {
       isBasicTee,
       isJeans,
       isSweats,
+      isBoot,
+      isRunningShoe,
+      isCleanSneaker,
+      isHeroSneaker,
       dnaTop,
       dnaBottom,
       dnaShoe,
@@ -378,10 +388,20 @@ function modeScore(items, mode) {
   const cameraSafe = items.filter((item) => item.traits.cameraSafe).length / items.length;
   const comfort = items.filter((item) => item.traits.comfort).length / items.length;
   const formal = items.filter((item) => item.traits.formal).length / items.length;
+  const hasJeans = items.some((item) => item.traits?.isJeans);
+  const hasSweats = items.some((item) => item.traits?.isSweats);
   if (mode === "stream") return (cameraSafe * 78) + (statementCount <= 1 ? 22 : 0);
-  if (mode === "build") return (comfort * 76) + (statementCount === 0 ? 24 : 10);
+  // Comfy: comfort + sweats ok
+  if (mode === "build") {
+    return Math.min(100, (comfort * 70) + (hasSweats ? 18 : 8) + (statementCount === 0 ? 12 : 4));
+  }
   if (mode === "content") return Math.min(100, 58 + (statementCount === 1 ? 32 : 8) + (cameraSafe * 10));
-  if (mode === "out") return Math.min(100, 50 + (formal * 42) + (statementCount <= 1 ? 8 : 0));
+  // Going out: jeans win, sweats lose hard
+  if (mode === "out") {
+    let score = 48 + (formal * 28) + (hasJeans ? 30 : 0) + (statementCount <= 1 ? 8 : 0);
+    if (hasSweats && !hasJeans) score = Math.min(score, 32);
+    return Math.min(100, score);
+  }
   return Math.min(100, 68 + (comfort * 22) + (statementCount <= 1 ? 10 : 0));
 }
 
@@ -468,10 +488,159 @@ function itemCompatibility(item, baseItems) {
   return colorCoherence([...baseItems, item]) + rotationScore([item]) * 0.2 + item.metadataConfidence * 10;
 }
 
+/** Stack is quiet black/grey/white monochrome (no accent color in top/bottom). */
+function isMonochromeQuietStack(baseItems) {
+  const wear = baseItems.filter((i) => i.kind === "top" || i.kind === "bottom" || i.kind === "jacket");
+  if (!wear.length) return false;
+  return wear.every((i) => {
+    const key = String(i.traits?.colorKey || "");
+    if (["black", "gray", "grey", "white", "cream", "offwhite"].includes(key)) return true;
+    if (i.colorProfile?.neutral) return true;
+    // near-black / near-white denim without blue key still counts quiet
+    if (i.colorProfile && i.colorProfile.saturation < 0.12) return true;
+    return false;
+  });
+}
+
+/** Loud shoe accents that need a friend in the stack (not dump on all-black). */
+function shoeIsLoudAccent(shoe) {
+  const name = String(shoe?.name || "").toLowerCase();
+  const key = String(shoe?.traits?.colorKey || "");
+  if (/university blue|unc\b|light blue|sky blue|kill.?bill|yellow\/black|birch rust|rust red/i.test(name)) {
+    return true;
+  }
+  if (["lightblue", "yellow", "orange", "red", "green", "purple", "pink"].includes(key)) return true;
+  // High-sat non-neutral shoe color
+  if (shoe?.colorProfile && !shoe.colorProfile.neutral && shoe.colorProfile.saturation >= 0.35) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Shoe ↔ stack color harmony. Black tee + black jeans + UNC blue AJ1 = fail.
+ */
+function shoeColorHarmony(shoe, baseItems) {
+  if (!shoe || !baseItems.length) return 0;
+  let score = 0;
+  let n = 0;
+  for (const piece of baseItems) {
+    if (piece.kind === "shoes") continue;
+    score += pairColorScore(shoe, piece);
+    n += 1;
+  }
+  const avg = n ? score / n : 70;
+
+  // Quiet monochrome (black/grey) stack wants neutral shoes: black, white, gum, grey
+  if (isMonochromeQuietStack(baseItems) && shoeIsLoudAccent(shoe)) {
+    return Math.min(avg, 28) - 40;
+  }
+
+  // Blue denim + blue/unc shoe without a non-blue top is also muddy
+  const hasBlueDenim = baseItems.some((i) => i.traits?.isJeans && (i.traits?.colorKey === "blue" || i.traits?.colorKey === "indigo" || i.traits?.colorKey === "navy"));
+  const quietTop = baseItems.some((i) => i.kind === "top" && (i.traits?.colorKey === "black" || i.colorProfile?.neutral));
+  if (hasBlueDenim && quietTop && shoeIsLoudAccent(shoe) && /blue|unc|university/i.test(String(shoe.name || ""))) {
+    return Math.min(avg, 32) - 30;
+  }
+
+  return avg;
+}
+
+/**
+ * Shoe fit for the stack — Melani law:
+ *   bare basic tee + baggy jeans is NOT Doc Martens weather.
+ *   Going out wants clean sneakers (Samba / Dunk / Spezial / AF1 / Jordan).
+ *   Boots need outerwear or cold + intentional stack.
+ *   Color must match — no random UNC blue on all-black.
+ */
+function shoeFitScore(shoe, baseItems, mode = "everyday", tempF = 70) {
+  if (!shoe) return -999;
+  let score = itemCompatibility(shoe, baseItems) * 0.45;
+  score += shoeColorHarmony(shoe, baseItems) * 0.55;
+  const hasOuter = baseItems.some((i) => i.kind === "jacket" || i.traits?.isHoodie);
+  const hasBasicTee = baseItems.some((i) => i.traits?.isBasicTee);
+  const hasJeans = baseItems.some((i) => i.traits?.isJeans);
+  const hasSweats = baseItems.some((i) => i.traits?.isSweats);
+  const boot = Boolean(shoe.traits?.isBoot);
+  const running = Boolean(shoe.traits?.isRunningShoe);
+  const hero = Boolean(shoe.traits?.isHeroSneaker);
+  const clean = Boolean(shoe.traits?.isCleanSneaker) || (!boot && !running && shoe.kind === "shoes");
+  const quietStack = isMonochromeQuietStack(baseItems);
+  const loudShoe = shoeIsLoudAccent(shoe);
+
+  // Hard preference: neutral sneakers on quiet monochrome
+  if (quietStack && !loudShoe && (hero || clean) && !boot) score += 24;
+  if (quietStack && loudShoe) score -= 55;
+
+  if (mode === "out") {
+    if (boot) {
+      // Boot-worthy only with structure
+      if (hasOuter && hasJeans) score += 18;
+      else if (tempF <= 52 && hasJeans) score += 8;
+      else if (hasBasicTee && hasJeans && !hasOuter) score -= 70; // the bad Doc look
+      else score -= 35;
+    } else if (running) {
+      score -= 45; // Hoka / running not going-out
+    } else if (hero) {
+      score += 42; // Samba, Dunk, Spezial, AF1, Jordan, Blazer
+      // Prefer black/white/gum jordans over UNC on black stacks
+      if (quietStack && /university blue|unc\b/i.test(String(shoe.name || ""))) score -= 50;
+    } else if (clean) {
+      score += 28;
+    }
+  } else if (mode === "build" || mode === "everyday") {
+    if (boot) score -= 28;
+    if (running) score += 12; // comfy ok
+    if (hero || clean) score += 22;
+    if (hasSweats && boot) score -= 20;
+    if (quietStack && loudShoe) score -= 40;
+  } else {
+    if (boot && hasBasicTee && !hasOuter) score -= 40;
+    if (hero) score += 18;
+  }
+  return score;
+}
+
+/** Reject looks where the shoe is a random accent on a quiet stack. */
+function isShoeColorClash(items) {
+  const shoe = items.find((i) => i.kind === "shoes");
+  if (!shoe) return false;
+  const base = items.filter((i) => i.kind !== "shoes");
+  if (!base.length) return false;
+  if (isMonochromeQuietStack(base) && shoeIsLoudAccent(shoe)) return true;
+  // Average pair score floor
+  return shoeColorHarmony(shoe, base) < 40;
+}
+
 function bestOptional(options, baseItems, offset = 0) {
   if (!options.length) return null;
   const sorted = [...options].sort((first, second) => itemCompatibility(second, baseItems) - itemCompatibility(first, baseItems));
   return sorted[offset % sorted.length];
+}
+
+function bestShoes(options, baseItems, mode, tempF, offset = 0) {
+  if (!options.length) return null;
+  const sorted = [...options].sort(
+    (a, b) => shoeFitScore(b, baseItems, mode, tempF) - shoeFitScore(a, baseItems, mode, tempF)
+      || a.id.localeCompare(b.id),
+  );
+  return sorted[offset % sorted.length];
+}
+
+/** True when boots sit under a light top + jeans with no outer — not boot-worthy. */
+function isWeakBootStack(items) {
+  const hasBoot = items.some(
+    (i) => i.traits?.isBoot || (i.kind === "shoes" && /\bboot|martens|timberland\b/i.test(String(i.name || ""))),
+  );
+  if (!hasBoot) return false;
+  const hasOuter = items.some((i) => i.kind === "jacket" || i.traits?.isHoodie);
+  if (hasOuter) return false;
+  // Bare tee / jersey / any non-hoodie top + denim cannot carry Docs/Timberlands
+  const lightTop = items.some(
+    (i) => i.kind === "top" && !i.traits?.isHoodie,
+  );
+  const hasJeans = items.some((i) => i.traits?.isJeans);
+  return lightTop && hasJeans;
 }
 
 function learnedPreferenceScore(items, state = {}) {
@@ -693,7 +862,7 @@ export function generateOutfits(library, state = {}, request = {}) {
   let bottoms = limitGroup(groups.bottom || []);
   const dresses = limitGroup(groups.dress || []);
   const tempF = context.temperatureF;
-  // Everyday / build: rank DNA tops first; don't let football kits dominate the base matrix
+  // Everyday / build (Comfy): DNA tops; sweats welcome
   // Heat: tees first, hoodies last (or already filtered out)
   if (context.mode === "everyday" || context.mode === "build" || context.mode === "stream") {
     tops = [...tops].sort((a, b) => {
@@ -710,13 +879,43 @@ export function generateOutfits(library, state = {}, request = {}) {
     });
     bottoms = [...bottoms].sort((a, b) => {
       const rank = (t) => (
-        (t.traits?.isJeans ? 22 : 0)
-        + (t.traits?.isSweats ? (tempF >= 82 ? -6 : 8) : 0)
+        // Comfy: sweats over jeans
+        (t.traits?.isSweats ? 28 : 0)
+        + (t.traits?.isJeans ? 6 : 0)
         + (t.traits?.dnaBottom ? 10 : 0)
         + (t.colorProfile && isNeutral(t.colorProfile) ? 4 : 0)
       );
       return rank(b) - rank(a) || a.id.localeCompare(b.id);
     });
+  }
+
+  // Going out: jeans hard preference — sweats almost never win
+  if (context.mode === "out") {
+    tops = [...tops].sort((a, b) => {
+      const rank = (t) => (
+        (t.traits?.isJersey ? -50 : 0)
+        + (t.traits?.isHoodie ? (tempF >= 75 ? -40 : 8) : 0)
+        + (t.traits?.isBasicTee ? 24 : 0)
+        + (t.traits?.dnaTop ? 10 : 0)
+        + (t.traits?.minimalSafe ? 8 : 0)
+      );
+      return rank(b) - rank(a) || a.id.localeCompare(b.id);
+    });
+    bottoms = [...bottoms].sort((a, b) => {
+      const rank = (t) => (
+        (t.traits?.isJeans ? 48 : 0)
+        + (t.traits?.isSweats ? -60 : 0) // hard demote sweats for going out
+        + (t.traits?.dnaBottom ? 8 : 0)
+        + (t.colorProfile && isNeutral(t.colorProfile) ? 6 : 0)
+      );
+      return rank(b) - rank(a) || a.id.localeCompare(b.id);
+    });
+    // Drop pure sweats from the candidate pool when jeans exist
+    const jeans = bottoms.filter((t) => t.traits?.isJeans);
+    if (jeans.length) {
+      bottoms = bottoms.filter((t) => !t.traits?.isSweats || t.traits?.isJeans);
+      if (!bottoms.length) bottoms = jeans;
+    }
   }
   const baseLooks = [
     ...dresses.map((dress) => [dress]),
@@ -751,10 +950,26 @@ export function generateOutfits(library, state = {}, request = {}) {
     const jacketPool = climateJackets.length ? climateJackets : (tempF < 78 ? rawJackets : []);
     const jacket = desiredJacket ? bestOptional(jacketPool, items, index) : null;
     if (jacket && !isWeatherBlocked(jacket, tempF, context.rain)) items.push(jacket);
-    const shoes = bestOptional(groups.shoes || [], items, index);
+    // Shoes ranked for the stack (not "whatever is next in rotation")
+    const shoes = bestShoes(groups.shoes || [], items, context.mode, tempF, index);
     if (shoes) items.push(shoes);
-    const accessory = bestOptional(groups.accessory || [], items, index);
-    if (accessory && items.filter((item) => item.traits.statement).length < 1) items.push(accessory);
+    // Flat-lay boards want accessories (scarf/bag/glasses/watch) — up to 3 on out/content, 1–2 everyday
+    const accPool = [...(groups.accessory || [])];
+    const accCap =
+      context.mode === "out" || context.mode === "content"
+        ? 3
+        : context.mode === "everyday"
+          ? 2
+          : 1;
+    const statementCount = () => items.filter((item) => item.traits.statement).length;
+    for (let a = 0; a < accCap && accPool.length; a += 1) {
+      if (statementCount() >= 2) break;
+      const pick = bestOptional(accPool, items, index + a * 3);
+      if (!pick) break;
+      items.push(pick);
+      const cut = accPool.findIndex((x) => x.id === pick.id);
+      if (cut >= 0) accPool.splice(cut, 1);
+    }
     const unique = [...new Map(items.map((item) => [item.id, item])).values()];
     let inspoMeta = { score: 72, reasons: [], matched: [] };
     if (inspoScorer && inspoPalettes.length) {
@@ -786,6 +1001,17 @@ export function generateOutfits(library, state = {}, request = {}) {
     // These are visual vetoes, not a low-score suggestion. Never surface a
     // blue top + blue denim + blue sneaker pile as a "look" for Melani.
     if (failsColorFormula) continue;
+    // Never surface Doc Martens under bare tee + jeans — not boot-worthy
+    if (isWeakBootStack(unique)) continue;
+    // Color match: no UNC blue AJ1 (etc.) dumped on black tee + black jeans
+    if (isShoeColorClash(unique)) continue;
+    // Going out: kill pure running shoes as the main shoe
+    if (
+      context.mode === "out"
+      && unique.some((i) => i.traits?.isRunningShoe)
+    ) {
+      continue;
+    }
     // Everyday: deprioritize jersey looks in the candidate pool (content mode still allows)
     if (
       (context.mode === "everyday" || context.mode === "build")
@@ -826,12 +1052,8 @@ export function generateOutfits(library, state = {}, request = {}) {
   if (context.rain && !(groups.jacket || []).some((item) => item.traits.rainSafe)) {
     warnings.push("Rain is in the context, but no rain-safe outer layer is identified in the wardrobe.");
   }
-  if (tempF >= 78 && climateTops.length && rawTops.some((item) => item.traits?.isHoodie)) {
-    warnings.push(`${Math.round(tempF)}° — hoodies and heavy layers are off the board today.`);
-  }
-  if (context.hasInspo) {
-    warnings.push(`Scoring with ${context.inspoCount} active inspo ${context.inspoCount === 1 ? "image" : "images"} (drop + Pinterest).`);
-  }
+  // No climate essays in the UI ("hoodies off the board") — filtering is silent
+  // Inspo scoring is also silent (no "Scoring with N images" blurb)
 
   return {
     generatedAt: new Date().toISOString(),

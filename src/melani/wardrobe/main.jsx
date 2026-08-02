@@ -38,6 +38,13 @@ class RootErrorBoundary extends Component {
   }
 }
 
+// Mark standalone SPA so CSS tokens apply (never when embedded in Wonder)
+try {
+  document.documentElement.classList.add("wardrobe-standalone", "theme-light");
+} catch {
+  /* ignore */
+}
+
 const rootEl = document.getElementById("root");
 if (!rootEl) {
   document.body.innerHTML =

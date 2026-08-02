@@ -52,11 +52,6 @@ type ChartGeom = {
   padB: number;
   /** Map a value to SVG Y (for goal lines etc.) */
   yOf: (v: number) => number;
-  /** Regression fit through history (deep sleep) */
-  fitLine?: string;
-  /** Forecast dashed segment (history end → future) */
-  forecastLine?: string;
-  forecastDots?: { x: number; y: number; v: number; day: string }[];
 };
 
 /**
@@ -256,21 +251,13 @@ function chartGeom(
   const plotW = Math.max(1, w - padL - padR);
   const plotH = Math.max(1, h - padT - padB);
 
-  const future = series.forecast?.future ?? [];
-  const fit = series.forecast?.fit ?? [];
-  // X axis = history + forecast days (so the dashed tail has room)
+  // Raw history only — no regression fit or 7-day forecast tail
   const allDays = [...pts.map((p) => p.day)];
-  for (const f of future) {
-    if (!allDays.includes(f.day)) allDays.push(f.day);
-  }
-  allDays.sort((a, b) => a.localeCompare(b));
   const dayIndex = new Map(allDays.map((d, i) => [d, i]));
   const nX = Math.max(allDays.length, 1);
 
   const vals = [
     ...pts.map((p) => p.value),
-    ...fit.map((p) => p.value),
-    ...future.map((p) => p.value),
     ...(opts?.domainExtra ?? []),
   ].filter((v) => Number.isFinite(v));
   if (!vals.length) return null;
@@ -303,41 +290,6 @@ function chartGeom(
     dots.length > 0
       ? `${line} L${dots[dots.length - 1].x.toFixed(2)},${baseY} L${dots[0].x.toFixed(2)},${baseY} Z`
       : "";
-
-  // Regression fit line (through history)
-  let fitLine: string | undefined;
-  if (fit.length >= 2) {
-    const sorted = [...fit].sort((a, b) => a.day.localeCompare(b.day));
-    fitLine = sorted
-      .map(
-        (p, i) =>
-          `${i === 0 ? "M" : "L"}${xOfDay(p.day).toFixed(2)},${yOf(p.value).toFixed(2)}`
-      )
-      .join(" ");
-  }
-
-  // Forecast: connect last actual → future points
-  let forecastLine: string | undefined;
-  let forecastDots: ChartGeom["forecastDots"];
-  if (future.length >= 1 && pts.length >= 1) {
-    const lastPt = pts[pts.length - 1];
-    const chain = [
-      { day: lastPt.day, value: lastPt.value },
-      ...[...future].sort((a, b) => a.day.localeCompare(b.day)),
-    ];
-    forecastLine = chain
-      .map(
-        (p, i) =>
-          `${i === 0 ? "M" : "L"}${xOfDay(p.day).toFixed(2)},${yOf(p.value).toFixed(2)}`
-      )
-      .join(" ");
-    forecastDots = future.map((p) => ({
-      x: xOfDay(p.day),
-      y: yOf(p.value),
-      v: p.value,
-      day: p.day,
-    }));
-  }
 
   // High → low for top-of-axis first (visual match)
   const tickVals = yTicksFor(lo, hi, step).sort((a, b) => b - a);
@@ -373,9 +325,6 @@ function chartGeom(
     padT,
     padB,
     yOf,
-    fitLine,
-    forecastLine,
-    forecastDots,
   };
 }
 
@@ -402,30 +351,44 @@ function strokeFor(series: MetricSeries): string {
 
 export function TimeGraph({
   series,
-  /** Optional horizontal goal / target line (e.g. 110 lb weight) */
+  /** Ideal target (e.g. 100% sleep, 8h) — quiet ink dotted line */
   goal,
   goalLabel,
+  /**
+   * Personal baseline line (e.g. your average) — blue dotted.
+   * Purpose: “where you already live” vs ideal.
+   */
+  avgLine,
+  avgLabel,
 }: {
   series: MetricSeries;
   goal?: number | null;
   goalLabel?: string;
+  avgLine?: number | null;
+  avgLabel?: string;
 }) {
   const w = 640;
   const h = 180;
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
+  const domainExtra = useMemo(() => {
+    const xs: number[] = [];
+    if (goal != null && Number.isFinite(goal)) xs.push(goal);
+    if (avgLine != null && Number.isFinite(avgLine)) xs.push(avgLine);
+    return xs.length ? xs : undefined;
+  }, [goal, avgLine]);
+
   const g = useMemo(
     () =>
       chartGeom(series, w, h, {
-        padL: 40,
-        padR: 16,
-        padT: 12,
+        padL: 44,
+        padR: 52,
+        padT: 18,
         padB: 28,
         maxXLabels: 6,
-        domainExtra:
-          goal != null && Number.isFinite(goal) ? [goal] : undefined,
+        domainExtra,
       }),
-    [series, goal]
+    [series, domainExtra]
   );
 
   if (!g || series.points.length < 1) {
@@ -437,6 +400,8 @@ export function TimeGraph({
   const hover = hoverIdx != null ? g.dots[hoverIdx] : null;
   const goalY =
     goal != null && Number.isFinite(goal) ? g.yOf(goal) : null;
+  const avgY =
+    avgLine != null && Number.isFinite(avgLine) ? g.yOf(avgLine) : null;
 
   function nearestIndex(svgX: number): number {
     let best = 0;
@@ -505,27 +470,48 @@ export function TimeGraph({
           </g>
         ))}
         {g.area ? <path d={g.area} fill={`url(#${gradId})`} /> : null}
-        {/* Goal / target dashed line (weight 110 lb, etc.) */}
+        {/*
+          Reference lines (purpose only):
+          · avg (blue dots) = your history baseline — “most of what you already hit”
+          · ideal (ink dashes) = next-week perfect target — 100% / 8h
+        */}
+        {avgY != null ? (
+          <g pointerEvents="none" className="wx-ref-avg">
+            <line
+              x1={g.padL}
+              x2={w - g.padR}
+              y1={avgY}
+              y2={avgY}
+              className="wx-avg-line"
+            />
+            <text
+              x={w - g.padR + 2}
+              y={avgY + 3}
+              textAnchor="start"
+              className="wx-avg-label"
+            >
+              {avgLabel ||
+                `avg ${formatValue(avgLine!, series.unit)}${series.unit}`}
+            </text>
+          </g>
+        ) : null}
         {goalY != null ? (
-          <g pointerEvents="none">
+          <g pointerEvents="none" className="wx-ref-ideal">
             <line
               x1={g.padL}
               x2={w - g.padR}
               y1={goalY}
               y2={goalY}
-              stroke="var(--wx-goal, #d4a017)"
-              strokeWidth="1.5"
-              strokeDasharray="5 4"
-              opacity="0.9"
+              className="wx-ideal-line"
             />
             <text
-              x={w - g.padR}
-              y={goalY - 5}
-              textAnchor="end"
-              className="wx-goal-label"
+              x={w - g.padR + 2}
+              y={goalY - 4}
+              textAnchor="start"
+              className="wx-ideal-label"
             >
               {goalLabel ||
-                `${formatValue(goal!, series.unit)}${series.unit} goal`}
+                `${formatValue(goal!, series.unit)}${series.unit}`}
             </text>
           </g>
         ) : null}
@@ -538,45 +524,6 @@ export function TimeGraph({
           strokeLinecap="round"
           pointerEvents="none"
         />
-        {/* Linear (or multi-linear) fit through history */}
-        {g.fitLine ? (
-          <path
-            d={g.fitLine}
-            fill="none"
-            stroke="var(--wx-accent, #7eb8ff)"
-            strokeWidth="1.75"
-            strokeOpacity="0.85"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            pointerEvents="none"
-          />
-        ) : null}
-        {/* 7-day forecast — dashed */}
-        {g.forecastLine ? (
-          <path
-            d={g.forecastLine}
-            fill="none"
-            stroke="var(--wx-accent, #7eb8ff)"
-            strokeWidth="2"
-            strokeDasharray="5 4"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            opacity="0.9"
-            pointerEvents="none"
-          />
-        ) : null}
-        {g.forecastDots?.map((d, i) => (
-          <circle
-            key={`f-${i}`}
-            cx={d.x}
-            cy={d.y}
-            r={3}
-            fill="none"
-            stroke="var(--wx-accent, #7eb8ff)"
-            strokeWidth="1.5"
-            pointerEvents="none"
-          />
-        ))}
         {g.dots.map((d, i) => (
           <circle
             key={i}

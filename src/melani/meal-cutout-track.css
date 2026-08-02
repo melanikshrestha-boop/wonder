@@ -1,0 +1,107 @@
+/* Meal cut-out flags — quiet red when hit, no cards */
+
+.fx-cutout-track {
+  margin-top: 0.25rem;
+}
+
+.fx-cutout-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--fx-faint);
+  line-height: 1.35;
+}
+
+.fx-cutout-summary {
+  margin: 0 0 0.55rem;
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.fx-cutout-ok {
+  color: var(--fx-no, #22c55e);
+}
+
+.fx-cutout-bad {
+  color: var(--fx-cutout, #ef4444);
+  font-weight: 500;
+}
+
+.fx-cutout-meals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.fx-cutout-meal-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.65rem;
+}
+
+.fx-cutout-meal-name {
+  font-size: 0.95rem;
+  color: var(--fx-strong);
+  font-weight: 500;
+}
+
+.fx-cutout-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fx-cutout, #ef4444);
+}
+
+.fx-cutout-pill.is-ok {
+  color: var(--fx-faint);
+  font-weight: 500;
+}
+
+.fx-cutout-meal.is-flagged .fx-cutout-meal-name {
+  color: var(--fx-cutout, #ef4444);
+}
+
+.fx-cutout-hits {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.fx-cutout-hits li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  font-size: 0.8rem;
+  color: var(--fx-muted);
+  line-height: 1.3;
+}
+
+.fx-cutout-hits strong {
+  font-weight: 600;
+  color: var(--fx-cutout, #ef4444);
+}
+
+.fx-cutout-hits span {
+  color: var(--fx-faint);
+}
+
+/* Usual meal card flag line */
+.usual-cutout-flag {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--fx-cutout, #ef4444);
+  line-height: 1.35;
+}
+
+.usual-cutout-flag strong {
+  font-weight: 600;
+}
+
+.usual-flash.is-cutout {
+  color: var(--fx-cutout, #ef4444);
+}

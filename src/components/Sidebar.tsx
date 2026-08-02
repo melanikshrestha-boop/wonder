@@ -218,22 +218,15 @@ function SectionLabel({
       tabIndex={0}
       title={
         closed
-          ? `${label} — double-tap to open`
-          : `${label} — tap once to close`
+          ? `${label} — tap to open (AM/PM skincare lives under Health)`
+          : `${label} — tap to close`
       }
       aria-expanded={!closed}
       onClick={() => {
-        if (!closed) {
-          // Already open → one tap closes (no double-tap needed)
-          lastTap.current = 0;
-          onClose(sectionKey);
-          return;
-        }
-        // Closed → only double-tap opens
-        const now = Date.now();
-        const doubleTap = now - lastTap.current <= DOUBLE_TAP_MS;
-        lastTap.current = doubleTap ? 0 : now;
-        if (doubleTap) onOpen(sectionKey);
+        // Single tap toggles — double-tap-to-open was hiding skincare from Melani
+        lastTap.current = 0;
+        if (closed) onOpen(sectionKey);
+        else onClose(sectionKey);
       }}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {

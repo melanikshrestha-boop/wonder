@@ -1,19 +1,21 @@
 /**
- * Daily Cloth Generator — outfit of the day from Melani's real closet.
- * Drop inspo images or paste a Pinterest pin/board URL; backend palette-matches looks.
+ * Daily Cloth Generator — one outfit, two vibes only:
+ *   Comfy (build) · Going out (jeans, not sweats)
+ * Flat-lay: torso → pants → shoes. Name popup hugs the piece.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OptimizedImage } from "./OptimizedImage.jsx";
 import { getFreshSavedWeather, weatherWardrobeContext } from "../weather/weatherCore";
 import "./daily-generator.css";
 
-const DAILY_KEY = "wonder-daily-outfit-v1";
+const DAILY_KEY = "wonder-daily-outfit-v3";
 const PINTEREST_BOARD_KEY = "wonder-wardrobe-pinterest-board-v1";
-const MODES = [
-  { id: "build", label: "Comfort" },
-  { id: "everyday", label: "Everyday" },
+/** Internal ranking pool — UI only ever shows one pick. */
+const POOL_SIZE = 8;
+/** Only two purposes — maps to wardrobe-intelligence modes. */
+const PURPOSES = [
+  { id: "build", label: "Comfy" },
   { id: "out", label: "Going out" },
-  { id: "content", label: "Content" },
 ];
 
 function todayKey() {
@@ -71,7 +73,69 @@ function kindLabel(item) {
   if (k === "shoes") return "Shoes";
   if (k === "jacket" || k === "wholebody_up") return "Jacket";
   if (k === "dress" || k === "dresses") return "Dress";
+  if (k === "accessory" || k === "accessories_up") return "Accessory";
   return "Piece";
+}
+
+/** True for footwear — even when kind is wrong (e.g. "jacket" on Nike Blazer). */
+function isFootwear(item) {
+  const k = String(item?.kind || item?.part || "").toLowerCase();
+  const name = String(item?.name || "").toLowerCase();
+  const tags = (item?.tags || []).map((t) => String(t).toLowerCase());
+  const blob = `${k} ${name} ${tags.join(" ")}`;
+
+  if (k === "shoes" || k === "shoe") return true;
+  if (tags.includes("sneakers") || tags.includes("shoes") || tags.includes("sneaker")) return true;
+  if (
+    /\b(sneaker|sneakers|shoe|shoes|boot|boots|sandal|sandals|loafer|loafers|mule|mules|slide|slides|jordan|dunk|samba|spezial|gazelle|killshot|air force|af1|mexico\s*66|onitsuka|yeezy|hoka|bondi|new balance|asics|vans|converse|timberland)\b/.test(
+      blob,
+    )
+  ) {
+    return true;
+  }
+  // Nike Blazer Mid is a sneaker — never outerwear
+  if (/\bblazer\b/.test(name) && !/\b(jacket|coat|suit|blazer jacket)\b/.test(name)) return true;
+  if (/\b(mid\s*'?\s*77|bq6806)\b/.test(blob)) return true;
+  return false;
+}
+
+/**
+ * Body-order slots: outer · top · bottom · shoes · acc*
+ * Shoes ALWAYS win over jacket keywords (Nike Blazer).
+ */
+function flatlaySlot(item, accIndex = 0) {
+  const k = String(item?.kind || item?.part || "").toLowerCase();
+  const name = String(item?.name || "").toLowerCase();
+  const tags = (item?.tags || []).map((t) => String(t).toLowerCase());
+  const blob = `${k} ${name} ${tags.join(" ")}`;
+
+  if (isFootwear(item)) return "shoes";
+
+  if (
+    k === "bottom"
+    || k === "lowerbody"
+    || /\b(jean|jeans|pant|pants|sweatpant|trouser|short|shorts|skirt)\b/.test(blob)
+  ) {
+    return "bottom";
+  }
+
+  // Real outer only — never bare "blazer", never footwear
+  if (
+    k === "jacket"
+    || k === "wholebody_up"
+    || /\b(jacket|coat|parka|puffer|windbreaker|hoodie|zip-?up|fleece)\b/.test(blob)
+  ) {
+    return "outer";
+  }
+
+  if (k === "dress" || k === "dresses") return "top";
+  if (k === "top" || k === "upperbody" || /\b(tee|t-shirt|shirt|crewneck|jersey|tank)\b/.test(blob)) {
+    return "top";
+  }
+
+  if (accIndex === 0) return "acc";
+  if (accIndex === 1) return "acc2";
+  return "acc3";
 }
 
 function fileToDataUrl(file) {
@@ -83,15 +147,47 @@ function fileToDataUrl(file) {
   });
 }
 
+function FlatlayPiece({ piece, slot, onOpenItem }) {
+  const src = pieceImage(piece);
+  const label = piece.name || "Piece";
+  return (
+    <button
+      type="button"
+      className={`daily-gen__flatlay-piece is-${slot}`}
+      data-slot={slot}
+      role="listitem"
+      onClick={() => onOpenItem?.(piece.id)}
+      aria-label={`${kindLabel(piece)}: ${label}`}
+    >
+      {/* Name popup only on hover/focus — never a permanent label in the stack */}
+      <span className="daily-gen__flatlay-meta" aria-hidden="true">
+        <span className="daily-gen__flatlay-name">{label}</span>
+      </span>
+      <span className="daily-gen__flatlay-media">
+        {src ? (
+          <OptimizedImage
+            className="daily-gen__flatlay-img"
+            src={src}
+            alt=""
+            sizes="(max-width: 640px) 48vw, 280px"
+            breakpoints={[160, 240, 320, 420, 560]}
+          />
+        ) : (
+          <span className="daily-gen__img-fallback" style={{ background: piece.color || "#ccc" }} />
+        )}
+      </span>
+    </button>
+  );
+}
+
 /**
  * @param {{ items: Array<Record<string, unknown>>, onOpenItem?: (id: string) => void }} props
  */
 export function DailyGenerator({ items = [], onOpenItem }) {
   const date = todayKey();
   const fileRef = useRef(null);
-  const [mode, setMode] = useState("build");
-  const [looks, setLooks] = useState([]);
-  const [lookIndex, setLookIndex] = useState(0);
+  const [pool, setPool] = useState([]);
+  const [pickIndex, setPickIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState([]);
@@ -110,6 +206,13 @@ export function DailyGenerator({ items = [], onOpenItem }) {
   const [showInspo, setShowInspo] = useState(false);
   const [weatherContext, setWeatherContext] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [purpose, setPurpose] = useState(() => {
+    const saved = readDailyState();
+    if (saved?.date === todayKey() && (saved.purpose === "build" || saved.purpose === "out")) {
+      return saved.purpose;
+    }
+    return "build";
+  });
 
   const closetReady = Array.isArray(items) && items.length > 0;
 
@@ -119,14 +222,14 @@ export function DailyGenerator({ items = [], onOpenItem }) {
       const data = await res.json().catch(() => ({}));
       if (res.ok) setInspoItems(Array.isArray(data.items) ? data.items : []);
     } catch {
-      /* inspo optional on first paint */
+      /* optional */
     }
   }, []);
 
-  const loadLooks = useCallback(async ({ force = false } = {}) => {
+  const loadToday = useCallback(async ({ advance = false } = {}) => {
     if (!closetReady) {
       setLoading(false);
-      setLooks([]);
+      setPool([]);
       return;
     }
     setLoading(true);
@@ -135,12 +238,13 @@ export function DailyGenerator({ items = [], onOpenItem }) {
       const snapshot = await getFreshSavedWeather();
       const liveWeather = snapshot ? weatherWardrobeContext(snapshot) : null;
       if (liveWeather) setWeatherContext(liveWeather);
+
       const response = await fetch("/api/wardrobe/recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode,
-          count: 8,
+          mode: purpose, // build = Comfy · out = Going out (jeans)
+          count: POOL_SIZE,
           temperatureF: liveWeather?.temperatureF ?? 68,
           rain: Boolean(liveWeather?.rain),
           weatherLocation: liveWeather?.location,
@@ -149,105 +253,124 @@ export function DailyGenerator({ items = [], onOpenItem }) {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not generate today's outfit.");
-      const nextLooks = Array.isArray(payload.looks) ? payload.looks : [];
-      setLooks(nextLooks);
-      setWarnings(Array.isArray(payload.warnings) ? payload.warnings.map(String) : []);
+
+      const nextPool = Array.isArray(payload.looks) ? payload.looks : [];
+      setPool(nextPool);
+      // Never surface climate essays ("hoodies off the board") — only real failures
+      const rawWarn = Array.isArray(payload.warnings) ? payload.warnings.map(String) : [];
+      setWarnings(
+        rawWarn.filter(
+          (w) =>
+            !w.startsWith("Scoring with")
+            && !/hoodies and heavy layers|off the board|Rain is in the context/i.test(w),
+        ),
+      );
       if (payload.inspo?.items) setInspoItems(payload.inspo.items);
 
       const saved = readDailyState();
+      const sameDay = saved?.date === date && saved?.purpose === purpose;
       let index = 0;
       let worn = false;
-      if (!force && saved?.date === date && Number.isFinite(Number(saved.lookIndex))) {
-        index = Math.min(Math.max(0, Number(saved.lookIndex)), Math.max(0, nextLooks.length - 1));
+
+      if (advance && nextPool.length) {
+        const prev = sameDay ? Number(saved?.pickIndex || 0) : 0;
+        index = (prev + 1) % nextPool.length;
+        worn = false;
+      } else if (sameDay && Number.isFinite(Number(saved?.pickIndex))) {
+        index = Math.min(Math.max(0, Number(saved.pickIndex)), Math.max(0, nextPool.length - 1));
+        if (saved.lookId) {
+          const found = nextPool.findIndex((l) => l.id === saved.lookId);
+          if (found >= 0) index = found;
+        }
         worn = Boolean(saved.worn);
-      } else if (nextLooks.length) {
-        const spin = force ? (Number(saved?.shuffleCount || 0) + 1) : 0;
-        index = (daySeed(date) + spin) % nextLooks.length;
-        writeDailyState({
-          date,
-          lookIndex: index,
-          lookId: nextLooks[index]?.id || null,
-          worn: false,
-          shuffleCount: force ? spin : (saved?.date === date ? Number(saved?.shuffleCount || 0) : 0),
-          generatedAt: payload.generatedAt || new Date().toISOString(),
-        });
-        setLookIndex(index);
-        setWornToday(false);
-        return;
+      } else if (nextPool.length) {
+        index = daySeed(`${date}:${purpose}`) % nextPool.length;
+        worn = false;
       }
-      setLookIndex(index);
+
+      setPickIndex(index);
       setWornToday(worn);
       writeDailyState({
         date,
-        lookIndex: index,
-        lookId: nextLooks[index]?.id || null,
+        purpose,
+        pickIndex: index,
+        lookId: nextPool[index]?.id || null,
         worn,
-        shuffleCount: saved?.date === date ? Number(saved?.shuffleCount || 0) : 0,
         generatedAt: payload.generatedAt || new Date().toISOString(),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cloth generator failed.");
-      setLooks([]);
+      setPool([]);
     } finally {
       setLoading(false);
     }
-  }, [closetReady, date, mode]);
+  }, [closetReady, date, purpose]);
 
   useEffect(() => {
     refreshInspo();
   }, [refreshInspo]);
 
   useEffect(() => {
-    loadLooks();
-  }, [loadLooks]);
+    loadToday();
+  }, [loadToday]);
 
-  const look = looks[lookIndex] || null;
+  const look = pool[pickIndex] || null;
   const activeInspo = useMemo(() => inspoItems.filter((i) => i.active !== false), [inspoItems]);
 
   const pieces = useMemo(() => {
     if (!look?.items?.length) return [];
-    // Display order: top → bottom → shoes → jacket (no overlap layout)
-    const rank = (item) => {
-      const k = String(item.kind || item.part || "");
-      if (k === "top" || k === "upperbody" || k === "dress" || k === "dresses") return 0;
-      if (k === "bottom" || k === "lowerbody") return 1;
-      if (k === "shoes") return 2;
-      if (k === "jacket" || k === "wholebody_up") return 3;
-      return 4;
-    };
-    return [...look.items].sort((a, b) => rank(a) - rank(b));
+    let accI = 0;
+    return look.items.map((item) => {
+      let slot = flatlaySlot(item, accI);
+      // Hard veto: footwear never lands in torso
+      if (isFootwear(item)) slot = "shoes";
+      if (slot === "acc" || slot === "acc2" || slot === "acc3") {
+        slot = accI === 0 ? "acc" : accI === 1 ? "acc2" : "acc3";
+        accI += 1;
+      }
+      return { ...item, flatlaySlot: slot };
+    });
   }, [look]);
 
-  const persistIndex = (nextIndex) => {
-    setLookIndex(nextIndex);
-    const saved = readDailyState() || {};
-    writeDailyState({
-      ...saved,
-      date,
-      lookIndex: nextIndex,
-      lookId: looks[nextIndex]?.id || null,
-      worn: Boolean(saved.worn && saved.date === date),
-    });
-  };
+  // Explicit body groups — never rely on accidental CSS order for shoes
+  const body = useMemo(() => {
+    const outer = pieces.find((p) => p.flatlaySlot === "outer") || null;
+    const top = pieces.find((p) => p.flatlaySlot === "top") || null;
+    const bottom = pieces.find((p) => p.flatlaySlot === "bottom") || null;
+    const shoes = pieces.find((p) => p.flatlaySlot === "shoes") || null;
+    const accs = pieces.filter((p) => ["acc", "acc2", "acc3"].includes(p.flatlaySlot));
+    return {
+      outer,
+      top,
+      bottom,
+      shoes,
+      accs,
+      layered: Boolean(outer && top),
+      hasTorso: Boolean(outer || top),
+    };
+  }, [pieces]);
 
-  const nextLook = () => {
-    if (!looks.length) return;
-    persistIndex((lookIndex + 1) % looks.length);
+  const skipThis = async () => {
+    if (busy || loading) return;
     setStatusNote("");
     setWornToday(false);
-  };
-
-  const prevLook = () => {
-    if (!looks.length) return;
-    persistIndex((lookIndex - 1 + looks.length) % looks.length);
-    setStatusNote("");
-    setWornToday(false);
-  };
-
-  const reshuffle = () => {
-    setStatusNote("");
-    setWornToday(false);
-    loadLooks({ force: true });
+    // Advance to next ranked look for today — still only one on screen
+    if (pool.length > 1) {
+      const next = (pickIndex + 1) % pool.length;
+      setPickIndex(next);
+      writeDailyState({
+        date,
+        purpose,
+        pickIndex: next,
+        lookId: pool[next]?.id || null,
+        worn: false,
+        generatedAt: new Date().toISOString(),
+      });
+      setStatusNote("Next pick for today.");
+    } else {
+      await loadToday({ advance: true });
+      setStatusNote("New pick for today.");
+    }
   };
 
   const wearThis = async () => {
@@ -259,9 +382,9 @@ export function DailyGenerator({ items = [], onOpenItem }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          index: lookIndex + 1,
+          index: pickIndex + 1,
           actor: "mel",
-          idempotencyKey: `daily-wear:${date}:${look.id || lookIndex}`,
+          idempotencyKey: `daily-wear:${date}:${look.id || pickIndex}`,
           reason: "Daily cloth generator",
         }),
       });
@@ -270,7 +393,7 @@ export function DailyGenerator({ items = [], onOpenItem }) {
       setWornToday(true);
       setStatusNote(payload.repeated ? "Already logged for today." : "Logged — wear count updated.");
       const saved = readDailyState() || {};
-      writeDailyState({ ...saved, date, lookIndex, lookId: look.id, worn: true });
+      writeDailyState({ ...saved, date, purpose, pickIndex, lookId: look.id, worn: true });
     } catch (err) {
       setStatusNote(err instanceof Error ? err.message : "Could not log wear.");
     } finally {
@@ -285,13 +408,19 @@ export function DailyGenerator({ items = [], onOpenItem }) {
       const response = await fetch("/api/wardrobe/outfit/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ index: lookIndex + 1, value, actor: "mel" }),
+        body: JSON.stringify({ index: pickIndex + 1, value, actor: "mel" }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         throw new Error(payload.error || "Could not save feedback.");
       }
-      setStatusNote(value === "like" ? "Liked — generator will lean this way." : "Noted — will rank this lower.");
+      if (value === "dislike") {
+        setStatusNote("Noted — next pick.");
+        setBusy(false);
+        await skipThis();
+        return;
+      }
+      setStatusNote("Liked — generator will lean this way.");
     } catch (err) {
       setStatusNote(err instanceof Error ? err.message : "Could not save feedback.");
     } finally {
@@ -325,8 +454,8 @@ export function DailyGenerator({ items = [], onOpenItem }) {
         if (!data.duplicate) added += 1;
       }
       await refreshInspo();
-      setStatusNote(added ? `Added ${added} inspo ${added === 1 ? "image" : "images"} — regenerating looks…` : "Those inspo images were already saved.");
-      await loadLooks({ force: true });
+      setStatusNote(added ? `Added ${added} inspo — refreshing today's look…` : "Those inspo images were already saved.");
+      await loadToday({ advance: true });
     } catch (err) {
       setStatusNote(err instanceof Error ? err.message : "Inspo upload failed.");
     } finally {
@@ -341,7 +470,7 @@ export function DailyGenerator({ items = [], onOpenItem }) {
       return;
     }
     setInspoBusy(true);
-    setStatusNote("Importing the public pins and reading their palettes…");
+    setStatusNote("Importing pins…");
     try {
       const res = await fetch("/api/wardrobe/inspo/pinterest", {
         method: "POST",
@@ -354,16 +483,11 @@ export function DailyGenerator({ items = [], onOpenItem }) {
       try {
         localStorage.setItem(PINTEREST_BOARD_KEY, url);
       } catch {
-        /* the live import still works when storage is unavailable */
+        /* ok */
       }
       await refreshInspo();
-      setStatusNote(
-        data.kind === "board"
-          ? `Got ${data.imported} real outfit photos from “${data.title || "board"}”. Regenerating looks…`
-          : `Got ${data.imported} pin photo${data.imported === 1 ? "" : "s"}. Regenerating looks…`,
-      );
-      await loadLooks({ force: true });
-      setStatusNote(`Live · ${data.imported} inspo photos driving today’s ranking. Hit Reshuffle if you want a new lock.`);
+      await loadToday({ advance: true });
+      setStatusNote(`Live · ${data.imported} inspo photos driving today's look.`);
     } catch (err) {
       setStatusNote(err instanceof Error ? err.message : "Pinterest import failed.");
     } finally {
@@ -384,7 +508,7 @@ export function DailyGenerator({ items = [], onOpenItem }) {
         throw new Error(data.error || "Could not update inspo.");
       }
       await refreshInspo();
-      await loadLooks({ force: true });
+      await loadToday({ advance: true });
     } catch (err) {
       setStatusNote(err instanceof Error ? err.message : "Could not update inspo.");
     } finally {
@@ -401,7 +525,7 @@ export function DailyGenerator({ items = [], onOpenItem }) {
         throw new Error(data.error || "Could not remove inspo.");
       }
       await refreshInspo();
-      await loadLooks({ force: true });
+      await loadToday({ advance: true });
     } catch (err) {
       setStatusNote(err instanceof Error ? err.message : "Could not remove inspo.");
     } finally {
@@ -417,25 +541,25 @@ export function DailyGenerator({ items = [], onOpenItem }) {
 
   if (!closetReady) {
     return (
-      <section className="daily-gen" aria-label="Smart outfit generator">
+      <section className="daily-gen" aria-label="Today's outfit">
         <header className="daily-gen__head">
-          <p className="daily-gen__eyebrow">Smart outfit generator</p>
+          <p className="daily-gen__eyebrow">Today</p>
           <h2 className="daily-gen__title">Import pieces to unlock today&apos;s look</h2>
         </header>
         <p className="daily-gen__empty">
-          The generator builds real outfits from your closet — top + bottom + shoes. Add Owned pieces first.
+          One outfit a day from your closet — top, bottoms, shoes on paper. Add Owned pieces first.
         </p>
       </section>
     );
   }
 
   return (
-    <section className="daily-gen" aria-label="Smart outfit generator">
+    <section className="daily-gen" aria-label="Today's outfit">
       <header className="daily-gen__head">
         <div className="daily-gen__head-text">
-          <p className="daily-gen__eyebrow">Smart outfit generator · {prettyDate(date)}</p>
+          <p className="daily-gen__eyebrow">Today · {prettyDate(date)}</p>
           <h2 className="daily-gen__title">
-            Today
+            Wear this
             {weatherContext ? (
               <span className="daily-gen__weather-badge" title={weatherContext.location || ""}>
                 {weatherContext.location ? `${weatherContext.location.split(",")[0]} · ` : ""}
@@ -445,139 +569,136 @@ export function DailyGenerator({ items = [], onOpenItem }) {
           </h2>
         </div>
         <div className="daily-gen__actions-top">
-          <button type="button" className="daily-gen__btn ghost" onClick={() => setShowInspo((current) => !current)}>
-            {activeInspo.length ? `Pinterest · ${activeInspo.length}` : "Pinterest & inspo"}
-          </button>
-          <button type="button" className="daily-gen__btn primary" onClick={reshuffle} disabled={loading || busy || inspoBusy}>
-            New lineup
+          <button type="button" className="daily-gen__btn ghost" onClick={() => setShowInspo((c) => !c)}>
+            {activeInspo.length ? `Inspo · ${activeInspo.length}` : "Inspo"}
           </button>
         </div>
       </header>
 
-      <div className="daily-gen__modes" aria-label="Outfit purpose">
-        {MODES.map((option) => (
+      {/* Only two vibes — Comfy vs Going out (jeans) */}
+      <div className="daily-gen__purposes" role="tablist" aria-label="Outfit vibe">
+        {PURPOSES.map((option) => (
           <button
             key={option.id}
             type="button"
-            className={mode === option.id ? "is-active" : ""}
-            aria-pressed={mode === option.id}
+            role="tab"
+            aria-selected={purpose === option.id}
+            className={`daily-gen__purpose${purpose === option.id ? " is-active" : ""}`}
             onClick={() => {
-              setMode(option.id);
+              if (purpose === option.id) return;
+              setPurpose(option.id);
               setStatusNote("");
               setWornToday(false);
             }}
           >
-            <strong>{option.label}</strong>
+            {option.label}
           </button>
         ))}
       </div>
 
-      {/* Inspo rail — drop zone + Pinterest + filmstrip */}
-      {showInspo ? <div
-        className={`daily-gen__inspo${dragOver ? " is-drag" : ""}`}
-        onDragEnter={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={onDrop}
-      >
-        <div className="daily-gen__inspo-head">
-          <div>
-            <p className="daily-gen__inspo-label">Style inspo</p>
-            <p className="daily-gen__inspo-hint">
-              Drop outfit screenshots or paste a public Pinterest profile, board, or pin.
-            </p>
+      {showInspo ? (
+        <div
+          className={`daily-gen__inspo${dragOver ? " is-drag" : ""}`}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+        >
+          <div className="daily-gen__inspo-head">
+            <div>
+              <p className="daily-gen__inspo-label">Style inspo</p>
+              <p className="daily-gen__inspo-hint">Drop outfit screenshots or paste a public Pinterest board or pin.</p>
+            </div>
+            <div className="daily-gen__inspo-actions">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={(e) => {
+                  uploadInspoFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                className="daily-gen__btn ghost"
+                disabled={inspoBusy}
+                onClick={() => fileRef.current?.click()}
+              >
+                Drop / upload
+              </button>
+            </div>
           </div>
-          <div className="daily-gen__inspo-actions">
+
+          <div className="daily-gen__pinterest">
             <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              multiple
-              hidden
-              onChange={(e) => {
-                uploadInspoFiles(e.target.files);
-                e.target.value = "";
+              className="daily-gen__pinterest-input"
+              type="url"
+              inputMode="url"
+              placeholder="https://www.pinterest.com/…"
+              value={pinterestUrl}
+              onChange={(e) => setPinterestUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  connectPinterest();
+                }
               }}
-            />
-            <button
-              type="button"
-              className="daily-gen__btn ghost"
               disabled={inspoBusy}
-              onClick={() => fileRef.current?.click()}
-            >
-              Drop / upload
+              aria-label="Pinterest URL"
+            />
+            <button type="button" className="daily-gen__btn primary" onClick={connectPinterest} disabled={inspoBusy}>
+              {inspoBusy ? "Pulling…" : "Import"}
             </button>
           </div>
-        </div>
 
-        <div className="daily-gen__pinterest">
-          <input
-            className="daily-gen__pinterest-input"
-            type="url"
-            inputMode="url"
-            placeholder="https://www.pinterest.com/pin/123…  (paste several pin links)"
-            value={pinterestUrl}
-            onChange={(e) => setPinterestUrl(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                connectPinterest();
-              }
-            }}
-            disabled={inspoBusy}
-            aria-label="Pinterest pin URLs"
-          />
-          <button type="button" className="daily-gen__btn primary" onClick={connectPinterest} disabled={inspoBusy}>
-            {inspoBusy ? "Pulling…" : "Import pins"}
-          </button>
+          {inspoItems.length ? (
+            <ul className="daily-gen__inspo-strip" aria-label="Saved inspo">
+              {inspoItems.map((item) => (
+                <li key={item.id} className={`daily-gen__inspo-card${item.active === false ? " is-off" : ""}`}>
+                  <button
+                    type="button"
+                    className="daily-gen__inspo-thumb"
+                    onClick={() => toggleInspo(item.id, item.active === false)}
+                    title={item.active === false ? "Tap to activate" : "Tap to pause"}
+                  >
+                    <img src={item.imageUrl} alt="" loading="lazy" />
+                    {item.source === "pinterest" ? <span className="daily-gen__inspo-src">Pin</span> : null}
+                  </button>
+                  {item.palette?.colors?.length ? (
+                    <span className="daily-gen__swatches" aria-hidden="true">
+                      {item.palette.colors.slice(0, 4).map((c) => (
+                        <i key={c.hex} style={{ background: c.hex }} />
+                      ))}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="daily-gen__inspo-x"
+                    aria-label={`Remove ${item.title}`}
+                    onClick={() => deleteInspo(item.id)}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="daily-gen__inspo-empty">No inspo yet — optional color target for today&apos;s pick.</p>
+          )}
         </div>
-
-        {inspoItems.length ? (
-          <ul className="daily-gen__inspo-strip" aria-label="Saved inspo">
-            {inspoItems.map((item) => (
-              <li key={item.id} className={`daily-gen__inspo-card${item.active === false ? " is-off" : ""}`}>
-                <button
-                  type="button"
-                  className="daily-gen__inspo-thumb"
-                  onClick={() => toggleInspo(item.id, item.active === false)}
-                  title={item.active === false ? "Tap to activate" : "Tap to pause"}
-                >
-                  <img src={item.imageUrl} alt="" loading="lazy" />
-                  {item.source === "pinterest" ? <span className="daily-gen__inspo-src">Pin</span> : null}
-                </button>
-                {item.palette?.colors?.length ? (
-                  <span className="daily-gen__swatches" aria-hidden="true">
-                    {item.palette.colors.slice(0, 4).map((c) => (
-                      <i key={c.hex} style={{ background: c.hex }} />
-                    ))}
-                  </span>
-                ) : null}
-                <button
-                  type="button"
-                  className="daily-gen__inspo-x"
-                  aria-label={`Remove ${item.title}`}
-                  onClick={() => deleteInspo(item.id)}
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="daily-gen__inspo-empty">
-            No inspo yet — drop a fit photo or connect a public Pinterest board so today&apos;s generator has a color target.
-          </p>
-        )}
-      </div> : null}
+      ) : null}
 
       {loading ? (
-        <p className="daily-gen__status">Generating today&apos;s look…</p>
+        <p className="daily-gen__status">Locking today&apos;s look…</p>
       ) : error ? (
         <p className="daily-gen__status daily-gen__status--error">{error}</p>
       ) : !look ? (
@@ -586,63 +707,60 @@ export function DailyGenerator({ items = [], onOpenItem }) {
         </p>
       ) : (
         <>
-          {/* Outfit pieces — never overlap; fluid columns for every width */}
+          {/*
+            Flat-lay law:
+            1) Torso — outer (hoodie) and/or top (tee), layered when both
+            2) Bottoms
+            3) Shoes
+            Never put footwear in the torso stack.
+          */}
           <div
-            className="daily-gen__outfit"
+            className={[
+              "daily-gen__flatlay",
+              body.outer ? "has-outer" : "",
+              body.top ? "has-top" : "",
+              body.bottom ? "has-bottom" : "",
+              body.shoes ? "has-shoes" : "",
+              body.layered ? "is-layered-torso" : "",
+              body.accs.length ? `has-acc-${Math.min(3, body.accs.length)}` : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             role="list"
-            aria-label="Today's outfit"
-            style={{ "--outfit-count": Math.max(1, pieces.length) }}
+            aria-label="Today's outfit flat lay"
           >
-            {pieces.map((piece) => {
-              const src = pieceImage(piece);
-              return (
-                <button
+            <div className="daily-gen__flatlay-board">
+              {body.hasTorso ? (
+                <div className="daily-gen__flatlay-torso" aria-label="Top">
+                  {body.outer ? (
+                    <FlatlayPiece piece={body.outer} slot="outer" onOpenItem={onOpenItem} />
+                  ) : null}
+                  {body.top ? <FlatlayPiece piece={body.top} slot="top" onOpenItem={onOpenItem} /> : null}
+                </div>
+              ) : null}
+
+              {body.bottom ? (
+                <FlatlayPiece piece={body.bottom} slot="bottom" onOpenItem={onOpenItem} />
+              ) : null}
+
+              {body.shoes ? (
+                <FlatlayPiece piece={body.shoes} slot="shoes" onOpenItem={onOpenItem} />
+              ) : null}
+
+              {body.accs.map((piece) => (
+                <FlatlayPiece
                   key={piece.id}
-                  type="button"
-                  className="daily-gen__outfit-card"
-                  role="listitem"
-                  onClick={() => onOpenItem?.(piece.id)}
-                  aria-label={`${kindLabel(piece)}: ${piece.name || "Piece"}`}
-                >
-                  <span className="daily-gen__outfit-media" aria-hidden="true">
-                    {src ? (
-                      <OptimizedImage
-                        className="daily-gen__outfit-img"
-                        src={src}
-                        alt=""
-                        sizes="(max-width: 640px) 42vw, 200px"
-                        breakpoints={[120, 180, 240, 320, 400]}
-                      />
-                    ) : (
-                      <span
-                        className="daily-gen__img-fallback"
-                        style={{ background: piece.color || "#ccc" }}
-                      />
-                    )}
-                  </span>
-                  <span className="daily-gen__outfit-meta">
-                    <span className="daily-gen__outfit-kind">{kindLabel(piece)}</span>
-                    <span className="daily-gen__outfit-name">{piece.name || "Piece"}</span>
-                  </span>
-                </button>
-              );
-            })}
+                  piece={piece}
+                  slot={piece.flatlaySlot || "acc"}
+                  onOpenItem={onOpenItem}
+                />
+              ))}
+            </div>
           </div>
 
           <div className="daily-gen__toolbar">
-            <div className="daily-gen__pager">
-              <button type="button" className="daily-gen__btn ghost" onClick={prevLook} disabled={looks.length < 2}>
-                ← Prev
-              </button>
-              <span className="daily-gen__pager-label">
-                Look {lookIndex + 1} / {looks.length}
-              </span>
-              <button type="button" className="daily-gen__btn ghost" onClick={nextLook} disabled={looks.length < 2}>
-                Next →
-              </button>
-            </div>
             <div className="daily-gen__commit">
-              <button type="button" className="daily-gen__btn ghost" onClick={() => likeThis("dislike")} disabled={busy}>
+              <button type="button" className="daily-gen__btn ghost" onClick={() => likeThis("dislike")} disabled={busy || loading}>
                 Not this
               </button>
               <button type="button" className="daily-gen__btn ghost" onClick={() => likeThis("like")} disabled={busy}>
@@ -660,8 +778,9 @@ export function DailyGenerator({ items = [], onOpenItem }) {
           </div>
 
           {statusNote ? <p className="daily-gen__status">{statusNote}</p> : null}
-          {warnings.length ? (
-            <p className="daily-gen__status daily-gen__status--warn">{warnings.filter((w) => !w.startsWith("Scoring with")).join(" ")}</p>
+          {/* Only blocking warnings (missing pieces) — never climate essays */}
+          {warnings.length && !look ? (
+            <p className="daily-gen__status daily-gen__status--warn">{warnings.join(" ")}</p>
           ) : null}
         </>
       )}

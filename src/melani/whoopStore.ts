@@ -140,44 +140,10 @@ export type MetricSeries = {
   /** ISO day of latest point */
   latestDay: string | null;
   trend: "up" | "down" | "flat" | "na";
-  /**
-   * Optional regression overlay (Deep sleep).
-   * fit = in-sample line; future = next 7 days forecast.
-   */
-  forecast?: {
-    model: string;
-    summary: string;
-    formula: string;
-    r2: number;
-    fit: { day: string; value: number }[];
-    future: { day: string; value: number }[];
-    drivers?: {
-      r2: number;
-      formula: string;
-      nextIfSameConditions: number;
-      factors: string[];
-    } | null;
-    logistic?: {
-      accuracy: number;
-      thresholdMin: number;
-      nextProb: number;
-      formula: string;
-    } | null;
-    /** Tabular Q-learning tip from your history */
-    rl?: {
-      algorithm: string;
-      actionLabel: string;
-      tip: string;
-      nTransitions: number;
-      stateLabel: string;
-    } | null;
-  };
 };
 
-// Analytics lives in whoopAnalytics.ts (registry-driven). Re-export for callers.
-import { buildWhoopAnalytics } from "./whoopAnalytics";
+// Analytics is in whoopAnalytics.ts — re-export type only (avoid circular init crash)
 export type { WhoopAnalytics } from "./whoopAnalytics";
-export { buildWhoopAnalytics };
 
 // ── Store I/O ──────────────────────────────────────────────────
 
@@ -257,6 +223,13 @@ export function saveWhoopStore(store: WhoopStore) {
   localStorage.setItem(WHOOP_KEY, json);
   whoopMem = store;
   whoopMemRaw = json;
+  // Graphs must recompute after every import/merge
+  try {
+    // lazy import avoids circular init with whoopAnalytics
+    void import("./whoopAnalytics").then((m) => m.clearWhoopAnalyticsCache?.());
+  } catch {
+    /* ignore */
+  }
   emit();
 }
 
@@ -454,16 +427,36 @@ function applyCycleToDay(day: WhoopDay, cycle: WhoopCycle) {
 
 // ── Import ─────────────────────────────────────────────────────
 
+/** Day already has sleep/recovery on the ledger — do not re-ingest (no duplicates). */
+function dayAlreadyHasBodyLog(store: WhoopStore, day: string): boolean {
+  const d = store.days[day];
+  if (!d) return false;
+  return !!(
+    d.sleep?.onset ||
+    d.sleepScore != null ||
+    d.recoveryPct != null ||
+    d.hrvMs != null ||
+    d.rhrBpm != null ||
+    (d.bedtime && d.wake)
+  );
+}
+
+function journalKey(day: string, question: string): string {
+  return `${day}::${question}`;
+}
+
 /**
- * Weekly Whoop export ingest (merge, never wipe).
- * Drop the four CSVs (or a folder export) each week — new nights append,
- * existing days update, workouts/journal de-dupe. Sleep clocks + graphs refresh.
+ * Weekly Whoop export ingest (append-only for days already logged).
+ * Drop the four CSVs each week — **new days only** for sleep/cycles,
+ * workouts de-dupe by id, journal skips day+question already present.
+ * Existing graph points are never wiped or double-counted.
  */
 export function importWhoopCsvTexts(
   files: Array<{ name: string; text: string }>
 ): {
   daysUpdated: number;
   daysNew: number;
+  daysSkipped: number;
   sleepSynced: number;
   workouts: number;
   journal: number;
@@ -474,8 +467,12 @@ export function importWhoopCsvTexts(
   let sleepSynced = 0;
   let workoutCount = 0;
   let journalCount = 0;
+  let daysSkipped = 0;
   const touched = new Set<string>();
   const workoutIds = new Set(store.workouts.map((w) => w.id));
+  const journalKeys = new Set(
+    store.journal.map((j) => journalKey(j.day, j.question))
+  );
 
   for (const file of files) {
     const rows = parseCsv(file.text);
@@ -487,8 +484,16 @@ export function importWhoopCsvTexts(
       for (const row of rows) {
         const sleep = parseSleepRow(row);
         if (!sleep) continue;
-        // Skip naps for sleep-clock sync; still store if we want later — skip pure nap rows for day rollup sleep
+        // Skip naps for sleep-clock sync; pure nap rows not day rollup sleep
         if (sleep.nap === true) continue;
+        // Only skip days that were already on the ledger before this import
+        if (
+          daysBefore.has(sleep.day) &&
+          dayAlreadyHasBodyLog(store, sleep.day)
+        ) {
+          daysSkipped += 1;
+          continue;
+        }
         const day = ensureDay(store, sleep.day);
         applySleepToDay(day, sleep);
         day.importedAt = new Date().toISOString();
@@ -506,10 +511,21 @@ export function importWhoopCsvTexts(
       for (const row of rows) {
         const cycle = parseCycleRow(row);
         if (!cycle) continue;
+        if (
+          daysBefore.has(cycle.day) &&
+          dayAlreadyHasBodyLog(store, cycle.day)
+        ) {
+          daysSkipped += 1;
+          continue;
+        }
         const day = ensureDay(store, cycle.day);
         applyCycleToDay(day, cycle);
         day.importedAt = new Date().toISOString();
-        if (cycle.sleep?.bedtimeHm && cycle.sleep?.wakeHm && cycle.sleep.nap !== true) {
+        if (
+          cycle.sleep?.bedtimeHm &&
+          cycle.sleep?.wakeHm &&
+          cycle.sleep.nap !== true
+        ) {
           saveSleepDay(cycle.day, cycle.sleep.bedtimeHm, cycle.sleep.wakeHm);
           notifyHabitAutoSync(cycle.day);
           sleepSynced += 1;
@@ -544,16 +560,13 @@ export function importWhoopCsvTexts(
       for (const row of rows) {
         const j = parseJournalRow(row);
         if (!j) continue;
-        // de-dupe same day+question (latest import wins)
-        store.journal = store.journal.filter(
-          (x) => !(x.day === j.day && x.question === j.question)
-        );
+        const jk = journalKey(j.day, j.question);
+        // Already logged this question that day — keep first, no overwrite
+        if (journalKeys.has(jk)) continue;
+        journalKeys.add(jk);
         store.journal.push(j);
         const day = ensureDay(store, j.day);
-        day.journal = [
-          ...(day.journal || []).filter((x) => x.question !== j.question),
-          j,
-        ];
+        day.journal = [...(day.journal || []), j];
         day.importedAt = new Date().toISOString();
         touched.add(j.day);
         journalCount += 1;
@@ -561,7 +574,9 @@ export function importWhoopCsvTexts(
     }
   }
 
-  store.workouts.sort((a, b) => (a.start || a.day).localeCompare(b.start || b.day));
+  store.workouts.sort((a, b) =>
+    (a.start || a.day).localeCompare(b.start || b.day)
+  );
   store.journal.sort((a, b) => b.day.localeCompare(a.day));
 
   const daysUpdated = touched.size;
@@ -569,22 +584,23 @@ export function importWhoopCsvTexts(
   for (const d of touched) {
     if (!daysBefore.has(d)) daysNew += 1;
   }
-  const daysRefreshed = daysUpdated - daysNew;
   const totalDays = Object.keys(store.days).length;
 
   const summary =
     daysUpdated === 0 && workoutCount === 0 && journalCount === 0
-      ? "No Whoop rows found. Export the weekly folder: sleeps, physiological_cycles, workouts, journal_entries."
+      ? daysSkipped > 0
+        ? `No new days — ${daysSkipped} already on your graphs (skipped).`
+        : "No Whoop rows found. Drop sleeps, physiological_cycles, workouts, journal_entries."
       : [
           daysNew > 0 ? `${daysNew} new day${daysNew === 1 ? "" : "s"}` : null,
-          daysRefreshed > 0
-            ? `${daysRefreshed} updated`
+          sleepSynced > 0
+            ? `${sleepSynced} sleep night${sleepSynced === 1 ? "" : "s"}`
             : null,
-          sleepSynced > 0 ? `${sleepSynced} sleep night${sleepSynced === 1 ? "" : "s"}` : null,
           workoutCount > 0
             ? `${workoutCount} new workout${workoutCount === 1 ? "" : "s"}`
             : null,
-          journalCount > 0 ? `${journalCount} journal` : null,
+          journalCount > 0 ? `${journalCount} new journal` : null,
+          daysSkipped > 0 ? `${daysSkipped} already logged skipped` : null,
           `total ${totalDays} days`,
         ]
           .filter(Boolean)
@@ -602,6 +618,7 @@ export function importWhoopCsvTexts(
   return {
     daysUpdated,
     daysNew,
+    daysSkipped,
     sleepSynced,
     workouts: workoutCount,
     journal: journalCount,
@@ -887,11 +904,11 @@ export async function importWhoopFromPublicLatest(): Promise<{
 
 export function exportWhoopJson(): string {
   const store = loadWhoopStore();
+  // Analytics imported from whoopAnalytics by callers — avoid circular boot import here
   return JSON.stringify(
     {
       exportedAt: new Date().toISOString(),
       store,
-      analytics: buildWhoopAnalytics(store),
     },
     null,
     2

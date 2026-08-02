@@ -2,16 +2,30 @@
  * Fitness page — Wonder Fitness (Sleep · Meals · Gym).
  * Focus / Screen Time permanently removed (owner: space for no value).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   CIRC,
   DAILY_SUPPLEMENTS,
+  supplementPackLasts,
   MACRO_GOALS,
   MEAL_PRESETS,
   pct,
+  mealShopYearCost,
+  shopRunOut,
+  sumMeasureMacros,
   todayKey,
   type ConsumeLog,
 } from "./data";
+import {
+  breakfastTrialStatus,
+  loadBreakfastTrial,
+} from "./breakfastTrial";
 import {
   addEntry,
   applyPendingSnackSeed,
@@ -27,8 +41,6 @@ import { MEL_DATA_EVENT } from "./melTools";
 import { notifyHabitAutoSync, WATER_GOAL_ML } from "./habitAutoSync";
 
 import {
-  buildWhoopAnalytics,
-  importWhoopCsvTexts,
   importWhoopFromPublicLatest,
   listWhoopSleepNights,
   loadWhoopDay,
@@ -38,13 +50,24 @@ import {
   WHOOP_EVENT,
   type WhoopDay,
 } from "./whoopStore";
+import { buildWhoopAnalytics } from "./whoopAnalytics";
 import { groupMetricsBySection, metricDef } from "./whoopMetrics";
 import { MetricExplainModal, MetricGraphPanel } from "./whoopMetricUi";
 import { QuoteRefreshControl } from "./QuoteRefreshControl";
 import { useQuoteRotation } from "./useQuoteRotation";
+import { WhoopCsvDrop } from "./WhoopCsvDrop";
+import { FoodPlateGuide } from "./FoodPlateGuide";
+import {
+  MealCutoutTrack,
+  flagDayMeals,
+} from "./MealCutoutTrack";
+import { reportMealCutouts } from "./foodGuide";
+import { MealsShop } from "./MealsShop";
 import "./fitness-exact.css";
 import "./gym-exact.css";
 import "./whoop-lab.css";
+import "./meal-cutout-track.css";
+import "./meals-shop.css";
 
 const CONSUME_KEY = "dr-melani-meals-consume";
 
@@ -181,7 +204,7 @@ import {
   loadFogMap,
   msUntilFogLock,
   setFogDay,
-  saveBowelDetailMap,
+  replaceBowelDetailMap,
   saveSleepDay,
   seedBowelDetailUndoBaseline,
   seedBowelUndoBaseline,
@@ -1076,9 +1099,6 @@ function SleepPanel() {
   const [fogPieOpen, setFogPieOpen] = useState(false);
   /** Collapsed by default — every-night log lives at page bottom */
   const [nightsOpen, setNightsOpen] = useState(false);
-  /** Quiet CSV import (no separate Whoop page) */
-  const whoopFileRef = useRef<HTMLInputElement>(null);
-  const [whoopImportBusy, setWhoopImportBusy] = useState(false);
   const nights = useMemo(
     () => listWhoopSleepNights(45),
     [nightsTick, whoop]
@@ -1146,10 +1166,8 @@ function SleepPanel() {
     }
   }
 
-  // On mount: hydrate from local store first (instant). Network import only if empty.
+  // On mount: hydrate store, then merge /whoop/latest (new days only — no dupes).
   useEffect(() => {
-    const s = loadWhoopStore();
-    const empty = Object.keys(s.days).length === 0 && s.workouts.length === 0;
     const hydrate = () => {
       const r = resolveSleepForDay(dayIso);
       setBedtime(r.bedtime);
@@ -1158,40 +1176,12 @@ function SleepPanel() {
       setNightsTick((t) => t + 1);
       setWhoopStoreTick((t) => t + 1);
     };
-    // Instant path — never block first paint on /whoop/latest fetches
     hydrate();
-    if (!empty) return;
     void importWhoopFromPublicLatest()
       .catch(() => ({ ok: false as const }))
       .finally(hydrate);
-    // dayIso only for initial hydrate of "today"; intentional empty deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function onWhoopFiles(fileList: FileList | null) {
-    if (!fileList?.length || whoopImportBusy) return;
-    setWhoopImportBusy(true);
-    try {
-      const files: Array<{ name: string; text: string }> = [];
-      for (const file of Array.from(fileList)) {
-        if (/\.zip$/i.test(file.name)) continue;
-        if (!/\.csv$/i.test(file.name) && !/\.txt$/i.test(file.name)) continue;
-        files.push({ name: file.name, text: await file.text() });
-      }
-      if (files.length) {
-        importWhoopCsvTexts(files);
-        syncAllWhoopSleepToSleepStore();
-        setWhoop(loadWhoopDay(dayIso));
-        setNightsTick((t) => t + 1);
-        setWhoopStoreTick((t) => t + 1);
-      }
-    } catch {
-      /* ignore */
-    } finally {
-      setWhoopImportBusy(false);
-      if (whoopFileRef.current) whoopFileRef.current.value = "";
-    }
-  }
 
   // New calendar day → load that day's Whoop/manual times
   useEffect(() => {
@@ -1467,24 +1457,6 @@ function SleepPanel() {
             ) : null}
           </>
         ) : null}
-        <div className="fx-whoop-import">
-          <button
-            type="button"
-            className="fx-whoop-import-btn"
-            disabled={whoopImportBusy}
-            onClick={() => whoopFileRef.current?.click()}
-          >
-            {whoopImportBusy ? "Importing…" : "Import weekly data"}
-          </button>
-          <input
-            ref={whoopFileRef}
-            type="file"
-            accept=".csv,text/csv,.txt"
-            multiple
-            hidden
-            onChange={(e) => void onWhoopFiles(e.target.files)}
-          />
-        </div>
       </footer>
     </div>
   );
@@ -1678,6 +1650,8 @@ function buildBowelAudit(day: string, look: BowelLook | undefined): BowelAudit |
 }
 
 function MealsPanel() {
+  // Eat = daily log · Shop = TJ plan (separate — no stacking)
+  const [mealsView, setMealsView] = useState<"eat" | "shop">("eat");
   // Track calendar day so midnight clears "logged today" and starts a fresh log
   const [day, setDay] = useState(() => todayKey());
   const g = MACRO_GOALS;
@@ -1691,10 +1665,16 @@ function MealsPanel() {
     loadUsualDay(todayKey())
   );
   const [flash, setFlash] = useState("");
+  const [flashCutout, setFlashCutout] = useState(false);
+  /** Bumps meal-flag UI when nutrition ledger changes */
+  const [mealTick, setMealTick] = useState(0);
 
-  // Mel / NL / snack seed → same rings
+  // Mel / NL / snack seed → same rings + cut-out scan
   useEffect(() => {
-    const refresh = () => setUsualDay(loadUsualDay(day));
+    const refresh = () => {
+      setUsualDay(loadUsualDay(day));
+      setMealTick((t) => t + 1);
+    };
     window.addEventListener(NUTRITION_EVENT, refresh);
     window.addEventListener(MEL_DATA_EVENT, refresh);
     return () => {
@@ -1702,16 +1682,11 @@ function MealsPanel() {
       window.removeEventListener(MEL_DATA_EVENT, refresh);
     };
   }, [day]);
-  // Open "What's in it" when linked with ?details=breakfast (or leave closed)
-  const [openDetails, setOpenDetails] = useState<string | null>(() => {
-    try {
-      const d = new URLSearchParams(window.location.search).get("details");
-      if (d === "breakfast" || d === "1") return "breakfast_usual";
-    } catch {
-      /* ignore */
-    }
-    return null;
-  });
+  /** Per-meal ingredients toggle id (null = all closed) */
+  const [openIngredients, setOpenIngredients] = useState<string | null>(null);
+  /** Per-meal full macro breakdown (not on ingredients list) */
+  const [openMacros, setOpenMacros] = useState<string | null>(null);
+
 
   // Bowel movement (moved from Sleep — body log next to food)
   const [bowelDetail, setBowelDetail] = useState<Record<string, BowelDayLog>>(
@@ -1726,7 +1701,8 @@ function MealsPanel() {
     }
   );
 
-  // Pull ~/.wonder/local bowel mirror (merge-only) — survives profile swaps
+  // Pull ~/.wonder/local bowel mirror — survives profile swaps.
+  // Re-run corrections after disk hydrate so seed days stay pruned.
   useEffect(() => {
     void (async () => {
       try {
@@ -1738,8 +1714,9 @@ function MealsPanel() {
           value?: Record<string, BowelDayLog> | null;
         };
         if (!body.value || typeof body.value !== "object") return;
-        // save merges richer; then reload UI
-        saveBowelDetailMap(body.value);
+        // Disk is source of truth for multi-device; replace (don't merge-back seed days)
+        replaceBowelDetailMap(body.value);
+        applyPendingBowelCorrections();
         const next = loadBowelDetailMap();
         setBowelDetail(next);
         seedBowelDetailUndoBaseline(next);
@@ -1939,6 +1916,15 @@ function MealsPanel() {
           : /dinner/i.test(preset.id)
             ? "dinner"
             : "snack";
+    // Prefer summed per-item macros (locked breakfast) over preset fields
+    const fromItems = sumMeasureMacros(preset.measures);
+    const macros = fromItems || {
+      calories: preset.calories,
+      protein_g: preset.protein_g,
+      carbs_g: preset.carbs_g,
+      fat_g: preset.fat_g,
+      fiber_g: preset.fiber_g,
+    };
     addEntry(
       {
         slot,
@@ -1946,11 +1932,11 @@ function MealsPanel() {
         grams: 0,
         qtyLabel: "Usual meal",
         macros: {
-          calories: preset.calories,
-          protein_g: preset.protein_g,
-          carbs_g: preset.carbs_g,
-          fat_g: preset.fat_g,
-          fiber_g: preset.fiber_g,
+          calories: Math.round(macros.calories * 10) / 10,
+          protein_g: Math.round(macros.protein_g * 10) / 10,
+          carbs_g: Math.round(macros.carbs_g * 10) / 10,
+          fat_g: Math.round(macros.fat_g * 10) / 10,
+          fiber_g: Math.round(macros.fiber_g * 10) / 10,
         },
         presetId: preset.id,
         source: "preset",
@@ -1963,8 +1949,25 @@ function MealsPanel() {
     const mm = String(now.getMinutes()).padStart(2, "0");
     patch(`meal-${presetId}`, { done: true, time: `${hh}:${mm}` });
     notifyHabitAutoSync(day);
-    setFlash(`Logged ${preset.title.toLowerCase()} — macros updated`);
-    window.setTimeout(() => setFlash(""), 2200);
+    setMealTick((t) => t + 1);
+    // Immediate cut-out flag from name + full ingredient list
+    const report = reportMealCutouts(preset.title, [
+      preset.notes,
+      ...preset.ingredients,
+      ...(preset.sections || []).flatMap((s) => s.items),
+    ]);
+    if (report.flagged) {
+      const labels = report.hits.map((h) => h.label).join(" · ");
+      setFlashCutout(true);
+      setFlash(`Cut out: ${labels}`);
+    } else {
+      setFlashCutout(false);
+      setFlash(`Logged ${preset.title.toLowerCase()} — macros updated`);
+    }
+    window.setTimeout(() => {
+      setFlash("");
+      setFlashCutout(false);
+    }, 3200);
   }
 
   /** Undo a usual so you can log again */
@@ -1977,12 +1980,38 @@ function MealsPanel() {
     setUsualDay(loadUsualDay(day));
     patch(`meal-${presetId}`, { done: false });
     notifyHabitAutoSync(day);
+    setMealTick((t) => t + 1);
+    setFlashCutout(false);
     setFlash("Undone");
     window.setTimeout(() => setFlash(""), 1400);
   }
 
   return (
     <>
+      <nav className="fx-subnav fx-meals-sub" aria-label="Meals sections">
+        {(
+          [
+            ["eat", "Eat"],
+            ["shop", "Shop"],
+          ] as const
+        ).map(([id, label]) => (
+          <span key={id} className="fx-subnav-item">
+            <button
+              type="button"
+              className={`fx-subnav-link${mealsView === id ? " is-active" : ""}`}
+              onClick={() => setMealsView(id)}
+            >
+              {label}
+            </button>
+          </span>
+        ))}
+      </nav>
+
+      {mealsView === "shop" ? <MealsShop /> : null}
+
+      {mealsView === "eat" ? (
+      <>
+      {/* Macros first — breakfast below */}
       <section className="fx-section">
         <h2 className="fx-h2">TODAY&apos;S MACROS</h2>
         <div className="macro-ring-wrap">
@@ -2032,15 +2061,21 @@ function MealsPanel() {
               strokeDasharray={CIRC.fiber}
               strokeDashoffset={off(CIRC.fiber, p.fiber_g)}
             />
-            <circle className="ring-hole" cx="100" cy="100" r="32" />
+            <circle className="ring-hole" cx="100" cy="100" r="40" />
           </svg>
           <div className="macro-ring-center">
-            <span className="macro-ring-num">
-              {c.protein_g}
+            {/* Quick read: calories + protein only (rest is in the list) */}
+            <span className="macro-ring-num macro-ring-cal-num">
+              {Math.round(c.calories)}
+            </span>
+            <span className="macro-ring-sub">cal</span>
+            <span className="macro-ring-num macro-ring-pro-num">
+              {Number.isInteger(c.protein_g)
+                ? c.protein_g
+                : Number(c.protein_g).toFixed(1)}
               <small>g</small>
             </span>
             <span className="macro-ring-sub">protein</span>
-            <span className="macro-ring-goal">of {g.protein_g}g</span>
           </div>
         </div>
         <ul className="macro-stats">
@@ -2067,23 +2102,53 @@ function MealsPanel() {
         </ul>
       </section>
 
-      {/* Breakfast only — no lunch / dinner / snack clutter for now */}
       <section className="fx-section usuals-section">
-        {flash ? <p className="usual-flash">{flash}</p> : null}
+        <h2 className="fx-h2">MEALS · 7-DAY TRIAL</h2>
+        <p className="usual-day-meta">
+          {(() => {
+            const st = breakfastTrialStatus(day, loadBreakfastTrial());
+            if (st.phase === "before") {
+              return `Starts ${st.startIso} · breakfast + lunch + dinner`;
+            }
+            if (st.phase === "active") {
+              return `Day ${st.dayNum} of ${st.days} · ends ${st.endIso} · B + L + D`;
+            }
+            return st.label;
+          })()}
+        </p>
+        {flash ? (
+          <p className={`usual-flash${flashCutout ? " is-cutout" : ""}`}>
+            {flash}
+          </p>
+        ) : null}
 
         {MEAL_PRESETS.map((u) => {
           const logged = usualDay.loggedIds.includes(u.id);
-          const open = openDetails === u.id;
+          const ingredientsOpen = openIngredients === u.id;
+          const macrosOpen = openMacros === u.id;
+          const itemMacros = sumMeasureMacros(u.measures);
+          const shopYear = mealShopYearCost(u.measures);
+          const logLabel =
+            u.slot === "breakfast"
+              ? "Log breakfast"
+              : u.slot === "lunch"
+                ? "Log lunch"
+                : u.slot === "dinner"
+                  ? "Log dinner"
+                  : "Log meal";
+          const presetHits = reportMealCutouts(u.title, [
+            u.notes,
+            ...u.ingredients,
+            ...(u.sections || []).flatMap((s) => s.items),
+          ]);
           return (
             <div
               key={u.id}
-              className={`usual-card is-breakfast${logged ? " is-logged" : ""}`}
+              className={`usual-card is-core${logged ? " is-logged" : ""}${
+                logged && presetHits.flagged ? " is-cutout" : ""
+              }`}
             >
               <h3 className="usual-title">{u.title}</h3>
-              <p className="usual-macro-line">
-                {u.calories} cal · {u.protein_g}g protein · {u.carbs_g}g C ·{" "}
-                {u.fat_g}g F
-              </p>
 
               {logged ? (
                 <div className="usual-logged-row">
@@ -2102,49 +2167,222 @@ function MealsPanel() {
                   className="usual-log-btn"
                   onClick={() => logUsual(u.id)}
                 >
-                  Log breakfast today
+                  {logLabel}
                 </button>
               )}
 
-              <button
-                type="button"
-                className="usual-details-toggle"
-                aria-expanded={open}
-                onClick={() =>
-                  setOpenDetails((cur) => (cur === u.id ? null : u.id))
-                }
-              >
-                {open ? "▾" : "▸"} What&apos;s in it
-              </button>
-              {open && (
-                <div className="usual-details">
-                  {u.notes ? <p className="usual-notes">{u.notes}</p> : null}
-                  {u.sections && u.sections.length > 0 ? (
-                    u.sections.map((sec, si) => (
-                      <div key={sec.title || `sec-${si}`} className="usual-sec">
-                        {sec.title ? (
-                          <p className="usual-sec-title">{sec.title}</p>
-                        ) : null}
-                        <ul className="usual-ingredients">
-                          {sec.items.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))
-                  ) : (
-                    <ul className="usual-ingredients">
-                      {u.ingredients.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
+              {logged && presetHits.flagged ? (
+                <p className="usual-cutout-flag">
+                  Cut out:{" "}
+                  <strong>
+                    {presetHits.hits.map((h) => h.label).join(" · ")}
+                  </strong>
+                </p>
+              ) : null}
+
+              {u.measures && u.measures.length > 0 ? (
+                <>
+                  <button
+                    type="button"
+                    className="usual-details-toggle"
+                    aria-expanded={ingredientsOpen}
+                    onClick={() =>
+                      setOpenIngredients((cur) =>
+                        cur === u.id ? null : u.id
+                      )
+                    }
+                  >
+                    {ingredientsOpen ? "▾" : "▸"} Ingredients
+                  </button>
+                  {ingredientsOpen ? (
+                    <div className="usual-measure">
+                      <ol className="usual-measure-list">
+                        {u.measures.map((row, i) => {
+                          const tone = row.tone || "default";
+                          const shop = row.shop;
+                          const math = shop
+                            ? shopRunOut(shop, row.amount)
+                            : null;
+                          const title = shop?.product || row.item;
+                          return (
+                            <li
+                              key={row.item}
+                              className={`usual-measure-row is-${tone}`}
+                            >
+                              <span className="usual-measure-n" aria-hidden>
+                                {i + 1}
+                              </span>
+                              <span className="usual-measure-body">
+                                {shop && math ? (
+                                  <>
+                                    {/*
+                                      Exact order:
+                                      Product (Source · size)
+                                      {daily}/day; N units at once: $total
+                                      Lasts ~ N days
+                                    */}
+                                    <span className="usual-measure-name">
+                                      {shop.url ? (
+                                        <a
+                                          className="usual-product-link"
+                                          href={shop.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          title={title}
+                                        >
+                                          {title}
+                                        </a>
+                                      ) : (
+                                        title
+                                      )}
+                                      <span className="usual-measure-meta-paren">
+                                        {" "}
+                                        ({math.metaParen})
+                                      </span>
+                                    </span>
+                                    <span className="usual-shop-line">
+                                      <span className="usual-shop-daily">
+                                        {math.dailyPart}
+                                      </span>
+                                      {math.buyPart ? (
+                                        <span
+                                          className="usual-shop-price"
+                                          title={
+                                            math.pricePerPackTip || undefined
+                                          }
+                                        >
+                                          {math.buyPart}
+                                        </span>
+                                      ) : null}
+                                    </span>
+                                    <span
+                                      className="usual-shop-days"
+                                      title={
+                                        math.daysTip
+                                          ? math.daysTip
+                                          : undefined
+                                      }
+                                    >
+                                      {math.lastsLine}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="usual-measure-name">
+                                      {title}
+                                      {row.amount ? (
+                                        <span className="usual-measure-amt">
+                                          {" "}
+                                          {row.amount}
+                                        </span>
+                                      ) : null}
+                                    </span>
+                                    {row.how ? (
+                                      <span className="usual-measure-how">
+                                        {row.how}
+                                      </span>
+                                    ) : null}
+                                  </>
+                                )}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                      {shopYear ? (
+                        <div className="usual-spend">
+                          <p className="usual-spend-line">
+                            Monthly:{" "}
+                            <strong>${Math.round(shopYear.perMonth)}</strong>
+                          </p>
+                          <p className="usual-spend-line">
+                            Yearly:{" "}
+                            <strong>${Math.round(shopYear.perYear)}</strong>
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+
+              {u.measures?.some((m) => m.macros) ? (
+                <>
+                  <button
+                    type="button"
+                    className="usual-details-toggle"
+                    aria-expanded={macrosOpen}
+                    onClick={() =>
+                      setOpenMacros((cur) => (cur === u.id ? null : u.id))
+                    }
+                  >
+                    {macrosOpen ? "▾" : "▸"} Macro breakdown
+                  </button>
+                  {macrosOpen ? (
+                    <div className="usual-macro-break">
+                      <ol className="usual-macro-break-list">
+                        {u.measures!
+                          .filter((m) => m.macros)
+                          .map((m, i) => {
+                            const tone = m.tone || "default";
+                            return (
+                              <li
+                                key={m.item}
+                                className={`usual-macro-break-row is-${tone}`}
+                              >
+                                <span className="usual-macro-break-n">
+                                  {i + 1}
+                                </span>
+                                <span className="usual-macro-break-body">
+                                  <span className="usual-macro-break-name">
+                                    {m.shop?.product || m.item}
+                                    <span className="usual-macro-break-amt">
+                                      {" "}
+                                      –{" "}
+                                      {m.amount
+                                        .replace(/\/day/gi, "")
+                                        .replace(/\s+/g, " ")
+                                        .trim() || m.amount}
+                                    </span>
+                                  </span>
+                                  <span className="usual-macro-break-vals">
+                                    Calories: {m.macros!.calories}
+                                    {" · "}Protein: {m.macros!.protein_g}g
+                                    {" · "}Carbs: {m.macros!.carbs_g}g
+                                    {" · "}Fat: {m.macros!.fat_g}g
+                                    {" · "}Fiber: {m.macros!.fiber_g}g
+                                  </span>
+                                </span>
+                              </li>
+                            );
+                          })}
+                      </ol>
+                      {itemMacros ? (
+                        <p className="usual-macro-break-total">
+                          Total · Calories:{" "}
+                          <strong>{itemMacros.calories.toFixed(1)}</strong>
+                          {" · "}Protein:{" "}
+                          <strong>{itemMacros.protein_g.toFixed(1)}g</strong>
+                          {" · "}Carbs:{" "}
+                          <strong>{itemMacros.carbs_g.toFixed(1)}g</strong>
+                          {" · "}Fat:{" "}
+                          <strong>{itemMacros.fat_g.toFixed(1)}g</strong>
+                          {" · "}Fiber:{" "}
+                          <strong>{itemMacros.fiber_g.toFixed(1)}g</strong>
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
             </div>
           );
+
         })}
       </section>
+
+      {/* Every logged meal scanned against the trash can list */}
+      <MealCutoutTrack day={day} tick={mealTick} />
 
       <WaterTracker day={day} />
       <SupplementsList day={day} />
@@ -2355,6 +2593,26 @@ function MealsPanel() {
           ) : null}
         </footer>
       </section>
+
+      {/*
+        Plate + cut-out bin — reference / reminder only.
+        Bottom of Meals so daily macros · usuals · water · supps · bowel stay first.
+        PRESERVE: do not delete; do not move above daily logging without explicit order.
+      */}
+      <FoodPlateGuide
+        today={{
+          calories: c.calories,
+          protein_g: c.protein_g,
+          carbs_g: c.carbs_g,
+          fat_g: c.fat_g,
+          fiber_g: c.fiber_g,
+        }}
+        hitLabels={flagDayMeals(day).flatMap((m) =>
+          m.report.hits.map((h) => h.label)
+        )}
+      />
+      </>
+      ) : null}
     </>
   );
 }
@@ -2545,9 +2803,11 @@ function saveSupDone(day: string, map: Record<string, boolean>) {
   }
 }
 
-/** Supplements: name (pink) · brand (gold) · when to take (gold) — tap to cross out */
+/** Supplements: single-tap = done · double-tap = pack/buy math (creatine) */
 function SupplementsList({ day }: { day: string }) {
   const [done, setDone] = useState(() => loadSupDone(day));
+  const [openBuy, setOpenBuy] = useState<string | null>(null);
+  const clickTimer = useRef<number | null>(null);
 
   useEffect(() => {
     const refresh = (event: Event) => {
@@ -2558,12 +2818,36 @@ function SupplementsList({ day }: { day: string }) {
     return () => window.removeEventListener(MEL_DATA_EVENT, refresh);
   }, [day]);
 
-  function toggle(id: string) {
+  useEffect(() => {
+    return () => {
+      if (clickTimer.current) window.clearTimeout(clickTimer.current);
+    };
+  }, []);
+
+  function toggleDone(id: string) {
     setDone((prev) => {
       const next = { ...prev, [id]: !prev[id] };
       saveSupDone(day, next);
       return next;
     });
+  }
+
+  function onItemClick(id: string) {
+    // Delay single-tap so double-tap can cancel (won't flip done)
+    if (clickTimer.current) window.clearTimeout(clickTimer.current);
+    clickTimer.current = window.setTimeout(() => {
+      toggleDone(id);
+      clickTimer.current = null;
+    }, 280);
+  }
+
+  function onItemDoubleClick(id: string, hasShop: boolean) {
+    if (clickTimer.current) {
+      window.clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+    }
+    if (!hasShop) return;
+    setOpenBuy((cur) => (cur === id ? null : id));
   }
 
   return (
@@ -2572,24 +2856,62 @@ function SupplementsList({ day }: { day: string }) {
       <ol className="fx-supp-list">
         {DAILY_SUPPLEMENTS.map((s, i) => {
           const isDone = !!done[s.id];
+          const shop = s.shop;
+          const buyOpen = openBuy === s.id && !!shop;
+          const pack = shop ? supplementPackLasts(shop) : null;
           return (
-            <li key={s.id}>
+            <li key={s.id} className={buyOpen ? "is-buy-open" : undefined}>
               <button
                 type="button"
                 className={`fx-supp-item${isDone ? " is-done" : ""}`}
-                onClick={() => toggle(s.id)}
+                onClick={() => onItemClick(s.id)}
+                onDoubleClick={() => onItemDoubleClick(s.id, !!shop)}
               >
                 <span className="fx-supp-num">{i + 1}.</span>
                 <span className="fx-supp-body">
-                  <span className="fx-supp-name">{s.name}</span>
-                  {s.dose ? (
-                    <span className="fx-supp-when"> · {s.dose}</span>
-                  ) : null}
-                  {s.when ? (
-                    <span className="fx-supp-when"> · {s.when}</span>
-                  ) : null}
+                  <span className="fx-supp-name-row">
+                    <span className="fx-supp-name">{s.name}</span>
+                    {s.dose ? (
+                      <span className="fx-supp-when"> · {s.dose}</span>
+                    ) : null}
+                    {s.when ? (
+                      <span className="fx-supp-when"> · {s.when}</span>
+                    ) : null}
+                  </span>
                 </span>
               </button>
+              {buyOpen && shop && pack ? (
+                <div className="fx-supp-buy">
+                  <p className="fx-supp-buy-line">
+                    {shop.url ? (
+                      <a
+                        className="fx-supp-link"
+                        href={shop.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={shop.product}
+                      >
+                        {shop.product}
+                      </a>
+                    ) : (
+                      <span className="fx-supp-product-plain">
+                        {shop.product}
+                      </span>
+                    )}
+                  </p>
+                  <p className="fx-supp-buy-line">
+                    {shop.dailyG} g/day · {shop.size} · online
+                  </p>
+                  <p className="fx-supp-buy-line">
+                    Buy {pack.buyLine} · {pack.daysLabel}
+                  </p>
+                  <p className="fx-supp-buy-line fx-supp-buy-math">
+                    {shop.buyQty && shop.buyQty > 1
+                      ? `${shop.buyQty} × ${Math.round(shop.packG)} g · ${shop.dailyG} g/day · once a year · $80`
+                      : `${Math.round(shop.packG)} g ÷ ${shop.dailyG} g = ${Math.round(pack.days)} days`}
+                  </p>
+                </div>
+              ) : null}
             </li>
           );
         })}
@@ -2617,19 +2939,21 @@ const TAB_TO_PAGE: Record<FitnessTab, string> = {
 export function FitnessExact({ pageId, onGo }: Props) {
   const tab = useMemo(() => tabFromPageId(pageId), [pageId]);
 
-  // Legacy routes → Sleep (Focus / Screen Time / Whoop / Body removed from nav)
+  // Legacy routes → Sleep once (do NOT depend on onGo identity — that re-fired on every
+  // sidebar toggle and could blank the shell)
   useEffect(() => {
     if (
-      pageId === "pg-whoop" ||
-      pageId === "pg-body" ||
-      pageId === "pg-focus" ||
-      pageId === "pg-screentime" ||
-      pageId === "pg-screen-time" ||
-      pageId === "pg-fitness"
+      pageId === "pg-whoop"
+      || pageId === "pg-body"
+      || pageId === "pg-focus"
+      || pageId === "pg-screentime"
+      || pageId === "pg-screen-time"
+      || pageId === "pg-fitness"
     ) {
       onGo("pg-sleep");
     }
-  }, [pageId, onGo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when pageId changes
+  }, [pageId]);
 
   function selectTab(t: FitnessTab) {
     onGo(TAB_TO_PAGE[t]);
@@ -2646,13 +2970,21 @@ export function FitnessExact({ pageId, onGo }: Props) {
             <p className="fx-quote-text">“{quote.text}”</p>
             <p className="fx-quote-author">{quote.source}</p>
           </div>
-          <QuoteRefreshControl
-            remaining={remaining}
-            limit={limit}
-            msUntilReset={msUntilReset}
-            onChange={nextQuote}
-            className="fx-quote-refresh"
-          />
+          <div className="fx-quote-tools">
+            <QuoteRefreshControl
+              remaining={remaining}
+              limit={limit}
+              msUntilReset={msUntilReset}
+              onChange={nextQuote}
+              className="fx-quote-refresh"
+            />
+            {/* + opens Dropbox-style Whoop CSV drop — merge new days only */}
+            <WhoopCsvDrop
+              onImported={() => {
+                window.dispatchEvent(new CustomEvent(WHOOP_EVENT));
+              }}
+            />
+          </div>
         </div>
 
         {/* Sleep · Meals · Gym only — Focus permanently removed */}

@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Workspace } from "./types";
-import { forceImportWonder, loadWorkspace, saveWorkspace } from "./storage";
+import {
+  ensureSystemPage,
+  forceImportWonder,
+  loadWorkspace,
+  saveWorkspace,
+} from "./storage";
 import {
   activePages,
   addAgentPage,
@@ -48,21 +53,38 @@ import "./notion.css";
  * never full-bleed that hides the sidebar, breadcrumbs, or New page.
  * (Restored from commit 1009966 layout before fitness full-bleed.)
  */
-export default function App() {
-  const [ws, setWs] = useState<Workspace>(() => {
+function bootWorkspace(): Workspace {
+  try {
     if (typeof window === "undefined") return forceImportWonder();
-    // Allow deep-link: ?page=pg-meals (opens that page on load)
-    const base = loadWorkspace();
-    try {
-      const page = new URLSearchParams(window.location.search).get("page");
-      if (page && base.pages?.some((p) => p.id === page)) {
-        return { ...base, activePageId: page };
+    let base = loadWorkspace();
+    if (!base?.pages?.length) base = forceImportWonder();
+    const params = new URLSearchParams(window.location.search);
+    const page = params.get("page");
+    // ?menu=1 forces the main sidebar open so she can leave Wardrobe
+    if (params.get("menu") === "1") {
+      base = { ...base, sidebarOpen: true };
+    }
+    if (page) {
+      base = ensureSystemPage(base, page);
+      if (base.pages?.some((p) => p.id === page && !p.trashedAt)) {
+        return { ...base, activePageId: page, sidebarOpen: true };
       }
-    } catch {
-      /* ignore */
+    }
+    // Always keep a valid active page so the shell never paints blank
+    if (!base.pages?.some((p) => p.id === base.activePageId && !p.trashedAt)) {
+      const first = base.pages?.find((p) => !p.trashedAt);
+      if (first) base = { ...base, activePageId: first.id };
+      else base = forceImportWonder();
     }
     return base;
-  });
+  } catch (err) {
+    console.error("[Wonder boot]", err);
+    return forceImportWonder();
+  }
+}
+
+export default function App() {
+  const [ws, setWs] = useState<Workspace>(() => bootWorkspace());
   const [theme, setTheme] = useState<WonderTheme>(() => {
     const t = loadTheme();
     applyTheme(t);
@@ -234,34 +256,90 @@ export default function App() {
     [ws, activePage]
   );
 
-  function openPage(id: string) {
-    setWs((prev) => setActivePage(prev, id));
-    if (id === "pg-finance" || id === "pg-finances") {
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.delete("tab");
-        window.history.replaceState(window.history.state, "", url);
-      } catch {
-        /* Finance still opens even if URL history is unavailable. */
-      }
-      window.dispatchEvent(new Event("wonder-finance-open-ledger"));
-    }
-    // Always dismiss mobile drawer + scrim when navigating
+  /** Kill stuck chrome before every page change (drawer, overlays, body locks). */
+  const resetShellChrome = useCallback(() => {
     setCompactSidebarOpen(false);
     setMoreOpen(false);
-  }
+    setSearchOpen(false);
+    try {
+      document.body.classList.remove("viewer-open");
+      document.documentElement.classList.remove("is-sidebar-resizing");
+      document.body.style.removeProperty("overflow");
+      document.documentElement.style.removeProperty("overflow");
+    } catch {
+      /* ignore */
+    }
+    try {
+      mainScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const openPage = useCallback(
+    (id: string) => {
+      if (!id) {
+        resetShellChrome();
+        return;
+      }
+      // Same page: only clear drawer — do NOT remount desks
+      if (id === workspaceRef.current.activePageId) {
+        resetShellChrome();
+        return;
+      }
+      resetShellChrome();
+      setWs((prev) => setActivePage(ensureSystemPage(prev, id), id));
+      if (id === "pg-finance" || id === "pg-finances") {
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("tab");
+          window.history.replaceState(window.history.state, "", url);
+        } catch {
+          /* Finance still opens even if URL history is unavailable. */
+        }
+        window.dispatchEvent(new Event("wonder-finance-open-ledger"));
+      }
+    },
+    [resetShellChrome],
+  );
+
+  // Never paint a pure blank page — auto-heal missing active page
+  useEffect(() => {
+    const livePages = activePages(ws);
+    if (livePages.length && !livePages.some((p) => p.id === ws.activePageId)) {
+      setWs((prev) => ({ ...prev, activePageId: livePages[0].id }));
+      return;
+    }
+    if (!livePages.length) {
+      setWs(forceImportWonder());
+    }
+  }, [ws]);
 
   useEffect(() => {
     const navigate = (event: Event) => {
       const pageId = (event as CustomEvent<{ pageId: string }>).detail?.pageId;
       if (!pageId) return;
+      // Same cleanup as openPage so Mel / iframe escape never leave double chrome
+      setCompactSidebarOpen(false);
+      setMoreOpen(false);
+      setSearchOpen(false);
+      try {
+        document.body.classList.remove("viewer-open");
+        document.documentElement.classList.remove("is-sidebar-resizing");
+        document.body.style.removeProperty("overflow");
+        document.documentElement.style.removeProperty("overflow");
+      } catch {
+        /* ignore */
+      }
       setWs((prev) => {
         // Mel transport: if system page missing, seed it so setActivePage works
-        let next = prev;
+        let next = ensureSystemPage(prev, pageId);
         if (!next.pages.some((p) => p.id === pageId && !p.trashedAt)) {
           const titles: Record<string, string> = {
             "pg-am-skin": "AM skincare",
             "pg-pm-skin": "PM skincare",
+            "pg-oral-care": "Oral care",
             "pg-shower-daily": "Daily shower",
             "pg-shower-everything": "Everything shower",
             "pg-hair": "Hair care",
@@ -288,7 +366,8 @@ export default function App() {
               pageId.startsWith("pg-shower") ||
               pageId === "pg-hair" ||
               pageId === "pg-am-skin" ||
-              pageId === "pg-pm-skin"
+              pageId === "pg-pm-skin" ||
+              pageId === "pg-oral-care"
                 ? "pg-hygiene"
                 : pageId === "pg-sleep" ||
                     pageId === "pg-meals" ||
@@ -391,7 +470,24 @@ export default function App() {
     return () => window.removeEventListener(MEL_WORKSPACE_ACTION_EVENT, runWorkspaceAction);
   }, []);
 
-  if (!activePage) return null;
+  // Last-resort UI if heal hasn't painted yet — never pure white void
+  if (!activePage) {
+    return (
+      <div className="app" style={{ padding: 40, fontFamily: "Georgia, serif" }}>
+        <p style={{ margin: "0 0 12px" }}>Wonder is recovering pages…</p>
+        <button
+          type="button"
+          className="topbar-btn"
+          onClick={() => {
+            setWs(forceImportWonder());
+            window.location.href = "/?page=pg-hygiene&menu=1";
+          }}
+        >
+          Recover now
+        </button>
+      </div>
+    );
+  }
 
   // Melani UI is content inside this Notion page (not a separate app mode)
   const melaniMode = isMelaniRichPage(activePage.id);
@@ -470,16 +566,24 @@ export default function App() {
         data-page-id={activePage.id}
       >
         <header className="topbar">
+          {/* Main menu (☰) — always first control; opens sidebar → Health → AM/PM skincare, Wardrobe, etc. */}
           <button
             type="button"
-            className="topbar-btn"
+            className="topbar-btn topbar-menu-btn"
             onClick={() => {
-              if (compactLayout) setCompactSidebarOpen((open) => !open);
-              else setWs((p) => ({ ...p, sidebarOpen: !p.sidebarOpen }));
+              // Always open the main page menu (never leave her trapped in Wardrobe)
+              if (compactLayout) setCompactSidebarOpen(true);
+              else setWs((p) => ({ ...p, sidebarOpen: true }));
             }}
-            title="Toggle sidebar"
+            title="Main menu — leave wardrobe, open skincare, other pages"
+            aria-label="Open main menu"
+            aria-keyshortcuts="Meta+\\"
           >
-            ☰
+            <span className="topbar-menu-icon" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
           </button>
 
           <div className="breadcrumb">
@@ -616,8 +720,8 @@ export default function App() {
             <UniversalQuote />
           ) : null}
           {melaniMode ? (
-            /* Sleep / Meals / Gym live in the SIDEBAR only */
-            <div className="notion-melani-page">
+            /* key forces a clean desk remount — no leftover wardrobe iframe / gym state */
+            <div className="notion-melani-page" key={activePage.id}>
               <div className="notion-melani-body">
                 <MelaniRichPage
                   pageId={activePage.id}

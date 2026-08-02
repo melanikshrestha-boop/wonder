@@ -6,7 +6,9 @@
  * visual focus; permanent cards, pills, gradients, and ornamental shadows do not.
  */
 
-:root {
+/* Scoped tokens — standalone SPA or native Wonder embed only */
+html.wardrobe-standalone,
+.wardrobe-embed {
   --paper: #f7f7fa;
   --ink: #1a1c22;
   --muted: #8f929a;
@@ -15,11 +17,14 @@
   --workspace-space: 16px;
   --workspace-space-double: 32px;
   background: var(--paper);
+  color: var(--ink);
 }
 
-html,
-body,
-.app-shell {
+html.wardrobe-standalone,
+html.wardrobe-standalone body,
+html.wardrobe-standalone .app-shell,
+.wardrobe-embed,
+.wardrobe-embed .app-shell {
   background: var(--paper);
   color: var(--ink);
 }
@@ -300,82 +305,77 @@ body,
   color: #109a45 !important;
 }
 
-.daily-gen__modes {
-  display: flex;
-  align-items: baseline;
-  gap: 24px;
-  margin: 18px 0 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
+/* Old multi-mode grid + pager gone — Comfy / Going out live in daily-generator.css */
+.daily-gen__modes,
+.daily-gen__pager {
+  display: none !important;
 }
 
-.daily-gen__modes button {
+.daily-gen__purposes {
   display: flex;
   align-items: baseline;
-  gap: 6px;
-  min-height: 0;
+  gap: 22px;
+  margin: 8px 0 12px;
+}
+
+.daily-gen__purpose {
+  appearance: none;
+  margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 0;
   background: transparent;
-  color: #83868e;
-}
-
-.daily-gen__modes button:hover,
-.daily-gen__modes button:focus-visible {
-  outline: none;
-  border: 0;
-  color: var(--ink);
-}
-
-.daily-gen__modes button.is-active {
-  border: 0;
-  background: transparent;
-  color: #ef2626;
-}
-
-.daily-gen__modes strong {
-  color: inherit;
+  color: var(--muted, #8a837a);
+  font: inherit;
   font-size: 14px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.daily-gen__purpose.is-active {
+  color: var(--ink, #191612);
   font-weight: 700;
 }
 
-.daily-gen__modes span {
-  color: inherit;
-  font-size: 11px;
-  opacity: .72;
+/* Daily flat-lay — no boxes, names are hover popups only (see daily-generator.css) */
+.daily-gen__flatlay {
+  margin: 4px 0 14px;
 }
 
-/* Daily outfit strip — flat paper, no boxes, no overlap */
-.daily-gen__outfit {
-  margin: 6px 0 22px;
-  gap: clamp(14px, 2.8vw, 32px);
+.daily-gen__flatlay-board {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  max-width: min(360px, 100%);
+  min-height: 0 !important;
+  gap: 0 !important;
+  overflow: visible !important;
 }
 
-.daily-gen__outfit-card {
-  border: 0;
+.daily-gen__flatlay-piece {
+  border: 0 !important;
+  outline: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  padding: 0;
+  height: auto !important;
+  min-height: 0 !important;
 }
 
-.daily-gen__outfit-media {
-  background: transparent;
+.daily-gen__flatlay-img {
+  filter: drop-shadow(0 6px 14px rgba(25, 22, 18, 0.08));
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
-.daily-gen__outfit-img {
-  filter:
-    drop-shadow(0 1px 1px rgba(25, 22, 18, 0.06))
-    drop-shadow(0 10px 18px rgba(25, 22, 18, 0.1));
+/* Popup text is cream on dark pill — never ink on paper “in the stack” */
+.daily-gen__flatlay-name {
+  color: #f7f1e8 !important;
 }
 
-.daily-gen__outfit-kind {
-  color: var(--muted, #8d877e);
-}
-
-.daily-gen__outfit-name {
-  color: var(--ink, #211e1a);
-  font-weight: 600;
+.daily-gen__flatlay-meta {
+  border: 0 !important;
 }
 
 .daily-gen__stage,
@@ -463,15 +463,20 @@ body,
 .gallery-item,
 .wishlist-card-shell,
 .gallery-item-lettermark {
-  border: 0;
+  border: 0 !important;
   border-radius: 0;
+  outline: none !important;
   background: transparent !important;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 .gallery-item-media .gallery-img,
 .gallery-item-media img {
-  filter: none;
+  /* No drop-shadow / outline — fake boxes on cutouts (Selene) */
+  filter: none !important;
+  outline: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
   /* No hover zoom — size locked; dual-face is opacity swap only */
   transform: none !important;
 }
@@ -491,9 +496,22 @@ button.gallery-item .gallery-item-retail {
   font-size: 12px;
 }
 
+.wishlist-card-shell,
 .wishlist-card-shell:hover {
-  background: transparent;
-  transform: none;
+  background: transparent !important;
+  transform: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.wishlist-card-shell .gallery-item,
+.wishlist-card-shell .gallery-item-media,
+.wishlist-card-shell img {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 
 .wishlist-card-actions {
@@ -731,12 +749,6 @@ button.gallery-item .gallery-item-retail {
 
   .daily-gen__title {
     font-size: 21px;
-  }
-
-  .daily-gen__modes {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px 20px;
   }
 
   .daily-gen__outfit {
