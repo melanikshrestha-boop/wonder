@@ -1,8 +1,8 @@
 /**
- * Daily meal cut-out tracker — every logged item is scanned against PLATE_TRASH.
- * Flag immediately if anything in the can is present.
+ * Cut-out scan helpers for trash can highlights.
+ * MEAL FLAGS UI was removed by Melani — do not reintroduce that section.
+ * Keep flagDayMeals / cutoutLabelsHitToday for FoodPlateGuide hits + log flash only.
  */
-import { useMemo } from "react";
 import { MEAL_PRESETS } from "./data";
 import {
   reportMealCutouts,
@@ -13,7 +13,6 @@ import {
   loadDay,
   type NutriEntry,
 } from "./nutrition/nutritionStore";
-import "./meal-cutout-track.css";
 
 export type FlaggedMeal = {
   id: string;
@@ -62,71 +61,4 @@ export function cutoutLabelsHitToday(day: string): CutoutHit["label"][] {
   return [...set];
 }
 
-type Props = {
-  day: string;
-  /** Re-render when meals change (pass entries length or tick). */
-  tick?: number;
-};
-
-export function MealCutoutTrack({ day, tick = 0 }: Props) {
-  const meals = useMemo(() => flagDayMeals(day), [day, tick]);
-  const flagged = meals.filter((m) => m.report.flagged);
-  const clean = meals.filter((m) => !m.report.flagged);
-
-  if (!meals.length) {
-    return (
-      <section className="fx-section fx-cutout-track" aria-label="Meal flags">
-        <h2 className="fx-h2">MEAL FLAGS</h2>
-        <p className="fx-cutout-empty">
-          Log a meal — anything on the cut-out list is flagged here.
-        </p>
-      </section>
-    );
-  }
-
-  return (
-    <section className="fx-section fx-cutout-track" aria-label="Meal flags">
-      <h2 className="fx-h2">MEAL FLAGS</h2>
-      <p className="fx-cutout-summary">
-        {flagged.length === 0 ? (
-          <span className="fx-cutout-ok">
-            {meals.length} meal{meals.length === 1 ? "" : "s"} · no cut-outs
-          </span>
-        ) : (
-          <span className="fx-cutout-bad">
-            {flagged.length} flagged · {clean.length} clean · {meals.length}{" "}
-            total
-          </span>
-        )}
-      </p>
-
-      <ul className="fx-cutout-meals">
-        {meals.map((m) => (
-          <li
-            key={m.id}
-            className={`fx-cutout-meal${m.report.flagged ? " is-flagged" : ""}`}
-          >
-            <div className="fx-cutout-meal-top">
-              <span className="fx-cutout-meal-name">{m.title}</span>
-              {m.report.flagged ? (
-                <span className="fx-cutout-pill">cut out</span>
-              ) : (
-                <span className="fx-cutout-pill is-ok">ok</span>
-              )}
-            </div>
-            {m.report.flagged ? (
-              <ul className="fx-cutout-hits">
-                {m.report.hits.map((h) => (
-                  <li key={h.label}>
-                    <strong>{h.label}</strong>
-                    <span>matched “{h.matched}”</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
+/** @deprecated MEAL FLAGS UI removed — do not re-export a section component. */

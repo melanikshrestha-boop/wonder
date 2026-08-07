@@ -2,7 +2,16 @@
  * Rich Melani pages inside workspace shell.
  * Fitness = FitnessExact. Data = profile + cycle + smart labs.
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { Page } from "../types";
 import {
   footerForLab,
@@ -30,6 +39,7 @@ import {
   isHygienePage,
   isShoppingAgentPage,
 } from "./pageRoutes";
+import { DeskErrorBoundary } from "./DeskErrorBoundary";
 // Nutrition tab is retired from the product surface (design rejected).
 // Operator + paper trading + World Monitor + Content + Failures permanently deleted (not routed).
 import "./melani.css";
@@ -85,6 +95,23 @@ const GmailConnector = lazy(async () => {
 /** Quiet fallback — empty desk while lazy chunk loads (no “Loading…” flash) */
 function DeskFallback({ label: _label }: { label: string }) {
   return <div className="melani-page-loading melani-page-loading--quiet" aria-busy="true" />;
+}
+
+/** Catch desk crashes so one bad page cannot blank the whole Wonder shell. */
+function Desk({
+  name,
+  label,
+  children,
+}: {
+  name: string;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <DeskErrorBoundary desk={name}>
+      <Suspense fallback={<DeskFallback label={label} />}>{children}</Suspense>
+    </DeskErrorBoundary>
+  );
 }
 
 /** One page: Profile → Period → Labs (status cards + tables + smart import) */
@@ -412,73 +439,73 @@ export function MelaniRichPage({
 }) {
   if (isFitnessPage(pageId)) {
     return (
-      <Suspense fallback={<DeskFallback label="Loading Fitness" />}>
+      <Desk name="Fitness" label="Loading Fitness">
         <FitnessExact pageId={pageId} onGo={onGo} />
-      </Suspense>
+      </Desk>
     );
   }
 
   if (isHygienePage(pageId)) {
     return (
-      <Suspense fallback={<DeskFallback label="Loading Hygiene" />}>
+      <Desk name="Hygiene" label="Loading Hygiene">
         <HygieneExact pageId={pageId} onGo={onGo} />
-      </Suspense>
+      </Desk>
     );
   }
 
   if (isGmailAgentPage(pageId)) {
     return (
-      <Suspense fallback={<DeskFallback label="Loading Gmail" />}>
+      <Desk name="Gmail" label="Loading Gmail">
         <GmailConnector onGo={onGo} />
-      </Suspense>
+      </Desk>
     );
   }
 
   if (isWardrobePage(pageId)) {
     return (
-      <Suspense fallback={<DeskFallback label="Loading Wardrobe" />}>
+      <Desk name="Wardrobe" label="Loading Wardrobe">
         <WardrobeEmbed />
-      </Suspense>
+      </Desk>
     );
   }
 
   if (isShoppingAgentPage(pageId)) {
     return (
-      <Suspense fallback={<DeskFallback label="Loading Shopping" />}>
+      <Desk name="Shopping" label="Loading Shopping">
         <ShoppingAgent />
-      </Suspense>
+      </Desk>
     );
   }
 
   if (isCareConciergePage(pageId)) {
     return (
-      <Suspense fallback={<DeskFallback label="Loading Care" />}>
+      <Desk name="Care" label="Loading Care">
         <CareConcierge />
-      </Suspense>
+      </Desk>
     );
   }
 
   if (isFinancesPage(pageId)) {
     return (
-      <Suspense fallback={<DeskFallback label="Loading Finances" />}>
+      <Desk name="Finances" label="Loading Finances">
         <Finances onGo={onGo} />
-      </Suspense>
+      </Desk>
     );
   }
 
   if (isHabitsPage(pageId)) {
     return (
-      <Suspense fallback={<DeskFallback label="Loading Habits" />}>
+      <Desk name="Habits" label="Loading Habits">
         <HabitTracker />
-      </Suspense>
+      </Desk>
     );
   }
 
   if (isBooksPage(pageId)) {
     return (
-      <Suspense fallback={<DeskFallback label="Loading Bookshelf" />}>
+      <Desk name="Bookshelf" label="Loading Bookshelf">
         <BooksLibrary onGo={onGo} workspacePages={pages} />
-      </Suspense>
+      </Desk>
     );
   }
 

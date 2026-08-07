@@ -23,14 +23,47 @@
   --fx-chart-line: rgba(255, 255, 255, 0.92);
   /* Meals rings / tracks (dark) */
   --fx-ring-track: rgba(255, 255, 255, 0.08);
-  --fx-ring-cal: rgba(255, 255, 255, 0.28);
+  --fx-ring-cal: rgba(255, 255, 255, 0.35);
   --fx-ring-hole: #000000;
-  --fx-dot-cal: rgba(255, 255, 255, 0.45);
+  --fx-dot-cal: rgba(255, 255, 255, 0.55);
   --fx-water-track: rgba(255, 255, 255, 0.12);
   --fx-supp-name: #fecdd3;
   --fx-supp-when: #fdba74;
   --fx-supp-num: #fb7185;
   --fx-supp-done: rgba(255, 255, 255, 0.32);
+  /* Ingredient info (Meals): action = what to do · sub = money/subscription */
+  /* Amount after colon — quiet italic gray (Melani example) */
+  --fx-info-amt: rgba(255, 255, 255, 0.42);
+  --fx-info-action: #6eb4ff;
+  /* Shop / buy line — dusty rose */
+  --fx-info-sub: #d4a0b0;
+  /*
+    Locked protocol (user example screenshot):
+    title black · amount muted italic · shop rose
+    cal blue · protein green · carbs red · fat gold · fiber orange
+  */
+  /*
+    Same legend everywhere (dots, rings, ingredient macros):
+    cal blue · protein green · carbs red · fat teal · fiber orange
+  */
+  --fx-macro-cal: #5b9fd4;
+  --fx-macro-pro: #3dba5f;
+  --fx-macro-carb: #e04545;
+  --fx-macro-fat: #2dd4bf;
+  --fx-macro-fib: #e08a3c;
+  --fx-dot-cal: var(--fx-macro-cal);
+  --fx-ring-cal: var(--fx-macro-cal);
+  /* Vitamin rings (distinct from macro hues) */
+  --fx-vit-d: #a78bfa;
+  --fx-vit-c: #f472b6;
+  --fx-vit-folate: #c084fc;
+  --fx-vit-ca: #94a3b8;
+  --fx-vit-mg: #67e8f9;
+  --fx-vit-b12: #818cf8;
+  --fx-vit-zn: #fbbf24;
+  --fx-vit-iodine: #38bdf8;
+  --fx-vit-se: #a3e635;
+  --fx-vit-k: #e879f9;
 
   background: var(--fx-bg);
   color: var(--fx-text);
@@ -62,14 +95,32 @@ html.theme-light .fx-page {
   --fx-chart-goal: rgba(22, 163, 74, 0.55);
   --fx-chart-line: rgba(26, 28, 34, 0.85);
   --fx-ring-track: rgba(26, 28, 34, 0.1);
-  --fx-ring-cal: rgba(26, 28, 34, 0.28);
   --fx-ring-hole: #f7f7fa;
-  --fx-dot-cal: rgba(26, 28, 34, 0.4);
   --fx-water-track: rgba(26, 28, 34, 0.12);
   --fx-supp-name: #be123c;
   --fx-supp-when: #c2410c;
   --fx-supp-num: #e11d48;
   --fx-supp-done: rgba(26, 28, 34, 0.35);
+  --fx-info-amt: rgba(26, 28, 34, 0.48);
+  --fx-info-action: #1a6fd4;
+  --fx-info-sub: #c48a9a;
+  --fx-macro-cal: #4a8fd4;
+  --fx-macro-pro: #2f9d4a;
+  --fx-macro-carb: #d43a3a;
+  --fx-macro-fat: #0d9488;
+  --fx-macro-fib: #d4783a;
+  --fx-dot-cal: var(--fx-macro-cal);
+  --fx-ring-cal: var(--fx-macro-cal);
+  --fx-vit-d: #7c5cbf;
+  --fx-vit-c: #d4538a;
+  --fx-vit-folate: #9b5fc0;
+  --fx-vit-ca: #64748b;
+  --fx-vit-mg: #0e9aa8;
+  --fx-vit-b12: #5b63d3;
+  --fx-vit-zn: #c99212;
+  --fx-vit-iodine: #0ea5c9;
+  --fx-vit-se: #65a30d;
+  --fx-vit-k: #c026d3;
 }
 
 .fx-inner {
@@ -877,10 +928,30 @@ html.theme-light .fx-page .fx-bm-leg-type {
   color: rgba(26, 28, 34, 0.58);
 }
 
+/* Side-by-side bowel charts — compact, not full-page stack */
+.fx-bm-logs-panel {
+  margin: 6px 0 0;
+}
+.fx-bm-graphs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem 1rem;
+  align-items: start;
+  max-width: 52rem;
+}
+.fx-bm-graphs-col {
+  min-width: 0;
+}
+@media (max-width: 720px) {
+  .fx-bm-graphs-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Bristol multi-line lifetime graph (replaces type pie) */
 .fx-bm-consistency-graph {
-  margin: 8px 0 8px;
-  max-width: 46rem;
+  margin: 0;
+  max-width: none;
 }
 .fx-bm-consistency-graph .wx-panel-head {
   margin-bottom: 2px;
@@ -889,9 +960,9 @@ html.theme-light .fx-page .fx-bm-leg-type {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 10px 14px;
+  gap: 6px 10px;
   color: var(--fx-muted);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -903,10 +974,10 @@ html.theme-light .fx-page .fx-bm-leg-type {
   color: #ef4444;
 }
 .fx-bm-consistency-hover {
-  min-height: 18px;
-  margin: 0 0 4px;
+  min-height: 14px;
+  margin: 0 0 2px;
   color: var(--fx-text);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 650;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -925,7 +996,10 @@ html.theme-light .fx-page .fx-bm-leg-type {
   position: relative;
 }
 .fx-bm-consistency-svg {
-  min-height: 210px;
+  min-height: 0;
+  max-height: 9.5rem;
+  width: 100%;
+  height: auto;
 }
 .fx-bm-axis-title {
   fill: var(--fx-muted);
@@ -959,8 +1033,33 @@ html.theme-light .fx-page .fx-bm-leg-type {
   opacity: 0.78;
 }
 .fx-bm-type-graph {
-  margin: 8px 0 4px;
-  max-width: 42rem;
+  margin: 0;
+  max-width: none;
+}
+.fx-bm-type-graph .wx-graph-wrap svg,
+.fx-bm-type-graph .fx-bm-multi {
+  min-height: 0;
+  max-height: 9.5rem;
+  width: 100%;
+  height: auto;
+}
+.fx-bm-graphs-col .wx-panel-title {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+.fx-bm-graphs-col .wx-panel-v {
+  font-size: 1.1rem;
+}
+.fx-bm-graphs-col .wx-panel-meta,
+.fx-bm-graphs-col .wx-panel-foot,
+.fx-bm-graphs-col .fx-bm-line-legend {
+  font-size: 0.68rem;
+}
+.fx-bm-graph-goal {
+  margin: 0.25rem 0 0;
+  font-size: 0.68rem;
+  color: var(--fx-muted);
+  line-height: 1.25;
 }
 .fx-bm-type-graph .wx-panel-v {
   color: #22c55e;
@@ -1188,12 +1287,14 @@ html.theme-light .fx-page .fx-bm-logs-toggle.is-on {
   font-variant-numeric: tabular-nums;
 }
 .fx-bm-details {
-  margin-top: 6px;
+  margin-top: 4px;
+  margin-bottom: 0;
   overflow: visible;
 }
 .fx-bm-type-hint {
   margin: 0;
   font-size: 13px;
+  line-height: 1.2;
   color: var(--fx-muted);
   font-family: var(--fx-font);
 }
@@ -1205,17 +1306,19 @@ html.theme-light .fx-page .fx-bm-type-hint {
 .fx-bm-closed-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  margin: 0 0 4px;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin: 0;
+  line-height: 1.2;
 }
 .fx-bm-toggle {
   border: none;
   background: transparent;
-  padding: 6px 0;
+  padding: 0;
   margin: 0;
   font-family: var(--fx-font);
   font-size: 13px;
+  line-height: 1.2;
   color: var(--fx-accent);
   cursor: pointer;
   text-decoration: underline;
@@ -1506,12 +1609,12 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   }
 }
 
-/* Macro rings — larger so cal + protein read in the hole */
+/* Macro rings — centered */
 .fx-page .macro-ring-wrap {
   position: relative;
-  width: min(280px, 78vw);
-  height: min(280px, 78vw);
-  margin: 10px auto 20px;
+  width: min(240px, 58vw);
+  height: min(240px, 58vw);
+  margin: 8px auto 16px;
   isolation: isolate;
 }
 
@@ -1532,21 +1635,21 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   stroke: var(--fx-ring-track, rgba(255, 255, 255, 0.06));
 }
 .ring-protein {
-  stroke: #2eea7f;
+  stroke: var(--fx-macro-pro);
   stroke-width: 7;
 }
 .ring-cal {
-  stroke: var(--fx-ring-cal, rgba(255, 255, 255, 0.28));
+  stroke: var(--fx-macro-cal);
   stroke-width: 7;
 }
 .ring-carbs {
-  stroke: #facc15;
+  stroke: var(--fx-macro-carb);
 }
 .ring-fat {
-  stroke: #ff8a3d;
+  stroke: var(--fx-macro-fat);
 }
 .ring-fiber {
-  stroke: #4da3ff;
+  stroke: var(--fx-macro-fib);
 }
 .ring-hole {
   /* Bigger hole so center cal + protein fit cleanly */
@@ -1568,23 +1671,25 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
 
 .macro-ring-num {
   color: var(--fx-strong);
-  font-size: 1.85rem;
+  font-size: 1.55rem;
   font-weight: 650;
   line-height: 1.05;
   font-family: var(--fx-font);
   font-variant-numeric: tabular-nums;
 }
 
-/* Calories lead (hero) · protein second */
+/* Ring center — ink only (not a rainbow block) */
 .macro-ring-cal-num {
-  font-size: 2.05rem;
+  font-size: 1.7rem;
   letter-spacing: -0.02em;
+  color: var(--fx-strong);
 }
 
 .macro-ring-pro-num {
-  font-size: 1.45rem;
-  margin-top: 6px;
+  font-size: 1.2rem;
+  margin-top: 4px;
   font-weight: 600;
+  color: var(--fx-strong);
 }
 
 .macro-ring-num small {
@@ -1619,14 +1724,49 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 0;
+  padding: 0;
   border-top: none;
   color: var(--fx-text);
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .macro-stats li:first-child {
   border-top: none;
+}
+
+/* Full-row hit target — click opens all meal macro breakdowns */
+.macro-stats-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.macro-stats-btn:hover {
+  color: var(--fx-strong);
+}
+
+.macro-stats-btn.is-on {
+  font-weight: 600;
+}
+
+.macro-stats-btn.is-on .macro-stats-label {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.macro-stats-label {
+  flex: 0 0 auto;
 }
 
 .macro-stats strong {
@@ -1635,9 +1775,34 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   font-weight: 650;
 }
 
-/* trailing “/ goal” sits after strong — keep readable */
-.macro-stats li {
-  font-variant-numeric: tabular-nums;
+.macro-stats-goal {
+  color: var(--fx-muted);
+  font-weight: 400;
+}
+
+/*
+  Day totals list — ink only (less color).
+  Small dots keep the hue cue; labels + numbers stay black/strong.
+*/
+.macro-stats-btn .macro-stats-label {
+  color: var(--fx-strong);
+}
+.macro-stats-btn strong {
+  color: var(--fx-strong);
+}
+.macro-stats-btn .macro-stats-goal {
+  color: var(--fx-muted);
+}
+/* Focused row: slightly stronger weight only, still ink */
+.macro-stats-btn.is-on .macro-stats-label,
+.macro-stats-btn.is-on strong {
+  color: var(--fx-strong);
+}
+
+/* Ring hit feedback */
+.macro-rings .ring-hit.is-on {
+  filter: brightness(1.2);
+  stroke-width: 9;
 }
 
 .dot {
@@ -1647,19 +1812,226 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   flex-shrink: 0;
 }
 .dot-cal {
-  background: var(--fx-dot-cal, rgba(255, 255, 255, 0.45));
+  background: var(--fx-macro-cal);
 }
 .dot-protein {
-  background: #2eea7f;
+  background: var(--fx-macro-pro);
 }
 .dot-carbs {
-  background: #facc15;
+  background: var(--fx-macro-carb);
 }
 .dot-fat {
-  background: #ff8a3d;
+  background: var(--fx-macro-fat);
 }
 .dot-fiber {
-  background: #4da3ff;
+  background: var(--fx-macro-fib);
+}
+
+/* ── Ring face: one label + one ring set only (never both) ── */
+.ring-face-title {
+  display: block;
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fx-strong);
+  text-align: center;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.ring-face-title:hover {
+  opacity: 0.75;
+}
+
+/* Single ring footprint — swap content mid-turn, no dual faces */
+.ring-flip-scene {
+  width: min(240px, 58vw);
+  height: min(240px, 58vw);
+  margin: 8px auto 16px;
+  transition: transform 0.32s cubic-bezier(0.4, 0.1, 0.2, 1), opacity 0.32s ease;
+  transform-style: preserve-3d;
+}
+
+.ring-flip-scene.is-turning {
+  transform: rotateY(90deg);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.ring-flip-scene .macro-ring-wrap {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+/* Center turns the face (no box chrome) */
+.macro-ring-center-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.macro-ring-center-btn:hover .macro-ring-sub {
+  color: var(--fx-strong);
+}
+
+.ring-vit-d {
+  stroke: var(--fx-vit-d);
+  stroke-width: 7;
+}
+.ring-vit-c {
+  stroke: var(--fx-vit-c);
+  stroke-width: 7;
+}
+.ring-vit-folate {
+  stroke: var(--fx-vit-folate);
+}
+.ring-vit-ca {
+  stroke: var(--fx-vit-ca);
+}
+.ring-vit-mg {
+  stroke: var(--fx-vit-mg);
+}
+
+.macro-ring-vit-num {
+  font-size: 1.7rem;
+  letter-spacing: -0.02em;
+  color: var(--fx-strong);
+}
+
+.macro-ring-vit-note {
+  margin-top: 4px;
+  opacity: 0.85;
+  letter-spacing: 0.06em;
+}
+
+.vit-stats-row {
+  cursor: default;
+  pointer-events: none;
+}
+
+.dot-vit-d {
+  background: var(--fx-vit-d);
+}
+.dot-vit-c {
+  background: var(--fx-vit-c);
+}
+.dot-vit-folate {
+  background: var(--fx-vit-folate);
+}
+.dot-vit-ca {
+  background: var(--fx-vit-ca);
+}
+.dot-vit-mg {
+  background: var(--fx-vit-mg);
+}
+.dot-vit-b12 {
+  background: var(--fx-vit-b12);
+}
+.dot-vit-zn {
+  background: var(--fx-vit-zn);
+}
+.dot-vit-iodine {
+  background: var(--fx-vit-iodine);
+}
+.dot-vit-se {
+  background: var(--fx-vit-se);
+}
+.dot-vit-k {
+  background: var(--fx-vit-k);
+}
+
+.vit-hint {
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--fx-muted);
+  font-weight: 400;
+  text-align: center;
+}
+
+/*
+  Global macro hue legend — meal cards, breakdown rows, totals.
+  Same class = same color everywhere. Normal weight (not bold).
+*/
+.fx-page .umv {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.fx-page .umv-cal {
+  color: var(--fx-macro-cal);
+}
+.fx-page .umv-pro {
+  color: var(--fx-macro-pro);
+}
+.fx-page .umv-carb {
+  color: var(--fx-macro-carb);
+}
+.fx-page .umv-fat {
+  color: var(--fx-macro-fat);
+}
+.fx-page .umv-fib {
+  color: var(--fx-macro-fib);
+}
+.fx-page .umv-sep {
+  color: var(--fx-faint);
+  font-weight: 400;
+}
+/* Never let <strong> inside a macro chip go bold */
+.fx-page .umv strong {
+  font-weight: 400;
+}
+
+/* Focused macro: dim others, keep focused hue full strength */
+.usual-macro-break.is-focus-calories .umv:not(.umv-cal),
+.usual-macro-break.is-focus-protein .umv:not(.umv-pro),
+.usual-macro-break.is-focus-carbs .umv:not(.umv-carb),
+.usual-macro-break.is-focus-fat .umv:not(.umv-fat),
+.usual-macro-break.is-focus-fiber .umv:not(.umv-fib),
+.usual-macro-line.is-focus-calories .umv:not(.umv-cal),
+.usual-macro-line.is-focus-protein .umv:not(.umv-pro),
+.usual-macro-line.is-focus-carbs .umv:not(.umv-carb),
+.usual-macro-line.is-focus-fat .umv:not(.umv-fat),
+.usual-macro-line.is-focus-fiber .umv:not(.umv-fib) {
+  opacity: 0.38;
+}
+
+.fx-page .umv.is-hi {
+  font-weight: 400;
+  opacity: 1 !important;
+}
+
+.usual-macro-break.is-focus-calories .umv-sep,
+.usual-macro-break.is-focus-protein .umv-sep,
+.usual-macro-break.is-focus-carbs .umv-sep,
+.usual-macro-break.is-focus-fat .umv-sep,
+.usual-macro-break.is-focus-fiber .umv-sep,
+.usual-macro-line.is-focus-calories .umv-sep,
+.usual-macro-line.is-focus-protein .umv-sep,
+.usual-macro-line.is-focus-carbs .umv-sep,
+.usual-macro-line.is-focus-fat .umv-sep,
+.usual-macro-line.is-focus-fiber .umv-sep {
+  opacity: 0.28;
+}
+
+.usual-macro-focus-tag {
+  font-weight: 500;
+  text-transform: lowercase;
+  color: var(--fx-muted);
+  font-size: 0.9em;
 }
 
 .fx-usual {
@@ -1680,12 +2052,136 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
 }
 
 /* ── My usuals — plain list, no cards ── */
+.usuals-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  margin: 0 0 0.35rem;
+}
+
+.usuals-head .fx-h2 {
+  margin: 0;
+}
+
+.usual-expand-macros {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--fx-accent, #7a9bb8);
+  cursor: pointer;
+  letter-spacing: 0.01em;
+}
+
+.usual-expand-macros:hover {
+  color: var(--fx-strong);
+}
+
+.usual-expand-macros.is-on {
+  color: var(--fx-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.usual-reset-day {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--fx-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.usual-reset-day:hover {
+  color: var(--fx-cutout, #ef4444);
+}
+
 .usual-day-meta {
   margin: 0 0 4px;
   font-size: 12px;
   line-height: 1.2;
   color: var(--fx-muted, #6b7280);
   letter-spacing: 0.01em;
+}
+
+/* Dinner protein swap — under title (always visible for steak ↔ sockeye) */
+.usual-swap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.85rem;
+  margin: 0.55rem 0 0;
+  padding: 0;
+}
+
+.usual-swap-top {
+  margin: 0.2rem 0 0.45rem;
+}
+
+.usual-swap-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fx-accent, #7a9bb8);
+  cursor: pointer;
+}
+
+.usual-swap-btn:hover {
+  color: var(--fx-strong);
+}
+
+.usual-swap-icon {
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.usual-swap-options {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55rem;
+}
+
+.usual-swap-opt {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.84rem;
+  color: var(--fx-muted);
+  cursor: pointer;
+  letter-spacing: -0.01em;
+}
+
+.usual-swap-opt:hover {
+  color: var(--fx-strong);
+}
+
+.usual-swap-opt.is-on {
+  color: var(--fx-strong);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Spend under last ingredient — monthly / yearly only */
@@ -1764,54 +2260,80 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   color: #6b7280;
 }
 
-/* Ingredients — numbered, single-spaced (tight) */
+/* Combined Details — numbered, tight, no bold product names */
 .usual-measure {
-  margin: 6px 0 4px;
+  margin: 4px 0 6px;
   max-width: 36rem;
+  width: 100%;
   font-family: inherit;
+}
+
+.usual-details-combined {
+  margin-top: 2px;
 }
 
 .usual-measure-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 0; /* single-space between items */
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* clear row air, not cramped mess */
+  width: 100%;
 }
 
 .usual-measure-row {
   display: grid;
-  grid-template-columns: 1.25rem 1fr;
-  column-gap: 0.4rem;
-  row-gap: 0;
-  align-items: baseline;
+  grid-template-columns: 1.35rem minmax(0, 1fr);
+  column-gap: 0.45rem;
+  align-items: start;
   margin: 0;
   padding: 0;
   font-size: 13px;
-  line-height: 1.2; /* single-space */
+  line-height: 1.3;
+  width: 100%;
 }
 
 .usual-measure-n {
   font-size: 12px;
-  line-height: 1.2;
+  line-height: 1.3;
   font-variant-numeric: tabular-nums;
+  font-weight: 400;
   color: var(--fx-muted, #9ca3af);
   text-align: right;
   user-select: none;
+  padding-top: 1px;
+  white-space: nowrap;
 }
 
 .usual-measure-body {
-  display: grid;
-  gap: 0; /* no air between name / meta / days */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1px; /* name · macros · Vitamins tight */
   min-width: 0;
-  line-height: 1.2;
+  width: 100%;
+  line-height: 1.3;
 }
 
+/* Product names: always black/ink · never bold · never seed yellow */
 .usual-measure-name {
-  font-weight: 600;
+  font-weight: 400;
   font-size: 13px;
-  line-height: 1.2;
+  line-height: 1.3;
   color: var(--fx-strong, #1a1c22);
+}
+
+.usual-measure-row.is-base .usual-measure-name,
+.usual-measure-row.is-nuts .usual-measure-name,
+.usual-measure-row.is-seed .usual-measure-name,
+.usual-measure-row.is-fruit .usual-measure-name,
+.usual-measure-row.is-base .usual-product-link,
+.usual-measure-row.is-nuts .usual-product-link,
+.usual-measure-row.is-seed .usual-product-link,
+.usual-measure-row.is-fruit .usual-product-link {
+  color: var(--fx-strong, #1a1c22);
+  font-weight: 400;
 }
 
 /* Product name = Instacart link · no underline · inherits color */
@@ -1838,87 +2360,99 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   outline-offset: 2px;
 }
 
-/* (Costco · 48 oz) — same line as product, quieter · not a link */
-.usual-measure-meta-paren {
-  font-weight: 400;
-  font-size: 12px;
-  color: #8b919a;
-}
-
-/* Daily amount — smaller gray next to name (no-shop rows) */
+/*
+  Protocol (Image 2) — every ingredient row:
+  title black · amount muted italic after colon · shop rose · macros colored
+*/
 .usual-measure-amt {
   font-weight: 400;
-  font-size: 0.78em;
-  line-height: 1.2;
+  font-style: italic;
+  font-size: 0.92em;
+  line-height: 1.3;
   font-variant-numeric: tabular-nums;
-  color: #9ca3af;
+  color: var(--fx-info-amt);
   vertical-align: baseline;
 }
 
 .usual-measure-how {
+  display: block;
   font-size: 11px;
   font-weight: 400;
-  line-height: 1.2;
-  color: #a8aeb8;
-  margin: 0;
+  line-height: 1.25;
+  color: var(--fx-muted);
+  margin: 1px 0 0;
 }
 
-/* Line 2: 150 g/day; 2 tubs at once: $19.38 */
+.usual-measure-sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: var(--fx-info-sub);
+  margin: 1px 0 0;
+}
+
+/* One shop line: Buy 3 tubs at once: $26.97; Lasts ~ 20 days */
 .usual-shop-line {
+  display: block;
   font-size: 12px;
   font-weight: 400;
-  line-height: 1.2;
-  color: #6b7280;
-}
-
-.usual-shop-daily {
-  color: #6b7280;
-}
-
-/* Multi-buy total / price — hover for per-pack */
-.usual-shop-price {
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.2;
+  font-style: normal;
+  line-height: 1.3;
+  color: var(--fx-info-sub);
+  margin: 1px 0 0;
   font-variant-numeric: tabular-nums;
-  color: #7a9bb8;
-  cursor: default;
 }
 
-/* Line 3: Lasts ~ 18 days */
+.usual-shop-daily,
+.usual-shop-price,
 .usual-shop-days {
-  font-size: 12px;
+  font-size: inherit;
   font-weight: 400;
-  font-variant-numeric: tabular-nums;
-  color: #8b919a;
-  line-height: 1.2;
-  cursor: default;
-  width: fit-content;
+  color: inherit;
   margin: 0;
+  display: inline;
+  opacity: 1;
 }
 
-/* Macro breakdown toggle — single-spaced, no calories on Ingredients */
+.usual-measure-meta-paren {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--fx-info-amt);
+}
+
+/* Macro breakdown — full-width rows, never letter-stack or overlap */
 .usual-macro-break {
-  margin: 4px 0 6px;
-  max-width: 36rem;
+  margin: 4px 0 8px;
+  width: 100%;
+  max-width: 40rem;
+  box-sizing: border-box;
 }
 
 .usual-macro-break-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* clear air between items so nothing piles up */
+  width: 100%;
 }
 
 .usual-macro-break-row {
   display: grid;
-  grid-template-columns: 1.25rem 1fr;
-  column-gap: 0.4rem;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  column-gap: 0.5rem;
+  align-items: start;
   margin: 0;
-  padding: 0;
+  padding: 2px 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   font-size: 13px;
-  line-height: 1.2;
+  line-height: 1.35;
+  /* never collapse the row */
+  min-height: 1.35em;
 }
 
 .usual-macro-break-n {
@@ -1926,18 +2460,28 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   font-variant-numeric: tabular-nums;
   color: var(--fx-muted, #9ca3af);
   text-align: right;
+  line-height: 1.35;
+  padding-top: 1px;
 }
 
 .usual-macro-break-body {
-  display: grid;
-  gap: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .usual-macro-break-name {
-  font-weight: 600;
+  display: block;
+  font-weight: 400;
   color: var(--fx-strong, #1a1c22);
-  line-height: 1.2;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .usual-macro-break-amt {
@@ -1946,72 +2490,318 @@ html.theme-light .fx-page .fx-bm-week-ro .fx-bm-day-ro.is-today {
   color: #9ca3af;
 }
 
-.usual-macro-break-vals {
+/* Vitamins / actives instead of zero macros on capsules and mix */
+.usual-macro-break-nutrients {
+  display: block;
   font-size: 12px;
   font-weight: 400;
-  color: #6b7280;
+  line-height: 1.35;
+  color: var(--fx-info-action);
+  margin: 2px 0 0;
+  max-width: 40rem;
+}
+
+/* Gray text toggle — own line under Log · no chevron */
+.usual-ingredients-head {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 6px 0 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
   line-height: 1.2;
+  color: var(--fx-muted);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+}
+
+.usual-ingredients-head:hover,
+.usual-ingredients-head.is-open {
+  color: var(--fx-strong);
+}
+
+.usual-vitamins-head {
+  margin-top: 2px;
+}
+
+/* Meal vitamins — plain list under Ingredients + macros */
+.usual-meal-vitamins {
+  list-style: none;
+  margin: 0 0 0.35rem;
+  padding: 0;
+  display: grid;
+  gap: 0.18rem;
+  max-width: 18rem;
+}
+
+.usual-meal-vitamins li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  color: var(--fx-muted);
+}
+
+.usual-meal-vit-lab {
+  font-weight: 400;
+  color: var(--fx-strong);
+  min-width: 0;
+}
+
+.usual-meal-vit-amt {
   font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--fx-muted);
+  white-space: nowrap;
+}
+
+/* Intro under the label (e.g. Take with 250 ml of water) */
+.usual-ingredients-note {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--fx-muted);
+  max-width: 28rem;
+}
+
+/* Vitamins / Actives — smaller gold under black product name */
+.usual-actives {
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.usual-actives-toggle {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 400; /* never bold */
+  line-height: 1.25;
+  /* Gold sub-label (Vitamins / Softgel / Actives) — must beat light button ink rule */
+  color: #c4923a !important;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  white-space: normal;
+  max-width: 100%;
+}
+
+.usual-actives-toggle:hover,
+.usual-actives-toggle.is-open {
+  color: #a67a28 !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+html.theme-light .fx-page .usual-actives-toggle {
+  color: #a67a28 !important;
+}
+html.theme-light .fx-page .usual-actives-toggle:hover,
+html.theme-light .fx-page .usual-actives-toggle.is-open {
+  color: #8a6420 !important;
+}
+
+.usual-actives-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/*
+  Layout:  #  Name (what for) ............... 2.5 g
+  Middle track must NOT collapse to 0 (letter-stack bug).
+*/
+.usual-actives-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(10rem, 1fr) max-content;
+  align-items: baseline;
+  column-gap: 12px;
+  padding: 1px 0;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: default;
+}
+
+.usual-actives-n {
+  color: var(--fx-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  text-align: right;
+}
+
+.usual-actives-main {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.usual-actives-name {
+  font-weight: 400;
+  color: var(--fx-strong);
+  white-space: normal;
+}
+
+/* What it’s for — right next to the name, muted */
+.usual-actives-role {
+  font-weight: 400;
+  color: var(--fx-muted);
+  white-space: normal;
+}
+
+/* Dose flush right — own color so eyes lock the column */
+.usual-actives-amt {
+  justify-self: end;
+  text-align: right;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--fx-info-action, #6eb4ff);
+  flex-shrink: 0;
+}
+
+.usual-actives-amt.is-empty {
+  display: none;
+}
+
+html.theme-light .usual-actives-amt {
+  color: var(--fx-info-action, #1a6fd4);
+}
+
+/* Hover tip only — never in document flow (was causing pile-ups).
+   Rich multi-paragraph copy: form · female why · pairs-with. */
+.usual-actives-tip {
+  display: none !important;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  z-index: 50;
+  min-width: 18rem;
+  max-width: min(34rem, 94vw);
+  max-height: min(70vh, 28rem);
+  overflow-y: auto;
+  padding: 10px 12px 12px;
+  border-radius: 8px;
+  background: var(--fx-strong);
+  color: var(--fx-bg);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  white-space: normal;
+}
+
+.usual-actives-tip-head {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  margin: 0 0 2px;
+  color: inherit;
+}
+
+.usual-actives-tip-role {
+  display: block;
+  font-size: 11px;
+  opacity: 0.72;
+  margin: 0 0 8px;
+  text-transform: none;
+}
+
+.usual-actives-tip-body {
+  display: block;
+  white-space: pre-line; /* honor \n\n paragraphs from data.ts */
+  font-size: 12px;
+  line-height: 1.48;
+  opacity: 0.96;
+}
+
+.usual-actives-item:hover .usual-actives-tip,
+.usual-actives-item:focus-within .usual-actives-tip {
+  display: block !important;
+}
+
+/* Last items: flip tip upward so it isn’t clipped by page bottom */
+.usual-actives-item:nth-last-child(-n + 4) .usual-actives-tip {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+html.theme-light .usual-actives-tip {
+  background: #1a1c22;
+  color: #f7f7fa;
+}
+
+.usual-macro-break-vals {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+  max-width: 100%;
+  margin: 1px 0 0;
+}
+
+/* Separators stay quiet so colored labels pop */
+.usual-macro-break .umv-sep {
+  color: var(--fx-faint);
 }
 
 .usual-macro-break-total {
   margin: 6px 0 0;
   font-size: 12px;
   line-height: 1.25;
-  color: var(--fx-strong, #1a1c22);
+  font-weight: 400;
+  color: var(--fx-muted);
 }
 
 .usual-macro-break-total strong {
-  font-weight: 600;
+  font-weight: 400;
 }
 
-/* Color code — same for Ingredients + Macro breakdown */
-.usual-measure-row.is-base .usual-measure-name,
-.usual-measure-row.is-base .usual-product-link,
-.usual-macro-break-row.is-base .usual-macro-break-name {
-  color: #2f9d6a;
+/* Total row inherits same macro colors via .umv-* */
+
+/*
+  Product names stay ink/black (no bold, no tone rainbow).
+  Tone colors live only on Vitamins / Actives toggles (gold).
+*/
+.usual-measure-row .usual-measure-name,
+.usual-measure-row .usual-product-link,
+.usual-macro-break-row .usual-macro-break-name {
+  color: var(--fx-strong, #1a1c22);
+  font-weight: 400;
 }
 
-.usual-measure-row.is-nuts .usual-measure-name,
-.usual-measure-row.is-nuts .usual-product-link,
-.usual-macro-break-row.is-nuts .usual-macro-break-name {
-  color: #d4849a;
-}
-
-.usual-measure-row.is-seed .usual-measure-name,
-.usual-measure-row.is-seed .usual-product-link,
-.usual-macro-break-row.is-seed .usual-macro-break-name {
-  color: #c4923a;
-}
-
-.usual-measure-row.is-fruit .usual-measure-name,
-.usual-measure-row.is-fruit .usual-product-link,
-.usual-macro-break-row.is-fruit .usual-macro-break-name {
-  color: #4a8fc4;
-}
-
-html.theme-light .usual-measure-row.is-base .usual-measure-name,
-html.theme-light .usual-measure-row.is-base .usual-product-link,
-html.theme-light .usual-macro-break-row.is-base .usual-macro-break-name {
-  color: #1f8a58;
-}
-
-html.theme-light .usual-measure-row.is-nuts .usual-measure-name,
-html.theme-light .usual-measure-row.is-nuts .usual-product-link,
-html.theme-light .usual-macro-break-row.is-nuts .usual-macro-break-name {
-  color: #c46b84;
-}
-
-html.theme-light .usual-measure-row.is-seed .usual-measure-name,
-html.theme-light .usual-measure-row.is-seed .usual-product-link,
-html.theme-light .usual-macro-break-row.is-seed .usual-macro-break-name {
-  color: #a67a28;
-}
-
-html.theme-light .usual-measure-row.is-fruit .usual-measure-name,
-html.theme-light .usual-measure-row.is-fruit .usual-product-link,
-html.theme-light .usual-macro-break-row.is-fruit .usual-macro-break-name {
-  color: #2f6fa0;
+html.theme-light .usual-measure-row .usual-measure-name,
+html.theme-light .usual-measure-row .usual-product-link,
+html.theme-light .usual-macro-break-row .usual-macro-break-name {
+  color: #1a1c22;
+  font-weight: 400;
 }
 
 .usuals-section {
@@ -2034,6 +2824,10 @@ html.theme-light .usual-macro-break-row.is-fruit .usual-macro-break-name {
   background: transparent;
   box-shadow: none;
   line-height: 1.2;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .usual-card.is-core {
@@ -2056,20 +2850,24 @@ html.theme-light .usual-macro-break-row.is-fruit .usual-macro-break-name {
   line-height: 1.2;
 }
 
+/* Always-visible per-meal macros (same colors as breakdown) */
 .usual-macro-line {
-  margin: 0 0 6px;
-  font-size: 13px;
-  line-height: 1;
+  margin: 2px 0 6px;
+  font-size: 12px;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
   color: var(--fx-muted);
 }
 
-/* Soft text button — not a fat pill */
+/* Soft text button — own line above Ingredients + macros */
 .usual-log-btn {
-  display: inline-block;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
   border: none;
   background: none;
   padding: 0;
-  margin: 0;
+  margin: 0 0 2px;
   color: var(--fx-accent);
   font-family: inherit;
   font-size: 14px;
@@ -2087,7 +2885,7 @@ html.theme-light .usual-macro-break-row.is-fruit .usual-macro-break-name {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0;
+  margin: 0 0 2px;
   line-height: 1.2;
 }
 
@@ -2666,9 +3464,8 @@ html.theme-light .fx-page .fx-bm-audit-experiment small {
 /*
   Meals light lock — force every surface that used to be white-on-white.
   Tokens already flip on .fx-page; these catch leftover hard-coded / inheritance gaps.
+  Do NOT blanket-color .macro-stats / .usual-macro-line — those use the macro hue legend.
 */
-html.theme-light .fx-page .macro-ring-num,
-html.theme-light .fx-page .macro-stats strong,
 html.theme-light .fx-page .usual-title,
 html.theme-light .fx-page h3 {
   color: #1a1c22 !important;
@@ -2676,7 +3473,6 @@ html.theme-light .fx-page h3 {
 
 html.theme-light .fx-page .macro-ring-sub,
 html.theme-light .fx-page .macro-ring-goal,
-html.theme-light .fx-page .usual-macro-line,
 html.theme-light .fx-page .usual-details-toggle,
 html.theme-light .fx-page .usual-undo-btn,
 html.theme-light .fx-page .usual-slot,
@@ -2689,11 +3485,39 @@ html.theme-light .fx-page .consume-sub {
   color: rgba(26, 28, 34, 0.55) !important;
 }
 
-html.theme-light .fx-page .macro-stats li,
 html.theme-light .fx-page .usual-ingredients,
 html.theme-light .fx-page .fx-water-btn,
 html.theme-light .fx-page .consume-name {
   color: #1a1c22 !important;
+}
+
+/* Light: meal-line macro hues only (day list stays ink) */
+html.theme-light .fx-page .umv-cal {
+  color: var(--fx-macro-cal) !important;
+}
+html.theme-light .fx-page .umv-pro {
+  color: var(--fx-macro-pro) !important;
+}
+html.theme-light .fx-page .umv-carb {
+  color: var(--fx-macro-carb) !important;
+}
+html.theme-light .fx-page .umv-fat {
+  color: var(--fx-macro-fat) !important;
+}
+html.theme-light .fx-page .umv-fib {
+  color: var(--fx-macro-fib) !important;
+}
+html.theme-light .fx-page .umv-sep {
+  color: var(--fx-faint) !important;
+}
+html.theme-light .fx-page .macro-ring-cal-num,
+html.theme-light .fx-page .macro-ring-pro-num,
+html.theme-light .fx-page .macro-stats-btn .macro-stats-label,
+html.theme-light .fx-page .macro-stats-btn strong {
+  color: #1a1c22 !important;
+}
+html.theme-light .fx-page .macro-stats-btn .macro-stats-goal {
+  color: rgba(26, 28, 34, 0.55) !important;
 }
 
 html.theme-light .fx-page .usual-log-btn {
@@ -2720,12 +3544,26 @@ html.theme-light .fx-page .ring-track {
   stroke: rgba(26, 28, 34, 0.1) !important;
 }
 
+/* Cal must stay blue — never gray (same as ingredient macro lines) */
 html.theme-light .fx-page .ring-cal {
-  stroke: rgba(26, 28, 34, 0.28) !important;
+  stroke: var(--fx-macro-cal) !important;
 }
 
 html.theme-light .fx-page .dot-cal {
-  background: rgba(26, 28, 34, 0.4) !important;
+  background: var(--fx-macro-cal) !important;
+}
+
+html.theme-light .fx-page .dot-protein {
+  background: var(--fx-macro-pro) !important;
+}
+html.theme-light .fx-page .dot-carbs {
+  background: var(--fx-macro-carb) !important;
+}
+html.theme-light .fx-page .dot-fat {
+  background: var(--fx-macro-fat) !important;
+}
+html.theme-light .fx-page .dot-fiber {
+  background: var(--fx-macro-fib) !important;
 }
 
 html.theme-light .fx-page .fx-supp-name {
@@ -2750,8 +3588,8 @@ html.theme-light .fx-page .consume-check {
   color: #1a1c22 !important;
 }
 
-/* Exclude gym set/link buttons — they keep blue accent like dark mode */
-html.theme-light .fx-page button:not(.fx-bf-tap):not(.fx-bf-day):not(.fx-bm-chip-btn):not(.fx-subnav-link):not(.usual-log-btn):not(.fx-water-btn):not(.fx-water-action):not(.fx-supp-item):not(.gx-set):not(.gx-today-link):not(.gx-save-week):not(.gx-day-pick):not(.gx-weight-chart-toggle):not(.gx-warmup-item) {
+/* Exclude gym set/link buttons + meal text toggles that keep their own colors */
+html.theme-light .fx-page button:not(.fx-bf-tap):not(.fx-bf-day):not(.fx-bm-chip-btn):not(.fx-subnav-link):not(.usual-log-btn):not(.fx-water-btn):not(.fx-water-action):not(.fx-supp-item):not(.gx-set):not(.gx-today-link):not(.gx-save-week):not(.gx-day-pick):not(.gx-weight-chart-toggle):not(.gx-warmup-item):not(.usual-actives-toggle):not(.usual-ingredients-head) {
   color: #1a1c22;
 }
 
@@ -2774,32 +3612,26 @@ html.theme-light .whoop-bar-link:hover:not(:disabled) {
   color: #1a1c22 !important;
 }
 
-/* Bowel graph goal caption under Yes/No consistency chart */
-.fx-bm-graph-goal {
-  margin: 6px 0 14px;
-  font-size: 12px;
-  line-height: 1.35;
-  color: rgba(255, 255, 255, 0.48);
-  max-width: 42rem;
-}
 html.theme-light .fx-page .fx-bm-graph-goal {
   color: rgba(26, 28, 34, 0.5);
 }
 
-/* Bowel graphs — sleep-style collapsible footer */
+/* Bowel graphs — tight under type row (no big air gap) */
 .fx-bm-logs-footer {
-  margin-top: 14px;
+  margin-top: 2px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: 4px;
 }
 .fx-bm-nights-toggle {
   /* reuse .fx-nights-toggle look; ensure it’s hard to miss */
   font-weight: 600;
   letter-spacing: 0.01em;
+  line-height: 1.2;
 }
 .fx-bm-logs-panel {
   width: 100%;
-  margin-top: 4px;
+  margin-top: 2px;
 }
+

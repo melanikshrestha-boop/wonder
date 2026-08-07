@@ -33,14 +33,17 @@ Full lead law: **`.grok/agents/wonder-lead.md`** (`wonder-lead`).
 | `wonder-implementer` | Bounded code slice | **worktree** |
 | `wonder-reviewer` | Diff gate before merge | none, read-only |
 
-### Cross-cutting
+### Quality & validation (verify stack)
 
-| Agent | Job | Isolation |
-|-------|-----|-----------|
-| `repo-explorer` | Entry points + data flow + risk map | read-only |
-| `code-reviewer` | Impact-ranked quality review | read-only |
-| `test-debugger` | Run tests, group failures, debug steps | execute |
-| `security-reviewer` | Authz / validation / secrets (no exploits) | read-only |
+| Agent | Job | Tools bias | Isolation |
+|-------|-----|------------|-----------|
+| `repo-explorer` | Entry points + data flow + risk map | Read, Grep, Glob | read-only |
+| `docs-researcher` | Official docs + release notes → research.md | Read, Grep, Glob, WebFetch, WebSearch | read-only (+ research.md) |
+| `code-reviewer` | Quality + security standards on diffs | Read, Grep, Glob | read-only |
+| `test-writer` | Unit + integration tests | Read, Write, Edit, Grep, Glob | worktree if multi-file tests |
+| `debugger` | Isolate + fix runtime errors | Read, Write, Edit, Bash, Grep, Glob | worktree if multi-file fix |
+| `test-debugger` | Run suites, group failures (no big feature rewrite) | Bash + read | execute |
+| `security-reviewer` | Authz / validation / secrets (no exploits) | Read, Grep, Glob | read-only |
 
 ### Domain lanes
 

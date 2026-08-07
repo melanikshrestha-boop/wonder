@@ -1021,3 +1021,111 @@ html:not(.theme-light) .care-mic-button {
   content: none !important;
   display: none !important;
 }
+
+/* ── Blood draw schedule (quarterly labs) ── */
+.care-blood {
+  margin: 0 0 14px;
+  padding: 0;
+}
+.care-blood .care-section-title {
+  margin: 0 0 6px;
+}
+.care-blood .care-section-title p {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--care-faint);
+}
+.care-blood .care-section-title h2 {
+  margin: 2px 0 0;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.care-blood-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px 10px;
+  align-items: end;
+  margin: 0 0 8px;
+}
+.care-blood-form label {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  min-width: 0;
+}
+.care-blood-form label span {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--care-faint);
+  line-height: 1;
+}
+.care-blood-form input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--care-input-bg);
+  color: var(--care-text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.15;
+}
+.care-blood-form input:focus {
+  outline: none;
+  background: var(--care-input-focus);
+}
+.care-blood-form .care-blood-notes {
+  grid-column: 1 / -1;
+}
+.care-blood-form .care-primary {
+  justify-self: start;
+  margin-top: 2px;
+}
+.care-blood-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.care-blood-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin: 0;
+  padding: 0;
+  line-height: 1.15;
+}
+.care-blood-list li.is-done {
+  opacity: 0.55;
+}
+.care-blood-list strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1;
+}
+.care-blood-list span {
+  display: block;
+  font-size: 12px;
+  color: var(--care-sub);
+  margin-top: 2px;
+}
+.care-blood-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.care-blood-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--care-faint);
+  line-height: 1.2;
+}

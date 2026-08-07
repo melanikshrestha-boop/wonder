@@ -11,24 +11,19 @@ import "./gear-wishlist.css";
 
 export function GearWishList() {
   const [buy, setBuy] = useState<GearWishItem[]>([]);
-  const [owned, setOwned] = useState<GearWishItem[]>([]);
 
   useEffect(() => {
-    const all = loadGearWishlist();
-    setBuy(all.filter((x) => !x.owned));
-    setOwned(all.filter((x) => x.owned));
+    setBuy(loadGearWishlist().filter((x) => !x.owned));
   }, []);
 
   function refresh() {
-    const all = loadGearWishlist();
-    setBuy(all.filter((x) => !x.owned));
-    setOwned(all.filter((x) => x.owned));
+    setBuy(loadGearWishlist().filter((x) => !x.owned));
   }
 
   return (
     <section className="gx-section gx-gear-wish" aria-label="Gear wishlist">
       <h2 className="gx-h2">Buy next</h2>
-      <p className="gx-sub gx-gear-sub">Blueprint stack · not dumbbells / Whoop / laser cap</p>
+      <p className="gx-sub gx-gear-sub">Blueprint stack</p>
 
       {buy.length === 0 ? (
         <p className="gx-sub">Nothing on the buy list.</p>
@@ -64,12 +59,6 @@ export function GearWishList() {
           ))}
         </ol>
       )}
-
-      {owned.length > 0 ? (
-        <p className="gx-gear-owned">
-          Own: {owned.map((x) => x.name).join(" · ")}
-        </p>
-      ) : null}
     </section>
   );
 }

@@ -15,10 +15,7 @@ export type GearWishItem = {
 
 const STORAGE_KEY = "wonder-gear-wishlist-v1";
 
-/**
- * Bryan Johnson stack Melani pasted.
- * Own already: Whoop, Bowflex dumbbells, Blueprint laser cap.
- */
+/** Bryan Johnson stack Melani pasted — buy-next only (no “own” recap). */
 const SEED: GearWishItem[] = [
   {
     id: "blueprint-olive-oil",
@@ -84,35 +81,14 @@ const SEED: GearWishItem[] = [
     note: "Buy next",
     source: "blueprint-stack",
   },
-  // Owned — kept for record, not buy-next
-  {
-    id: "whoop-4",
-    name: "Whoop 4.0",
-    url: "https://www.whoop.com",
-    brand: "Whoop",
-    owned: true,
-    note: "Already own",
-    source: "blueprint-stack",
-  },
-  {
-    id: "bowflex-dumbbells",
-    name: "Bowflex Dumbbells",
-    url: "https://global.bowflex.com/",
-    brand: "Bowflex",
-    owned: true,
-    note: "Already own",
-    source: "blueprint-stack",
-  },
-  {
-    id: "blueprint-laser-cap",
-    name: "Blueprint Laser Cap",
-    url: "https://blueprint.bryanjohnson.com/",
-    brand: "Blueprint",
-    owned: true,
-    note: "Already own / coming soon",
-    source: "blueprint-stack",
-  },
 ];
+
+/** Retired from seed — strip from localStorage if still present */
+const PURGE_IDS = new Set([
+  "whoop-4",
+  "bowflex-dumbbells",
+  "blueprint-laser-cap",
+]);
 
 function readRaw(): GearWishItem[] {
   try {
@@ -148,6 +124,12 @@ function writeRaw(items: GearWishItem[]) {
 export function loadGearWishlist(): GearWishItem[] {
   let items = readRaw();
   let changed = false;
+
+  // Drop retired “already own” rows (Whoop / Bowflex / laser cap)
+  const before = items.length;
+  items = items.filter((x) => !PURGE_IDS.has(x.id));
+  if (items.length !== before) changed = true;
+
   for (const seed of SEED) {
     if (!items.some((x) => x.id === seed.id)) {
       items = [...items, seed];

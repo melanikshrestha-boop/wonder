@@ -282,13 +282,25 @@ export function BooksLibrary({
   onGo?: (id: string) => void;
   workspacePages?: Page[];
 }) {
-  const [books, setBooks] = useState<Book[]>(() => loadBooks());
+  const [books, setBooks] = useState<Book[]>(() => {
+    try {
+      return loadBooks();
+    } catch (err) {
+      console.error("[Bookshelf] loadBooks failed", err);
+      return [];
+    }
+  });
   const [booksPreferences, setBooksPreferences] = useState(() =>
     loadBooksPreferences()
   );
-  const [folders, setFolders] = useState<BookFolder[]>(() =>
-    includeBookFolders(loadBookFolders(), loadBooks())
-  );
+  const [folders, setFolders] = useState<BookFolder[]>(() => {
+    try {
+      return includeBookFolders(loadBookFolders(), loadBooks());
+    } catch (err) {
+      console.error("[Bookshelf] load folders failed", err);
+      return [];
+    }
+  });
   const [filter, setFilter] = useState<Filter>(
     () => loadLibraryView().filter || "all"
   );

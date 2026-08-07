@@ -90,9 +90,11 @@ const SEED_HABITS: Omit<Habit, "createdAt" | "archivedAt">[] = [
   { id: "hb-5",  name: "Read 30 min",            emoji: "📖", color: HABIT_PALETTE[4], cadence: "daily", weeklyTarget: 7 },
   { id: "hb-6",  name: "Skin routine (AM + PM)", emoji: "✨", color: HABIT_PALETTE[5], cadence: "daily", weeklyTarget: 7 },
   { id: "hb-7",  name: "Track every dollar",     emoji: "💸", color: HABIT_PALETTE[6], cadence: "daily", weeklyTarget: 7 },
-  { id: "hb-8",  name: "No sugar",               emoji: "🚫", color: HABIT_PALETTE[7], cadence: "daily", weeklyTarget: 6 },
+  { id: "hb-8",  name: "No sugar (really affected)", emoji: "🚫", color: HABIT_PALETTE[7], cadence: "daily", weeklyTarget: 7 },
   { id: "hb-9",  name: "Journal — 10 min",       emoji: "📓", color: HABIT_PALETTE[8], cadence: "daily", weeklyTarget: 7 },
   { id: "hb-10", name: "Sleep by 10:30",         emoji: "🌙", color: HABIT_PALETTE[9], cadence: "daily", weeklyTarget: 7 },
+  /** Owner: ≥1 Sam Altman or Paul Graham essay every day */
+  { id: "hb-11", name: "SA / PG essay (≥1)",     emoji: "✍️", color: HABIT_PALETTE[10] || HABIT_PALETTE[0], cadence: "daily", weeklyTarget: 7 },
 ];
 
 /** Normalize hex to lowercase #rrggbb so comparisons never miss case/format. */
@@ -336,6 +338,74 @@ export function onHabitsChange(cb: () => void): () => void {
   return () => window.removeEventListener(EVENT, cb);
 }
 
+/** Owner laws that must exist even if she already has a habit list. */
+function applyOwnerFitnessHabitLaws(habits: Habit[]): { habits: Habit[]; changed: boolean } {
+  let changed = false;
+  const out = habits.map((h) => {
+    // Rename legacy “No sugar” → reason locked (she is really affected)
+    if (
+      h.id === "hb-8" ||
+      /^no sugar$/i.test(h.name.trim()) ||
+      /^no sugar\b/i.test(h.name.trim())
+    ) {
+      const nextName = "No sugar (really affected)";
+      if (h.name !== nextName || h.weeklyTarget < 7) {
+        changed = true;
+        return { ...h, name: nextName, weeklyTarget: 7, emoji: h.emoji || "🚫" };
+      }
+    }
+    // SA / PG daily essay goal
+    if (
+      h.id === "hb-11" ||
+      /sam altman|paul graham|sa\s*\/\s*pg|pg essay|sa essay/i.test(h.name)
+    ) {
+      const nextName = "SA / PG essay (≥1)";
+      if (h.name !== nextName || h.weeklyTarget < 7) {
+        changed = true;
+        return { ...h, name: nextName, weeklyTarget: 7, emoji: h.emoji || "✍️" };
+      }
+    }
+    return h;
+  });
+  // Ensure the sugar habit exists if she deleted it
+  const hasSugar = out.some(
+    (h) => h.id === "hb-8" || /no sugar/i.test(h.name)
+  );
+  if (!hasSugar) {
+    changed = true;
+    out.push({
+      id: "hb-8",
+      name: "No sugar (really affected)",
+      emoji: "🚫",
+      color: nextUniqueHabitColor(out),
+      cadence: "daily",
+      weeklyTarget: 7,
+      createdAt: Date.now(),
+      archivedAt: null,
+    });
+  }
+  // Ensure daily SA/PG essay habit
+  const hasEssay = out.some(
+    (h) =>
+      h.id === "hb-11" ||
+      /sam altman|paul graham|sa\s*\/\s*pg|pg essay|sa essay/i.test(h.name)
+  );
+  if (!hasEssay) {
+    changed = true;
+    out.push({
+      id: "hb-11",
+      name: "SA / PG essay (≥1)",
+      emoji: "✍️",
+      color: nextUniqueHabitColor(out),
+      cadence: "daily",
+      weeklyTarget: 7,
+      createdAt: Date.now(),
+      archivedAt: null,
+    });
+  }
+  return { habits: out, changed };
+}
+
 export function loadHabits(): Habit[] {
   try {
     const raw = typeof localStorage !== "undefined"
@@ -345,7 +415,10 @@ export function loadHabits(): Habit[] {
       const parsed = JSON.parse(raw) as Habit[];
       if (Array.isArray(parsed) && parsed.length) {
         // Never allow two habits to share a swatch — migrate on read
-        const { habits: fixed, changed } = ensureUniqueHabitColors(parsed);
+        const colors = ensureUniqueHabitColors(parsed);
+        const laws = applyOwnerFitnessHabitLaws(colors.habits);
+        const fixed = laws.habits;
+        const changed = colors.changed || laws.changed;
         if (changed) {
           try {
             localStorage.setItem(HABITS_KEY, JSON.stringify(fixed));

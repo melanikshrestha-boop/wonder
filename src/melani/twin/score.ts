@@ -31,7 +31,7 @@ function clampScore(value: number): number {
 
 export function scoreTwin(inputs: TwinInputs): ScoredTwin {
   const sleepGoal = inputs.goals.sleep_hours || 8;
-  const proteinGoal = inputs.goals.protein_g || 125;
+  const proteinGoal = inputs.goals.protein_g || 150;
   const waterGoal = inputs.goals.water_ml || 3500;
   const sleepShortfall =
     inputs.sleepHours == null ? 1.5 : Math.max(0, sleepGoal - inputs.sleepHours);

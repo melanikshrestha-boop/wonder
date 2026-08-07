@@ -319,7 +319,13 @@ function ensureLifePages(ws: Workspace): Workspace {
   // Health
   ensurePage("pg-fitness", "Fitness", "fitness", null);
   ensurePage("pg-sleep", "Sleep", "sleep", "pg-fitness");
-  ensurePage("pg-meals", "Meals", "meals", "pg-fitness");
+  ensurePage("pg-meals", "Meals + Supplements", "meals", "pg-fitness");
+  // Always keep Meals page title current (nav + page chrome)
+  pages = pages.map((p) =>
+    p.id === "pg-meals" && p.title !== "Meals + Supplements"
+      ? { ...p, title: "Meals + Supplements", updatedAt: now }
+      : p
+  );
   ensurePage("pg-gym", "Gym", "gym", "pg-fitness");
   // Whoop + Focus permanently out of nav (data keys may remain; never wipe health)
   pages = pages.map((p) =>
@@ -579,7 +585,7 @@ const SYSTEM_PAGE_SEEDS: Record<
   "pg-hair": { title: "Hair care", icon: "hair", parentId: "pg-hygiene" },
   "pg-fitness": { title: "Fitness", icon: "fitness", parentId: null },
   "pg-sleep": { title: "Sleep", icon: "sleep", parentId: "pg-fitness" },
-  "pg-meals": { title: "Meals", icon: "meals", parentId: "pg-fitness" },
+  "pg-meals": { title: "Meals + Supplements", icon: "meals", parentId: "pg-fitness" },
   "pg-gym": { title: "Gym", icon: "gym", parentId: "pg-fitness" },
   "pg-fashion-os": { title: "Wardrobe", icon: "fashion", parentId: "pg-agents" },
   "pg-library": { title: "Bookshelf", icon: "books", parentId: null },

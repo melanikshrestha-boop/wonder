@@ -113,12 +113,13 @@ export const DUE_RULES: DueRule[] = [
   },
   {
     id: "lab-panel",
-    label: "Routine bloodwork",
+    label: "Quarterly blood tests",
     service: "lab-work",
-    intervalMonths: 12,
+    intervalMonths: 3,
     fromAge: 18,
-    basis: "Commonly drawn alongside the annual physical",
-    reason: "Routine blood panel ordered with the annual visit",
+    basis:
+      "Owner law: full panel every quarter (cardio/metabolic + migraine context) — not annual-only",
+    reason: "Quarterly blood panel — Melani owner schedule",
   },
 ];
 

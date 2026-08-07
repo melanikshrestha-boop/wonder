@@ -3,57 +3,60 @@
  * Short list of categories Melani actually uses — not a full chart of accounts.
  */
 
-/** Fixed colors for pie / legend — same category = same color every month */
+/**
+ * Fixed colors for pie / legend — same category = same color every month.
+ * Soft editorial palette (dusty sage, clay, slate) — not neon Tailwind brights.
+ */
 export const CATEGORY_COLORS: Record<string, string> = {
-  Income: "#16a34a",
-  Family: "#0d9488",
-  Reimbursements: "#2563eb",
-  Gifts: "#db2777",
-  "Online income": "#0f766e",
-  "Technology income": "#4338ca",
-  Photography: "#7c3aed",
-  Reselling: "#f59e0b",
-  "Online business": "#14b8a6",
-  Technology: "#6366f1",
-  "Photography costs": "#8b5cf6",
-  "Reselling costs": "#d97706",
-  Cash: "#a16207",
-  Transfers: "#64748b", // account / card moves — neutral slate, not Zelle
-  Repayment: "#475569",
-  Groceries: "#22c55e",
-  Restaurants: "#ef4444", // "bad" discretionary — red
-  Experiences: "#f97316",
-  Housing: "#8b5cf6",
-  Utilities: "#06b6d4",
-  Laundry: "#3b82f6",
-  Health: "#14b8a6",
-  Subscriptions: "#a855f7",
-  Clothing: "#ec4899",
-  Transport: "#eab308",
-  Education: "#6366f1",
-  Travel: "#0ea5e9",
-  Business: "#334155",
-  Fees: "#b45309",
-  "Credit card payment": "#94a3b8",
+  Income: "#5a8f72",
+  Family: "#6a8f8a",
+  Reimbursements: "#6b8fad",
+  Gifts: "#b07a8c",
+  "Online income": "#4d7a6a",
+  "Technology income": "#6b7a9e",
+  Photography: "#8b7a9e",
+  Reselling: "#b8956a",
+  "Online business": "#5f8a7e",
+  Technology: "#7a86a8",
+  "Photography costs": "#8a7a9a",
+  "Reselling costs": "#a8885c",
+  Cash: "#9a8a6a",
+  Transfers: "#8a8f96", // neutral slate
+  Repayment: "#7a828c",
+  Groceries: "#6b9a78",
+  Restaurants: "#b07a72", // soft clay — still “watch this”, not neon red
+  Experiences: "#b08a6a",
+  Housing: "#8a7e9a",
+  Utilities: "#6a8f9a",
+  Laundry: "#7a8ea8",
+  Health: "#6a9a90",
+  Subscriptions: "#9a7a96",
+  Clothing: "#b08a98",
+  Transport: "#a8986a",
+  Education: "#7a86a0",
+  Travel: "#6a8fad",
+  Business: "#6a727c",
+  Fees: "#a08060",
+  "Credit card payment": "#9aa0a8",
 };
 
 const CUSTOM_CATEGORY_COLORS = [
-  "#7c3aed",
-  "#0891b2",
-  "#f97316",
-  "#16a34a",
-  "#db2777",
-  "#2563eb",
-  "#ca8a04",
-  "#dc2626",
-  "#0d9488",
-  "#9333ea",
-  "#ea580c",
-  "#4f46e5",
-  "#059669",
-  "#be185d",
-  "#0284c7",
-  "#b45309",
+  "#6b8fad",
+  "#8b7a9e",
+  "#b08a6a",
+  "#5a8f72",
+  "#b07a8c",
+  "#7a8ea8",
+  "#a8986a",
+  "#b07a72",
+  "#6a8f8a",
+  "#9a7a96",
+  "#a8885c",
+  "#7a86a0",
+  "#5f8a7e",
+  "#b08a98",
+  "#6a8f9a",
+  "#8a8f96",
 ];
 
 /** Categories treated as lifestyle leaks (red cue in UI) */
@@ -400,8 +403,9 @@ export function normalizeImportedTransactionCategory(
   return normalizeTransactionCategory(category, merchantOrNote, kind);
 }
 
-/** User-picked pie/legend colors — same key drives every chart surface */
-const CATEGORY_COLORS_KEY = "wonder-finance-category-colors-v1";
+/** User-picked pie/legend colors — same key drives every chart surface.
+ *  v2: soft palette default; ignores old neon overrides from v1. */
+const CATEGORY_COLORS_KEY = "wonder-finance-category-colors-v2";
 /** Charts listen so slice + legend re-render when a color is saved */
 export const CATEGORY_COLOR_EVENT = "wonder-finance-category-colors-changed";
 

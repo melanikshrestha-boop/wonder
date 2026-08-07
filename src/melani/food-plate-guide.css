@@ -8,14 +8,17 @@
   margin: 0 0 1.25rem;
 }
 
-/* Trash alone — no plate column */
+/* Solo bin/gift fill the column (pair row sets equal 1fr widths) */
 .fx-bin-solo {
-  justify-self: start;
-  max-width: 18.5rem;
+  justify-self: stretch;
+  max-width: none;
+  width: 100%;
 }
 
 .fx-bin-solo .fx-bin-silhouette {
   margin: 0;
+  max-width: none;
+  width: 100%;
 }
 
 /* —— Plate column —— */
@@ -256,7 +259,16 @@
   line-height: 1.35;
 }
 
-/* —— Trash can: interactive lid, toss, rattle on hits —— */
+/* —— Trash can hard ban: idle lid bob, toss, rattle on hits —— */
+
+.fx-bin-title {
+  margin: 0 0 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fx-faint);
+}
 
 .fx-bin {
   justify-self: stretch;
@@ -286,7 +298,7 @@ html.theme-light .fx-bin-silhouette {
   --bin-num: rgba(20, 21, 26, 0.36);
 }
 
-/* Lid — static (no open/close) */
+/* Lid — static until cursor is on the can */
 .fx-bin-lid {
   display: flex;
   flex-direction: column;
@@ -296,6 +308,7 @@ html.theme-light .fx-bin-silhouette {
   padding: 0;
   color: var(--bin-solid);
   pointer-events: none;
+  transform-origin: 50% 100%;
 }
 
 .fx-bin-handle {
@@ -304,6 +317,21 @@ html.theme-light .fx-bin-silhouette {
   border-radius: 999px 999px 2px 2px;
   background: var(--bin-solid);
   margin-bottom: 0.1rem;
+  transform-origin: 50% 100%;
+}
+
+/* Hover the whole can → lid + handle bob (off while editing — fights edge tools) */
+.fx-bin-silhouette:hover .fx-bin-lid {
+  animation: fx-bin-lid-idle 2.8s ease-in-out infinite;
+}
+
+.fx-bin-silhouette:hover .fx-bin-handle {
+  animation: fx-bin-handle-wobble 2.8s ease-in-out infinite;
+}
+
+.fx-bin.is-editing .fx-bin-silhouette:hover .fx-bin-lid,
+.fx-bin.is-editing .fx-bin-silhouette:hover .fx-bin-handle {
+  animation: none !important;
 }
 
 .fx-bin-lidcap {
@@ -540,10 +568,43 @@ html.theme-light .fx-bin-silhouette {
   }
 }
 
+/* Idle lid: slight lift + rock (top of can only) */
+@keyframes fx-bin-lid-idle {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-3px) rotate(-2.2deg);
+  }
+  50% {
+    transform: translateY(-1px) rotate(1.6deg);
+  }
+  75% {
+    transform: translateY(-4px) rotate(-1.4deg);
+  }
+}
+
+/* Handle tips a little more so motion reads on the top */
+@keyframes fx-bin-handle-wobble {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(-6deg);
+  }
+  60% {
+    transform: rotate(5deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fx-bin.is-rattle .fx-bin-silhouette,
   .fx-bin-list li.is-toss,
-  .fx-bin-flies i {
+  .fx-bin-flies i,
+  .fx-bin-silhouette:hover .fx-bin-lid,
+  .fx-bin-silhouette:hover .fx-bin-handle {
     animation: none !important;
   }
 }
@@ -622,4 +683,559 @@ html.theme-light .fx-bin-silhouette {
   font-style: normal;
   color: var(--fx-faint);
   font-size: 0.9em;
+}
+
+
+/* —— Trash + approved gift: equal columns, shared crown geometry —— */
+.fx-bin-gift-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem 1.75rem;
+  align-items: start;
+  width: 100%;
+  max-width: 40rem;
+}
+
+.fx-bin-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Same title band height so vessels line up */
+.fx-bin-title,
+.fx-gift-title {
+  margin: 0 0 0.55rem;
+  min-height: 1.05rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.05rem;
+  color: var(--fx-faint);
+}
+
+.fx-gift-title {
+  color: #16a34a;
+}
+
+.fx-bin-solo,
+.fx-gift-solo {
+  width: 100%;
+  max-width: none;
+  justify-self: stretch;
+}
+
+.fx-bin-solo .fx-bin-silhouette,
+.fx-gift-silhouette {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+/**
+ * Gift crown = trash crown (handle 0.4rem + gap + lidcap 0.68rem)
+ * so vessel tops align across the row.
+ */
+.fx-gift {
+  --gift-green: #16a34a;
+  --gift-green-deep: #15803d;
+  --gift-fill: #ecfdf5;
+  --gift-type: #14532d;
+  --gift-num: #4d7c5a;
+  width: 100%;
+}
+
+.fx-gift-lid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  /* reserve same stack as trash lid */
+  min-height: calc(0.4rem + 0.1rem + 0.68rem);
+}
+
+.fx-gift-handle {
+  width: 1.55rem;
+  height: 0.4rem;
+  border-radius: 999px 999px 2px 2px;
+  margin-bottom: 0.1rem;
+  background: var(--gift-green);
+  box-sizing: border-box;
+  transform-origin: 50% 100%;
+}
+
+/**
+ * Lid band — solid fill + green stroke (not hollow transparent).
+ * Hollow + clip on the vessel made the crown look like two green commas.
+ */
+.fx-gift-lidcap {
+  width: 93%;
+  height: 0.68rem;
+  border-radius: 4px 4px 1px 1px;
+  background: var(--gift-fill);
+  border: 3px solid var(--gift-green);
+  box-sizing: border-box;
+  box-shadow: none;
+}
+
+/**
+ * Vessel shell: clip-path kills CSS borders — paint green as the outer
+ * background, then inset the mint fill with ::before so the outline is continuous.
+ */
+.fx-gift-vessel {
+  position: relative;
+  margin-top: 0.1rem;
+  width: 100%;
+  /* outer padding = green “border” thickness after clip */
+  padding: calc(0.95rem + 3px) calc(1rem + 3px) calc(0.75rem + 3px)
+    calc(0.9rem + 3px);
+  background: var(--gift-green);
+  border: 0;
+  border-radius: 0;
+  clip-path: polygon(4.5% 0%, 95.5% 0%, 97% 100%, 3% 100%);
+  box-sizing: border-box;
+  max-height: min(52vh, 26rem);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Mint cavity — slightly tighter trapezoid so green rim stays even */
+.fx-gift-vessel::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: var(--gift-fill);
+  clip-path: polygon(4.3% 0%, 95.7% 0%, 96.75% 100%, 3.25% 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.fx-gift-list-root {
+  position: relative;
+  z-index: 1;
+  list-style: none;
+  margin: 0;
+  padding: 0.1rem 0.1rem 0.05rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--gift-green) 45%, transparent) transparent;
+}
+
+/* Trash list max-height matches */
+.fx-bin-list {
+  max-height: min(50vh, 24.5rem);
+}
+
+.fx-gift-group {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fx-gift-group + .fx-gift-group {
+  margin-top: 0.75rem;
+}
+
+.fx-gift-group-label {
+  margin: 0 0 0.28rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gift-green-deep);
+}
+
+.fx-gift-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.fx-gift-list li {
+  line-height: 1.22;
+  min-width: 0;
+}
+
+.fx-gift-n {
+  font-size: 0.65rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+  color: var(--gift-num);
+  text-align: right;
+  padding-top: 0.1em;
+}
+
+.fx-gift-item {
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  color: var(--gift-type);
+}
+
+.fx-gift-silhouette:hover .fx-gift-lid {
+  animation: fx-bin-lid-idle 2.8s ease-in-out infinite;
+}
+
+.fx-gift-silhouette:hover .fx-gift-handle {
+  animation: fx-bin-handle-wobble 2.8s ease-in-out infinite;
+}
+
+@media (max-width: 720px) {
+  .fx-bin-gift-row {
+    grid-template-columns: 1fr;
+    max-width: 22rem;
+  }
+}
+
+/* —— Diet list: clean default; edit mode shows × (right) + Add —— */
+.fx-diet-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.fx-diet-row.is-edit {
+  grid-template-columns: minmax(0, 1fr) 1.35rem;
+  column-gap: 0.2rem;
+}
+
+.fx-diet-row .fx-bin-row-btn,
+.fx-diet-row .fx-gift-row-btn {
+  min-width: 0;
+}
+
+/* Gift: number + label in the row button; × stays in the right column */
+.fx-diet-row-gift.is-edit {
+  grid-template-columns: minmax(0, 1fr) 1.35rem;
+}
+
+.fx-gift-row-btn {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  column-gap: 0.4rem;
+  align-items: baseline;
+  width: 100%;
+  margin: 0;
+  padding: 0.1rem 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  min-width: 0;
+}
+
+.fx-diet-x {
+  flex-shrink: 0;
+  justify-self: end;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--bin-type, #888) 70%, transparent);
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0.55;
+}
+
+.fx-diet-x:hover {
+  opacity: 1;
+  color: var(--fx-cutout, #ef4444);
+  background: color-mix(in srgb, var(--fx-cutout, #ef4444) 10%, transparent);
+}
+
+.fx-diet-x-gift {
+  color: color-mix(in srgb, #15803d 55%, transparent);
+}
+
+.fx-diet-x-gift:hover {
+  color: #b91c1c;
+  background: color-mix(in srgb, #b91c1c 10%, transparent);
+}
+
+.fx-diet-edit-row {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  column-gap: 0.4rem;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0.1rem 0;
+  min-width: 0;
+}
+
+.fx-diet-edit-row-gift {
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+}
+
+.fx-diet-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.fx-diet-add-gift {
+  margin-top: 0.35rem;
+  margin-bottom: 0.1rem;
+}
+
+.fx-diet-add-btn {
+  border: 0;
+  border-radius: 4px;
+  padding: 0.3rem 0.55rem;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--bin-type, #fff) 14%, transparent);
+  color: var(--bin-type, #e8e8ec);
+  white-space: nowrap;
+}
+
+.fx-diet-add-gift .fx-diet-add-btn {
+  background: color-mix(in srgb, #16a34a 18%, transparent);
+  color: #14532d;
+}
+
+.fx-diet-input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.35rem 0.45rem;
+  font: inherit;
+  font-size: 0.75rem;
+  background: color-mix(in srgb, var(--bin-type, #fff) 8%, transparent);
+  color: var(--bin-type, #e8e8ec);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.fx-diet-input::placeholder {
+  color: color-mix(in srgb, var(--bin-type, #fff) 35%, transparent);
+}
+
+.fx-diet-input-gift {
+  background: color-mix(in srgb, #16a34a 10%, transparent);
+  color: #14532d;
+}
+
+.fx-diet-input-gift::placeholder {
+  color: color-mix(in srgb, #14532d 40%, transparent);
+}
+
+.fx-diet-input:focus {
+  box-shadow: 0 0 0 1px color-mix(in srgb, #8b9cff 50%, transparent);
+}
+
+.fx-diet-input-gift:focus {
+  box-shadow: 0 0 0 1px #16a34a;
+}
+
+/**
+ * Bottom edge tools (pen + plus).
+ * Gift: expand strip on hover (smooth).
+ * Trash: FIXED footprint — no height/padding thrash (was glitching under clip-path).
+ */
+.fx-diet-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+/* ── Gift (keep smooth expand) ── */
+.fx-diet-edge-gift {
+  height: 0.72rem;
+  padding: 0 0 0.12rem 0.55rem;
+  transition: height 0.14s ease, padding 0.14s ease;
+}
+
+.fx-diet-edge-gift:hover,
+.fx-diet-edge-gift:focus-within,
+.fx-diet-edge-gift.is-open {
+  height: 1.55rem;
+  padding-bottom: 0.28rem;
+}
+
+/* ── Trash: stable hit strip — never resizes (kills hover flicker loop) ── */
+.fx-diet-edge-bin {
+  height: 1.45rem;
+  padding: 0 0 0.22rem 0.55rem;
+  transition: none;
+}
+
+.fx-diet-edge-tools {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.1rem;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fx-diet-edge-gift .fx-diet-edge-tools {
+  transform: translateY(3px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.fx-diet-edge-bin .fx-diet-edge-tools {
+  transform: none;
+  transition: opacity 0.1s ease;
+}
+
+.fx-diet-edge:hover .fx-diet-edge-tools,
+.fx-diet-edge:focus-within .fx-diet-edge-tools,
+.fx-diet-edge.is-open .fx-diet-edge-tools {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fx-diet-edge-gift:hover .fx-diet-edge-tools,
+.fx-diet-edge-gift:focus-within .fx-diet-edge-tools,
+.fx-diet-edge-gift.is-open .fx-diet-edge-tools {
+  transform: translateY(0);
+}
+
+.fx-diet-edge-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: color-mix(in srgb, var(--bin-type, #aaa) 70%, transparent);
+  cursor: pointer;
+  line-height: 0;
+  flex-shrink: 0;
+}
+
+.fx-diet-edge-btn:hover {
+  color: var(--bin-type, #eee);
+  background: color-mix(in srgb, var(--bin-type, #fff) 10%, transparent);
+}
+
+.fx-diet-edge-pen.is-on {
+  color: var(--bin-type, #eee);
+  background: color-mix(in srgb, var(--bin-type, #fff) 12%, transparent);
+}
+
+/* Plus only fully readable when the edge has opened (hover/open) */
+.fx-diet-edge-plus {
+  opacity: 0.92;
+}
+
+.fx-diet-edge-gift .fx-diet-edge-btn {
+  color: color-mix(in srgb, #15803d 55%, transparent);
+}
+
+.fx-diet-edge-gift .fx-diet-edge-btn:hover,
+.fx-diet-edge-gift .fx-diet-edge-pen.is-on {
+  color: #15803d;
+  background: color-mix(in srgb, #16a34a 14%, transparent);
+}
+
+.fx-diet-edge-icon {
+  display: block;
+}
+
+/**
+ * Trash vessel: STATIC bottom pad — never :has()-jumps.
+ * Padding thrash + clip-path was the edit-edge glitch.
+ * Tools overlay the reserved strip; gift still expands smoothly.
+ */
+.fx-bin-vessel {
+  padding-bottom: 1.4rem;
+}
+
+/* Gift only — expand bottom when edge opens (leave as-is / smooth) */
+.fx-gift-vessel {
+  padding-bottom: calc(0.7rem + 3px);
+}
+
+.fx-gift-vessel:has(.fx-diet-edge:hover),
+.fx-gift-vessel:has(.fx-diet-edge:focus-within),
+.fx-gift.is-editing .fx-gift-vessel {
+  padding-bottom: calc(1.65rem + 3px);
+}
+
+.fx-gift-list-root {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Keep list above the absolute edge hit strip */
+.fx-bin-list,
+.fx-gift-list-root {
+  position: relative;
+  z-index: 1;
+}
+
+.fx-diet-add-btn {
+  border: 0;
+  border-radius: 4px;
+  padding: 0.35rem 0.55rem;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--bin-type, #fff) 14%, transparent);
+  color: var(--bin-type, #e8e8ec);
+}
+
+.fx-diet-add-gift .fx-diet-add-btn {
+  background: color-mix(in srgb, #16a34a 18%, transparent);
+  color: #14532d;
+}
+
+.fx-diet-add-btn:hover {
+  filter: brightness(1.08);
 }

@@ -177,7 +177,7 @@ export const LAB_ITEMS: LabItem[] = [
  "oneLiner": "Main 'bad' cholesterol number on your prevention board.",
  "simple": "LDL is the cholesterol particle doctors watch most for long-term artery plaque. Your result was HIGH (120 vs a tighter young-adult prevention goal under ~110). For you this is not abstract biology. It is the number that decides how hard you push fiber, training, and what you ask Dr. Ververis about rechecks. You are building a body and a clinic career for decades. LDL is early warning, not a personality score.",
  "testsFor": "Long-term heart and artery risk, and whether food + training are enough or you need a clinician plan.",
- "highMeans": "Your 120 is flagged HIGH. Common levers you already control: more daily fiber (goal 30g), less liquid sugar, consistent lifting and walks, solid sleep. Genetics can still push it. Ask Ververis for target and recheck timing. Do not panic-cut protein. Keep the 125g goal.",
+ "highMeans": "Your 120 is flagged HIGH. Common levers you already control: more daily fiber (goal 30g), less liquid sugar, consistent lifting and walks, solid sleep. Genetics can still push it. Ask Ververis for target and recheck timing. Do not panic-cut protein. Keep the 150g goal.",
  "lowMeans": "Lower LDL is usually better for arteries. Too-low from extreme restriction is rare at your age.",
  "date": "2026-03-26",
  "lab": "Quest Diagnostics-West Hills"
@@ -463,7 +463,7 @@ export const LAB_ITEMS: LabItem[] = [
  "status": "ok",
  "normalRange": "About 6-20 mg/dL",
  "oneLiner": "Protein waste handled by liver and kidneys.",
- "simple": "BUN moves with protein intake, hydration, and kidney handling. High protein days and low water can raise it. You eat for 125g protein, so interpret with water logs.",
+ "simple": "BUN moves with protein intake, hydration, and kidney handling. High protein days and low water can raise it. You eat for 150g protein, so interpret with water logs.",
  "testsFor": "Hydration and kidney handling of protein load.",
  "highMeans": "Often dehydration or high protein intake. Drink and recheck before spiraling.",
  "lowMeans": "Can reflect low protein intake or overhydration. Rarely urgent alone.",

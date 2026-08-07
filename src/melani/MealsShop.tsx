@@ -1,336 +1,198 @@
 /**
- * Meals → Shop
- * Grouped by meal (breakfast / lunch / dinner) — not produce aisles.
- * Tap = bought · tap again = undo (clear). No double-tap gesture.
+ * Shop · 52-week buy plan from locked meals.
+ * Assumes you restocked today — only shows when each thing is due next.
+ * Color = cadence: green weekly · blue ~2wk · violet month · gold pantry.
+ * Top line = $600/mo grocery budget vs locked-day burn (food only).
  */
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  BLUEPRINT_MEALS,
-  TJ_SHOP_EVENT,
-  computeRunOut,
-  formatAmount,
-  groupRowsByMeal,
-  loadShopChecks,
-  loadStock,
-  markShopBought,
-  plainDayIngredientList,
-  setStockAmount,
-  type BlueprintMealId,
-  type ShopItemState,
-} from "./blueprintDiet";
+  buildMealShopGamePlan,
+  coreDayGroceryBudget,
+  shopCadenceBand,
+  type MealShopScheduleItem,
+  type MealShopTripLine,
+} from "./data";
 import "./meals-shop.css";
 
-type Props = {
-  defaultDays?: number;
-};
+function bandOf(it: MealShopScheduleItem | undefined, short: string): string {
+  if (!it) return "bi";
+  return shopCadenceBand(it.daysPerBuy, it.weeklyAlways);
+}
 
-export function MealsShop({ defaultDays = 7 }: Props) {
-  const [days, setDays] = useState(defaultDays);
-  const [optional, setOptional] = useState(false);
-  const [stock, setStock] = useState(loadStock);
-  const [checks, setChecks] = useState(loadShopChecks);
-  const [mode, setMode] = useState<"buy" | "stock" | "day">("buy");
+function chipLabel(l: MealShopTripLine): string {
+  return l.buyQty > 1 ? `${l.short} ×${l.buyQty}` : l.short;
+}
 
-  useEffect(() => {
-    const sync = () => {
-      setStock(loadStock());
-      setChecks(loadShopChecks());
-    };
-    window.addEventListener(TJ_SHOP_EVENT, sync);
-    return () => window.removeEventListener(TJ_SHOP_EVENT, sync);
-  }, []);
+function money(n: number): string {
+  const abs = Math.abs(n);
+  const body = abs >= 100 ? abs.toFixed(0) : abs.toFixed(0);
+  return n < 0 ? `−$${body}` : `$${body}`;
+}
 
-  const mealIds: BlueprintMealId[] = optional
-    ? ["breakfast", "lunch", "dinner", "optional"]
-    : ["breakfast", "lunch", "dinner"];
-
-  const rows = useMemo(
-    () => computeRunOut(mealIds, days, stock),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [optional, days, stock]
+export function MealsShop() {
+  const plan = useMemo(
+    () => buildMealShopGamePlan({ weekCount: 52, stockedToday: true }),
+    []
   );
 
-  const buyRows = useMemo(
-    () =>
-      rows.filter(
-        (r) =>
-          r.packsToBuy > 0 ||
-          checks[r.id] === "bought" ||
-          checks[r.id] === "own"
-      ),
-    [rows, checks]
+  // Steak default for budget; sockeye is usually cheaper on protein line
+  const budget = useMemo(() => coreDayGroceryBudget("steak"), []);
+  const topSpend = useMemo(
+    () => budget.lines.filter((l) => l.priced).slice(0, 5),
+    [budget]
   );
 
-  const buyByMeal = useMemo(
-    () => groupRowsByMeal(buyRows, mealIds),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [buyRows, optional]
+  const meta = useMemo(() => {
+    const m = new Map<string, MealShopScheduleItem>();
+    for (const it of plan.items) m.set(it.short, it);
+    return m;
+  }, [plan]);
+
+  const weekly = plan.items.filter((it) => it.weeklyAlways);
+  const bulkMeta = plan.items.filter((it) => !it.weeklyAlways);
+
+  // Only weeks where Costco or Direct is due (skip empty / TJ-only noise)
+  const bulkTrips = plan.trips.filter(
+    (t) => t.costco.length > 0 || t.direct.length > 0
   );
-  const stockByMeal = useMemo(
-    () => groupRowsByMeal(rows, mealIds),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows, optional]
-  );
-  const dayList = useMemo(() => plainDayIngredientList(optional), [optional]);
 
-  const dayByMeal = useMemo(() => {
-    const map = new Map<string, typeof dayList>();
-    for (const row of dayList) {
-      const arr = map.get(row.meal) || [];
-      arr.push(row);
-      map.set(row.meal, arr);
-    }
-    return BLUEPRINT_MEALS.filter((m) => mealIds.includes(m.id))
-      .map((m) => ({
-        title: m.title,
-        short: m.short,
-        items: map.get(m.title) || [],
-      }))
-      .filter((g) => g.items.length > 0);
-  }, [dayList, optional]);
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? bulkTrips : bulkTrips.slice(0, 12);
 
-  const buyCount = rows.filter(
-    (r) =>
-      r.packsToBuy > 0 &&
-      checks[r.id] !== "own" &&
-      checks[r.id] !== "bought"
-  ).length;
-
-  function refreshShop() {
-    setChecks(loadShopChecks());
-    setStock(loadStock());
-  }
-
-  /** Tap = buy · same row again = undo. Immediate, no delay / no double-tap. */
-  function handleBuyTap(id: string, packs: number) {
-    markShopBought(id, packs);
-    refreshShop();
-  }
-
-  function rowClass(state: ShopItemState | undefined): string {
-    if (state === "bought") return "is-bought";
-    if (state === "own") return "is-own";
-    return "";
-  }
+  const budgetPct = Math.min(100, budget.pctOfBudget);
 
   return (
     <div className="ms">
       <header className="ms-head">
-        <h2 className="fx-h2">SHOP · BY MEAL</h2>
-        <p className="ms-meta">
-          {mode === "buy"
-            ? `What to grab at TJ for the next ${days} days. Tap = bought · tap again = undo${
-                buyCount > 0 ? ` · ${buyCount} left` : ""
-              }`
-            : mode === "stock"
-              ? `What’s left at home vs how much you use per day (${days}-day window).`
-              : "Exact grams for one full day of the locked plan — not a buy list."}
-        </p>
+        <h2 className="fx-h2">SHOP · 52 WEEKS</h2>
+        <p className="ms-meta">Stocked today · next buys only</p>
       </header>
 
-      <div className="ms-toolbar">
-        <div className="ms-modes" role="tablist" aria-label="Shop view">
-          {(
-            [
-              ["buy", "Buy list"],
-              ["stock", "At home"],
-              ["day", "One day exact"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              className={mode === id ? "is-on" : undefined}
-              onClick={() => setMode(id)}
-            >
-              {label}
-            </button>
-          ))}
+      {/* $600/mo grocery budget — food only, not Blueprint */}
+      <div
+        className={`ms-budget${budget.overBudget ? " is-over" : ""}`}
+        aria-label="Monthly grocery budget"
+      >
+        <p className="ms-budget-line">
+          <span className="ms-budget-label">Grocery / month</span>
+          <strong className="ms-budget-num">
+            {money(budget.perMonth)}
+            <span className="ms-budget-of"> / {money(budget.budgetUsd)}</span>
+          </strong>
+        </p>
+        <div
+          className="ms-budget-bar"
+          role="progressbar"
+          aria-valuenow={budgetPct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${budget.pctOfBudget} percent of grocery budget`}
+        >
+          <span
+            className="ms-budget-fill"
+            style={{ width: `${budgetPct}%` }}
+          />
         </div>
-        {mode !== "day" ? (
-          <div className="ms-days" role="group" aria-label="Days to cover">
-            <span className="ms-days-label">Cover</span>
-            {[3, 7, 14].map((n) => (
-              <button
-                key={n}
-                type="button"
-                className={days === n ? "is-on" : undefined}
-                onClick={() => setDays(n)}
-              >
-                {n} days
-              </button>
+        <p className="ms-budget-sub">
+          {budget.overBudget
+            ? `${money(budget.perMonth - budget.budgetUsd)} over · food only · Blueprint separate`
+            : `${money(budget.remainingUsd)} left · food only · Blueprint separate`}
+          {" · "}
+          steak day estimate
+        </p>
+        {topSpend.length > 0 ? (
+          <p className="ms-budget-top" aria-label="Biggest monthly food costs">
+            {topSpend.map((l) => (
+              <span key={l.name} className="ms-budget-chip">
+                {l.short} {money(l.perMonth)}
+              </span>
             ))}
-            <button
-              type="button"
-              className={optional ? "is-on" : undefined}
-              onClick={() => setOptional((v) => !v)}
-              title="Include optional pudding ingredients"
-            >
-              + pudding
-            </button>
-          </div>
+          </p>
+        ) : null}
+        {budget.unpriced.length > 0 ? (
+          <p className="ms-budget-miss">
+            Missing price: {budget.unpriced.slice(0, 4).join(" · ")}
+            {budget.unpriced.length > 4 ? "…" : ""}
+          </p>
         ) : null}
       </div>
 
-      {mode === "day" ? (
-        <section className="ms-panel" aria-label="One day by meal">
-          <h2 className="fx-h2">EXACT · ONE DAY</h2>
-          {dayByMeal.map((g) => (
-            <div key={g.title} className="ms-meal-block">
-              <h3 className="ms-meal-h">{g.title}</h3>
-              <p className="ms-meal-short">{g.short}</p>
-              <table className="ms-table">
-                <tbody>
-                  {g.items.map((row, i) => (
-                    <tr key={`${row.name}-${i}`}>
-                      <td className="ms-num">{row.amount}</td>
-                      <td>{row.name}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
-        </section>
-      ) : null}
+      {/* Color key — 4 chips */}
+      <p className="ms-buy-legend" aria-hidden>
+        <span className="ms-chip is-wk">weekly</span>
+        <span className="ms-chip is-bi">2 wk</span>
+        <span className="ms-chip is-mo">month</span>
+        <span className="ms-chip is-yr">pantry</span>
+      </p>
 
-      {mode === "buy" ? (
-        <section className="ms-panel" aria-label="Buy by meal">
-          <h2 className="fx-h2">BUY · BY MEAL</h2>
-          {!buyByMeal.length ? (
-            <p className="ms-empty">
-              Nothing to buy for {days}d — stock covers it, or mark items own.
-            </p>
-          ) : (
-            buyByMeal.map((g, gi) => (
-              <div key={g.mealId} className="ms-meal-block">
-                <h3 className="ms-meal-h">
-                  <span className="ms-meal-n">{gi + 1}</span>
-                  {g.title}
-                </h3>
-                <p className="ms-meal-short">{g.short}</p>
-                <ul>
-                  {g.items.map((item) => {
-                    const st = checks[item.id] as ShopItemState | undefined;
-                    const also =
-                      item.mealIds.length > 1
-                        ? item.mealIds
-                            .filter((m) => m !== item.primaryMeal)
-                            .map((m) =>
-                              m === "optional"
-                                ? "pudding"
-                                : m.charAt(0).toUpperCase() + m.slice(1)
-                            )
-                            .join(" · ")
-                        : "";
-                    return (
-                      <li key={item.id} className={rowClass(st)}>
-                        <button
-                          type="button"
-                          className={`ms-check${st === "own" ? " is-own" : ""}${
-                            st === "bought" ? " is-bought" : ""
-                          }`}
-                          aria-label={
-                            st === "bought" || st === "own"
-                              ? `${item.name} marked — tap to undo`
-                              : `${item.name}: tap to mark bought`
-                          }
-                          onClick={() =>
-                            handleBuyTap(item.id, item.packsToBuy)
-                          }
-                        >
-                          {st === "own" ? "●" : st === "bought" ? "✓" : ""}
-                        </button>
-                        <div className="ms-line">
-                          <strong>{item.tjProduct}</strong>
-                          <span>
-                            {st === "own"
-                              ? "Own · at home"
-                              : st === "bought"
-                                ? "Bought today"
-                                : `Buy ${item.packsToBuy}${
-                                    item.packSize
-                                      ? ` × ${formatAmount(item.packSize, item.unit)}`
-                                      : ""
-                                  } · ${formatAmount(item.usePerDay, item.unit)}/day`}
-                            {st !== "own" &&
-                            st !== "bought" &&
-                            item.daysLeft != null
-                              ? ` · ${item.daysLeft}d left`
-                              : ""}
-                            {also ? ` · also ${also}` : ""}
-                          </span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+      {/* Always — TJ produce once */}
+      <div className="ms-buy-block">
+        <p className="ms-buy-when">Every week · TJ</p>
+        <div className="ms-chips">
+          {weekly.map((it) => (
+            <span key={it.id} className="ms-chip is-wk">
+              {it.short}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* How long bulk lasts (one quiet line each) */}
+      <div className="ms-buy-block">
+        <p className="ms-buy-when">Bulk lasts</p>
+        <div className="ms-chips">
+          {bulkMeta.map((it) => {
+            const band = shopCadenceBand(it.daysPerBuy, false);
+            const q = it.buyQty > 1 ? ` ×${it.buyQty}` : "";
+            const days =
+              it.daysPerBuy >= 60
+                ? `${(it.daysPerBuy / 30.44).toFixed(0)}mo`
+                : `${Math.round(it.daysPerBuy)}d`;
+            return (
+              <span key={it.id} className={`ms-chip is-${band}`}>
+                {it.short}
+                {q} · {days}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Calendar — date + chips */}
+      <div className="ms-buy-cal">
+        <p className="ms-buy-when">When to buy bulk</p>
+        {visible.map((t) => {
+          const lines = [...t.costco, ...t.direct];
+          return (
+            <div key={t.weekIndex} className="ms-buy-row">
+              <span className="ms-buy-date">{t.label}</span>
+              <div className="ms-chips">
+                {lines.map((l) => {
+                  const it = meta.get(l.short);
+                  const band = bandOf(it, l.short);
+                  return (
+                    <span
+                      key={`${t.weekIndex}-${l.full}`}
+                      className={`ms-chip is-${band}`}
+                    >
+                      {chipLabel(l)}
+                    </span>
+                  );
+                })}
               </div>
-            ))
-          )}
-        </section>
-      ) : null}
-
-      {mode === "stock" ? (
-        <section className="ms-panel" aria-label="Home stock by meal">
-          <h2 className="fx-h2">STOCK · BY MEAL</h2>
-          <p className="ms-hint">
-            How many days each item lasts from what’s in the house.
-          </p>
-          {stockByMeal.map((g) => (
-            <div key={g.mealId} className="ms-meal-block">
-              <h3 className="ms-meal-h">{g.title}</h3>
-              <p className="ms-meal-short">{g.short}</p>
-              <ul className="ms-stock-list">
-                {g.items.map((item) => (
-                  <li key={item.id}>
-                    <div className="ms-stock-name">
-                      <strong>{item.name}</strong>
-                      <span>
-                        {formatAmount(item.usePerDay, item.unit)}/day
-                        {item.daysLeft != null ? (
-                          <>
-                            {" · "}
-                            <em
-                              className={
-                                item.daysLeft < days ? "is-low" : undefined
-                              }
-                            >
-                              {item.daysLeft}d left
-                            </em>
-                          </>
-                        ) : (
-                          " · —"
-                        )}
-                      </span>
-                    </div>
-                    <label className="ms-stock-input">
-                      <span className="ms-vis">Left</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={item.unit === "each" ? 0.5 : 1}
-                        value={stock[item.id] ?? ""}
-                        placeholder="0"
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          const map = setStockAmount(
-                            item.id,
-                            v === "" ? 0 : Number(v)
-                          );
-                          setStock({ ...map });
-                        }}
-                      />
-                      <span className="ms-unit">{item.unit}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
             </div>
-          ))}
-        </section>
-      ) : null}
+          );
+        })}
+        {bulkTrips.length > 12 ? (
+          <button
+            type="button"
+            className="ms-more"
+            onClick={() => setShowAll((v) => !v)}
+          >
+            {showAll ? "Less" : `All ${bulkTrips.length} trips`}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -202,7 +202,7 @@ export function careServiceLabel(service: CareService): string {
     "annual-physical": "Annual physical",
     "primary-care": "Primary care visit",
     "eye-exam": "Eye exam",
-    "lab-work": "Lab work",
+    "lab-work": "Blood draw / labs",
     specialist: "Specialist visit",
     other: "Medical appointment",
   };

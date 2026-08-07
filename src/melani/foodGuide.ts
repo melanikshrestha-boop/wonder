@@ -104,39 +104,92 @@ export const PLATE_DRINKS = [
  * Shown in the can; any logged meal matching these is flagged immediately.
  */
 export const PLATE_TRASH = [
+  // ── Sugar (owner: really affected — hard cut) ──
   "Added sugar",
-  "High-fructose corn syrup",
-  "Junk food",
+  // ── Vices ──
+  "Alcohol or Smoking",
+  // ── Junk pile (one bucket) ──
+  "Junk / ultra-processed food",
+  // ── Method ──
   "Fried food",
-  "Deli meats",
-  "Processed meats",
+  // ── Anything labeled artificial ──
+  "Anything labeled artificial",
   "Gums",
-  "Aspartame",
-  "Other artificial sweeteners",
-  "Hydrogenated oils",
-  "Partially hydrogenated oils",
-  "Corn oil",
-  "Soybean oil",
-  "Canola oil (seed oils you cut)",
-  "Trans fats",
-  "Saturated animal fats",
-  "Butter",
-  "Lard",
-  "Tallow",
-  "Cream / heavy cream",
-  "Full-fat cheese for fat load",
-  "Animal fat cooking",
-  "Red meat",
-  "Organ meat",
-  "Bacon / sausage",
-  "Rice (refined)",
-  "Pasta (refined)",
-  "White bread",
-  "Alcohol",
+  // ── Oils / fats ──
+  "Seed oils & industrial fats",
+  // ── Protein allowlist (green gift is the only yes) ──
+  "Any protein not in the approved bin",
+  // ── Carbs ──
+  "Refined carbs: white rice, white pasta, etc.",
+  // ── Drinks ──
   "Soda / energy drinks",
-  "Candy / pastry",
-  "Ultra-processed snacks",
 ] as const;
+
+/**
+ * Approved lists — green gift next to the trash can.
+ * Celine Nova diet lock (owner list).
+ */
+export const APPROVED_PROTEIN = [
+  "Kaki Oysters",
+  "Bass",
+  "Nigiri",
+  "Beef",
+  "Octopus",
+  "Catfish",
+  "Sashimi",
+  "Chicken",
+  "Scallops",
+  "Eggs",
+  "Sea Urchin",
+  "Lamb",
+  "Seabass",
+  "Perch",
+  "Spicy Tuna w Avocado",
+  "Squid",
+  "Turkey",
+  "Sweet Shrimps",
+  "Whitefish",
+  "Tobiko",
+  "Tuna",
+  "Yellowtail",
+  "Trout",
+] as const;
+
+export const APPROVED_VEGETABLES = [
+  "Artichoke",
+  "Avocado",
+  "Beets",
+  "Broccoli",
+  "Brussels sprouts",
+  "Cabbage",
+  "Carrots",
+  "Cucumber",
+  "Garlic",
+  "Olives",
+  "Onions",
+  "Peppers",
+  "Salad greens",
+  "Spinach",
+] as const;
+
+export const APPROVED_NUTS = [
+  "Peanuts",
+  "Pecans",
+  "Pistachios",
+] as const;
+
+export type ApprovedGroup = {
+  id: "protein" | "vegetables" | "nuts";
+  label: string;
+  items: readonly string[];
+};
+
+export const APPROVED_GROUPS: ApprovedGroup[] = [
+  { id: "protein", label: "Protein", items: APPROVED_PROTEIN },
+  { id: "vegetables", label: "Vegetables", items: APPROVED_VEGETABLES },
+  // Nuts kept in data only — UI gift list is protein + vegetables
+  { id: "nuts", label: "Nuts", items: APPROVED_NUTS },
+];
 
 export type CutoutLabel = (typeof PLATE_TRASH)[number];
 
@@ -168,133 +221,11 @@ const CUTOUT_ALIASES: Record<CutoutLabel, string[]> = {
     "corn syrup",
     "simple syrup",
     "sugar syrup",
-  ],
-  "High-fructose corn syrup": [
     "high-fructose corn syrup",
     "high fructose corn syrup",
     "hfcs",
   ],
-  "Junk food": ["junk food", "fast food", "mcdonald", "doritos", "cheetos"],
-  "Fried food": [
-    "fried",
-    "deep fried",
-    "deep-fried",
-    "french fry",
-    "french fries",
-    "onion ring",
-    "tempura",
-  ],
-  "Deli meats": [
-    "deli meat",
-    "deli meats",
-    "cold cut",
-    "cold cuts",
-    "lunch meat",
-  ],
-  "Processed meats": [
-    "processed meat",
-    "hot dog",
-    "hotdog",
-    "pepperoni",
-    "salami",
-    "mortadella",
-    "bologna",
-  ],
-  Gums: [
-    "xanthan gum",
-    "guar gum",
-    "gellan gum",
-    "locust bean gum",
-    "carrageenan",
-  ],
-  Aspartame: ["aspartame", "nutrasweet", "equal sweetener"],
-  "Other artificial sweeteners": [
-    "sucralose",
-    "splenda",
-    "saccharin",
-    "acesulfame",
-    "ace-k",
-    "neotame",
-    "artificial sweetener",
-  ],
-  "Hydrogenated oils": ["hydrogenated oil", "hydrogenated oils"],
-  "Partially hydrogenated oils": [
-    "partially hydrogenated",
-    "partially-hydrogenated",
-  ],
-  "Corn oil": ["corn oil"],
-  "Soybean oil": ["soybean oil", "soy oil"],
-  "Canola oil (seed oils you cut)": [
-    "canola oil",
-    "rapeseed oil",
-    "vegetable oil",
-    "seed oil",
-  ],
-  "Trans fats": ["trans fat", "trans fats", "trans-fat"],
-  "Saturated animal fats": [
-    "saturated animal",
-    "animal fat",
-    "beef fat",
-    "pork fat",
-  ],
-  Butter: ["butter", "ghee"],
-  Lard: ["lard"],
-  Tallow: ["tallow"],
-  "Cream / heavy cream": [
-    "heavy cream",
-    "whipping cream",
-    "double cream",
-    "heavy whipping",
-  ],
-  "Full-fat cheese for fat load": [
-    "full-fat cheese",
-    "full fat cheese",
-    "cheddar",
-    "brie",
-    "camembert",
-    "cream cheese",
-  ],
-  "Animal fat cooking": ["cooked in animal fat", "fried in lard", "duck fat"],
-  "Red meat": [
-    "red meat",
-    "beef",
-    "steak",
-    "lamb",
-    "veal",
-    "mutton",
-    "ground beef",
-    "hamburger",
-    "burger patty",
-  ],
-  "Organ meat": [
-    "organ meat",
-    "liver",
-    "kidney",
-    "heart offal",
-    "sweetbread",
-    "tripe",
-  ],
-  "Bacon / sausage": ["bacon", "sausage", "pancetta", "prosciutto"],
-  "Rice (refined)": ["white rice", "jasmine rice", "basmati white", "rice white"],
-  "Pasta (refined)": [
-    "white pasta",
-    "spaghetti",
-    "penne",
-    "macaroni",
-    "fettuccine",
-    "linguine",
-    "pasta",
-  ],
-  "White bread": [
-    "white bread",
-    "white toast",
-    "baguette",
-    "brioche",
-    "hot dog bun",
-    "hamburger bun",
-  ],
-  // Whole-word only in scanCutouts (never substring: ginger≠gin, vinegar≠wine)
-  Alcohol: [
+  "Alcohol or Smoking": [
     "alcohol",
     "beer",
     "wine",
@@ -308,18 +239,33 @@ const CUTOUT_ALIASES: Record<CutoutLabel, string[]> = {
     "liqueur",
     "boozy",
     "ipa",
+    "smoking",
+    "smoke",
+    "cigarette",
+    "cigarettes",
+    "vape",
+    "vaping",
+    "nicotine",
+    "cigar",
+    "tobacco",
+    "weed",
+    "cannabis",
+    "joint",
+    "blunt",
   ],
-  "Soda / energy drinks": [
-    "soda",
-    "cola",
-    "pepsi",
-    "sprite",
-    "energy drink",
-    "red bull",
-    "monster energy",
-    "soft drink",
-  ],
-  "Candy / pastry": [
+  "Junk / ultra-processed food": [
+    "junk food",
+    "fast food",
+    "mcdonald",
+    "doritos",
+    "cheetos",
+    "ultra-processed",
+    "chip bag",
+    "potato chip",
+    "potato chips",
+    "crisps",
+    "pocky",
+    "protein bar candy",
     "candy",
     "pastry",
     "donut",
@@ -331,14 +277,150 @@ const CUTOUT_ALIASES: Record<CutoutLabel, string[]> = {
     "muffin",
     "pie crust",
   ],
-  "Ultra-processed snacks": [
-    "ultra-processed",
-    "chip bag",
-    "potato chip",
-    "potato chips",
-    "crisps",
-    "pocky",
-    "protein bar candy",
+  "Fried food": [
+    "fried",
+    "deep fried",
+    "deep-fried",
+    "french fry",
+    "french fries",
+    "onion ring",
+    "tempura",
+  ],
+  "Anything labeled artificial": [
+    "artificial",
+    "artificially",
+    "artificial sweetener",
+    "artificial flavor",
+    "artificial flavour",
+    "artificial color",
+    "artificial colour",
+    "artificial colors",
+    "artificial colours",
+    "artificial ingredient",
+    "aspartame",
+    "nutrasweet",
+    "equal sweetener",
+    "sucralose",
+    "splenda",
+    "saccharin",
+    "acesulfame",
+    "ace-k",
+    "neotame",
+  ],
+  Gums: [
+    "xanthan gum",
+    "guar gum",
+    "gellan gum",
+    "locust bean gum",
+    "carrageenan",
+  ],
+  "Seed oils & industrial fats": [
+    "hydrogenated oil",
+    "hydrogenated oils",
+    "partially hydrogenated",
+    "partially-hydrogenated",
+    "corn oil",
+    "soybean oil",
+    "soy oil",
+    "canola oil",
+    "rapeseed oil",
+    "vegetable oil",
+    "seed oil",
+    "trans fat",
+    "trans fats",
+    "trans-fat",
+  ],
+  /**
+   * Anything animal/alt protein that is NOT on APPROVED_PROTEIN.
+   * Matchers are banned proteins only — approved names never appear here.
+   * Lamb/beef/chicken/turkey/eggs/seafood on the green list stay allowed.
+   */
+  "Any protein not in the approved bin": [
+    "bacon",
+    "sausage",
+    "pancetta",
+    "prosciutto",
+    "pork",
+    "pork chop",
+    "pork loin",
+    "pork belly",
+    "pulled pork",
+    "ham",
+    "deli meat",
+    "deli meats",
+    "cold cut",
+    "cold cuts",
+    "lunch meat",
+    "processed meat",
+    "hot dog",
+    "hotdog",
+    "pepperoni",
+    "salami",
+    "mortadella",
+    "bologna",
+    "organ meat",
+    "liver",
+    "kidney",
+    "sweetbread",
+    "tripe",
+    "offal",
+    "veal",
+    "mutton",
+    "goat meat",
+    "venison",
+    "bison",
+    "duck",
+    "goose",
+    "salmon",
+    "sockeye",
+    "cod",
+    "halibut",
+    "tilapia",
+    "sardine",
+    "anchovy",
+    "mackerel",
+    "crab",
+    "lobster",
+    "clam",
+    "mussel",
+    "tofu",
+    "tempeh",
+    "seitan",
+    "whey protein",
+    "pea protein",
+    "casein",
+    "protein powder",
+    "beyond meat",
+    "impossible burger",
+  ],
+  "Refined carbs: white rice, white pasta, etc.": [
+    "white rice",
+    "jasmine rice",
+    "basmati white",
+    "rice white",
+    "white pasta",
+    "spaghetti",
+    "penne",
+    "macaroni",
+    "fettuccine",
+    "linguine",
+    "pasta",
+    "white bread",
+    "white toast",
+    "baguette",
+    "brioche",
+    "hot dog bun",
+    "hamburger bun",
+  ],
+  "Soda / energy drinks": [
+    "soda",
+    "cola",
+    "pepsi",
+    "sprite",
+    "energy drink",
+    "red bull",
+    "monster energy",
+    "soft drink",
   ],
 };
 
@@ -372,14 +454,15 @@ function hayHasAlias(
   const a = alias.trim().toLowerCase();
   if (!a) return false;
 
-  if (label === "Alcohol") {
+  if (label === "Alcohol or Smoking") {
     // Kitchen strings that are not drinking alcohol
     const safe = hay
       .replace(/\bapple\s+cider\s+vinegar\b/g, " ")
       .replace(/\bcider\s+vinegar\b/g, " ")
       .replace(/\bginger(\s+root)?\b/g, " ")
       .replace(/\bextra\s+virgin\b/g, " ")
-      .replace(/\bvirgin\s+olive\b/g, " ");
+      .replace(/\bvirgin\s+olive\b/g, " ")
+      .replace(/\bsmoked\s+(salmon|paprika|salt|cheese|meat|fish|tofu)\b/g, " ");
     return new RegExp(`\\b${escapeRegExp(a)}\\b`, "i").test(safe);
   }
 
@@ -392,6 +475,26 @@ function hayHasAlias(
   return hay.includes(a);
 }
 
+/** Active trash labels — defaults plus owner edits from dietListsStore when available. */
+function activeTrashLabels(): string[] {
+  try {
+    // Lazy require-style to avoid circular import at module init
+    const raw =
+      typeof localStorage !== "undefined"
+        ? localStorage.getItem("dr-melani-diet-lists-v1")
+        : null;
+    if (raw) {
+      const parsed = JSON.parse(raw) as { trash?: string[] };
+      if (Array.isArray(parsed.trash) && parsed.trash.length) {
+        return parsed.trash.filter((t) => typeof t === "string" && t.trim());
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+  return [...PLATE_TRASH];
+}
+
 export function scanCutouts(text: string): CutoutHit[] {
   if (!text?.trim()) return [];
   const hay = normalizeMealText(text);
@@ -400,14 +503,20 @@ export function scanCutouts(text: string): CutoutHit[] {
   const hits: CutoutHit[] = [];
   const seen = new Set<string>();
 
-  for (const label of PLATE_TRASH) {
-    const aliases = CUTOUT_ALIASES[label] || [label.toLowerCase()];
+  for (const label of activeTrashLabels()) {
+    const aliases =
+      (CUTOUT_ALIASES as Record<string, string[]>)[label] || [
+        label.toLowerCase(),
+      ];
     const sorted = [...aliases].sort((a, b) => b.length - a.length);
     let found: string | null = null;
-    const searchIn = label === "Added sugar" ? hayNoHoney : hay;
+    const searchIn =
+      label === "Added sugar" || /^added sugar/i.test(label)
+        ? hayNoHoney
+        : hay;
     for (const a of sorted) {
       if (!a) continue;
-      if (hayHasAlias(searchIn, a, label)) {
+      if (hayHasAlias(searchIn, a, label as CutoutLabel)) {
         found = a.trim();
         break;
       }
@@ -415,14 +524,14 @@ export function scanCutouts(text: string): CutoutHit[] {
     // Bare word “sugar” / “sugars” → Added sugar (after honey stripped)
     if (
       !found &&
-      label === "Added sugar" &&
+      (label === "Added sugar" || /^added sugar/i.test(label)) &&
       /\bsugars?\b/.test(hayNoHoney)
     ) {
       found = "sugar";
     }
     if (found && !seen.has(label)) {
       seen.add(label);
-      hits.push({ label, matched: found });
+      hits.push({ label: label as CutoutLabel, matched: found });
     }
   }
   return hits;

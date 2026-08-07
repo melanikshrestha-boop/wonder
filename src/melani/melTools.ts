@@ -8,7 +8,17 @@ import {
 import { loadBooks, requestBookOpen, type Book } from "./booksStore";
 import { requestBookDiscovery } from "./bookDiscovery";
 import { deriveCycle, loadCycle } from "./cycleEngine";
-import { DAILY_SUPPLEMENTS, MEAL_PRESETS, todayKey } from "./data";
+import {
+  DAILY_SUPPLEMENTS,
+  MEAL_PRESETS,
+  resolveMealPreset,
+  todayKey,
+} from "./data";
+import {
+  addWaterDrink,
+  removeWaterDrink,
+  waterMlFromPreset,
+} from "./waterLog";
 import {
   buildEconCanonPack,
   explainEconFramework,
@@ -162,7 +172,7 @@ const PAGE_ALIASES: Array<{ pattern: RegExp; pageId: string; title: string }> = 
   { pattern: /^(?:my\s+)?(?:care|care concierge|appointments?|dentist|doctor appointments?)$/i, pageId: "pg-agent-care", title: "Care Concierge" },
   // Nutrition tab retired — route macros/food log to Fitness → Meals
   // Paper trading desk permanently removed — no Mel alias to it
-  { pattern: /^(?:my\s+)?(?:meals?|food|nutrition|macros?|calories|cals|food log|what i ate)$/i, pageId: "pg-meals", title: "Meals" },
+  { pattern: /^(?:my\s+)?(?:meals?|food|nutrition|macros?|calories|cals|food log|what i ate|supplements?)$/i, pageId: "pg-meals", title: "Meals + Supplements" },
   { pattern: /^(?:my\s+)?(?:sleep|brain fog)$/i, pageId: "pg-sleep", title: "Sleep" },
   { pattern: /^(?:my\s+)?(?:gym|workout|training)$/i, pageId: "pg-gym", title: "Gym" },
   // Focus / Screen Time permanently removed — open Sleep instead
@@ -806,11 +816,12 @@ function dayFromNutri(day: string): MealDay {
 }
 
 export function log_usual_meal(presetId: string): string {
-  const preset = MEAL_PRESETS.find((meal) => meal.id === presetId);
-  if (!preset) return failure("log_usual_meal", `No usual meal matches ${presetId}.`);
+  const raw = MEAL_PRESETS.find((meal) => meal.id === presetId);
+  if (!raw) return failure("log_usual_meal", `No usual meal matches ${presetId}.`);
+  const preset = resolveMealPreset(raw);
   const day = todayKey();
   // Already logged this preset today (single truth = nutrition entries)
-  if (loadNutriDay(day).some((e) => e.presetId === preset.id)) {
+  if (loadNutriDay(day).some((e) => e.presetId === preset.id || e.presetId === raw.id)) {
     return result(
       "log_usual_meal",
       `${preset.title} is already logged today.`,
@@ -846,6 +857,10 @@ export function log_usual_meal(presetId: string): string {
     day
   );
 
+  // Blueprint meals include 250 ml water — add to water bar with the meal
+  const waterMl = waterMlFromPreset(preset);
+  const waterAdded = waterMl > 0 ? addWaterDrink(day, waterMl) : 0;
+
   const consumeKey = `dr-melani-meals-consume:${day}`;
   try {
     const consume = JSON.parse(localStorage.getItem(consumeKey) || "{}") as Record<
@@ -859,10 +874,13 @@ export function log_usual_meal(presetId: string): string {
   }
   notifyHabitAutoSync(day);
   notify({ domain: "meals", day });
+  if (waterAdded > 0) notify({ domain: "water", day });
   const next = dayFromNutri(day);
   return result(
     "log_usual_meal",
-    `Logged ${preset.title.toLowerCase()}: ${preset.calories} calories and ${preset.protein_g}g protein.`,
+    waterAdded > 0
+      ? `Logged ${preset.title.toLowerCase()}: ${preset.calories} cal · ${preset.protein_g}g protein · +${waterAdded} ml water.`
+      : `Logged ${preset.title.toLowerCase()}: ${preset.calories} calories and ${preset.protein_g}g protein.`,
     next
   );
 }
@@ -985,10 +1003,13 @@ export function log_food_nl(raw: string): string {
 }
 
 export function undo_usual_meal(presetId: string): string {
-  const preset = MEAL_PRESETS.find((meal) => meal.id === presetId);
-  if (!preset) return failure("undo_usual_meal", `No usual meal matches ${presetId}.`);
+  const raw = MEAL_PRESETS.find((meal) => meal.id === presetId);
+  if (!raw) return failure("undo_usual_meal", `No usual meal matches ${presetId}.`);
+  const preset = resolveMealPreset(raw);
   const day = todayKey();
-  const hit = loadNutriDay(day).find((e) => e.presetId === preset.id);
+  const hit = loadNutriDay(day).find(
+    (e) => e.presetId === preset.id || e.presetId === raw.id
+  );
   if (!hit) {
     return result(
       "undo_usual_meal",
@@ -997,6 +1018,8 @@ export function undo_usual_meal(presetId: string): string {
     );
   }
   removeEntry(hit.id, day);
+  const waterMl = waterMlFromPreset(preset);
+  if (waterMl > 0) removeWaterDrink(day, waterMl);
   try {
     const consumeKey = `dr-melani-meals-consume:${day}`;
     const consume = JSON.parse(localStorage.getItem(consumeKey) || "{}") as Record<
@@ -1012,7 +1035,14 @@ export function undo_usual_meal(presetId: string): string {
   }
   notifyHabitAutoSync(day);
   notify({ domain: "meals", day });
-  return result("undo_usual_meal", `Undid ${preset.title.toLowerCase()}.`, dayFromNutri(day));
+  if (waterMl > 0) notify({ domain: "water", day });
+  return result(
+    "undo_usual_meal",
+    waterMl > 0
+      ? `Undid ${preset.title.toLowerCase()} · −${waterMl} ml water.`
+      : `Undid ${preset.title.toLowerCase()}.`,
+    dayFromNutri(day)
+  );
 }
 
 export function log_water(amountMl: number): string {

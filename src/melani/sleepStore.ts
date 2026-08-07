@@ -1114,6 +1114,13 @@ const BOWEL_PENDING_CORRECTIONS: {
   { id: "2026-07-29-type4-v3", day: "2026-07-29", had: true, look: 4 },
   { id: "2026-07-30-type4-v3", day: "2026-07-30", had: true, look: 4 },
   { id: "2026-07-31-no-v3", day: "2026-07-31", had: false },
+  // Forgot to log — no BM that day
+  { id: "2026-08-03-no-forgot", day: "2026-08-03", had: false },
+  // Owner late log 2026-08-06: Tue no, Wed type 4
+  { id: "2026-08-04-no-forgot", day: "2026-08-04", had: false },
+  { id: "2026-08-05-yes-t4-forgot", day: "2026-08-05", had: true, look: 4 },
+  // Owner: no BM Thursday 2026-08-06
+  { id: "2026-08-06-no-forgot", day: "2026-08-06", had: false },
 ];
 
 /** Owner intentional start day — drop assistant seed rows before this. */

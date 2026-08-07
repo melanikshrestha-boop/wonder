@@ -47,14 +47,17 @@ Orchestration: **`.grok/skills/wonder-parallel/SKILL.md`** (`/wonder-parallel`) 
 | `wonder-reviewer` | Diff gate (Guardian + Selene + correctness) | none (read-only) |
 | `wonder-lead` | Orchestrator: decompose → spawn ≤8 → merge → ship | parent only |
 
-### Cross-cutting roles (also in `~/.grok/agents/`)
+### Quality & validation (`.grok/agents/`)
 
-| Agent | Job | Isolation |
-|-------|-----|-----------|
-| `repo-explorer` | Entry points, data flows, risk map | read-only |
-| `code-reviewer` | Impact-ranked quality/maintainability review | read-only |
-| `test-debugger` | Run tests, group failures, debug steps / coverage gaps | execute tests |
-| `security-reviewer` | Authz, validation, secret exposure | read-only (no exploits) |
+| Agent | Job | Tools | Isolation |
+|-------|-----|-------|-----------|
+| `repo-explorer` | Entry points, data flows, risk zones | Read, Grep, Glob | read-only |
+| `docs-researcher` | Official docs + release notes | Read, Grep, Glob, WebFetch, WebSearch | research.md only |
+| `code-reviewer` | Code quality + security standards on diffs | Read, Grep, Glob | read-only |
+| `test-writer` | Unit + integration tests | Read, Write, Edit, Grep, Glob | worktree if multi-file |
+| `debugger` | Isolate + fix runtime errors | Read, Write, Edit, Bash, Grep, Glob | worktree if multi-file |
+| `test-debugger` | Run tests, group failures / coverage gaps | Bash + read | execute tests |
+| `security-reviewer` | Authz, validation, secret exposure | Read, Grep, Glob | read-only (no exploits) |
 
 ### Domain lanes
 

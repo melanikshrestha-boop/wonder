@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import {
   CIRC,
@@ -19,13 +20,22 @@ import {
   mealShopYearCost,
   shopRunOut,
   sumMeasureMacros,
+  macrosMeaningful,
   todayKey,
+  loadMealVariantId,
+  saveMealVariantId,
+  resolveMealPreset,
+  VITAMIN_GOALS,
+  VITAMIN_RING_TRACKS,
+  VITAMIN_LIST_EXTRA,
+  VITAMIN_DISPLAY_ROWS,
+  vitaminTotalsFromLogged,
+  vitaminRingAveragePct,
+  vitaminsFromMeasures,
+  vitaminsMeaningful,
   type ConsumeLog,
+  type MealPreset,
 } from "./data";
-import {
-  breakfastTrialStatus,
-  loadBreakfastTrial,
-} from "./breakfastTrial";
 import {
   addEntry,
   applyPendingSnackSeed,
@@ -39,6 +49,15 @@ import { GymExact } from "./GymExact";
 
 import { MEL_DATA_EVENT } from "./melTools";
 import { notifyHabitAutoSync, WATER_GOAL_ML } from "./habitAutoSync";
+import {
+  addWaterDrink,
+  loadWater,
+  loadWaterHist,
+  removeWaterDrink,
+  saveWater,
+  saveWaterHist,
+  waterMlFromPreset,
+} from "./waterLog";
 
 import {
   importWhoopFromPublicLatest,
@@ -57,10 +76,9 @@ import { QuoteRefreshControl } from "./QuoteRefreshControl";
 import { useQuoteRotation } from "./useQuoteRotation";
 import { WhoopCsvDrop } from "./WhoopCsvDrop";
 import { FoodPlateGuide } from "./FoodPlateGuide";
-import {
-  MealCutoutTrack,
-  flagDayMeals,
-} from "./MealCutoutTrack";
+// MealCutoutTrack (MEAL FLAGS UI) — permanently removed; do not reintroduce.
+// flagDayMeals still feeds the trash can hit highlights only.
+import { flagDayMeals } from "./MealCutoutTrack";
 import { reportMealCutouts } from "./foodGuide";
 import { MealsShop } from "./MealsShop";
 import "./fitness-exact.css";
@@ -407,12 +425,13 @@ function BowelBristolLifetimeGraph({
     );
   }
 
-  const w = 640;
-  const h = 180;
-  const padL = 36;
-  const padR = 14;
-  const padT = 12;
-  const padB = 28;
+  // Compact — sits beside consistency graph in a 2-col row
+  const w = 400;
+  const h = 132;
+  const padL = 28;
+  const padR = 10;
+  const padT = 10;
+  const padB = 22;
   const plotW = w - padL - padR;
   const plotH = h - padT - padB;
 
@@ -624,17 +643,21 @@ function BowelBristolLifetimeGraph({
               pointerEvents="none"
             />
           ) : null}
-          {xIdx.map((i) => (
-            <text
-              key={series[i].day}
-              x={xOf(i)}
-              y={h - 8}
-              textAnchor="middle"
-              className="wx-axis-x"
-            >
-              {shortDay(series[i].day)}
-            </text>
-          ))}
+          {xIdx.map((i) => {
+            const anchor =
+              i === 0 ? "start" : i === series.length - 1 ? "end" : "middle";
+            return (
+              <text
+                key={series[i].day}
+                x={xOf(i)}
+                y={h - 8}
+                textAnchor={anchor}
+                className="wx-axis-x"
+              >
+                {shortDay(series[i].day)}
+              </text>
+            );
+          })}
           <rect
             x={padL}
             y={padT}
@@ -713,11 +736,12 @@ function BowelConsistencyGraph({
     );
   }
 
-  const w = 660;
-  const h = 220;
-  const padL = 42;
-  const padR = 18;
-  const padT = 26;
+  // Compact — sits beside Bristol types in a 2-col row
+  const w = 400;
+  const h = 132;
+  const padL = 32;
+  const padR = 10;
+  const padT = 18;
   const padB = 34;
   const plotW = w - padL - padR;
   const plotH = h - padT - padB;
@@ -931,25 +955,23 @@ function BowelConsistencyGraph({
               pointerEvents="none"
             />
           ) : null}
-          {xIdx.map((i) => (
-            <text
-              key={points[i].day}
-              x={xOf(i)}
-              y={h - 10}
-              textAnchor="middle"
-              className="wx-axis-x"
-            >
-              {shortDay(points[i].day)}
-            </text>
-          ))}
-          <text
-            x={padL + plotW}
-            y={h - 10}
-            textAnchor="end"
-            className="fx-bm-axis-title"
-          >
-            Days
-          </text>
+          {xIdx.map((i) => {
+            // Anchor edges so first/last dates never sit under another label
+            const x = xOf(i);
+            const anchor =
+              i === 0 ? "start" : i === points.length - 1 ? "end" : "middle";
+            return (
+              <text
+                key={points[i].day}
+                x={x}
+                y={h - 10}
+                textAnchor={anchor}
+                className="wx-axis-x"
+              >
+                {shortDay(points[i].day)}
+              </text>
+            );
+          })}
           <rect
             x={padL}
             y={padT}
@@ -1480,6 +1502,91 @@ function emptyMacros(): MacroBag {
   return { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 };
 }
 
+type MacroFocusKey = "calories" | "protein" | "carbs" | "fat" | "fiber";
+
+/** One macro chip — same class → same color on every meal / total row. */
+function MacroVal({
+  kind,
+  focus,
+  children,
+}: {
+  kind: "cal" | "pro" | "carb" | "fat" | "fib";
+  focus?: MacroFocusKey | null;
+  children: ReactNode;
+}) {
+  const focusMap = {
+    cal: "calories",
+    pro: "protein",
+    carb: "carbs",
+    fat: "fat",
+    fib: "fiber",
+  } as const;
+  const hi = focus != null && focus === focusMap[kind];
+  return (
+    <span className={`umv umv-${kind}${hi ? " is-hi" : ""}`}>{children}</span>
+  );
+}
+
+/** Full cal · protein · carbs · fat · fiber strip (color only, never bold). */
+function MacroStrip({
+  mac,
+  focus = null,
+}: {
+  mac: MacroBag;
+  focus?: MacroFocusKey | null;
+}) {
+  const n = (v: number, unit = "") =>
+    `${Number.isInteger(v) ? v : Number(v.toFixed(1))}${unit}`;
+  return (
+    <>
+      <MacroVal kind="cal" focus={focus}>
+        Calories: {n(mac.calories)}
+      </MacroVal>
+      <span className="umv-sep"> · </span>
+      <MacroVal kind="pro" focus={focus}>
+        Protein: {n(mac.protein_g, "g")}
+      </MacroVal>
+      <span className="umv-sep"> · </span>
+      <MacroVal kind="carb" focus={focus}>
+        Carbs: {n(mac.carbs_g, "g")}
+      </MacroVal>
+      <span className="umv-sep"> · </span>
+      <MacroVal kind="fat" focus={focus}>
+        Fat: {n(mac.fat_g, "g")}
+      </MacroVal>
+      <span className="umv-sep"> · </span>
+      <MacroVal kind="fib" focus={focus}>
+        Fiber: {n(mac.fiber_g, "g")}
+      </MacroVal>
+    </>
+  );
+}
+
+/**
+ * Preset ids renamed over time (e.g. dinner steak → dinner_main).
+ * Old nutrition rows keep the old presetId — map so UI/undo still match.
+ */
+const PRESET_ID_ALIASES: Record<string, string> = {
+  dinner_grass_fed_steak: "dinner_main",
+  dinner_sockeye: "dinner_main",
+  preworkout_ag1: "morning_blueprint",
+  preworkout_longevity_mix: "morning_blueprint",
+};
+
+function canonicalPresetId(id: string | undefined | null): string | null {
+  if (!id) return null;
+  return PRESET_ID_ALIASES[id] || id;
+}
+
+/** All stored presetIds that count as this canonical meal. */
+function presetIdAliases(canonicalId: string): string[] {
+  const ids = [canonicalId];
+  for (const [oldId, canon] of Object.entries(PRESET_ID_ALIASES)) {
+    if (canon === canonicalId) ids.push(oldId);
+  }
+  return ids;
+}
+
 /** Read day from nutrition item ledger (source of truth). */
 function loadUsualDay(day: string): UsualDayLog {
   try {
@@ -1487,7 +1594,9 @@ function loadUsualDay(day: string): UsualDayLog {
     const t = nutriTotalsFor(day);
     const loggedIds = [
       ...new Set(
-        entries.map((e) => e.presetId || e.id).filter(Boolean) as string[]
+        entries
+          .map((e) => canonicalPresetId(e.presetId) || e.presetId || e.id)
+          .filter(Boolean) as string[]
       ),
     ];
     return {
@@ -1682,10 +1791,59 @@ function MealsPanel() {
       window.removeEventListener(MEL_DATA_EVENT, refresh);
     };
   }, [day]);
-  /** Per-meal ingredients toggle id (null = all closed) */
+  /**
+   * Click a ring/stat → open every meal’s Ingredients + macros and highlight
+   * that macro color.
+   */
+  type MacroFocus = "calories" | "protein" | "carbs" | "fat" | "fiber";
+  const [macroFocus, setMacroFocus] = useState<MacroFocus | null>(null);
+  /** One face at a time: macros ↔ vitamins (never both). */
+  const [ringFace, setRingFace] = useState<"macros" | "vitamins">("macros");
+  const [ringTurning, setRingTurning] = useState(false);
+  function flipRingFace() {
+    if (ringTurning) return;
+    setRingTurning(true);
+    // Mid-turn swap so only one set of rings is ever painted
+    window.setTimeout(() => {
+      setRingFace((f) => {
+        const next = f === "macros" ? "vitamins" : "macros";
+        if (next === "vitamins") setMacroFocus(null);
+        return next;
+      });
+    }, 160);
+    window.setTimeout(() => setRingTurning(false), 320);
+  }
+  /** Which meal’s Ingredients + macros list is open (null = all closed). */
   const [openIngredients, setOpenIngredients] = useState<string | null>(null);
-  /** Per-meal full macro breakdown (not on ingredients list) */
-  const [openMacros, setOpenMacros] = useState<string | null>(null);
+  /** Open every meal’s Ingredients + macros at once. */
+  const [ingredientsExpandAll, setIngredientsExpandAll] = useState(false);
+  /** Meal card id with Vitamins open (separate from ingredients + macros). */
+  const [openVitamins, setOpenVitamins] = useState<string | null>(null);
+
+  function toggleMacroFocus(key: MacroFocus) {
+    setMacroFocus((cur) => {
+      const next = cur === key ? null : key;
+      if (next) setIngredientsExpandAll(true);
+      return next;
+    });
+  }
+
+  /** Dinner protein swap (steak | salmon) — drives ingredients + macros */
+  const [dinnerVariantId, setDinnerVariantId] = useState(() => {
+    const dinner = MEAL_PRESETS.find((m) => m.slot === "dinner" && m.variants);
+    return dinner ? loadMealVariantId(dinner) || dinner.defaultVariantId || "steak" : "steak";
+  });
+
+  function activePreset(raw: MealPreset): MealPreset {
+    if (!raw.variants?.length) return raw;
+    return resolveMealPreset(raw, dinnerVariantId);
+  }
+
+  function setDinnerVariant(nextId: string) {
+    const dinner = MEAL_PRESETS.find((m) => m.id === "dinner_main");
+    if (dinner) saveMealVariantId(dinner.id, nextId);
+    setDinnerVariantId(nextId);
+  }
 
 
   // Bowel movement (moved from Sleep — body log next to food)
@@ -1729,8 +1887,6 @@ function MealsPanel() {
   const [bowelTypesOpen, setBowelTypesOpen] = useState(false);
   /** Graphs closed by default — open via “logged days” toggle (like sleep nights). */
   const [bowelLogsOpen, setBowelLogsOpen] = useState(false);
-  /** Bristol types graph nested under the same toggle */
-  const [bowelPieOpen, setBowelPieOpen] = useState(true);
   const todayLog = bowelDetail[day];
   const todayBowel = todayLog?.had === true;
   const todayBowelNo = todayLog?.had === false;
@@ -1883,6 +2039,17 @@ function MealsPanel() {
     fat_g: pct(c.fat_g, g.fat_g),
     fiber_g: pct(c.fiber_g, g.fiber_g),
   };
+  // Vitamins: morning stack → daily-need rings (19-year-old woman targets)
+  const vit = vitaminTotalsFromLogged(usualDay.loggedIds, dinnerVariantId);
+  const vitPct = {
+    d_mcg: pct(vit.d_mcg, VITAMIN_GOALS.d_mcg),
+    c_mg: pct(vit.c_mg, VITAMIN_GOALS.c_mg),
+    folate_mcg: pct(vit.folate_mcg, VITAMIN_GOALS.folate_mcg),
+    ca_mg: pct(vit.ca_mg, VITAMIN_GOALS.ca_mg),
+    mg_mg: pct(vit.mg_mg, VITAMIN_GOALS.mg_mg),
+  };
+  const vitAvg = vitaminRingAveragePct(vit);
+  const morningVitLogged = usualDay.loggedIds.includes("morning_blueprint");
   const off = (circ: number, percent: number) =>
     (circ * (1 - percent / 100)).toFixed(2);
 
@@ -1901,9 +2068,14 @@ function MealsPanel() {
 
   /** Log a usual meal once → nutritionStore (Mel uses the same path) */
   function logUsual(presetId: string) {
-    const preset = MEAL_PRESETS.find((m) => m.id === presetId);
-    if (!preset) return;
-    if (loadNutriDay(day).some((e) => e.presetId === presetId)) {
+    const raw = MEAL_PRESETS.find((m) => m.id === presetId);
+    if (!raw) return;
+    const preset = activePreset(raw);
+    const already = loadNutriDay(day).some((e) => {
+      const canon = canonicalPresetId(e.presetId) || e.presetId;
+      return canon === presetId || e.presetId === presetId;
+    });
+    if (already) {
       setFlash("Already logged today");
       window.setTimeout(() => setFlash(""), 1600);
       return;
@@ -1913,10 +2085,10 @@ function MealsPanel() {
         ? "breakfast"
         : /lunch/i.test(preset.id)
           ? "lunch"
-          : /dinner/i.test(preset.id)
+          : /dinner/i.test(preset.id) || preset.slot === "dinner"
             ? "dinner"
             : "snack";
-    // Prefer summed per-item macros (locked breakfast) over preset fields
+    // Prefer summed per-item macros (active dinner variant / locked meals)
     const fromItems = sumMeasureMacros(preset.measures);
     const macros = fromItems || {
       calories: preset.calories,
@@ -1943,6 +2115,9 @@ function MealsPanel() {
       },
       day
     );
+    // Blueprint slots carry 250 ml water — log that pour on the water bar too
+    const waterMl = waterMlFromPreset(preset);
+    const waterAdded = waterMl > 0 ? addWaterDrink(day, waterMl) : 0;
     setUsualDay(loadUsualDay(day));
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, "0");
@@ -1962,7 +2137,11 @@ function MealsPanel() {
       setFlash(`Cut out: ${labels}`);
     } else {
       setFlashCutout(false);
-      setFlash(`Logged ${preset.title.toLowerCase()} — macros updated`);
+      setFlash(
+        waterAdded > 0
+          ? `Logged ${preset.title.toLowerCase()} · +${waterAdded} ml water`
+          : `Logged ${preset.title.toLowerCase()} — macros updated`
+      );
     }
     window.setTimeout(() => {
       setFlash("");
@@ -1970,20 +2149,78 @@ function MealsPanel() {
     }, 3200);
   }
 
-  /** Undo a usual so you can log again */
+  /** Undo a usual so you can log again (includes legacy dinner preset ids). */
   function undoUsual(presetId: string) {
     const preset = MEAL_PRESETS.find((m) => m.id === presetId);
     if (!preset) return;
-    const hit = loadNutriDay(day).find((e) => e.presetId === presetId);
-    if (!hit) return;
-    removeEntry(hit.id, day);
+    const aliases = new Set(presetIdAliases(presetId));
+    const entries = loadNutriDay(day);
+    // Match current id, renamed aliases, or dinner slot presets with dinner title
+    const hits = entries.filter((e) => {
+      if (e.presetId && aliases.has(e.presetId)) return true;
+      if (e.presetId && aliases.has(canonicalPresetId(e.presetId) || "")) {
+        return true;
+      }
+      // Orphan dinner rows after id rename (steak title, old presetId)
+      if (
+        presetId === "dinner_main" &&
+        e.slot === "dinner" &&
+        e.source === "preset"
+      ) {
+        return true;
+      }
+      return false;
+    });
+    if (!hits.length) {
+      // Still stuck rings? wipe any leftover preset row that maps to this meal
+      setFlash("Nothing to undo for this meal");
+      window.setTimeout(() => setFlash(""), 1600);
+      return;
+    }
+    for (const hit of hits) {
+      removeEntry(hit.id, day);
+    }
+    // Peel meal water pour(s) off the bar (250 ml per Blueprint slot)
+    const resolved = activePreset(preset);
+    const waterMl = waterMlFromPreset(resolved);
+    if (waterMl > 0) {
+      for (let i = 0; i < hits.length; i++) {
+        removeWaterDrink(day, waterMl);
+      }
+    }
     setUsualDay(loadUsualDay(day));
     patch(`meal-${presetId}`, { done: false });
     notifyHabitAutoSync(day);
     setMealTick((t) => t + 1);
     setFlashCutout(false);
-    setFlash("Undone");
+    setFlash(
+      waterMl > 0
+        ? hits.length > 1
+          ? `Undone (${hits.length}) · −${waterMl * hits.length} ml water`
+          : `Undone · −${waterMl} ml water`
+        : hits.length > 1
+          ? `Undone (${hits.length})`
+          : "Undone"
+    );
     window.setTimeout(() => setFlash(""), 1400);
+  }
+
+  /** Nuclear clear — when rings stay full after undos (orphan ledger rows). */
+  function resetTodayMeals() {
+    const entries = loadNutriDay(day);
+    for (const e of entries) {
+      removeEntry(e.id, day);
+    }
+    setUsualDay(loadUsualDay(day));
+    for (const m of MEAL_PRESETS) {
+      patch(`meal-${m.id}`, { done: false });
+    }
+    notifyHabitAutoSync(day);
+    setMealTick((t) => t + 1);
+    setMacroFocus(null);
+    setFlashCutout(false);
+    setFlash("Today’s meals cleared");
+    window.setTimeout(() => setFlash(""), 1800);
   }
 
   return (
@@ -2011,131 +2248,302 @@ function MealsPanel() {
 
       {mealsView === "eat" ? (
       <>
-      {/* Macros first — breakfast below */}
-      <section className="fx-section">
-        <h2 className="fx-h2">TODAY&apos;S MACROS</h2>
-        <div className="macro-ring-wrap">
-          <svg className="macro-rings" viewBox="0 0 200 200" aria-hidden>
-            <circle className="ring-track" cx="100" cy="100" r="88" />
-            <circle
-              className="ring-cal"
-              cx="100"
-              cy="100"
-              r="88"
-              strokeDasharray={CIRC.cal}
-              strokeDashoffset={off(CIRC.cal, p.calories)}
-            />
-            <circle className="ring-track" cx="100" cy="100" r="77" />
-            <circle
-              className="ring-protein"
-              cx="100"
-              cy="100"
-              r="77"
-              strokeDasharray={CIRC.protein}
-              strokeDashoffset={off(CIRC.protein, p.protein_g)}
-            />
-            <circle className="ring-track" cx="100" cy="100" r="66" />
-            <circle
-              className="ring-carbs"
-              cx="100"
-              cy="100"
-              r="66"
-              strokeDasharray={CIRC.carbs}
-              strokeDashoffset={off(CIRC.carbs, p.carbs_g)}
-            />
-            <circle className="ring-track" cx="100" cy="100" r="55" />
-            <circle
-              className="ring-fat"
-              cx="100"
-              cy="100"
-              r="55"
-              strokeDasharray={CIRC.fat}
-              strokeDashoffset={off(CIRC.fat, p.fat_g)}
-            />
-            <circle className="ring-track" cx="100" cy="100" r="44" />
-            <circle
-              className="ring-fiber"
-              cx="100"
-              cy="100"
-              r="44"
-              strokeDasharray={CIRC.fiber}
-              strokeDashoffset={off(CIRC.fiber, p.fiber_g)}
-            />
-            <circle className="ring-hole" cx="100" cy="100" r="40" />
-          </svg>
-          <div className="macro-ring-center">
-            {/* Quick read: calories + protein only (rest is in the list) */}
-            <span className="macro-ring-num macro-ring-cal-num">
-              {Math.round(c.calories)}
-            </span>
-            <span className="macro-ring-sub">cal</span>
-            <span className="macro-ring-num macro-ring-pro-num">
-              {Number.isInteger(c.protein_g)
-                ? c.protein_g
-                : Number(c.protein_g).toFixed(1)}
-              <small>g</small>
-            </span>
-            <span className="macro-ring-sub">protein</span>
-          </div>
+      <section
+        className={`fx-section ring-flip-section${
+          macroFocus ? ` is-macro-focus-${macroFocus}` : ""
+        }${ringFace === "vitamins" ? " is-vitamins" : " is-macros"}`}
+      >
+        {/* One label only — tap to turn to the other face */}
+        <button
+          type="button"
+          className="ring-face-title"
+          onClick={flipRingFace}
+          title={
+            ringFace === "macros" ? "Turn to vitamins" : "Turn to macros"
+          }
+          aria-label={
+            ringFace === "macros"
+              ? "Macros. Turn to vitamins."
+              : "Vitamins. Turn to macros."
+          }
+        >
+          {ringFace === "macros" ? "Macros" : "Vitamins"}
+        </button>
+
+        <div
+          className={`ring-flip-scene${ringTurning ? " is-turning" : ""}`}
+        >
+          {ringFace === "macros" ? (
+            <div className="macro-ring-wrap">
+              <svg
+                className={`macro-rings${macroFocus ? ` is-focus-${macroFocus}` : ""}`}
+                viewBox="0 0 200 200"
+                role="img"
+                aria-label="Macro rings — tap a ring to scan meals"
+              >
+                <circle className="ring-track" cx="100" cy="100" r="88" />
+                <circle
+                  className={`ring-cal ring-hit${macroFocus === "calories" ? " is-on" : ""}`}
+                  cx="100"
+                  cy="100"
+                  r="88"
+                  strokeDasharray={CIRC.cal}
+                  strokeDashoffset={off(CIRC.cal, p.calories)}
+                  onClick={() => toggleMacroFocus("calories")}
+                  style={{ cursor: "pointer", pointerEvents: "stroke" }}
+                >
+                  <title>Calories — open meal breakdowns</title>
+                </circle>
+                <circle className="ring-track" cx="100" cy="100" r="77" />
+                <circle
+                  className={`ring-protein ring-hit${macroFocus === "protein" ? " is-on" : ""}`}
+                  cx="100"
+                  cy="100"
+                  r="77"
+                  strokeDasharray={CIRC.protein}
+                  strokeDashoffset={off(CIRC.protein, p.protein_g)}
+                  onClick={() => toggleMacroFocus("protein")}
+                  style={{ cursor: "pointer", pointerEvents: "stroke" }}
+                >
+                  <title>Protein — open meal breakdowns</title>
+                </circle>
+                <circle className="ring-track" cx="100" cy="100" r="66" />
+                <circle
+                  className={`ring-carbs ring-hit${macroFocus === "carbs" ? " is-on" : ""}`}
+                  cx="100"
+                  cy="100"
+                  r="66"
+                  strokeDasharray={CIRC.carbs}
+                  strokeDashoffset={off(CIRC.carbs, p.carbs_g)}
+                  onClick={() => toggleMacroFocus("carbs")}
+                  style={{ cursor: "pointer", pointerEvents: "stroke" }}
+                >
+                  <title>Carbs — open meal breakdowns</title>
+                </circle>
+                <circle className="ring-track" cx="100" cy="100" r="55" />
+                <circle
+                  className={`ring-fat ring-hit${macroFocus === "fat" ? " is-on" : ""}`}
+                  cx="100"
+                  cy="100"
+                  r="55"
+                  strokeDasharray={CIRC.fat}
+                  strokeDashoffset={off(CIRC.fat, p.fat_g)}
+                  onClick={() => toggleMacroFocus("fat")}
+                  style={{ cursor: "pointer", pointerEvents: "stroke" }}
+                >
+                  <title>Fat — open meal breakdowns</title>
+                </circle>
+                <circle className="ring-track" cx="100" cy="100" r="44" />
+                <circle
+                  className={`ring-fiber ring-hit${macroFocus === "fiber" ? " is-on" : ""}`}
+                  cx="100"
+                  cy="100"
+                  r="44"
+                  strokeDasharray={CIRC.fiber}
+                  strokeDashoffset={off(CIRC.fiber, p.fiber_g)}
+                  onClick={() => toggleMacroFocus("fiber")}
+                  style={{ cursor: "pointer", pointerEvents: "stroke" }}
+                >
+                  <title>Fiber — open meal breakdowns</title>
+                </circle>
+                <circle className="ring-hole" cx="100" cy="100" r="40" />
+              </svg>
+              <button
+                type="button"
+                className="macro-ring-center macro-ring-center-btn"
+                onClick={flipRingFace}
+                title="Turn to vitamins"
+                aria-label="Turn ring to vitamins"
+              >
+                <span className="macro-ring-num macro-ring-cal-num">
+                  {Math.round(c.calories)}
+                </span>
+                <span className="macro-ring-sub">cal</span>
+                <span className="macro-ring-num macro-ring-pro-num">
+                  {Number.isInteger(c.protein_g)
+                    ? c.protein_g
+                    : Number(c.protein_g).toFixed(1)}
+                  <small>g</small>
+                </span>
+                <span className="macro-ring-sub">protein</span>
+              </button>
+            </div>
+          ) : (
+            <div className="macro-ring-wrap vit-ring-wrap">
+              <svg
+                className="macro-rings vit-rings"
+                viewBox="0 0 200 200"
+                role="img"
+                aria-label="Vitamin rings toward daily need for a 19-year-old woman"
+              >
+                {(
+                  [
+                    ["d_mcg", CIRC.cal, 88, "ring-vit-d", "Vitamin D"],
+                    ["c_mg", CIRC.protein, 77, "ring-vit-c", "Vitamin C"],
+                    ["folate_mcg", CIRC.carbs, 66, "ring-vit-folate", "Folate"],
+                    ["ca_mg", CIRC.fat, 55, "ring-vit-ca", "Calcium"],
+                    ["mg_mg", CIRC.fiber, 44, "ring-vit-mg", "Magnesium"],
+                  ] as const
+                ).map(([key, circ, r, cls, title]) => (
+                  <g key={key}>
+                    <circle className="ring-track" cx="100" cy="100" r={r} />
+                    <circle
+                      className={`${cls} ring-hit`}
+                      cx="100"
+                      cy="100"
+                      r={r}
+                      strokeDasharray={circ}
+                      strokeDashoffset={off(circ, vitPct[key])}
+                    >
+                      <title>
+                        {title}: {vit[key]}
+                        {key.endsWith("mcg") ? " mcg" : " mg"} of{" "}
+                        {VITAMIN_GOALS[key]}
+                        {key.endsWith("mcg") ? " mcg" : " mg"} daily need
+                      </title>
+                    </circle>
+                  </g>
+                ))}
+                <circle className="ring-hole" cx="100" cy="100" r="40" />
+              </svg>
+              <button
+                type="button"
+                className="macro-ring-center macro-ring-center-btn"
+                onClick={flipRingFace}
+                title="Turn to macros"
+                aria-label="Turn ring to macros"
+              >
+                <span className="macro-ring-num macro-ring-vit-num">{vitAvg}</span>
+                <span className="macro-ring-sub">% need</span>
+                <span className="macro-ring-sub macro-ring-vit-note">
+                  {morningVitLogged ? "morning in" : "log morning"}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
-        <ul className="macro-stats">
-          <li>
-            <span className="dot dot-cal" />
-            Calories <strong>{c.calories}</strong> / {g.calories}
-          </li>
-          <li>
-            <span className="dot dot-protein" />
-            Protein <strong>{c.protein_g}g</strong> / {g.protein_g}g
-          </li>
-          <li>
-            <span className="dot dot-carbs" />
-            Carbs <strong>{c.carbs_g}g</strong> / {g.carbs_g}g
-          </li>
-          <li>
-            <span className="dot dot-fat" />
-            Fat <strong>{c.fat_g}g</strong> / {g.fat_g}g
-          </li>
-          <li>
-            <span className="dot dot-fiber" />
-            Fiber <strong>{c.fiber_g}g</strong> / {g.fiber_g}g
-          </li>
-        </ul>
+
+        {ringFace === "macros" ? (
+          <ul className="macro-stats" aria-label="Macro goals">
+            {(
+              [
+                ["calories", "Calories", "dot-cal", c.calories, g.calories, ""],
+                ["protein", "Protein", "dot-protein", c.protein_g, g.protein_g, "g"],
+                ["carbs", "Carbs", "dot-carbs", c.carbs_g, g.carbs_g, "g"],
+                ["fat", "Fat", "dot-fat", c.fat_g, g.fat_g, "g"],
+                ["fiber", "Fiber", "dot-fiber", c.fiber_g, g.fiber_g, "g"],
+              ] as const
+            ).map(([key, label, dot, cur, goal, unit]) => (
+              <li key={key}>
+                <button
+                  type="button"
+                  className={`macro-stats-btn${macroFocus === key ? " is-on" : ""}`}
+                  onClick={() => toggleMacroFocus(key)}
+                  aria-pressed={macroFocus === key}
+                  title={
+                    macroFocus === key
+                      ? `Clear ${label} highlight`
+                      : `Show ${label} in every meal breakdown`
+                  }
+                >
+                  <span className={`dot ${dot}`} />
+                  <span className="macro-stats-label">{label}</span>
+                  <strong>
+                    {cur}
+                    {unit}
+                  </strong>
+                  <span className="macro-stats-goal">
+                    {" "}
+                    / {goal}
+                    {unit}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <>
+            <ul
+              className="macro-stats"
+              aria-label="Vitamins today versus daily need for a 19-year-old woman"
+            >
+              {[...VITAMIN_RING_TRACKS, ...VITAMIN_LIST_EXTRA].map((row) => {
+                const cur = vit[row.key];
+                const goal = VITAMIN_GOALS[row.key];
+                const over = cur > goal && goal > 0;
+                return (
+                  <li key={row.key}>
+                    <span className="macro-stats-btn vit-stats-row">
+                      <span className={`dot ${row.dot}`} />
+                      <span className="macro-stats-label">{row.label}</span>
+                      <strong>
+                        {cur % 1 === 0 ? cur : cur.toFixed(1)}
+                        {row.unit}
+                      </strong>
+                      <span className="macro-stats-goal">
+                        {" "}
+                        / {goal}
+                        {row.unit} need
+                        {over ? " · over need" : ""}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            {!morningVitLogged ? (
+              <p className="vit-hint">
+                Log first thing in the morning to count your stack toward daily need
+              </p>
+            ) : null}
+          </>
+        )}
       </section>
 
       <section className="fx-section usuals-section">
-        <h2 className="fx-h2">MEALS · 7-DAY TRIAL</h2>
-        <p className="usual-day-meta">
-          {(() => {
-            const st = breakfastTrialStatus(day, loadBreakfastTrial());
-            if (st.phase === "before") {
-              return `Starts ${st.startIso} · breakfast + lunch + dinner`;
-            }
-            if (st.phase === "active") {
-              return `Day ${st.dayNum} of ${st.days} · ends ${st.endIso} · B + L + D`;
-            }
-            return st.label;
-          })()}
-        </p>
+        <div className="usuals-head">
+          <h2 className="fx-h2">MEALS + SUPPLEMENTS</h2>
+        </div>
+        {usualDay.totals.calories > 0 || usualDay.loggedIds.length > 0 ? (
+          <button
+            type="button"
+            className="usual-reset-day"
+            onClick={resetTodayMeals}
+            title="Clear every logged meal today (fixes stuck rings)"
+          >
+            Clear today’s log
+          </button>
+        ) : null}
         {flash ? (
           <p className={`usual-flash${flashCutout ? " is-cutout" : ""}`}>
             {flash}
           </p>
         ) : null}
 
-        {MEAL_PRESETS.map((u) => {
+        {MEAL_PRESETS.map((raw) => {
+          const u = activePreset(raw);
           const logged = usualDay.loggedIds.includes(u.id);
-          const ingredientsOpen = openIngredients === u.id;
-          const macrosOpen = openMacros === u.id;
           const itemMacros = sumMeasureMacros(u.measures);
           const shopYear = mealShopYearCost(u.measures);
+          // Ingredients + macros: text toggle (no chevron) · open when focused too
+          const ingredientsOpen =
+            openIngredients === u.id ||
+            ingredientsExpandAll ||
+            macroFocus != null;
           const logLabel =
-            u.slot === "breakfast"
-              ? "Log breakfast"
-              : u.slot === "lunch"
-                ? "Log lunch"
-                : u.slot === "dinner"
-                  ? "Log dinner"
-                  : "Log meal";
+            u.id === "morning_blueprint"
+              ? "Log first thing in the morning"
+              : u.id === "post_workout_shake"
+                ? "Log post-workout"
+                : u.id === "midday_metabolic"
+                  ? "Log Metabolic Protein"
+                    : u.slot === "breakfast"
+                      ? "Log breakfast"
+                      : u.slot === "lunch"
+                        ? "Log lunch"
+                        : u.slot === "dinner"
+                          ? "Log dinner"
+                          : "Log meal";
           const presetHits = reportMealCutouts(u.title, [
             u.notes,
             ...u.ingredients,
@@ -2150,6 +2558,48 @@ function MealsPanel() {
             >
               <h3 className="usual-title">{u.title}</h3>
 
+              {/* Dinner protein always visible — steak ↔ sockeye */}
+              {raw.variants && raw.variants.length > 1 ? (
+                <div
+                  className="usual-swap usual-swap-top"
+                  role="group"
+                  aria-label="Dinner protein"
+                >
+                  <button
+                    type="button"
+                    className="usual-swap-btn"
+                    title="Swap steak and sockeye salmon"
+                    onClick={() => {
+                      const ids = raw.variants!.map((v) => v.id);
+                      const i = ids.indexOf(dinnerVariantId);
+                      const next = ids[(i + 1) % ids.length] || ids[0];
+                      setDinnerVariant(next);
+                    }}
+                  >
+                    <span className="usual-swap-icon" aria-hidden>
+                      ⇄
+                    </span>
+                    <span className="usual-swap-label">Swap</span>
+                  </button>
+                  <div className="usual-swap-options">
+                    {raw.variants.map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        className={`usual-swap-opt${
+                          dinnerVariantId === v.id ? " is-on" : ""
+                        }`}
+                        aria-pressed={dinnerVariantId === v.id}
+                        onClick={() => setDinnerVariant(v.id)}
+                      >
+                        {v.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Log / undo first — then ingredients always open (no toggle) */}
               {logged ? (
                 <div className="usual-logged-row">
                   <span className="usual-logged-label">Logged today ✓</span>
@@ -2180,124 +2630,157 @@ function MealsPanel() {
                 </p>
               ) : null}
 
+              {/*
+                Toggle is plain gray text only — no ▸/▾ chevron.
+                Click “Ingredients + macros” → list opens / closes.
+              */}
               {u.measures && u.measures.length > 0 ? (
                 <>
                   <button
                     type="button"
-                    className="usual-details-toggle"
+                    className={`usual-ingredients-head${
+                      ingredientsOpen ? " is-open" : ""
+                    }`}
                     aria-expanded={ingredientsOpen}
-                    onClick={() =>
+                    onClick={() => {
+                      if (ingredientsExpandAll || macroFocus) {
+                        setIngredientsExpandAll(false);
+                        setMacroFocus(null);
+                        setOpenIngredients(u.id);
+                        return;
+                      }
                       setOpenIngredients((cur) =>
                         cur === u.id ? null : u.id
-                      )
-                    }
+                      );
+                    }}
                   >
-                    {ingredientsOpen ? "▾" : "▸"} Ingredients
+                    Ingredients + macros
                   </button>
                   {ingredientsOpen ? (
-                    <div className="usual-measure">
+                    <div
+                      className={`usual-measure usual-details-combined${
+                        macroFocus ? ` is-focus-${macroFocus}` : ""
+                      }`}
+                    >
+                      {u.ingredientsNote ? (
+                        <p className="usual-ingredients-note">
+                          {u.ingredientsNote}
+                        </p>
+                      ) : null}
                       <ol className="usual-measure-list">
-                        {u.measures.map((row, i) => {
-                          const tone = row.tone || "default";
-                          const shop = row.shop;
-                          const math = shop
-                            ? shopRunOut(shop, row.amount)
-                            : null;
-                          const title = shop?.product || row.item;
-                          return (
-                            <li
-                              key={row.item}
-                              className={`usual-measure-row is-${tone}`}
-                            >
-                              <span className="usual-measure-n" aria-hidden>
-                                {i + 1}
-                              </span>
-                              <span className="usual-measure-body">
-                                {shop && math ? (
-                                  <>
-                                    {/*
-                                      Exact order:
-                                      Product (Source · size)
-                                      {daily}/day; N units at once: $total
-                                      Lasts ~ N days
-                                    */}
-                                    <span className="usual-measure-name">
-                                      {shop.url ? (
-                                        <a
-                                          className="usual-product-link"
-                                          href={shop.url}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          title={title}
-                                        >
-                                          {title}
-                                        </a>
-                                      ) : (
-                                        title
-                                      )}
-                                      <span className="usual-measure-meta-paren">
-                                        {" "}
-                                        ({math.metaParen})
-                                      </span>
-                                    </span>
-                                    <span className="usual-shop-line">
-                                      <span className="usual-shop-daily">
-                                        {math.dailyPart}
-                                      </span>
-                                      {math.buyPart ? (
-                                        <span
-                                          className="usual-shop-price"
-                                          title={
-                                            math.pricePerPackTip || undefined
-                                          }
-                                        >
-                                          {math.buyPart}
-                                        </span>
-                                      ) : null}
-                                    </span>
-                                    <span
-                                      className="usual-shop-days"
-                                      title={
-                                        math.daysTip
-                                          ? math.daysTip
-                                          : undefined
-                                      }
-                                    >
-                                      {math.lastsLine}
-                                    </span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <span className="usual-measure-name">
-                                      {title}
-                                      {row.amount ? (
-                                        <span className="usual-measure-amt">
-                                          {" "}
-                                          {row.amount}
-                                        </span>
-                                      ) : null}
-                                    </span>
-                                    {row.how ? (
-                                      <span className="usual-measure-how">
-                                        {row.how}
+                        {u.measures
+                          .filter((row) => !/^water\b/i.test(row.item.trim()))
+                          .map((row, i) => {
+                            const hasFoodMacros = macrosMeaningful(row.macros);
+                            const isBlueprintShop =
+                              !!row.shop &&
+                              (/blueprint/i.test(row.shop.source || "") ||
+                                /blueprint|big stack/i.test(
+                                  row.shop.product || ""
+                                ));
+                            const shop =
+                              row.shop && !isBlueprintShop
+                                ? row.shop
+                                : undefined;
+                            const math = shop
+                              ? shopRunOut(shop, row.amount)
+                              : null;
+                            const title = row.item;
+                            const amt = row.amount
+                              ? row.amount.replace(/\s+/g, " ").trim()
+                              : "";
+                            const shopLine =
+                              math && math.buyPart
+                                ? `Buy ${math.buyPart.replace(/^;\s*/, "")}; ${math.lastsLine}`
+                                : math
+                                  ? math.lastsLine
+                                  : null;
+                            return (
+                              <li
+                                key={row.item}
+                                className="usual-measure-row"
+                              >
+                                <span className="usual-measure-n" aria-hidden>
+                                  {i + 1}.
+                                </span>
+                                <span className="usual-measure-body">
+                                  <span className="usual-measure-name">
+                                    {shop?.url ? (
+                                      <a
+                                        className="usual-product-link"
+                                        href={shop.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        title={title}
+                                      >
+                                        {title}
+                                      </a>
+                                    ) : (
+                                      title
+                                    )}
+                                    {amt ? (
+                                      <span className="usual-measure-amt">
+                                        : {amt}
                                       </span>
                                     ) : null}
-                                  </>
-                                )}
-                              </span>
-                            </li>
-                          );
-                        })}
+                                  </span>
+                                  {shopLine ? (
+                                    <span
+                                      className="usual-shop-line"
+                                      title={
+                                        math?.pricePerPackTip ||
+                                        math?.daysTip ||
+                                        undefined
+                                      }
+                                    >
+                                      {shopLine}
+                                    </span>
+                                  ) : null}
+                                  {hasFoodMacros && row.macros ? (
+                                    <span className="usual-macro-break-vals">
+                                      <MacroStrip
+                                        mac={row.macros}
+                                        focus={macroFocus}
+                                      />
+                                    </span>
+                                  ) : null}
+                                  {row.activesGroups &&
+                                  row.activesGroups.length > 0
+                                    ? row.activesGroups.map((g) =>
+                                        g.actives.length > 0 ? (
+                                          <MeasureActivesToggle
+                                            key={g.label}
+                                            label={g.label}
+                                            actives={g.actives}
+                                          />
+                                        ) : null
+                                      )
+                                    : row.actives && row.actives.length > 0 ? (
+                                        <MeasureActivesToggle
+                                          label={row.activesLabel || "Actives"}
+                                          actives={row.actives}
+                                        />
+                                      ) : null}
+                                </span>
+                              </li>
+                            );
+                          })}
                       </ol>
-                      {shopYear ? (
+                      {itemMacros ? (
+                        <p className="usual-macro-break-total">
+                          Total ·{" "}
+                          <MacroStrip mac={itemMacros} focus={macroFocus} />
+                        </p>
+                      ) : null}
+                      {shopYear && shopYear.perMonth > 0 ? (
                         <div className="usual-spend">
                           <p className="usual-spend-line">
                             Monthly:{" "}
-                            <strong>${Math.round(shopYear.perMonth)}</strong>
+                            <span>${Math.round(shopYear.perMonth)}</span>
                           </p>
                           <p className="usual-spend-line">
                             Yearly:{" "}
-                            <strong>${Math.round(shopYear.perYear)}</strong>
+                            <span>${Math.round(shopYear.perYear)}</span>
                           </p>
                         </div>
                       ) : null}
@@ -2306,83 +2789,55 @@ function MealsPanel() {
                 </>
               ) : null}
 
-              {u.measures?.some((m) => m.macros) ? (
-                <>
-                  <button
-                    type="button"
-                    className="usual-details-toggle"
-                    aria-expanded={macrosOpen}
-                    onClick={() =>
-                      setOpenMacros((cur) => (cur === u.id ? null : u.id))
-                    }
-                  >
-                    {macrosOpen ? "▾" : "▸"} Macro breakdown
-                  </button>
-                  {macrosOpen ? (
-                    <div className="usual-macro-break">
-                      <ol className="usual-macro-break-list">
-                        {u.measures!
-                          .filter((m) => m.macros)
-                          .map((m, i) => {
-                            const tone = m.tone || "default";
-                            return (
-                              <li
-                                key={m.item}
-                                className={`usual-macro-break-row is-${tone}`}
-                              >
-                                <span className="usual-macro-break-n">
-                                  {i + 1}
-                                </span>
-                                <span className="usual-macro-break-body">
-                                  <span className="usual-macro-break-name">
-                                    {m.shop?.product || m.item}
-                                    <span className="usual-macro-break-amt">
-                                      {" "}
-                                      –{" "}
-                                      {m.amount
-                                        .replace(/\/day/gi, "")
-                                        .replace(/\s+/g, " ")
-                                        .trim() || m.amount}
-                                    </span>
-                                  </span>
-                                  <span className="usual-macro-break-vals">
-                                    Calories: {m.macros!.calories}
-                                    {" · "}Protein: {m.macros!.protein_g}g
-                                    {" · "}Carbs: {m.macros!.carbs_g}g
-                                    {" · "}Fat: {m.macros!.fat_g}g
-                                    {" · "}Fiber: {m.macros!.fiber_g}g
-                                  </span>
-                                </span>
-                              </li>
-                            );
-                          })}
-                      </ol>
-                      {itemMacros ? (
-                        <p className="usual-macro-break-total">
-                          Total · Calories:{" "}
-                          <strong>{itemMacros.calories.toFixed(1)}</strong>
-                          {" · "}Protein:{" "}
-                          <strong>{itemMacros.protein_g.toFixed(1)}g</strong>
-                          {" · "}Carbs:{" "}
-                          <strong>{itemMacros.carbs_g.toFixed(1)}g</strong>
-                          {" · "}Fat:{" "}
-                          <strong>{itemMacros.fat_g.toFixed(1)}g</strong>
-                          {" · "}Fiber:{" "}
-                          <strong>{itemMacros.fiber_g.toFixed(1)}g</strong>
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </>
-              ) : null}
+              {/* Vitamins — food + stack for this meal only. Below ingredients + macros. */}
+              {(() => {
+                const mealVits = vitaminsFromMeasures(u.measures);
+                if (!vitaminsMeaningful(mealVits)) return null;
+                const vOpen = openVitamins === u.id;
+                return (
+                  <>
+                    <button
+                      type="button"
+                      className={`usual-ingredients-head usual-vitamins-head${
+                        vOpen ? " is-open" : ""
+                      }`}
+                      aria-expanded={vOpen}
+                      onClick={() =>
+                        setOpenVitamins((cur) => (cur === u.id ? null : u.id))
+                      }
+                    >
+                      Vitamins
+                    </button>
+                    {vOpen ? (
+                      <ul className="usual-meal-vitamins">
+                        {VITAMIN_DISPLAY_ROWS.map((row) => {
+                          const n = mealVits[row.key];
+                          if (!n || n <= 0) return null;
+                          const rounded =
+                            n >= 10
+                              ? Math.round(n)
+                              : Math.round(n * 10) / 10;
+                          return (
+                            <li key={row.key}>
+                              <span className="usual-meal-vit-lab">
+                                {row.label}
+                              </span>
+                              <span className="usual-meal-vit-amt">
+                                {rounded} {row.unit}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : null}
+                  </>
+                );
+              })()}
             </div>
           );
 
         })}
       </section>
-
-      {/* Every logged meal scanned against the trash can list */}
-      <MealCutoutTrack day={day} tick={mealTick} />
 
       <WaterTracker day={day} />
       <SupplementsList day={day} />
@@ -2556,39 +3011,26 @@ function MealsPanel() {
           </button>
           {bowelLogsOpen ? (
             <div className="fx-bm-logs-panel">
-              <BowelConsistencyGraph
-                points={bowelConsistency.points}
-                yes={bowelConsistency.yes}
-                no={bowelConsistency.no}
-              />
-              <p className="fx-bm-graph-goal">
-                Goal: Yes climbs · No stays flat.
-              </p>
-              <button
-                type="button"
-                className="fx-bf-life-toggle"
-                aria-expanded={bowelPieOpen}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setBowelPieOpen((o) => !o);
-                }}
-              >
-                types · n = {bristolLife.n}
-                {bristolLife.n > 0
-                  ? ` · ${([1, 2, 3, 4, 5, 6, 7] as const)
-                      .filter((t) => bristolLife.counts[t] > 0)
-                      .map((t) => `${t}×${bristolLife.counts[t]}`)
-                      .join(" · ")}`
-                  : ""}
-              </button>
-              {bowelPieOpen ? (
-                <BowelBristolLifetimeGraph
-                  series={bristolLife.series}
-                  counts={bristolLife.counts}
-                  n={bristolLife.n}
-                />
-              ) : null}
+              {/* Side-by-side compact charts — no full-width stack */}
+              <div className="fx-bm-graphs-row">
+                <div className="fx-bm-graphs-col">
+                  <BowelConsistencyGraph
+                    points={bowelConsistency.points}
+                    yes={bowelConsistency.yes}
+                    no={bowelConsistency.no}
+                  />
+                  <p className="fx-bm-graph-goal">
+                    Goal: Yes climbs · No stays flat.
+                  </p>
+                </div>
+                <div className="fx-bm-graphs-col">
+                  <BowelBristolLifetimeGraph
+                    series={bristolLife.series}
+                    counts={bristolLife.counts}
+                    n={bristolLife.n}
+                  />
+                </div>
+              </div>
             </div>
           ) : null}
         </footer>
@@ -2624,52 +3066,64 @@ const WATER_ADDS = [
   { ml: 1000, label: "+1 L" },
 ] as const;
 
-const WATER_KEY = "dr-melani-water-ml";
-const WATER_HIST_KEY = "dr-melani-water-hist";
-
-function loadWater(day: string): number {
-  try {
-    const raw = localStorage.getItem(`${WATER_KEY}:${day}`);
-    if (raw) return Math.max(0, Number(raw) || 0);
-  } catch {
-    /* ignore */
-  }
-  return 0;
-}
-
-function saveWater(day: string, ml: number) {
-  try {
-    localStorage.setItem(`${WATER_KEY}:${day}`, String(ml));
-  } catch {
-    /* ignore */
-  }
-  // Habits ↔ water: bar at 3.5 L checks “3.5L water + Diet”; habit check fills bar
-  notifyHabitAutoSync(day);
-  try {
-    window.dispatchEvent(
-      new CustomEvent(MEL_DATA_EVENT, { detail: { domain: "water", day } })
-    );
-  } catch {
-    /* ignore */
-  }
-}
-
-function loadWaterHist(day: string): number[] {
-  try {
-    const raw = localStorage.getItem(`${WATER_HIST_KEY}:${day}`);
-    if (raw) return JSON.parse(raw) as number[];
-  } catch {
-    /* ignore */
-  }
-  return [];
-}
-
-function saveWaterHist(day: string, hist: number[]) {
-  try {
-    localStorage.setItem(`${WATER_HIST_KEY}:${day}`, JSON.stringify(hist));
-  } catch {
-    /* ignore */
-  }
+/**
+ * Vitamins / actives list.
+ * Layout (scan dose on the right):
+ *   1  Name (what it’s for)                    2.5 g
+ * Hover tip: rich multi-paragraph detail (female-focused) from data.ts.
+ */
+function MeasureActivesToggle({
+  label,
+  actives,
+}: {
+  label: string;
+  actives: { name: string; amount?: string; role: string; detail: string }[];
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="usual-actives">
+      <button
+        type="button"
+        className={`usual-actives-toggle${open ? " is-open" : ""}`}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {label}
+      </button>
+      {open ? (
+        <ol className="usual-actives-list">
+          {actives.map((a, i) => (
+            <li key={a.name} className="usual-actives-item" tabIndex={0}>
+              <span className="usual-actives-n">{i + 1}</span>
+              <span className="usual-actives-main">
+                <span className="usual-actives-name">{a.name}</span>
+                {a.role ? (
+                  <span className="usual-actives-role"> ({a.role})</span>
+                ) : null}
+              </span>
+              {a.amount ? (
+                <span className="usual-actives-amt">{a.amount}</span>
+              ) : (
+                <span className="usual-actives-amt is-empty" aria-hidden>
+                  {" "}
+                </span>
+              )}
+              <span className="usual-actives-tip" role="tooltip">
+                <span className="usual-actives-tip-head">
+                  {a.name}
+                  {a.amount ? ` · ${a.amount}` : ""}
+                </span>
+                {a.role ? (
+                  <span className="usual-actives-tip-role">{a.role}</span>
+                ) : null}
+                <span className="usual-actives-tip-body">{a.detail}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </div>
+  );
 }
 
 /** Water like Melani: bar + plain text adds (no underlines, no boxes) */
@@ -2680,6 +3134,8 @@ function WaterTracker({ day }: { day: string }) {
   const liters = (ml / 1000).toFixed(1);
   const goalL = (goal / 1000).toFixed(1); // 3.5
   const pctFill = Math.min(100, Math.round((ml / goal) * 100));
+  // Block double-fire (double click / StrictMode impurity) on the same tap
+  const addLockRef = useRef(false);
 
   useEffect(() => {
     setMl(loadWater(day));
@@ -2694,6 +3150,7 @@ function WaterTracker({ day }: { day: string }) {
       setHist(loadWaterHist(day));
     };
     // Habit check fills water → same event; also re-sync if habits grid changes
+    // Meal log also fires water domain so bar updates without reload
     window.addEventListener(MEL_DATA_EVENT, refresh);
     window.addEventListener("wonder-habits-update", refresh);
     return () => {
@@ -2702,42 +3159,43 @@ function WaterTracker({ day }: { day: string }) {
     };
   }, [day]);
 
+  /**
+   * Add ml from localStorage truth — never side-effect inside setState.
+   * (Side effects in setMl updaters ran twice and logged +1 L as +2 L.)
+   */
   function add(amount: number) {
-    setMl((prev) => {
-      const next = Math.min(goal, prev + amount);
-      const added = next - prev;
-      if (added > 0) {
-        setHist((h) => {
-          const nh = [...h, added];
-          saveWaterHist(day, nh);
-          return nh;
-        });
-      }
-      saveWater(day, next);
-      return next;
-    });
+    if (addLockRef.current) return;
+    addLockRef.current = true;
+    try {
+      const added = addWaterDrink(day, amount, goal);
+      if (added <= 0) return;
+      setMl(loadWater(day));
+      setHist(loadWaterHist(day));
+    } finally {
+      // Release on next frame so one physical click can't double-apply
+      window.setTimeout(() => {
+        addLockRef.current = false;
+      }, 0);
+    }
   }
 
   function undoLast() {
-    setHist((h) => {
-      if (!h.length) return h;
-      const last = h[h.length - 1];
-      const rest = h.slice(0, -1);
-      setMl((prev) => {
-        const next = Math.max(0, prev - last);
-        saveWater(day, next);
-        return next;
-      });
-      saveWaterHist(day, rest);
-      return rest;
-    });
+    const h = loadWaterHist(day);
+    if (!h.length) return;
+    const last = h[h.length - 1];
+    const rest = h.slice(0, -1);
+    const next = Math.max(0, loadWater(day) - last);
+    saveWater(day, next);
+    saveWaterHist(day, rest);
+    setMl(next);
+    setHist(rest);
   }
 
   function reset() {
-    setMl(0);
-    setHist([]);
     saveWater(day, 0);
     saveWaterHist(day, []);
+    setMl(0);
+    setHist([]);
   }
 
   return (
@@ -2959,13 +3417,18 @@ export function FitnessExact({ pageId, onGo }: Props) {
     onGo(TAB_TO_PAGE[t]);
   }
 
+  // Meals → diet / body / life bank only · Sleep & Gym → founder hero bank
+  const quoteChannel = tab === "meals" ? "meals" : "hero";
   const { quote, remaining, limit, msUntilReset, nextQuote } =
-    useQuoteRotation();
+    useQuoteRotation(quoteChannel);
 
   return (
     <div className="fx-page">
       <div className="fx-inner">
-        <div className="fx-quote">
+        <div
+          className={`fx-quote${tab === "meals" ? " is-meals-diet" : ""}`}
+          data-quote-channel={quoteChannel}
+        >
           <div className="fx-quote-copy">
             <p className="fx-quote-text">“{quote.text}”</p>
             <p className="fx-quote-author">{quote.source}</p>
@@ -2992,7 +3455,7 @@ export function FitnessExact({ pageId, onGo }: Props) {
           {(
             [
               ["sleep", "Sleep"],
-              ["meals", "Meals"],
+              ["meals", "Meals + Supplements"],
               ["gym", "Gym"],
             ] as const
           ).map(([id, label]) => (

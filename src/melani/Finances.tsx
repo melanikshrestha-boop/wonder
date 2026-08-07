@@ -880,9 +880,42 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
 
   const [state, setState] = useState<FinanceState | null>(() => {
     if (probeVault().mode === "encrypted") return null;
-    const initial = loadFinance();
-    seedFinanceUndoBaseline(initial);
-    return initial;
+    try {
+      const initial = loadFinance();
+      seedFinanceUndoBaseline(initial);
+      return initial;
+    } catch (err) {
+      console.error("[Finances] loadFinance failed", err);
+      try {
+        // Last resort: empty books so the desk still opens
+        const empty = {
+          version: 2 as const,
+          accounts: [],
+          txs: [],
+          budget: [],
+          watchlist: [] as string[],
+          plaidMeta: null,
+          goals: [],
+          creditProfile: {
+            onTimePct: 95,
+            historyYears: 3,
+            hardInquiries: 1,
+            openAccounts: 2,
+            recentLates: 0,
+            collections: 0,
+            knownScore: 677,
+            scoreProvider: null,
+            scoreModel: null,
+            scoreBureau: null,
+            cashFloor: 300,
+          },
+        };
+        seedFinanceUndoBaseline(empty as FinanceState);
+        return empty as FinanceState;
+      } catch {
+        return null;
+      }
+    }
   });
   const [categoryPrefs, setCategoryPrefs] =
     useState<CategoryPrefs>(loadCategoryPrefs);
@@ -4083,7 +4116,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
 
               {filterMonth === "all" && monthBooks.length > 0 ? (
                 <section className="wd-ledger-year-summary" aria-label="Year summary">
-                  <h2>Okay here's the deal.</h2>
                   <AllLedgerCharts
                     rows={ledgerChartRows}
                     scopeLabel={String(filterYear)}
@@ -4174,6 +4206,14 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                           ) : null}
                         </div>
                       </header>
+
+                      {/* Charts above ledger so pies never float over table rows */}
+                      <MonthBookCharts
+                        rows={book.rows}
+                        month={book.month}
+                        monthLabel={`${monthOnly} ${yearOnly}`}
+                        onCategoryDoubleClick={filterLedgerFromChart}
+                      />
 
                       <div className="wd-table-wrap wd-month-full">
                         <table className="wd-table wd-edit wd-ledger-table wd-ledger-full">
@@ -4350,14 +4390,6 @@ export function Finances(_props: { onGo?: (pageId: string) => void }) {
                           </tbody>
                         </table>
                       </div>
-
-                      {/* Month visuals — graph + pie under the logs */}
-                      <MonthBookCharts
-                        rows={book.rows}
-                        month={book.month}
-                        monthLabel={`${monthOnly} ${yearOnly}`}
-                        onCategoryDoubleClick={filterLedgerFromChart}
-                      />
                     </section>
                   );
                 })}

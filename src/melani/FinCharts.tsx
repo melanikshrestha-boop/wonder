@@ -28,19 +28,20 @@ import {
 import { pieSlicePath } from "./pieGeometry";
 import { pushUndo } from "../undoStack";
 
+/** Soft fallback when a slice has no category color — muted, not neon */
 const PALETTE = [
-  "#7c3aed",
-  "#0891b2",
-  "#f97316",
-  "#16a34a",
-  "#db2777",
-  "#2563eb",
-  "#ca8a04",
-  "#dc2626",
-  "#0d9488",
-  "#9333ea",
-  "#ea580c",
-  "#475569",
+  "#6b8fad",
+  "#8b7a9e",
+  "#b08a6a",
+  "#5a8f72",
+  "#b07a8c",
+  "#7a8ea8",
+  "#a8986a",
+  "#b07a72",
+  "#6a8f8a",
+  "#9a7a96",
+  "#a8885c",
+  "#7a828c",
 ];
 
 export type LinePoint = { x: string; y: number; label: string };
@@ -1066,7 +1067,7 @@ export function MonthBookCharts({
           <InteractivePieChart
             title="Expenses by category"
             slices={expenseSlices}
-            size={220}
+            size={168}
             holeRatio={0.58}
             centerPrimary={moneyCents(totalOut)}
             centerSecondary="total expenses"
@@ -1080,7 +1081,7 @@ export function MonthBookCharts({
           <InteractivePieChart
             title="Income by category"
             slices={incomeSlices}
-            size={220}
+            size={168}
             holeRatio={0.58}
             centerPrimary={moneyCents(totalIn)}
             centerSecondary="total income"
@@ -1217,9 +1218,11 @@ export function AllLedgerCharts({
   }));
 
   return (
-    <section className="wd-panel wd-all-ledger-charts" aria-label="All ledger data">
+    <section className="wd-all-ledger-charts" aria-label="All ledger data">
       <header className="wd-all-ledger-head">
-        <p className="wd-ledger-scope">{scopeLabel || "Selected period"}</p>
+        {scopeLabel ? (
+          <p className="wd-ledger-scope">{scopeLabel}</p>
+        ) : null}
         <dl>
           <div className="wd-math-metric" tabIndex={0}>
             <dt>Earned</dt>
@@ -1315,13 +1318,13 @@ export function AllLedgerCharts({
             yLabel=""
             points={monthlyNet}
             color="#1f6f8b"
-            height={190}
+            height={140}
           />
         </article>
         <InteractivePieChart
           title="Received by source"
           slices={toSlices(incomeMap)}
-          size={220}
+          size={168}
           holeRatio={0.58}
           centerPrimary={moneyCents(totalIncome)}
           centerSecondary="received"
@@ -1333,7 +1336,7 @@ export function AllLedgerCharts({
         <InteractivePieChart
           title="All expenses by category"
           slices={toSlices(expenseMap)}
-          size={220}
+          size={168}
           holeRatio={0.58}
           centerPrimary={moneyCents(totalExpenses)}
           centerSecondary="expenses"
@@ -1345,7 +1348,7 @@ export function AllLedgerCharts({
         <InteractivePieChart
           title="Moved out, not spending"
           slices={toSlices(movementOutMap)}
-          size={220}
+          size={168}
           holeRatio={0.58}
           centerPrimary={moneyCents(totalMovementOut)}
           centerSecondary="moved out"

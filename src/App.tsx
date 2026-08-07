@@ -31,6 +31,7 @@ import { isWardrobePage } from "./melani/wardrobe/route";
 import { MelaniAI } from "./melani/MelaniAI";
 import { SelectionResearch } from "./melani/SelectionResearch";
 import { UniversalQuote } from "./melani/UniversalQuote";
+import { DeskErrorBoundary } from "./melani/DeskErrorBoundary";
 import { FocusOverlay } from "./melani/FocusOverlay";
 import {
   MEL_NAVIGATE_EVENT,
@@ -709,15 +710,22 @@ export default function App() {
             )}
             </div>
           </div>
-          <MelaniAI pageId={activePage.id} pageTitle={activePage.title} />
-          <SelectionResearch />
+          <DeskErrorBoundary desk="Mel">
+            <MelaniAI pageId={activePage.id} pageTitle={activePage.title} />
+          </DeskErrorBoundary>
+          <DeskErrorBoundary desk="Research">
+            <SelectionResearch />
+          </DeskErrorBoundary>
         </header>
 
         {/* Page body scrolls here — Notion pages OR Melani content inside page */}
         <div ref={mainScrollRef} className="main-scroll">
           {/* Fitness + Wardrobe own the full canvas — no quote band stealing height */}
           {!isFitnessPage(activePage.id) && !isWardrobePage(activePage.id) ? (
-            <UniversalQuote />
+            // Quote band must never take down Bookshelf / Finances / the shell
+            <DeskErrorBoundary desk="Quote">
+              <UniversalQuote />
+            </DeskErrorBoundary>
           ) : null}
           {melaniMode ? (
             /* key forces a clean desk remount — no leftover wardrobe iframe / gym state */

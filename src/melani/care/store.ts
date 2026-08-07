@@ -73,6 +73,46 @@ function normalizeProvider(value: Partial<CareProvider>): CareProvider | null {
 function normalizeState(value: Partial<CareState> | null): CareState {
   if (!value || typeof value !== "object") return emptyCareState();
   const empty = emptyCareState();
+  const historyRaw = value.history;
+  const history =
+    historyRaw && typeof historyRaw === "object"
+      ? {
+          lastDone:
+            historyRaw.lastDone && typeof historyRaw.lastDone === "object"
+              ? { ...historyRaw.lastDone }
+              : {},
+          disabled: Array.isArray(historyRaw.disabled)
+            ? historyRaw.disabled.filter((id): id is string => typeof id === "string")
+            : [],
+          intervalOverride:
+            historyRaw.intervalOverride &&
+            typeof historyRaw.intervalOverride === "object"
+              ? { ...historyRaw.intervalOverride }
+              : {},
+        }
+      : undefined;
+  const grantRaw = value.grant;
+  const grantChannels = Array.isArray(grantRaw?.channels)
+    ? grantRaw!.channels.filter(
+        (c): c is "phone" | "portal" | "email" =>
+          c === "phone" || c === "portal" || c === "email"
+      )
+    : (["phone", "portal"] as ("phone" | "portal" | "email")[]);
+  const grant =
+    grantRaw && typeof grantRaw === "object"
+      ? {
+          enabled: Boolean(grantRaw.enabled),
+          grantedAt:
+            typeof grantRaw.grantedAt === "string" ? grantRaw.grantedAt : null,
+          channels: grantChannels.length
+            ? grantChannels
+            : (["phone", "portal"] as ("phone" | "portal" | "email")[]),
+          allowCancellations: Boolean(grantRaw.allowCancellations),
+          dailyLimit:
+            typeof grantRaw.dailyLimit === "number" ? grantRaw.dailyLimit : 5,
+          log: Array.isArray(grantRaw.log) ? grantRaw.log.slice(0, 100) : [],
+        }
+      : undefined;
   return {
     version: 1,
     profile: { ...empty.profile, ...(value.profile || {}) },
@@ -83,6 +123,8 @@ function normalizeState(value: Partial<CareState> | null): CareState {
     appointments: Array.isArray(value.appointments) ? value.appointments.slice(0, 100) : [],
     receipts: Array.isArray(value.receipts) ? value.receipts.slice(0, 250) : [],
     settings: { ...empty.settings, ...(value.settings || {}) },
+    ...(history ? { history } : {}),
+    ...(grant ? { grant } : {}),
   };
 }
 

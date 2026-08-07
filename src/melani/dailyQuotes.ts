@@ -24,6 +24,26 @@ export type DailyQuote = {
  * Add more anytime; the day picker wraps cleanly.
  */
 export const HERO_QUOTES: DailyQuote[] = [
+  // ── Own law (founder) ──────────────────────────────────────
+  {
+    text: "Risk avoidance causes the most regret.",
+    source: "Celine Nova",
+    tag: "courage",
+    weight: 3,
+  },
+  {
+    text: "While society praises cold, rational logic, I believe all humans are inherently emotional decision-makers who just use logic later to justify their feelings.",
+    source: "Celine Nova",
+    tag: "truth",
+    weight: 3,
+  },
+  {
+    text: "I am an egotistical utilitarian: I pursue my own selfish goals and personal success in the way that also helps the greatest number of people around me. Life is a paradox — at least in modern society.",
+    source: "Celine Nova",
+    tag: "paradox",
+    weight: 3,
+  },
+
   // ── Steve Jobs ─────────────────────────────────────────────
   {
     text: "The people who are crazy enough to think they can change the world are the ones who do.",
@@ -383,6 +403,12 @@ export const HERO_QUOTES: DailyQuote[] = [
     text: "The most contrarian thing of all is not to oppose the crowd but to think for yourself.",
     source: "Peter Thiel",
     tag: "thinking",
+  },
+  {
+    text: "Brilliant thinking is rare, but courage is in even shorter supply than genius.",
+    source: "Peter Thiel",
+    tag: "courage",
+    weight: 2,
   },
 
   // ── Larry Page ─────────────────────────────────────────────

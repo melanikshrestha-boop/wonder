@@ -310,7 +310,7 @@ export const PHASE_META: Record<
  color: "#c97b84", // rose — bleed phase
  oneLiner: "Bleed week. Recovery mode for training, focus, and pain.",
  biology:
- "Your body is shedding the uterine lining and often running on lower hormone drive, so oxygen delivery and energy can feel flatter, especially if flow is medium or heavy. That is why lower body PRs, long study marathons, and hard inventing sprints often feel harder on day 1 to 3. Blood loss also dips iron a bit, which matters for someone lifting and chasing 125g protein who already watches fatigue and migraines.",
+ "Your body is shedding the uterine lining and often running on lower hormone drive, so oxygen delivery and energy can feel flatter, especially if flow is medium or heavy. That is why lower body PRs, long study marathons, and hard inventing sprints often feel harder on day 1 to 3. Blood loss also dips iron a bit, which matters for someone lifting and chasing 150g protein who already watches fatigue and migraines.",
  hormones:
  "Estrogen and progesterone are at the bottom of the cycle. That drop is what starts the bleed. As the week goes on, the brain starts the next cycle so you are not stuck here forever.",
  guidance:

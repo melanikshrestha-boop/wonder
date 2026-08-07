@@ -85,7 +85,7 @@ html body .wd strong {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 22px 26px 60px;
+  padding: 12px 18px 40px;
   /* allow ledger to scroll inside wrap — don’t clip the Amount column */
   overflow-x: visible;
   background: var(--wd-bg);
@@ -104,12 +104,12 @@ html body .wd strong {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0;
-  margin: 0 0 28px;
-  padding: 0 0 14px;
+  margin: 0 0 4px;
+  padding: 0;
   font-family: var(--wd-font);
   font-size: 14px;
   line-height: 1;
-  border-bottom: 1px solid var(--wd-hairline);
+  border-bottom: 0;
 }
 
 .wd-subnav-item {
@@ -565,8 +565,8 @@ html body .wd strong {
   background: var(--wd-panel);
   border: 0;
   border-radius: 0;
-  padding: 10px 0 14px;
-  margin-bottom: 4px;
+  padding: 0;
+  margin-bottom: 2px;
   min-height: 0;
   box-shadow: none;
 }
@@ -2013,12 +2013,13 @@ html body .wd strong {
 }
 
 .wd-ledger-scope {
-  margin: 0 0 10px;
+  margin: 0 0 6px;
   color: var(--wd-secondary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  line-height: 1;
 }
 
 .wd-math-metric {
@@ -2091,15 +2092,18 @@ html body .wd strong {
   box-sizing: border-box;
   max-width: 100%;
   overflow-x: clip;
-  padding-right: 24px !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 .wd-ledger-year-summary {
-  margin: 0 0 28px;
+  margin: 0 0 12px;
+  padding: 0;
 }
 
+/* No marketing lede — year KPIs only */
 .wd-ledger-year-summary > h2 {
-  margin: 0 0 18px;
+  display: none !important;
 }
 
 .wd-budget-ledger {
@@ -2406,12 +2410,12 @@ html body .wd strong {
   }
 
   .wd-all-ledger-charts .wd-pie-wrap {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
   }
 
   .wd-all-ledger-charts .wd-pie-disk {
-    justify-self: center;
+    width: min(168px, 100%);
   }
 
   .wd-allocation-pie {
@@ -2520,7 +2524,7 @@ html body .wd strong {
   }
 
   .wd-all-ledger-head dl {
-    gap: 18px;
+    gap: 8px 14px;
   }
 }
 
@@ -3124,11 +3128,13 @@ html:not(.theme-light) .main.is-finances .wd-table.wd-ledger-full thead th {
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-start;
-  /* Squeeze controls together (was ~1.1rem — looked sparse) */
-  gap: 0.15rem 0.55rem;
-  margin: 0 0 1.1rem;
+  gap: 2px 8px;
+  margin: 0 0 2px;
+  padding: 0;
   width: 100%;
   max-width: none;
+  min-height: 0;
+  line-height: 1;
 }
 /* Compact dropdowns: width = selected label, not longest option */
 .wd-filters-ledger select {
@@ -3270,20 +3276,27 @@ html:not(.theme-light) .main.is-finances .wd-table.wd-ledger-full thead th {
   line-height: 1 !important;
 }
 .wd * {
-  line-height: 1;
+  line-height: 1 !important;
 }
 .wd p {
-  margin: 0.25rem 0;
+  margin: 0 !important;
 }
 .wd li {
-  margin: 0.1rem 0;
+  margin: 0 !important;
+}
+.wd h1,
+.wd h2,
+.wd h3,
+.wd h4 {
+  margin: 0 !important;
+  line-height: 1 !important;
 }
 .wd-subnav,
 .wd-subnav-plain {
   border: 0 !important;
   border-bottom: 0 !important;
   padding-bottom: 0 !important;
-  margin-bottom: 0.9rem;
+  margin-bottom: 4px;
   line-height: 1;
 }
 .wd-subnav-link {
@@ -3714,33 +3727,49 @@ html.theme-light .wd-cad-opt.on {
   margin-bottom: 8px;
 }
 
-/* ── Month charts: line + pie side-by-side (sleep / Focus language) ── */
+/* ── Month charts: stack cleanly so pies never float over the ledger ── */
 .wd-month-charts {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(420px, 1fr);
-  gap: 1rem 1.5rem;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: stretch;
   width: 100%;
-  max-width: none;
-  margin: 1.25rem 0 0.5rem;
+  max-width: 100%;
+  margin: 0.75rem 0 1rem;
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
+  isolation: isolate;
 }
 .wd-month-charts-line {
   min-width: 0;
   width: 100%;
+  position: relative;
+  z-index: 0;
 }
 .wd-month-charts-pie,
 .wd-month-charts-pies {
   min-width: 0;
   width: 100%;
+  position: relative;
+  z-index: 0;
 }
 .wd-month-charts-pies {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@media (min-width: 900px) {
+  .wd-month-charts-pies {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem 1.5rem;
+  }
 }
 .wd-month-charts .wd-pie-block {
   min-width: 0;
   width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 /* Big out/in/net like Fitness sleep metric head */
 .wd-month-chart-hero {
@@ -3814,49 +3843,75 @@ html.theme-light .wd-cad-opt.on {
   display: block;
 }
 
-.wd-all-ledger-head dl {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
-  gap: 24px 32px;
+/* Dense year math — pack left, no 1fr stretch voids */
+.wd-all-ledger-head {
+  margin: 0;
+  padding: 0;
 }
 
 .wd-all-ledger-head dl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px 18px;
   margin: 0;
+  padding: 0;
 }
 
 .wd-all-ledger-head dl div {
-  min-width: 92px;
+  min-width: 0;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
 }
 
 .wd-all-ledger-head dt {
   color: var(--wd-secondary);
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
+  line-height: 1;
+  margin: 0;
 }
 
 .wd-all-ledger-head dd {
   margin: 3px 0 0;
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 700;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
+/* Year charts: trend full width, pies in 1–2 columns — never 4 cramped cells that overflow */
 .wd-all-ledger-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 1.4fr) repeat(2, minmax(250px, 1fr));
-  gap: 28px;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
   align-items: start;
-  margin-top: 22px;
+  margin-top: 12px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .wd-all-ledger-trend {
   min-width: 0;
+  width: 100%;
+  grid-column: 1 / -1;
 }
 
-@media (max-width: 1400px) {
+.wd-all-ledger-grid > .wd-pie-block {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+@media (min-width: 960px) {
   .wd-all-ledger-grid {
     grid-template-columns: 1fr 1fr;
+    gap: 1.25rem 1.5rem;
   }
   .wd-all-ledger-trend {
     grid-column: 1 / -1;
@@ -3865,8 +3920,7 @@ html.theme-light .wd-cad-opt.on {
 
 @media (max-width: 680px) {
   .wd-all-ledger-head dl {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px 24px;
+    gap: 10px 14px;
   }
   .wd-all-ledger-grid {
     grid-template-columns: 1fr;
@@ -3921,51 +3975,56 @@ html.theme-light .wd-cad-opt.on {
   font-weight: 600;
   pointer-events: none;
 }
-/* Title above pie + legend (never side-by-side with the circle) */
+/* Title above pie + legend — one column, never spill onto sibling charts/tables */
 .wd-pie-block {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 8px;
   min-width: 0;
   width: 100%;
-  /* Isolate title/hover/legend so one pie never paints over a sibling */
+  max-width: 100%;
   position: relative;
   isolation: isolate;
-  overflow: visible;
+  overflow: hidden; /* never paint over ledger / neighbor pies */
+  contain: layout;
+  box-sizing: border-box;
 }
 .wd-pie-block .wd-hab-chart-title {
   margin: 0;
   max-width: 100%;
   min-width: 0;
-  /* Title stays in flow above its own chart — never absolute over neighbors */
   position: relative;
   z-index: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.15;
+  line-height: 1.2;
   padding-right: 4px;
 }
+/* ALWAYS stack: disk on top, legend below — side-by-side overflow was the overlap bug */
 .wd-pie-wrap {
   display: flex;
-  gap: 14px 18px;
+  flex-direction: column;
+  gap: 10px;
   align-items: flex-start;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   position: relative;
   z-index: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* Pie disk only — keeps hover label centered on the circle, not the legend */
 .wd-pie-disk {
   position: relative;
   flex: 0 0 auto;
-  width: min(220px, 100%);
+  width: min(180px, 100%);
   aspect-ratio: 1 / 1;
   max-width: 100%;
-  /* Clip hover chip to the disk so it never covers the legend or next pie */
   overflow: hidden;
   contain: layout paint;
   z-index: 0;
@@ -4028,14 +4087,15 @@ html:not(.theme-light) .wd-pie-hover-val {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  flex: 1 1 8rem;
+  gap: 4px;
+  flex: 0 0 auto;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
   position: relative;
   z-index: 1;
-  /* Own stacking context — sibling pie titles cannot sit on top of rows */
   isolation: isolate;
+  box-sizing: border-box;
 }
 .wd-pie-legend li {
   display: grid;
@@ -4043,12 +4103,14 @@ html:not(.theme-light) .wd-pie-hover-val {
   align-items: center;
   gap: 8px;
   font-size: 12px;
+  line-height: 1.25 !important;
   color: var(--wd-text);
   cursor: pointer;
   border-radius: 6px;
-  padding: 4px 6px;
+  padding: 3px 4px;
   min-width: 0;
-  transition: background 0.15s ease, transform 0.15s ease;
+  margin: 0 !important;
+  transition: background 0.15s ease;
 }
 .wd-pie-legend .wd-sub-legend-name {
   min-width: 0;
@@ -4061,14 +4123,15 @@ html:not(.theme-light) .wd-pie-hover-val {
   font-variant-numeric: tabular-nums;
 }
 
-/* Double-click color popover — sits in the pie block, not over the table */
+/* Color popover — fixed to viewport corner so it never covers ledger rows */
 .wd-pie-color-pop {
-  position: absolute;
-  left: 0;
-  top: 100%;
-  margin-top: 8px;
-  z-index: 30;
-  width: min(260px, calc(100vw - 32px));
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 200;
+  width: min(280px, calc(100vw - 32px));
+  margin: 0;
   padding: 12px 12px 10px;
   border-radius: 10px;
   background: var(--wd-panel, #fff);
@@ -4189,13 +4252,11 @@ html:not(.theme-light) .wd-pie-color-pop-btn:hover {
 .wd-pie-svg {
   cursor: pointer;
   flex: 0 0 auto;
-  width: min(220px, 100%);
+  width: 100%;
   height: auto;
   aspect-ratio: 1 / 1;
   max-width: 100%;
-  overflow: visible;
-  /* Pop slices outside viewBox a bit */
-  overflow: visible;
+  overflow: hidden; /* never spill slices onto legend / neighbors */
 }
 .wd-pie-slice {
   transition: opacity 0.16s ease, filter 0.16s ease, stroke-width 0.12s ease;
@@ -4540,17 +4601,18 @@ svg.wd-linechart {
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px 20px;
-  margin: 0 0 28px !important;
-  padding: 0 0 4px !important;
+  gap: 6px 12px;
+  margin: 0 0 4px !important;
+  padding: 0 !important;
   border: 0 !important;
+  min-height: 0 !important;
 }
 .wd-subnav-left,
 .wd-subnav-right {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 1.15rem;
+  gap: 10px;
 }
 .wd-subnav-bar .wd-subnav-link {
   font-size: 14px !important;
@@ -5017,32 +5079,59 @@ html:not(.theme-light) .main.is-finances .wd-table.wd-ledger-full thead th {
 .wd-overview {
   display: flex;
   flex-direction: column;
-  gap: var(--wd-space-5);
+  gap: 2px;
 }
 
 .wd-page > .wd-panel,
 .wd-overview > .wd-panel,
 .wd-stack > .wd-panel {
   margin: 0;
+  padding: 0 !important;
 }
 
 .wd-panel-head {
-  gap: var(--wd-space-4);
-  margin-bottom: var(--wd-space-4);
+  gap: 4px;
+  margin-bottom: 4px;
 }
 
 .wd-subnav-bar {
-  margin-bottom: var(--wd-space-6) !important;
+  margin: 0 0 4px !important;
+  padding: 0 !important;
+  gap: 6px 12px !important;
 }
 
 .wd-subnav-left,
 .wd-subnav-right {
-  gap: var(--wd-space-5);
+  gap: 10px;
 }
 
 .main.is-finances .wd-filters.wd-filters-ledger {
-  gap: var(--wd-space-3) !important;
-  margin-bottom: var(--wd-space-5) !important;
+  gap: 2px 10px !important;
+  margin: 0 0 4px !important;
+  min-height: 0 !important;
+}
+
+/* Ledger year strip — final density lock (beats older sparse grids) */
+.main.is-finances .wd-ledger-year-summary {
+  margin: 0 0 10px !important;
+}
+.main.is-finances .wd-all-ledger-head dl {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px 16px !important;
+  grid-template-columns: unset !important;
+}
+.main.is-finances .wd-all-ledger-head dd {
+  font-size: 16px !important;
+  margin-top: 2px !important;
+}
+.main.is-finances .wd-all-ledger-grid {
+  margin-top: 10px !important;
+  gap: 12px 14px !important;
+}
+.main.is-finances .wd-linechart {
+  background: transparent !important;
+  border-radius: 0 !important;
 }
 
 /* Books is an action surface. The engines still calculate everything behind it. */
@@ -5879,4 +5968,329 @@ html:not(.theme-light) .main.is-finances .wd-table.wd-ledger-full thead th {
 
 .wd-page > .wd-rockefeller ~ * {
   display: none !important;
+}
+
+/*
+ * ═══════════════════════════════════════════════════════════════════
+ * Dense Finances — tight chrome, but charts/legend keep real stacking
+ * (do NOT zero every li/p margin — that + cramped grids caused overlap)
+ * ═══════════════════════════════════════════════════════════════════
+ */
+.main.is-finances .wd {
+  --wd-space-1: 2px;
+  --wd-space-2: 4px;
+  --wd-space-3: 6px;
+  --wd-space-4: 8px;
+  --wd-space-5: 10px;
+  --wd-space-6: 12px;
+  font-size: 13px !important;
+  line-height: 1.15 !important;
+}
+/* Headings / body type — tight but readable */
+.main.is-finances .wd h1,
+.main.is-finances .wd h2,
+.main.is-finances .wd h3,
+.main.is-finances .wd h4 {
+  margin-top: 0 !important;
+  margin-bottom: 0.15em !important;
+  line-height: 1.15 !important;
+}
+/* Never force every descendant to line-height 1 / margin 0 — breaks pie+legend layout */
+.main.is-finances .wd-main {
+  padding: 6px 12px 20px !important;
+}
+/* Tabs */
+.main.is-finances .wd .wd-subnav,
+.main.is-finances .wd .wd-subnav-bar,
+.main.is-finances .wd-subnav.wd-subnav-bar {
+  margin: 0 0 2px !important;
+  padding: 0 !important;
+  gap: 2px 8px !important;
+  min-height: 0 !important;
+  border: 0 !important;
+}
+.main.is-finances .wd-subnav-left,
+.main.is-finances .wd-subnav-right {
+  gap: 8px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.main.is-finances .wd-subnav-bar .wd-subnav-link {
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+}
+.main.is-finances .wd-top-note,
+.main.is-finances .wd-note {
+  margin: 0 0 2px !important;
+  padding: 0 !important;
+}
+/* Page stack */
+.main.is-finances .wd-page,
+.main.is-finances .wd-overview,
+.main.is-finances .wd-stack {
+  gap: 2px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.main.is-finances .wd-panel,
+.main.is-finances .wd-page > .wd-panel {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+}
+.main.is-finances .wd-panel-head {
+  margin: 0 0 2px !important;
+  padding: 0 !important;
+  gap: 4px !important;
+}
+/* Filters */
+.main.is-finances .wd-filters,
+.main.is-finances .wd-filters.wd-filters-ledger {
+  margin: 0 0 2px !important;
+  padding: 0 !important;
+  gap: 2px 8px !important;
+  min-height: 0 !important;
+}
+.main.is-finances .wd-filters input,
+.main.is-finances .wd-filters select,
+.main.is-finances .wd-filters-ledger input,
+.main.is-finances .wd-filters-ledger select,
+.main.is-finances .wd-filters-ledger summary {
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 0.5rem 0 0 !important;
+  line-height: 1.15 !important;
+}
+/* Year strip */
+.main.is-finances .wd-ledger-year-summary {
+  margin: 0 0 4px !important;
+  padding: 0 !important;
+}
+.main.is-finances .wd-ledger-scope {
+  margin: 0 0 2px !important;
+}
+.main.is-finances .wd-all-ledger-head {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.main.is-finances .wd-all-ledger-head dl {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px 12px !important;
+  margin: 0 !important;
+}
+.main.is-finances .wd-all-ledger-head dd {
+  margin: 1px 0 0 !important;
+  font-size: 15px !important;
+}
+.main.is-finances .wd-all-ledger-head dt {
+  font-size: 10px !important;
+}
+.main.is-finances .wd-all-ledger-grid {
+  margin: 4px 0 0 !important;
+  gap: 6px 8px !important;
+}
+.main.is-finances .wd-math-popover {
+  line-height: 1.25 !important;
+}
+/* Month books + ledger tables */
+.main.is-finances .wd-month-books {
+  margin: 2px 0 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+.main.is-finances .wd-month-book {
+  margin: 0 0 6px !important;
+  padding: 0 !important;
+}
+.main.is-finances .wd-month-book-head {
+  margin: 0 0 2px !important;
+  padding: 0 !important;
+  gap: 2px !important;
+}
+.main.is-finances .wd-month-book-head h3 {
+  margin: 0 !important;
+  font-size: 15px !important;
+  line-height: 1 !important;
+}
+.main.is-finances .wd-month-io {
+  margin: 1px 0 0 !important;
+  gap: 0.25rem 0.4rem !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+}
+.main.is-finances .wd-month-full {
+  margin: 2px 0 0 !important;
+  padding: 0 !important;
+}
+.main.is-finances .wd-table-wrap,
+.main.is-finances .wd-acct-table-wrap {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.main.is-finances .wd-table th,
+.main.is-finances .wd-table.wd-ledger-full th {
+  padding: 2px 4px 2px 0 !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+.main.is-finances .wd-table td,
+.main.is-finances .wd-table.wd-ledger-full td {
+  padding: 1px 4px 1px 0 !important;
+  font-size: 12px !important;
+  line-height: 1.1 !important;
+  vertical-align: baseline !important;
+}
+.main.is-finances .wd-table tr {
+  line-height: 1 !important;
+}
+/* Budget / subscriptions / rockefeller / action boards */
+.main.is-finances .wd-budget-metrics,
+.main.is-finances .wd-budget-head,
+.main.is-finances .wd-budget-grid,
+.main.is-finances .wd-action-board,
+.main.is-finances .wd-action-board-head,
+.main.is-finances .wd-accountant-metrics,
+.main.is-finances .wd-rockefeller,
+.main.is-finances .wd-owner-section {
+  margin-top: 0 !important;
+  margin-bottom: 4px !important;
+  gap: 4px 8px !important;
+}
+.main.is-finances .wd-budget-metrics dd {
+  margin: 1px 0 0 !important;
+  font-size: 16px !important;
+}
+.main.is-finances .wd-action-board-head {
+  margin-bottom: 4px !important;
+}
+.main.is-finances .wd-action-footer,
+.main.is-finances .wd-auto-bar {
+  margin: 2px 0 !important;
+  gap: 4px !important;
+}
+.main.is-finances .wd-budget-row {
+  padding: 2px 0 !important;
+  margin: 0 0 2px !important;
+  gap: 4px !important;
+}
+.main.is-finances .wd-accountant-metrics {
+  margin: 0 0 4px !important;
+  gap: 1px !important;
+}
+.main.is-finances .wd-accountant-metrics > div {
+  padding: 4px 6px !important;
+}
+.main.is-finances .wd-decision-queue {
+  padding: 4px 6px !important;
+}
+.main.is-finances .wd-decision-queue li {
+  padding: 3px 0 !important;
+}
+.main.is-finances .wd-statement-strip > div {
+  padding: 4px 6px !important;
+}
+.main.is-finances .wd-review-filter {
+  margin: 0 0 2px !important;
+  padding: 2px 0 !important;
+  gap: 4px !important;
+}
+.main.is-finances .wd-category-review {
+  margin: 0 0 2px !important;
+  line-height: 1.15 !important;
+}
+.main.is-finances .wd-acct-list li {
+  margin: 0 !important;
+  padding: 1px 0 !important;
+  line-height: 1.1 !important;
+}
+/* Charts — dense but contained (no overlap onto ledger) */
+.main.is-finances .wd-month-charts {
+  margin: 0.5rem 0 1rem !important;
+  gap: 1rem !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
+  z-index: 0 !important;
+}
+.main.is-finances .wd-month-charts-pies {
+  gap: 1rem !important;
+}
+.main.is-finances .wd-linechart {
+  background: transparent !important;
+}
+.main.is-finances .wd-pie-wrap {
+  margin: 0 !important;
+  padding: 0 !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+.main.is-finances .wd-pie-block {
+  overflow: hidden !important;
+  max-width: 100% !important;
+}
+.main.is-finances .wd-pie-legend {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 auto !important;
+}
+.main.is-finances .wd-pie-legend li {
+  line-height: 1.25 !important;
+  margin: 0 !important;
+}
+.main.is-finances .wd-all-ledger-grid {
+  grid-template-columns: 1fr !important;
+  gap: 1.25rem !important;
+  overflow: hidden !important;
+}
+@media (min-width: 960px) {
+  .main.is-finances .wd-all-ledger-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+.main.is-finances .wd-month-book {
+  position: relative !important;
+  z-index: 0 !important;
+  overflow: hidden !important;
+}
+.main.is-finances .wd-table-wrap,
+.main.is-finances .wd-month-full {
+  position: relative !important;
+  z-index: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+}
+/* Color popover: centered modal — never over ledger rows */
+.main.is-finances .wd-pie-color-pop {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+  z-index: 200 !important;
+}
+/* Form rows */
+.main.is-finances .wd-form {
+  gap: 2px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.main.is-finances .wd-form label,
+.main.is-finances .wd-form input,
+.main.is-finances .wd-form select {
+  margin: 0 !important;
+  line-height: 1.15 !important;
+}
+/* Kill decorative double-gaps from generic p rules */
+.main.is-finances .wd p + p {
+  margin-top: 2px !important;
 }

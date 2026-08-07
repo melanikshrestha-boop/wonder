@@ -29,6 +29,7 @@ import {
 } from "./care/agent";
 import { careServiceLabel, parseCareRequest } from "./care/parser";
 import { downloadAppointmentCalendar } from "./care/calendar";
+import { emptyCareHistory, markDone } from "./care/dueEngine";
 import {
   CARE_EVENT,
   CARE_PAGE_ID,
@@ -40,6 +41,7 @@ import {
   removeCareProvider,
   saveCareAppointment,
   saveCareProvider,
+  saveCareState,
   setCareRequestStatus,
   updateCareProfile,
   updateCareSettings,
@@ -66,6 +68,7 @@ import {
 import "./care-concierge.css";
 
 const QUICK_REQUESTS = [
+  "Book blood draw / quarterly labs this month morning",
   "Book a dental cleaning next week in the morning",
   "Book my annual physical this month",
   "Show my upcoming appointments",
@@ -575,8 +578,25 @@ export function CareConcierge() {
   const stopListening = useRef<(() => void) | null>(null);
   const stopSpeaking = useRef<(() => void) | null>(null);
 
+  // Schedule blood draw (owner law: quarterly labs)
+  const [labWhen, setLabWhen] = useState("");
+  const [labName, setLabName] = useState("");
+  const [labAddress, setLabAddress] = useState("");
+  const [labNotes, setLabNotes] = useState("");
+
   const active = useMemo(() => activeCareRequests(state), [state]);
   const appointments = useMemo(() => upcomingCareAppointments(state), [state]);
+  const labAppointments = useMemo(
+    () =>
+      state.appointments
+        .filter(
+          (a) =>
+            a.service === "lab-work" ||
+            /blood|lab/i.test(a.title)
+        )
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+    [state.appointments]
+  );
   const selected = state.requests.find((request) => request.id === selectedId) || active[0] || null;
   const todayAppts = useMemo(
     () => appointments.filter((a) => isSameLocalDay(a.startsAt)),
@@ -640,10 +660,20 @@ export function CareConcierge() {
       announce("Could not read a date/time in that text. Paste the full clinic SMS.", "danger");
       return;
     }
+    const isLab =
+      /blood|lab\b|labs\b|phlebotom|quest|labcorp|bloodwork|blood work/i.test(
+        parsed.title + " " + parsed.notes
+      );
     saveCareAppointment({
-      title: parsed.title,
+      title: isLab
+        ? "Blood draw · quarterly labs"
+        : parsed.title,
       providerName: parsed.providerName,
-      service: /invisalign/i.test(parsed.title) ? "specialist" : "other",
+      service: isLab
+        ? "lab-work"
+        : /invisalign/i.test(parsed.title)
+          ? "specialist"
+          : "other",
       startsAt: parsed.startsAt,
       address: parsed.address,
       visitMode: "in-person",
@@ -675,6 +705,76 @@ export function CareConcierge() {
       setVoiceState("speaking");
       stopSpeaking.current = speakCareReply(text, state.settings.voiceName, () => setVoiceState("idle"));
     }
+  }
+
+  function scheduleBloodDraw() {
+    if (!labWhen.trim()) {
+      announce("Pick a date and time for the blood draw.", "danger");
+      return;
+    }
+    const starts = new Date(labWhen);
+    if (Number.isNaN(starts.getTime())) {
+      announce("That date/time is invalid.", "danger");
+      return;
+    }
+    const office = labName.trim() || "Lab";
+    const appt = saveCareAppointment({
+      title: "Blood draw · quarterly labs",
+      providerName: office,
+      service: "lab-work",
+      startsAt: starts.toISOString(),
+      endsAt: new Date(starts.getTime() + 30 * 60 * 1000).toISOString(),
+      address: labAddress.trim(),
+      visitMode: "in-person",
+      status: "scheduled",
+      notes:
+        labNotes.trim() ||
+        "Owner law: quarterly blood tests · fasting if ordered",
+    });
+    const st = loadCareState();
+    if (
+      !st.providers.some((p) =>
+        p.name.toLowerCase().includes(office.toLowerCase().slice(0, 10))
+      )
+    ) {
+      saveCareProvider({
+        name: office,
+        specialty: "Lab / phlebotomy",
+        address: labAddress.trim(),
+        phone: "",
+        website: "",
+        preferred: true,
+      });
+    }
+    setLabWhen("");
+    setLabNotes("");
+    sync();
+    announce(
+      `Scheduled blood draw · ${formatAppointment(appt.startsAt)}${
+        office ? ` · ${office}` : ""
+      }.`
+    );
+  }
+
+  function completeBloodDraw(appointmentId: string) {
+    const appt = loadCareState().appointments.find((a) => a.id === appointmentId);
+    if (!appt) return;
+    patchCareAppointment(appointmentId, { status: "completed" });
+    const day = appt.startsAt.slice(0, 10);
+    const st = loadCareState();
+    const history = st.history
+      ? {
+          lastDone: st.history.lastDone || {},
+          disabled: st.history.disabled || [],
+          intervalOverride: st.history.intervalOverride || {},
+        }
+      : emptyCareHistory();
+    saveCareState({
+      ...st,
+      history: markDone(history, "lab-panel", day),
+    });
+    sync();
+    announce(`Marked blood draw done · next quarterly clock resets from ${day}.`);
   }
 
   function runCommand(command: string) {
@@ -764,6 +864,97 @@ export function CareConcierge() {
 
       {/* Care agent: due list, profile vault, phone-first call prep */}
       <CareAgentPanel />
+
+      {/* Blood draw — owner quarterly labs */}
+      <section className="care-blood" aria-label="Schedule blood draw">
+        <div className="care-section-title">
+          <div>
+            <p>Quarterly labs</p>
+            <h2>Blood draw</h2>
+          </div>
+        </div>
+        <div className="care-blood-form">
+          <label>
+            <span>When</span>
+            <input
+              type="datetime-local"
+              value={labWhen}
+              onChange={(e) => setLabWhen(e.target.value)}
+            />
+          </label>
+          <label>
+            <span>Lab / office</span>
+            <input
+              value={labName}
+              onChange={(e) => setLabName(e.target.value)}
+              placeholder="Quest · Labcorp · clinic lab"
+            />
+          </label>
+          <label>
+            <span>Address</span>
+            <input
+              value={labAddress}
+              onChange={(e) => setLabAddress(e.target.value)}
+              placeholder="optional"
+            />
+          </label>
+          <label className="care-blood-notes">
+            <span>Notes</span>
+            <input
+              value={labNotes}
+              onChange={(e) => setLabNotes(e.target.value)}
+              placeholder="fasting · panel ordered · order #"
+            />
+          </label>
+          <button
+            type="button"
+            className="care-primary"
+            onClick={scheduleBloodDraw}
+            disabled={!labWhen}
+          >
+            Schedule blood draw
+          </button>
+        </div>
+        {labAppointments.length ? (
+          <ul className="care-blood-list">
+            {labAppointments.map((a) => (
+              <li key={a.id} className={a.status !== "scheduled" ? "is-done" : ""}>
+                <div>
+                  <strong>{a.title}</strong>
+                  <span>
+                    {formatAppointment(a.startsAt)}
+                    {a.providerName ? ` · ${a.providerName}` : ""}
+                    {a.status !== "scheduled" ? ` · ${a.status}` : ""}
+                  </span>
+                  {a.address ? <span>{a.address}</span> : null}
+                </div>
+                <div className="care-blood-actions">
+                  {a.status === "scheduled" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="care-secondary"
+                        onClick={() => downloadAppointmentCalendar(a)}
+                      >
+                        <CalendarBlank size={14} /> Calendar
+                      </button>
+                      <button
+                        type="button"
+                        className="care-primary"
+                        onClick={() => completeBloodDraw(a.id)}
+                      >
+                        <Check size={14} /> Done
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="care-blood-empty">No blood draws scheduled yet.</p>
+        )}
+      </section>
 
       {todayAppts.length ? (
         <div className="care-day-of" role="status">

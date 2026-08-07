@@ -87,6 +87,13 @@ function lsJson<T>(key: string, fallback: T): T {
   }
 }
 
+/** Owner laws Mel must always track (merge, never wipe). */
+const OWNER_GOAL_NOTES = [
+  "Avoid sugar — really affected by it",
+  "Get quarterly blood tests",
+  "Read ≥1 Sam Altman or Paul Graham essay every day · https://blog.samaltman.com/archive · https://www.paulgraham.com/articles.html",
+] as const;
+
 function defaultGoals(): MelGoals {
   return {
     calories: MACRO_GOALS.calories,
@@ -97,21 +104,140 @@ function defaultGoals(): MelGoals {
     water_ml: PROFILE.waterGoalMl, // 3.5 L
     sleep_hours: 8,
     migraine_max_per_week: 2,
-    notes: [],
+    notes: [...OWNER_GOAL_NOTES],
   };
 }
 
-export function loadGoals(): MelGoals {
-  const g = lsJson<Partial<MelGoals>>(GOALS_KEY, {});
-  return { ...defaultGoals(), ...g, notes: g.notes || [] };
+function mergeOwnerGoalNotes(notes: string[]): string[] {
+  const out = [...notes];
+  const lower = new Set(out.map((n) => n.toLowerCase()));
+  for (const law of OWNER_GOAL_NOTES) {
+    // Skip if a close variant already exists (sugar / quarterly labs)
+    const key = law.toLowerCase();
+    const covered =
+      lower.has(key) ||
+      (key.includes("sugar") &&
+        [...lower].some((n) => n.includes("sugar"))) ||
+      (key.includes("quarterly") &&
+        [...lower].some(
+          (n) => n.includes("quarterly") || n.includes("blood test")
+        )) ||
+      (key.includes("essay") &&
+        [...lower].some(
+          (n) =>
+            n.includes("essay") ||
+            n.includes("sam altman") ||
+            n.includes("paul graham")
+        ));
+    if (!covered) {
+      out.push(law);
+      lower.add(key);
+    }
+  }
+  return out;
 }
 
-export function saveGoals(goals: MelGoals) {
+function normalizeGoals(partial: Partial<MelGoals> | null | undefined): MelGoals {
+  const d = defaultGoals();
+  if (!partial || typeof partial !== "object") return d;
+  const notesRaw = Array.isArray(partial.notes)
+    ? partial.notes.filter((n): n is string => typeof n === "string" && n.trim().length > 0)
+    : [];
+  const notes = mergeOwnerGoalNotes(notesRaw);
+  return {
+    calories: Number.isFinite(partial.calories) ? Number(partial.calories) : d.calories,
+    protein_g: Number.isFinite(partial.protein_g) ? Number(partial.protein_g) : d.protein_g,
+    carbs_g: Number.isFinite(partial.carbs_g) ? Number(partial.carbs_g) : d.carbs_g,
+    fat_g: Number.isFinite(partial.fat_g) ? Number(partial.fat_g) : d.fat_g,
+    fiber_g: Number.isFinite(partial.fiber_g) ? Number(partial.fiber_g) : d.fiber_g,
+    water_ml: Number.isFinite(partial.water_ml) ? Number(partial.water_ml) : d.water_ml,
+    sleep_hours: Number.isFinite(partial.sleep_hours)
+      ? Number(partial.sleep_hours)
+      : d.sleep_hours,
+    migraine_max_per_week: Number.isFinite(partial.migraine_max_per_week)
+      ? Number(partial.migraine_max_per_week)
+      : d.migraine_max_per_week,
+    notes,
+  };
+}
+
+function pushGoalsDisk(goals: MelGoals) {
+  if (typeof fetch === "undefined") return;
   try {
-    localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
+    void fetch("/api/wonder-state", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: GOALS_KEY, value: goals }),
+      keepalive: true,
+    }).catch(() => {});
   } catch {
     /* ignore */
   }
+}
+
+export function loadGoals(): MelGoals {
+  const raw = lsJson<Partial<MelGoals>>(GOALS_KEY, {});
+  const next = normalizeGoals(raw);
+  // Persist if owner laws were just merged into notes
+  const before = Array.isArray(raw.notes) ? raw.notes.length : 0;
+  if (next.notes.length > before) {
+    try {
+      localStorage.setItem(GOALS_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+    pushGoalsDisk(next);
+  }
+  return next;
+}
+
+export function saveGoals(goals: MelGoals) {
+  const next = normalizeGoals(goals);
+  try {
+    localStorage.setItem(GOALS_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+  pushGoalsDisk(next);
+  return next;
+}
+
+/**
+ * Merge disk goals (notes especially) into localStorage.
+ * Prefer union of freeform notes so agent-written goals survive browser refresh.
+ */
+export async function hydrateGoalsFromDisk(): Promise<MelGoals> {
+  const local = loadGoals();
+  if (typeof fetch === "undefined") return local;
+  try {
+    const res = await fetch(`/api/wonder-state?key=${encodeURIComponent(GOALS_KEY)}`);
+    if (!res.ok) return local;
+    const body = (await res.json()) as { value?: Partial<MelGoals> | null };
+    if (!body.value || typeof body.value !== "object") return local;
+    const disk = normalizeGoals(body.value);
+    // Union notes (case-insensitive); keep numeric fields from whichever has more notes if local empty notes
+    const noteSeen = new Set(local.notes.map((n) => n.toLowerCase()));
+    const mergedNotes = [...local.notes];
+    for (const n of disk.notes) {
+      const k = n.toLowerCase();
+      if (!noteSeen.has(k)) {
+        noteSeen.add(k);
+        mergedNotes.push(n);
+      }
+    }
+    const next = normalizeGoals({
+      ...local,
+      // If local never customized numbers, take disk when it looks intentional
+      ...(local.notes.length === 0 && disk.notes.length > 0 ? disk : {}),
+      notes: mergedNotes.slice(-20),
+    });
+    if (JSON.stringify(next) !== JSON.stringify(local)) {
+      return saveGoals(next);
+    }
+  } catch {
+    /* offline */
+  }
+  return local;
 }
 
 /** Parse "goal protein 130" / "goal water 4000" / "goal note no dairy after 6" */
@@ -123,7 +249,10 @@ export function applyGoalCommand(raw: string): MelGoals | null {
   const g = loadGoals();
 
   if (key === "note" || key === "notes") {
-    g.notes = [...g.notes, val].slice(-20);
+    const lower = val.toLowerCase();
+    if (!g.notes.some((n) => n.toLowerCase() === lower)) {
+      g.notes = [...g.notes, val].slice(-20);
+    }
     saveGoals(g);
     return g;
   }

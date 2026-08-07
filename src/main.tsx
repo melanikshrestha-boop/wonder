@@ -64,6 +64,10 @@ if (isWidgetMode()) {
     await g.hydrateFromDisk();
     g.mirrorAllToDisk();
   });
+  // Mel goals (freeform notes + macro targets) ↔ ~/.wonder/local
+  void import("./melani/melContext").then(async (m) => {
+    await m.hydrateGoalsFromDisk();
+  });
   void import("./melani/agents/dataVault").then((v) => {
     void v.maybeAutoSnapshot(45);
   });
