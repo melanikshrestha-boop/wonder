@@ -1,0 +1,11 @@
+Workspace: ~/wonder
+
+1. git pull origin main
+2. Ensure http://127.0.0.1:5173/ returns 200 (npm run wonder:install or npm run dev)
+3. Read CODEX.md, AGENTS.md, docs/SYSTEMS.md, docs/SELENE-UI.md, docs/NO-DELETE-UI.md
+4. Implement Systems v1: three doors (company ship, money close → http://127.0.0.1:5191/ Lunara, Wonder open), today checkmarks, localStorage merge-only store
+5. No dividers/boxes/marketing blurbs (Selene). Do not delete existing nav desks
+6. Smoke at 127.0.0.1:5173 (not localhost)
+7. Commit + push main
+
+Melani is a founder/engineer building systems for consistency (not one-day motivation). Extend docs/SYSTEMS.md when she adds doors.

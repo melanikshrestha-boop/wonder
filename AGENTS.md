@@ -7,6 +7,11 @@
 
 Mel = the coach/AI bubble. Wonder = the whole product. Do not call the product Dr. Melani.
 
+### Codex
+
+Open **`CODEX.md`** first, then **`docs/CODEX-HANDOFF.md`** + **`docs/SYSTEMS.md`**.  
+Mission: ship **Systems** (consistency as product) under Selene law.
+
 ---
 
 ## Selene UI (non-negotiable)

@@ -2,6 +2,8 @@
 
 Same product as Grok. Read **AGENTS.md** first for standing rules.
 
+**Codex handoff:** root **`CODEX.md`**, full brief **`docs/CODEX-HANDOFF.md`**, systems spec **`docs/SYSTEMS.md`**.
+
 ## Continuous GitHub sync (mandatory)
 
 After every meaningful prompt of work: **commit + push** to  
